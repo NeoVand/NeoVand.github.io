@@ -68,7 +68,7 @@ var chartConfig = {
 var issueList=['economy',"education","guns","immigration","jobs","racialIssues","seniorsSocialSecurity","terrorism"];
 var vizController = {
     scale:1,
-    nodeSize:2.8,
+    nodeSize:3.5,
     showVerified:false,
     showJournalist:false,
     polarity : true,
@@ -113,7 +113,7 @@ var gui = new dat.GUI();
 gui.add(vizController, 'rotate');
 gui.add(vizController, 'rotationSpeed', 0, 0.01);
 gui.add(vizController, 'nodeVisibility', 0, 10.).onChange(updateColors);
-gui.add(vizController, 'nodeSize', 0, 3.).onChange(updateSizes);
+gui.add(vizController, 'nodeSize', 0, 10).onChange(updateSizes);
 gui.add(vizController, 'nodeContrast', 1, 3.).onChange(updateColors);
 gui.add(vizController, 'edgeVisibility', 0, 1).onChange(updateColors);
 var nodeColorsPolarity = gui.addFolder('Candidates');
