@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Visualize Network</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            color: #ffffff;
+            font-family:Monospace;
+            font-size:13px;
+            text-align:center;
+            font-weight: bold;
+
+            background-color: #505050;
+            margin: 0px;
+            overflow: hidden;
+        }
+        #info {
+            color: #fff;
+            position: absolute;
+            top: 0px; width: 100%;
+            padding: 5px;
+            z-index:100;
+        }
+        a { color: #ff0000 }
+
+        #tooltip {
+            pointer-events: none;
+            border: solid 1px rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            position: absolute;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        #tooltip .body {
+            font-size: 12px;
+        }
+        #tooltip .attribution {
+            font-size: 8px;
+            margin-top: 5px;
+        }
+        #tooltip .attribution:before {
+            content: "- ";
+        }
+        #tooltip.hidden {
+            display: none;
+        }
+    </style>
+
+
+
+</head>
+
+<body>
+<div id="container"></div>
+<div id="tooltip" class="hidden">
+    <div class="body">hello hello</div>
+    <!--<div class="attribution"></div>-->
+</div>
+<script src="./libs/colormix-2.0.0.js"></script>
+<script src="./libs/three.js"></script>
+<script src="./libs/dat.gui.min.js"></script>
+<script src="./libs/d3.v4.js"></script>
+<script src="./libs/Detector.js"></script>
+<script src="./libs/stats.min.js"></script>
+<script src="./libs/spin.min.js"></script>
+<script src="./libs/OrbitControls.js"></script>
+
+<script type="x-shader/x-vertex" id="nodeVertexshader">
+
+			uniform float amplitude;
+			attribute float size;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_PointSize = size * ( 200.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+<script type="x-shader/x-fragment" id="nodeFragmentshader">
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				gl_FragColor = vec4( color * vColor, 0.6 );
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+			}
+
+		</script>
+
+<script type="x-shader/x-vertex" id="edgeVertexshader">
+
+			uniform float opacity;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+<script type="x-shader/x-fragment" id="edgeFragmentshader">
+            uniform float opacity;
+			uniform vec3 color;
+			varying vec3 vColor;
+
+			void main() {
+
+				gl_FragColor = vec4( color * vColor, opacity );
+
+			}
+
+		</script>
+
+<script src="./js/edges.js"></script>
+<script src="./js/nodes.js"></script>
+<script src="./js/colorMaker.js"></script>
+<script src="./js/gamepadControl.js"></script>
+<script src="./js/app.js"></script>
+
+</body>
+
+</html>

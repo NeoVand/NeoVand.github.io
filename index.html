@@ -1,148 +1,546 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Visualize Network</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <style>
-        body {
-            color: #ffffff;
-            font-family:Monospace;
-            font-size:13px;
-            text-align:center;
-            font-weight: bold;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neo Mohsenvand</title>
+  <meta name="description" content="Interactive simulations, visualizations, and tools built for the browser — by Neo Mohsenvand." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-            background-color: #505050;
-            margin: 0px;
-            overflow: hidden;
-        }
-        #info {
-            color: #fff;
-            position: absolute;
-            top: 0px; width: 100%;
-            padding: 5px;
-            z-index:100;
-        }
-        a { color: #ff0000 }
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111111;
+      --border:    #1c1c1c;
+      --text:      #e8e8e8;
+      --muted:     #666;
+      --accent-sim: #6366f1;
+      --accent-ml:  #a855f7;
+      --accent-bio: #22c55e;
+      --accent-tool:#f59e0b;
+      --radius: 10px;
+      --transition: 200ms ease;
+    }
 
-        #tooltip {
-            pointer-events: none;
-            border: solid 1px rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            position: absolute;
-            color: white;
-            background: rgba(0, 0, 0, 0.6);
-        }
-        #tooltip .body {
-            font-size: 12px;
-        }
-        #tooltip .attribution {
-            font-size: 8px;
-            margin-top: 5px;
-        }
-        #tooltip .attribution:before {
-            content: "- ";
-        }
-        #tooltip.hidden {
-            display: none;
-        }
-    </style>
+    html { scroll-behavior: smooth; }
 
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
 
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 48px;
+      background: rgba(10,10,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
 
+    .nav-logo {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 400;
+      transition: color var(--transition);
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 96px 24px 72px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+
+    .hero p {
+      font-size: clamp(15px, 2vw, 18px);
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto;
+      font-weight: 300;
+    }
+
+    /* ── GALLERY ── */
+    .gallery-section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--card-accent, var(--accent-sim));
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+
+    .card:hover::before { opacity: 1; }
+    .card:hover { border-color: color-mix(in srgb, var(--card-accent, var(--accent-sim)) 40%, var(--border)); }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .card-arrow {
+      font-size: 18px;
+      color: var(--muted);
+      transition: color var(--transition), transform var(--transition);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .card:hover .card-arrow {
+      color: var(--card-accent, var(--accent-sim));
+      transform: translate(2px, -2px);
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 99px;
+      background: rgba(255,255,255,0.05);
+      color: #666;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── ABOUT ── */
+    #about {
+      border-top: 1px solid var(--border);
+      padding: 80px 24px 100px;
+    }
+
+    .about-inner {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .about-inner .section-label {
+      margin-bottom: 32px;
+    }
+
+    .about-name {
+      font-size: 26px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+
+    .about-bio {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.75;
+      margin-bottom: 36px;
+    }
+
+    .about-bio em {
+      color: #999;
+      font-style: normal;
+    }
+
+    .about-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .about-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: #666;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      transition: color var(--transition), border-color var(--transition);
+    }
+
+    .about-link:hover {
+      color: var(--text);
+      border-color: #333;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer p {
+      font-size: 13px;
+      color: #333;
+    }
+
+    footer a {
+      font-size: 13px;
+      color: #333;
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    footer a:hover { color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 64px 20px 48px; }
+      .gallery-section { padding: 0 16px 60px; }
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
 </head>
-
 <body>
-<div id="container"></div>
-<div id="tooltip" class="hidden">
-    <div class="body">hello hello</div>
-    <!--<div class="attribution"></div>-->
-</div>
-<script src="./libs/colormix-2.0.0.js"></script>
-<script src="./libs/three.js"></script>
-<script src="./libs/dat.gui.min.js"></script>
-<script src="./libs/d3.v4.js"></script>
-<script src="./libs/Detector.js"></script>
-<script src="./libs/stats.min.js"></script>
-<script src="./libs/spin.min.js"></script>
-<script src="./libs/OrbitControls.js"></script>
 
-<script type="x-shader/x-vertex" id="nodeVertexshader">
+  <!-- NAV -->
+  <nav>
+    <a class="nav-logo" href="/">Neo Mohsenvand</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="https://github.com/NeoVand" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </nav>
 
-			uniform float amplitude;
-			attribute float size;
-			attribute vec3 customColor;
+  <!-- HERO -->
+  <header class="hero">
+    <h1>Interactive<br />Experiments</h1>
+    <p>Simulations, visualizations, and tools — built for the browser.</p>
+  </header>
 
-			varying vec3 vColor;
+  <!-- GALLERY -->
+  <main class="gallery-section">
+    <p class="section-label">Live Demos</p>
+    <div class="gallery-grid">
 
-			void main() {
+      <!-- SIMULATION -->
+      <a class="card" href="https://neovand.github.io/swarm/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-sim)">
+        <div class="card-header">
+          <span class="card-title">Swarm</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Thousands of agents navigating emergent behavior — GPU-accelerated, running entirely in your browser.</p>
+        <div class="card-tags">
+          <span class="tag">WebGPU</span>
+          <span class="tag">Svelte</span>
+          <span class="tag">Simulation</span>
+        </div>
+      </a>
 
-				vColor = customColor;
+      <a class="card" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-sim)">
+        <div class="card-header">
+          <span class="card-title">Games of Life</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.</p>
+        <div class="card-tags">
+          <span class="tag">WebGPU</span>
+          <span class="tag">Svelte</span>
+          <span class="tag">Cellular Automata</span>
+        </div>
+      </a>
 
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+      <a class="card" href="https://neovand.github.io/boids/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-sim)">
+        <div class="card-header">
+          <span class="card-title">Boids</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Craig Reynolds' flocking algorithm — cohesion, separation, and alignment brought to life with WebGL.</p>
+        <div class="card-tags">
+          <span class="tag">WebGL</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">Flocking</span>
+        </div>
+      </a>
 
-				gl_PointSize = size * ( 200.0 / -mvPosition.z );
+      <a class="card" href="https://neovand.github.io/fields/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-sim)">
+        <div class="card-header">
+          <span class="card-title">Fields</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">An interactive electromagnetic lab — place charges and currents, watch the field lines respond in real time.</p>
+        <div class="card-tags">
+          <span class="tag">TypeScript</span>
+          <span class="tag">Physics</span>
+          <span class="tag">Visualization</span>
+        </div>
+      </a>
 
-				gl_Position = projectionMatrix * mvPosition;
+      <!-- ML / MATH -->
+      <a class="card" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-ml)">
+        <div class="card-header">
+          <span class="card-title">Gradient Descent Explorer</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Watch optimization algorithms navigate loss landscapes in real time, with D3-powered animations.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">D3.js</span>
+          <span class="tag">ML</span>
+        </div>
+      </a>
 
-			}
+      <a class="card" href="https://neovand.github.io/SoftMaxExplainer/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-ml)">
+        <div class="card-header">
+          <span class="card-title">SoftMax Explainer</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Explore the softmax function interactively — temperature, logits, and probability distributions in one view.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">ML</span>
+        </div>
+      </a>
 
-		</script>
+      <a class="card" href="https://neovand.github.io/neocalculus/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-ml)">
+        <div class="card-header">
+          <span class="card-title">Neocalculus</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">An infinitesimal-first interactive calculus book — learn through manipulation, not memorization.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">Math</span>
+          <span class="tag">Interactive</span>
+        </div>
+      </a>
 
-<script type="x-shader/x-fragment" id="nodeFragmentshader">
+      <!-- BIO / LIFE -->
+      <a class="card" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-bio)">
+        <div class="card-header">
+          <span class="card-title">Algocell</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Artificial life emerging from random Z80 machine code bytes — evolution in your browser, no setup needed.</p>
+        <div class="card-tags">
+          <span class="tag">TypeScript</span>
+          <span class="tag">Artificial Life</span>
+          <span class="tag">Z80</span>
+        </div>
+      </a>
 
-			uniform vec3 color;
-			uniform sampler2D texture;
+      <a class="card" href="https://neovand.github.io/herbal/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-bio)">
+        <div class="card-header">
+          <span class="card-title">Herbal</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">An evidence-based herbal medicine reference — botanical agents with clinical efficacy data, searchable by condition.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">Healthcare</span>
+          <span class="tag">Database</span>
+        </div>
+      </a>
 
-			varying vec3 vColor;
+      <!-- TOOLS / GUIDES -->
+      <a class="card" href="https://neovand.github.io/gitvibes/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool)">
+        <div class="card-header">
+          <span class="card-title">GitVibes</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders — concepts explained without the jargon.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">Git</span>
+          <span class="tag">Guide</span>
+        </div>
+      </a>
 
-			void main() {
+      <a class="card" href="https://neovand.github.io/RDB/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool)">
+        <div class="card-header">
+          <span class="card-title">RDB</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">Relational databases from first principles to advanced design — live SQL playgrounds in every section.</p>
+        <div class="card-tags">
+          <span class="tag">TypeScript</span>
+          <span class="tag">SQL</span>
+          <span class="tag">Interactive</span>
+        </div>
+      </a>
 
-				gl_FragColor = vec4( color * vColor, 0.6 );
-				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+      <a class="card" href="https://neovand.github.io/ui-component-guide/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool)">
+        <div class="card-header">
+          <span class="card-title">UI Component Guide</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">A unified component reference for vibe coders — browse, compare, and copy patterns from a single place.</p>
+        <div class="card-tags">
+          <span class="tag">TypeScript</span>
+          <span class="tag">UI</span>
+          <span class="tag">Reference</span>
+        </div>
+      </a>
 
-			}
+      <a class="card" href="https://neovand.github.io/vibe-coding/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool)">
+        <div class="card-header">
+          <span class="card-title">Vibe Coding</span>
+          <span class="card-arrow">↗</span>
+        </div>
+        <p class="card-desc">An audiovisual interactive experience — generative art responding to controls and sound in real time.</p>
+        <div class="card-tags">
+          <span class="tag">Svelte</span>
+          <span class="tag">Audio</span>
+          <span class="tag">Generative</span>
+        </div>
+      </a>
 
-		</script>
+    </div>
+  </main>
 
-<script type="x-shader/x-vertex" id="edgeVertexshader">
+  <!-- ABOUT -->
+  <section id="about">
+    <div class="about-inner">
+      <p class="section-label">About</p>
+      <h2 class="about-name">Neo Mohsenvand</h2>
+      <p class="about-bio">
+        <!-- TODO: Replace this placeholder with your bio from your resume -->
+        <em>Researcher and builder at the intersection of computation, biology, and design.
+        Currently at Caterpillar and affiliated with the MIT Media Lab.
+        I build interactive tools that make complex systems tangible — simulations, visualizations,
+        and exploratory interfaces that invite curiosity over instruction.</em>
+      </p>
+      <div class="about-links">
+        <a class="about-link" href="https://github.com/NeoVand" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          GitHub
+        </a>
+        <a class="about-link" href="https://linkedin.com/in/mohsenvand" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          LinkedIn
+        </a>
+        <a class="about-link" href="https://orcid.org/0000-0001-8114-3617" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 0 1-.947-.947c0-.525.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.016-5.325 5.016h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 3.872-2.484 3.872-3.722 0-2.016-1.284-3.722-3.862-3.722h-2.307z"/></svg>
+          ORCID
+        </a>
+      </div>
+    </div>
+  </section>
 
-			uniform float opacity;
-			attribute vec3 customColor;
-
-			varying vec3 vColor;
-
-			void main() {
-
-				vColor = customColor;
-
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-
-				gl_Position = projectionMatrix * mvPosition;
-
-			}
-
-		</script>
-
-<script type="x-shader/x-fragment" id="edgeFragmentshader">
-            uniform float opacity;
-			uniform vec3 color;
-			varying vec3 vColor;
-
-			void main() {
-
-				gl_FragColor = vec4( color * vColor, opacity );
-
-			}
-
-		</script>
-
-<script src="./js/edges.js"></script>
-<script src="./js/nodes.js"></script>
-<script src="./js/colorMaker.js"></script>
-<script src="./js/gamepadControl.js"></script>
-<script src="./js/app.js"></script>
+  <footer>
+    <p>© 2025 Neo Mohsenvand</p>
+    <a href="archive/">Old site →</a>
+  </footer>
 
 </body>
-
 </html>
