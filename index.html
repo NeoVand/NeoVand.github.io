@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Neo Mohsenvand</title>
   <meta name="description" content="Interactive simulations, visualizations, and tools built for the browser — by Neo Mohsenvand." />
+  <meta property="og:title" content="Neo Mohsenvand" />
+  <meta property="og:description" content="Interactive simulations, visualizations, and tools built for the browser." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -12,17 +14,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0a0a0a;
-      --surface:   #111111;
-      --border:    #1c1c1c;
-      --text:      #e8e8e8;
-      --muted:     #666;
-      --accent-sim: #6366f1;
+      --bg:         #080808;
+      --surface:    #101010;
+      --surface-2:  #151515;
+      --border:     #1e1e1e;
+      --border-2:   #2a2a2a;
+      --text:       #e4e4e4;
+      --muted:      #555;
+      --muted-2:    #777;
+      --accent-sim: #5b6ef5;
       --accent-ml:  #a855f7;
       --accent-bio: #22c55e;
-      --accent-tool:#f59e0b;
-      --radius: 10px;
-      --transition: 200ms ease;
+      --accent-tool:#e89c3e;
+      --radius: 12px;
+      --ease: cubic-bezier(0.25, 0, 0, 1);
     }
 
     html { scroll-behavior: smooth; }
@@ -34,9 +39,10 @@
       font-size: 15px;
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
 
-    /* ── NAV ── */
+    /* ─── NAV ─── */
     nav {
       position: sticky;
       top: 0;
@@ -44,136 +50,202 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 18px 48px;
-      background: rgba(10,10,10,0.85);
-      backdrop-filter: blur(12px);
+      padding: 0 48px;
+      height: 56px;
+      background: rgba(8,8,8,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
     }
 
     .nav-logo {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+      font-size: 14px;
+      font-weight: 500;
       color: var(--text);
       text-decoration: none;
+      letter-spacing: 0.01em;
     }
 
     .nav-links {
       display: flex;
-      gap: 32px;
+      gap: 28px;
       list-style: none;
     }
 
     .nav-links a {
       color: var(--muted);
       text-decoration: none;
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 400;
-      transition: color var(--transition);
+      transition: color 150ms;
     }
 
     .nav-links a:hover { color: var(--text); }
 
-    /* ── HERO ── */
+    /* ─── HERO ─── */
     .hero {
-      max-width: 760px;
+      max-width: 680px;
       margin: 0 auto;
-      padding: 96px 24px 72px;
+      padding: 88px 24px 64px;
       text-align: center;
     }
 
-    .hero h1 {
-      font-size: clamp(32px, 5vw, 52px);
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 20px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      font-size: clamp(34px, 5.5vw, 56px);
+      font-weight: 600;
+      letter-spacing: -0.035em;
+      line-height: 1.08;
       color: #fff;
+      margin-bottom: 22px;
     }
 
     .hero p {
-      font-size: clamp(15px, 2vw, 18px);
-      color: var(--muted);
-      max-width: 480px;
+      font-size: clamp(15px, 2vw, 17px);
+      color: var(--muted-2);
+      max-width: 420px;
       margin: 0 auto;
       font-weight: 300;
+      line-height: 1.65;
     }
 
-    /* ── GALLERY ── */
-    .gallery-section {
-      max-width: 1100px;
+    /* ─── GALLERY ─── */
+    .gallery {
+      max-width: 1140px;
       margin: 0 auto;
-      padding: 0 24px 80px;
+      padding: 0 24px 100px;
     }
 
-    .section-label {
+    .gallery-label {
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
-    .gallery-grid {
+    /* Featured row (large) */
+    .featured-row {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
     }
 
-    /* ── CARD ── */
+    /* Secondary grid */
+    .secondary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    /* ─── CARD ─── */
     .card {
       position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 28px;
       text-decoration: none;
       color: inherit;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
       overflow: hidden;
-    }
-
-    .card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: var(--card-accent, var(--accent-sim));
-      opacity: 0;
-      transition: opacity var(--transition);
+      transition: border-color 200ms var(--ease),
+                  transform 220ms var(--ease),
+                  box-shadow 220ms var(--ease);
     }
 
     .card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      transform: translateY(-4px);
+      border-color: var(--border-2);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.55);
     }
 
-    .card:hover::before { opacity: 1; }
-    .card:hover { border-color: color-mix(in srgb, var(--card-accent, var(--accent-sim)) 40%, var(--border)); }
+    /* Thumbnail */
+    .card-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: var(--surface-2);
+      position: relative;
+    }
+
+    .card-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 400ms var(--ease), opacity 200ms;
+      opacity: 0;
+    }
+
+    .card-thumb img.loaded { opacity: 1; }
+    .card:hover .card-thumb img { transform: scale(1.03); }
+
+    /* Gradient placeholder while image loads */
+    .card-thumb::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--card-gradient, linear-gradient(135deg, #1a1a2e 0%, #16213e 100%));
+      z-index: 0;
+    }
+
+    .card-thumb img { position: relative; z-index: 1; }
+
+    /* Accent line */
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--card-accent, var(--accent-sim));
+      opacity: 0;
+      transition: opacity 200ms;
+      z-index: 2;
+    }
+
+    .card:hover::after { opacity: 1; }
+
+    /* Body */
+    .card-body {
+      padding: 20px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
 
     .card-header {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
     }
 
     .card-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: #fff;
       letter-spacing: -0.01em;
+      line-height: 1.3;
     }
 
     .card-arrow {
-      font-size: 18px;
+      font-size: 16px;
       color: var(--muted);
-      transition: color var(--transition), transform var(--transition);
       flex-shrink: 0;
+      transition: color 150ms, transform 200ms var(--ease);
       margin-top: 1px;
     }
 
@@ -183,68 +255,68 @@
     }
 
     .card-desc {
-      font-size: 13.5px;
-      color: var(--muted);
+      font-size: 13px;
+      color: var(--muted-2);
       line-height: 1.55;
-      flex: 1;
     }
 
     .card-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 5px;
       margin-top: 4px;
     }
 
     .tag {
       font-size: 11px;
       font-weight: 500;
-      padding: 3px 9px;
+      padding: 3px 8px;
       border-radius: 99px;
-      background: rgba(255,255,255,0.05);
-      color: #666;
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
       letter-spacing: 0.02em;
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
-    /* ── ABOUT ── */
+    /* ─── ABOUT ─── */
     #about {
       border-top: 1px solid var(--border);
-      padding: 80px 24px 100px;
+      padding: 80px 24px 96px;
     }
 
     .about-inner {
-      max-width: 600px;
+      max-width: 560px;
       margin: 0 auto;
     }
 
-    .about-inner .section-label {
-      margin-bottom: 32px;
+    .about-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 28px;
     }
 
     .about-name {
-      font-size: 26px;
+      font-size: clamp(22px, 3vw, 28px);
       font-weight: 600;
       color: #fff;
       letter-spacing: -0.02em;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
     .about-bio {
       font-size: 15px;
-      color: var(--muted);
-      line-height: 1.75;
+      color: var(--muted-2);
+      line-height: 1.78;
       margin-bottom: 36px;
-    }
-
-    .about-bio em {
-      color: #999;
-      font-style: normal;
     }
 
     .about-links {
       display: flex;
       flex-wrap: wrap;
-      gap: 14px;
+      gap: 10px;
     }
 
     .about-link {
@@ -252,48 +324,53 @@
       align-items: center;
       gap: 7px;
       font-size: 13px;
-      color: #666;
+      color: var(--muted);
       text-decoration: none;
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 14px;
-      transition: color var(--transition), border-color var(--transition);
+      transition: color 150ms, border-color 150ms, background 150ms;
+      background: transparent;
     }
 
     .about-link:hover {
       color: var(--text);
-      border-color: #333;
+      border-color: var(--border-2);
+      background: var(--surface);
     }
 
-    /* ── FOOTER ── */
+    .about-link svg { flex-shrink: 0; }
+
+    /* ─── FOOTER ─── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 24px 48px;
+      padding: 22px 48px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    footer p {
-      font-size: 13px;
-      color: #333;
-    }
-
-    footer a {
-      font-size: 13px;
-      color: #333;
+    footer p, footer a {
+      font-size: 12.5px;
+      color: #2c2c2c;
       text-decoration: none;
-      transition: color var(--transition);
+      transition: color 150ms;
     }
 
     footer a:hover { color: var(--muted); }
 
-    /* ── RESPONSIVE ── */
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      .secondary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     @media (max-width: 640px) {
-      nav { padding: 16px 20px; }
-      .hero { padding: 64px 20px 48px; }
-      .gallery-section { padding: 0 16px 60px; }
-      footer { flex-direction: column; gap: 8px; text-align: center; }
+      nav { padding: 0 20px; }
+      .hero { padding: 60px 20px 48px; }
+      .gallery { padding: 0 16px 72px; }
+      .featured-row { grid-template-columns: 1fr; }
+      .secondary-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; gap: 8px; padding: 20px; }
     }
   </style>
 </head>
@@ -304,204 +381,303 @@
     <a class="nav-logo" href="/">Neo Mohsenvand</a>
     <ul class="nav-links">
       <li><a href="#about">About</a></li>
-      <li><a href="https://github.com/NeoVand" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://github.com/NeoVand" target="_blank" rel="noopener">GitHub ↗</a></li>
     </ul>
   </nav>
 
   <!-- HERO -->
   <header class="hero">
-    <h1>Interactive<br />Experiments</h1>
-    <p>Simulations, visualizations, and tools — built for the browser.</p>
+    <span class="hero-eyebrow">Interactive Experiments</span>
+    <h1>Building things<br />you can play with</h1>
+    <p>Simulations, visualizations, and tools — all running in the browser, no install needed.</p>
   </header>
 
   <!-- GALLERY -->
-  <main class="gallery-section">
-    <p class="section-label">Live Demos</p>
-    <div class="gallery-grid">
+  <main class="gallery">
+    <p class="gallery-label">Live Demos</p>
 
-      <!-- SIMULATION -->
+    <!-- Featured: 2-column row -->
+    <div class="featured-row">
+
       <a class="card" href="https://neovand.github.io/swarm/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-sim)">
-        <div class="card-header">
-          <span class="card-title">Swarm</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-sim); --card-gradient: linear-gradient(135deg,#0d1b3e,#0a0f2e)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/swarm/swarmscreenshot.jpg" alt="Swarm" loading="lazy" />
         </div>
-        <p class="card-desc">Thousands of agents navigating emergent behavior — GPU-accelerated, running entirely in your browser.</p>
-        <div class="card-tags">
-          <span class="tag">WebGPU</span>
-          <span class="tag">Svelte</span>
-          <span class="tag">Simulation</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Swarm</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Thousands of agents navigating emergent behavior — WebGPU-accelerated, running entirely in your browser.</p>
+          <div class="card-tags">
+            <span class="tag">WebGPU</span>
+            <span class="tag">Svelte</span>
+            <span class="tag">Simulation</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-sim)">
-        <div class="card-header">
-          <span class="card-title">Games of Life</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-sim); --card-gradient: linear-gradient(135deg,#0f1a0f,#0a150a)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/games-of-life/thumbnail.jpg" alt="Games of Life" loading="lazy" />
         </div>
-        <p class="card-desc">WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.</p>
-        <div class="card-tags">
-          <span class="tag">WebGPU</span>
-          <span class="tag">Svelte</span>
-          <span class="tag">Cellular Automata</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Games of Life</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.</p>
+          <div class="card-tags">
+            <span class="tag">WebGPU</span>
+            <span class="tag">Svelte</span>
+            <span class="tag">Cellular Automata</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- Secondary: 3-column grid -->
+    <div class="secondary-grid">
+
+      <a class="card" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-bio); --card-gradient: linear-gradient(135deg,#051c0e,#071a0d)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/algocell/og-image.png" alt="Algocell" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Algocell</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Artificial life emerging from Z80 machine code bytes — evolution in your browser.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span>
+            <span class="tag">Artificial Life</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-ml); --card-gradient: linear-gradient(135deg,#1a0a2e,#120820)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/GradientDescent/screenshot.gif" alt="Gradient Descent Explorer" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Gradient Descent Explorer</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Watch optimizers navigate loss landscapes in real time, with D3-powered animations.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">D3.js</span>
+            <span class="tag">ML</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="https://neovand.github.io/coms/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool); --card-gradient: linear-gradient(135deg,#1c1206,#150e04)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/coms/og-image.png" alt="Protocol Lab" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Protocol Lab</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">An interactive atlas of 46 network protocols — from the TCP handshake to modern QUIC streams.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span>
+            <span class="tag">Networking</span>
+            <span class="tag">Interactive</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="https://macmac.lol/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-ml); --card-gradient: linear-gradient(135deg,#1a0a1e,#120818)">
+        <div class="card-thumb">
+          <img src="https://macmac.lol/og-image.png" alt="MacMac" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">MacMac</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">A game about sampling probability distributions — click to win, think to win fewer times.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">Probability</span>
+            <span class="tag">Game</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="https://neovand.github.io/gitvibes/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-tool); --card-gradient: linear-gradient(135deg,#1c1006,#140c04)">
+        <div class="card-thumb">
+          <img src="https://neovand.github.io/gitvibes/og-image.png" alt="GitVibes" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">GitVibes</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders — concepts without the jargon.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">Git</span>
+            <span class="tag">Guide</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/boids/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-sim)">
-        <div class="card-header">
-          <span class="card-title">Boids</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-sim); --card-gradient: linear-gradient(135deg,#0a0f2e,#060a1e)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
+          <!-- No thumbnail available — fallback gradient -->
         </div>
-        <p class="card-desc">Craig Reynolds' flocking algorithm — cohesion, separation, and alignment brought to life with WebGL.</p>
-        <div class="card-tags">
-          <span class="tag">WebGL</span>
-          <span class="tag">TypeScript</span>
-          <span class="tag">Flocking</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Boids</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Craig Reynolds' flocking algorithm — cohesion, separation, and alignment with real-time WebGL.</p>
+          <div class="card-tags">
+            <span class="tag">WebGL</span>
+            <span class="tag">TypeScript</span>
+            <span class="tag">Simulation</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/fields/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-sim)">
-        <div class="card-header">
-          <span class="card-title">Fields</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-sim); --card-gradient: linear-gradient(135deg,#060d24,#040819)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">An interactive electromagnetic lab — place charges and currents, watch the field lines respond in real time.</p>
-        <div class="card-tags">
-          <span class="tag">TypeScript</span>
-          <span class="tag">Physics</span>
-          <span class="tag">Visualization</span>
-        </div>
-      </a>
-
-      <!-- ML / MATH -->
-      <a class="card" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-ml)">
-        <div class="card-header">
-          <span class="card-title">Gradient Descent Explorer</span>
-          <span class="card-arrow">↗</span>
-        </div>
-        <p class="card-desc">Watch optimization algorithms navigate loss landscapes in real time, with D3-powered animations.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">D3.js</span>
-          <span class="tag">ML</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Fields</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">An electromagnetic lab — place charges and currents, watch field lines respond in real time.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span>
+            <span class="tag">Physics</span>
+            <span class="tag">Interactive</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/SoftMaxExplainer/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-ml)">
-        <div class="card-header">
-          <span class="card-title">SoftMax Explainer</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-ml); --card-gradient: linear-gradient(135deg,#14082a,#0e0620)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">Explore the softmax function interactively — temperature, logits, and probability distributions in one view.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">TypeScript</span>
-          <span class="tag">ML</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">SoftMax Explainer</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Explore the softmax function interactively — temperature, logits, and probability all in one view.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">TypeScript</span>
+            <span class="tag">ML</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/neocalculus/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-ml)">
-        <div class="card-header">
-          <span class="card-title">Neocalculus</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-ml); --card-gradient: linear-gradient(135deg,#10062a,#08041e)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">An infinitesimal-first interactive calculus book — learn through manipulation, not memorization.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">Math</span>
-          <span class="tag">Interactive</span>
-        </div>
-      </a>
-
-      <!-- BIO / LIFE -->
-      <a class="card" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-bio)">
-        <div class="card-header">
-          <span class="card-title">Algocell</span>
-          <span class="card-arrow">↗</span>
-        </div>
-        <p class="card-desc">Artificial life emerging from random Z80 machine code bytes — evolution in your browser, no setup needed.</p>
-        <div class="card-tags">
-          <span class="tag">TypeScript</span>
-          <span class="tag">Artificial Life</span>
-          <span class="tag">Z80</span>
-        </div>
-      </a>
-
-      <a class="card" href="https://neovand.github.io/herbal/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-bio)">
-        <div class="card-header">
-          <span class="card-title">Herbal</span>
-          <span class="card-arrow">↗</span>
-        </div>
-        <p class="card-desc">An evidence-based herbal medicine reference — botanical agents with clinical efficacy data, searchable by condition.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">Healthcare</span>
-          <span class="tag">Database</span>
-        </div>
-      </a>
-
-      <!-- TOOLS / GUIDES -->
-      <a class="card" href="https://neovand.github.io/gitvibes/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-tool)">
-        <div class="card-header">
-          <span class="card-title">GitVibes</span>
-          <span class="card-arrow">↗</span>
-        </div>
-        <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders — concepts explained without the jargon.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">Git</span>
-          <span class="tag">Guide</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Neocalculus</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">An infinitesimal-first interactive calculus book — learn through manipulation, not memorization.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">Math</span>
+            <span class="tag">Interactive</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/RDB/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-tool)">
-        <div class="card-header">
-          <span class="card-title">RDB</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-tool); --card-gradient: linear-gradient(135deg,#1a1006,#120c04)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">Relational databases from first principles to advanced design — live SQL playgrounds in every section.</p>
-        <div class="card-tags">
-          <span class="tag">TypeScript</span>
-          <span class="tag">SQL</span>
-          <span class="tag">Interactive</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">RDB</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">Relational databases from first principles — with live SQL playgrounds in every section.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span>
+            <span class="tag">SQL</span>
+            <span class="tag">Guide</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="https://neovand.github.io/herbal/" target="_blank" rel="noopener"
+         style="--card-accent: var(--accent-bio); --card-gradient: linear-gradient(135deg,#041c0a,#031408)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Herbal</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">An evidence-based herbal medicine reference — clinical efficacy data, searchable by condition.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">Healthcare</span>
+            <span class="tag">Reference</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/ui-component-guide/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-tool)">
-        <div class="card-header">
-          <span class="card-title">UI Component Guide</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-tool); --card-gradient: linear-gradient(135deg,#1a140a,#120e06)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">A unified component reference for vibe coders — browse, compare, and copy patterns from a single place.</p>
-        <div class="card-tags">
-          <span class="tag">TypeScript</span>
-          <span class="tag">UI</span>
-          <span class="tag">Reference</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">UI Atlas</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">A unified component reference for vibe coders — browse, compare, and copy from a single place.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span>
+            <span class="tag">UI</span>
+            <span class="tag">Reference</span>
+          </div>
         </div>
       </a>
 
       <a class="card" href="https://neovand.github.io/vibe-coding/" target="_blank" rel="noopener"
-         style="--card-accent: var(--accent-tool)">
-        <div class="card-header">
-          <span class="card-title">Vibe Coding</span>
-          <span class="card-arrow">↗</span>
+         style="--card-accent: var(--accent-sim); --card-gradient: linear-gradient(135deg,#0a0a1e,#060614)">
+        <div class="card-thumb" style="display:flex;align-items:center;justify-content:center;min-height:160px;">
         </div>
-        <p class="card-desc">An audiovisual interactive experience — generative art responding to controls and sound in real time.</p>
-        <div class="card-tags">
-          <span class="tag">Svelte</span>
-          <span class="tag">Audio</span>
-          <span class="tag">Generative</span>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Vibe Coding</span>
+            <span class="card-arrow">↗</span>
+          </div>
+          <p class="card-desc">A generative audiovisual experience — visuals and sound responding to real-time controls.</p>
+          <div class="card-tags">
+            <span class="tag">Svelte</span>
+            <span class="tag">Audio</span>
+            <span class="tag">Generative</span>
+          </div>
         </div>
       </a>
 
@@ -511,14 +687,14 @@
   <!-- ABOUT -->
   <section id="about">
     <div class="about-inner">
-      <p class="section-label">About</p>
+      <p class="about-label">About</p>
       <h2 class="about-name">Neo Mohsenvand</h2>
       <p class="about-bio">
-        <!-- TODO: Replace this placeholder with your bio from your resume -->
-        <em>Researcher and builder at the intersection of computation, biology, and design.
+        <!-- TODO: Replace with bio from resume -->
+        Researcher and builder at the intersection of computation, biology, and design.
         Currently at Caterpillar and affiliated with the MIT Media Lab.
         I build interactive tools that make complex systems tangible — simulations, visualizations,
-        and exploratory interfaces that invite curiosity over instruction.</em>
+        and exploratory interfaces that invite curiosity over instruction.
       </p>
       <div class="about-links">
         <a class="about-link" href="https://github.com/NeoVand" target="_blank" rel="noopener">
@@ -541,6 +717,17 @@
     <p>© 2025 Neo Mohsenvand</p>
     <a href="archive/">Old site →</a>
   </footer>
+
+  <script>
+    // Lazy-load images with loaded class for fade-in
+    document.querySelectorAll('.card-thumb img').forEach(img => {
+      if (img.complete) {
+        img.classList.add('loaded');
+      } else {
+        img.addEventListener('load', () => img.classList.add('loaded'));
+      }
+    });
+  </script>
 
 </body>
 </html>
