@@ -302,6 +302,117 @@
       letter-spacing: 0.02em;
     }
 
+    /* ─── RESEARCH ─── */
+    #research {
+      border-top: 1px solid var(--border);
+      padding: 80px 24px 80px;
+    }
+
+    .research-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .research-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .research-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .research-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .rcard {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: border-color 200ms var(--ease),
+                  transform 200ms var(--ease),
+                  box-shadow 200ms var(--ease);
+    }
+
+    .rcard:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-2);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+
+    .rcard-thumb {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      background: #0e0e0e;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .rcard-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity 300ms, transform 400ms var(--ease);
+      filter: saturate(0.7);
+    }
+
+    .rcard-thumb img.loaded { opacity: 1; }
+    .rcard:hover .rcard-thumb img {
+      transform: scale(1.05);
+      filter: saturate(1);
+    }
+
+    .rcard-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .rcard-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ddd;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+    }
+
+    .rcard-desc {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1100px) {
+      .research-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (max-width: 800px) {
+      .research-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 540px) {
+      .research-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* ─── ABOUT ─── */
     #about {
       border-top: 1px solid var(--border);
@@ -408,7 +519,7 @@
   <!-- HERO -->
   <header class="hero">
     <span class="hero-eyebrow">Interactive Experiments</span>
-    <h1>Building things<br />you can play with</h1>
+    <h1>Interactive<br />Complexity</h1>
     <p>Simulations, visualizations, and tools — all running in the browser, no install needed.</p>
   </header>
 
@@ -719,6 +830,119 @@
     </div>
   </main>
 
+  <!-- RESEARCH / EARLIER WORK -->
+  <section id="research">
+    <div class="research-inner">
+      <div class="research-header">
+        <p class="section-label" style="margin-bottom:0">Earlier Work</p>
+        <span class="research-sub">MIT Media Lab · Fluid Interfaces Group</span>
+      </div>
+      <div class="research-grid">
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/insight-deep-neurofeedback/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2019/04/08/DNF-01_IHlgqLt.png.1400x1400.png" alt="inSight" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">inSight: Deep Neurofeedback</span>
+            <p class="rcard-desc">Brain decoding using BigGAN and MusicVAE to generate naturalistic neurofeedback stimuli.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/affective-memory-summarization/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2021/01/24/affective.png.1400x1400.png" alt="Affective Memory Summarization" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Affective Memory Summarization</span>
+            <p class="rcard-desc">Using affective signals to condense 16 hours of body-cam footage into a 15-minute daily recap.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/large-scale-eeg-biometrics-through-self-supervised-learning/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2021/01/24/fig-topo-01.png.1400x1400.png" alt="EEG Biometrics" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Large-Scale EEG Biometrics</span>
+            <p class="rcard-desc">Self-supervised EEG-based user identification at scale, surpassing prior 157-subject limits.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/physiophone/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2021/02/24/perspective copy.png.1400x1400.png" alt="Physiophone" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Physiophone</span>
+            <p class="rcard-desc">Sonification of electrophysiological signals — turning EEG, ECG, and EMG into sound.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/flower-eeg-visualization-with-the-aid-of-machine-learning/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2019/10/04/flower-01.png.1400x1400.png" alt="Flower" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Flower: EEG Visualization</span>
+            <p class="rcard-desc">Open-source tool for in-depth visual analysis of multi-channel time-domain neural recordings.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/skipnorm/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2020/10/22/skipnorm.png.1400x1400.png" alt="SkipNorm" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">SkipNorm</span>
+            <p class="rcard-desc">A flexible deep learning building block that combines skip connections and normalization in one layer.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/q-ai-that-makes-the-graph-of-your-memories/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2019/04/08/Qpipe_sfgQFow.png.1400x1400.png" alt="Q" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Q: Conversational Data Labeling</span>
+            <p class="rcard-desc">An intelligent interface that builds a personal knowledge graph through natural conversation.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/datavrse/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2020/10/22/electome.png.1400x1400.png" alt="DataVRse" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">DataVRse</span>
+            <p class="rcard-desc">VR visualization of the Twitter social graph during the 2016 U.S. Presidential Election.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/rhizome/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2022/09/02/laura-fuhrman-73OJLcahQHg-unsplash.jpg.1400x1400.jpg" alt="Rhizome" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Rhizome</span>
+            <p class="rcard-desc">A tool for navigating personal memories to support people living with dementia.</p>
+          </div>
+        </a>
+
+        <a class="rcard" href="https://www.media.mit.edu/projects/the-electome-measuring-responsiveness-in-the-2016-election/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="https://dam-prod.media.mit.edu/thumb/2017/02/21/image(2).png.1400x1400.png" alt="The Electome" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">The Electome</span>
+            <p class="rcard-desc">AI-driven mapping of the 2016 election public sphere — where machine intelligence meets political journalism.</p>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
   <!-- ABOUT -->
   <section id="about">
     <div class="about-inner">
@@ -755,7 +979,7 @@
 
   <script>
     // Image fade-in
-    document.querySelectorAll('.card-thumb img').forEach(img => {
+    document.querySelectorAll('.card-thumb img, .rcard-thumb img').forEach(img => {
       if (img.complete) img.classList.add('loaded');
       else img.addEventListener('load', () => img.classList.add('loaded'));
     });
