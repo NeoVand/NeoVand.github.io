@@ -181,24 +181,10 @@
     }
 
     .card:hover {
-      transform: translateY(-4px);
-      border-color: var(--border-2);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+      transform: translateY(-3px);
+      border-color: #282828;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.5);
     }
-
-    /* Accent line on hover */
-    .card::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--accent, #6366f1);
-      opacity: 0;
-      transition: opacity 180ms;
-      z-index: 2;
-    }
-
-    .card:hover::after { opacity: 1; }
 
     /* Thumbnail */
     .card-thumb {
@@ -949,11 +935,12 @@
       <p class="section-label">About</p>
       <h2 class="about-name">Neo Mohsenvand</h2>
       <p class="about-bio">
-        <!-- TODO: Replace with bio from resume -->
-        Researcher and builder at the intersection of computation, biology, and design.
-        Currently at Caterpillar and affiliated with the MIT Media Lab.
-        I build interactive tools that make complex systems tangible — simulations, visualizations,
-        and exploratory interfaces that invite curiosity over instruction.
+        I studied <!-- school + field → fill in from resume --> and went on to do research
+        at the <a href="https://www.media.mit.edu/groups/fluid-interfaces/overview/" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-color:#333">Fluid Interfaces Group</a>
+        at the MIT Media Lab, working on brain-computer interfaces, affective computing,
+        and tools that extend human memory and attention.
+        I now work at Caterpillar, building systems at the intersection of AI and
+        industrial intelligence — and keep making interactive experiments on the side.
       </p>
       <div class="about-links">
         <a class="about-link" href="https://github.com/NeoVand" target="_blank" rel="noopener">
