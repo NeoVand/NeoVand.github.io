@@ -549,22 +549,24 @@
     <div class="hero-about">
       <h2 class="about-name">Neo Mohsenvand</h2>
       <p class="about-bio">
-        I studied electrical and biomedical engineering at
-        <a href="https://en.wikipedia.org/wiki/Amirkabir_University_of_Technology" target="_blank" rel="noopener"><strong>Tehran Polytechnique</strong></a>,
-        then applied mathematics at
-        <a href="https://www.ox.ac.uk/" target="_blank" rel="noopener"><strong>Oxford</strong></a>.
-        I did both my PhD and my postdoc at
-        <a href="https://www.mit.edu/" target="_blank" rel="noopener"><strong>MIT</strong></a>, in the
+        I'm Chief AI Architect for Global Finance at
+        <a href="https://www.caterpillar.com/" target="_blank" rel="noopener"><strong>Caterpillar</strong></a>,
+        and I keep making interactive experiments on the side. Before that I led R&amp;D at
+        <a href="https://brainco.tech/" target="_blank" rel="noopener"><strong>BrainCo</strong></a>,
+        a brain-computer interface startup, which I joined after a spell at
+        <a href="https://machinelearning.apple.com/" target="_blank" rel="noopener"><strong>Apple</strong></a>
+        as a machine learning research intern. I came to industry from a postdoc at
+        <a href="https://www.mit.edu/" target="_blank" rel="noopener"><strong>MIT</strong></a>,
+        where I had also done my PhD, both in the
         <a href="https://www.media.mit.edu/" target="_blank" rel="noopener"><strong>Media Lab</strong></a>'s
         <a href="https://www.media.mit.edu/groups/fluid-interfaces/overview/" target="_blank" rel="noopener">Fluid Interfaces Group</a>,
         working on brain-computer interfaces, affective computing, and tools that extend human
-        memory and attention — with a spell at
-        <a href="https://machinelearning.apple.com/" target="_blank" rel="noopener"><strong>Apple</strong></a>
-        as a machine learning research intern along the way. I went on to lead R&amp;D at
-        <a href="https://brainco.tech/" target="_blank" rel="noopener"><strong>BrainCo</strong></a>,
-        a brain-computer interface startup, and I'm now Chief AI Architect for Global Finance at
-        <a href="https://www.caterpillar.com/" target="_blank" rel="noopener"><strong>Caterpillar</strong></a>
-        — and keep making interactive experiments on the side.
+        memory and attention. Earlier I did my master's in applied mathematics at
+        <a href="https://www.ox.ac.uk/" target="_blank" rel="noopener"><strong>Oxford</strong></a>,
+        and before any of it I studied electrical and biomedical engineering at
+        <a href="https://en.wikipedia.org/wiki/Amirkabir_University_of_Technology" target="_blank" rel="noopener"><strong>Tehran Polytechnique</strong></a>.
+        I'm passionate about the intersection of software, design, and intelligence,
+        both artificial and biological.
       </p>
       <div class="about-links">
         <a class="about-link" href="https://github.com/NeoVand" target="_blank" rel="noopener">
@@ -1319,13 +1321,14 @@
 
     // Canopy: five grammars, each with its own silhouette, height and grey ramp.
     const TREES = [
-      { axiom: 'F', rules: { F: 'FF+[+F-F-F]-[-F+F+F]' },        angle: 22.5, iters: 3, rise: 0.96, tone: [ 60, 142] },
+      // `tip` is the colour of the twig ends; `girth` scales the trunk
+      { axiom: 'F', rules: { F: 'FF+[+F-F-F]-[-F+F+F]' },        angle: 22.5, iters: 3, rise: 0.96, tone: [ 44, 150], tip: 255, girth: 1.05, tipMin: 2, tipShare: 0.42 },
       // an unbalanced rule: the trailing branch has no straight continuation,
       // so it grows open and lopsided rather than fractal-neat
-      { axiom: 'F', rules: { F: 'F[+F]F[-F][F]' },               angle: 21.0, iters: 4, rise: 0.91, tone: [ 48, 120] },
-      { axiom: 'X', rules: { X: 'F[+X][-X]FX', F: 'FF' },        angle: 25.7, iters: 5, rise: 1.00, tone: [ 72, 208] },
-      { axiom: 'X', rules: { X: 'F+[[X]-X]-F[-FX]+X', F: 'FF' }, angle: 23.5, iters: 5, rise: 0.94, tone: [100, 190] },
-      { axiom: 'F', rules: { F: 'F[+F]F[-F]F' },                 angle: 25.7, iters: 4, rise: 0.96, tone: [116, 174] },
+      { axiom: 'F', rules: { F: 'F[+F]F[-F][F]' },               angle: 21.0, iters: 4, rise: 0.91, tone: [ 40, 138], tip: 236, girth: 1.00, tipMin: 3, tipShare: 0.34 },
+      { axiom: 'X', rules: { X: 'F[+X][-X]FX', F: 'FF' },        angle: 25.7, iters: 5, rise: 1.00, tone: [ 60, 156], tip: 255, girth: 1.45 },
+      { axiom: 'X', rules: { X: 'F+[[X]-X]-F[-FX]+X', F: 'FF' }, angle: 23.5, iters: 5, rise: 0.94, tone: [ 72, 168], tip: 248, girth: 1.55 },
+      { axiom: 'F', rules: { F: 'F[+F]F[-F]F' },                 angle: 25.7, iters: 4, rise: 0.96, tone: [ 78, 172], tip: 255, girth: 1.20 },
     ];
 
     // Undergrowth: many small copies of the fourth species, standing on the
@@ -1342,7 +1345,8 @@
     };
 
     const REACH = 340;          // px radius of the pointer's influence
-    const MIN_RATIO = 0.47;     // how narrow a tree may be squeezed to fit its slot
+    const SOFT = 2.2;           // branching levels drawing back at once
+    const MIN_RATIO = 0.35;     // hard floor on how narrow a tree may be squeezed
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function expand(spec) {
@@ -1364,21 +1368,52 @@
     // One turtle walk. Collects segments per depth, and always returns the bbox.
     // sx/sy are separate so a plant can be gently narrowed to fit its slot
     // without losing height (and sx may be negative, to mirror it).
-    function walk(p, sx, sy, ox, oy, bend, buckets) {
-      let x = ox, y = oy, a = -Math.PI / 2, depth = 0;
+    function walk(p, sx, sy, ox, oy, bend, buckets, tipSegs) {
+      let x = ox, y = oy, a = -Math.PI / 2, depth = 0, tipN = 0;
       const stack = [];
       const turn = p.angle * Math.PI / 180;
+      const share = p.tipShare ?? 1;
+      // How far growth currently extends, in branching levels. Beyond the
+      // front there is nothing; SOFT levels straddle it part-grown, so several
+      // generations are drawing back at once rather than one crisp edge
+      // marching down. `shrink` pulls in everything below the front as well,
+      // more slowly, so the whole plant draws down instead of the inner
+      // branches standing at full length until the front arrives.
+      const front = p.front ?? Infinity;
+      const shrink = p.shrink ?? 1;
       let minX = ox, maxX = ox, minY = oy, maxY = oy;
       const s = p.str;
 
       for (let i = 0; i < s.length; i++) {
         const c = s[i];
         if (c === 'F') {
+          const reach = front === Infinity
+            ? 1
+            : Math.max(0, Math.min(1, (front - depth) / SOFT)) * shrink;
+          if (reach <= 0.001) continue;          // this level has receded away
           if (bend) a += bend(depth, x, y);
           const px = x, py = y;
-          x += Math.cos(a) * sx;
-          y += Math.sin(a) * sy;
-          if (buckets) (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y);
+          x += Math.cos(a) * sx * reach;
+          y += Math.sin(a) * sy * reach;
+          if (buckets) {
+            // A segment with nothing drawn after it on this branch is a twig
+            // end. Those are what carry the highlight — keyed off depth alone,
+            // the deeper species stayed grey, because their last depth level
+            // holds only a handful of segments while their twig ends are
+            // everywhere.
+            // skip anything that neither draws nor branches — rotations, and
+            // leftover variables like X, which is how these branches end
+            let j = i + 1;
+            while (j < s.length && s[j] !== 'F' && s[j] !== '[' && s[j] !== ']') j++;
+            // Some grammars end nearly every segment in a twig, and their twigs
+            // all sit at full depth, so highlighting the lot floods the canopy
+            // white. tipMin keeps the highlight to the outer levels, tipShare
+            // scatters it across a fraction of them.
+            let terminal = (j >= s.length || s[j] === ']') && depth >= (p.tipMin || 0);
+            if (terminal && share < 1 && hash(tipN++, p.tipSalt) > share) terminal = false;
+            if (terminal && tipSegs) tipSegs.push(px, py, x, y);
+            else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y);
+          }
           if (x < minX) minX = x; else if (x > maxX) maxX = x;
           if (y < minY) minY = y; else if (y > maxY) maxY = y;
         } else if (c === '+') a += turn;
@@ -1394,14 +1429,17 @@
     // one expansion, reused by every instance — only the transform differs
     const underShape = expand(UNDER_SPEC);
     const undergrowth = Array.from({ length: UNDER_COUNT }, (_, i) => {
-      const tone0 = Math.round(42 + hash(i, 4) * 30);
+      // kept near the muted grey of the un-hovered profile buttons, so the
+      // scrub sits back instead of competing with the canopy
+      const tone0 = Math.round(32 + hash(i, 4) * 20);
       return {
         ...UNDER_SPEC, ...underShape, kind: 'under',
         // heights skew small: a lot of low scrub, a few taller clumps
         rise: 0.026 + Math.pow(hash(i, 2), 1.8) * 0.10,
         squat: 1.55 + hash(i, 6) * 0.85,
         flip: hash(i, 3) > 0.5 ? 1 : 0,
-        tone: [tone0, tone0 + 46 + Math.round(hash(i, 5) * 38)],
+        tone: [tone0, tone0 + 16 + Math.round(hash(i, 5) * 18)],
+        tip: 78 + Math.round(hash(i, 14) * 26),
       };
     });
 
@@ -1411,6 +1449,9 @@
       p.box = walk(p, 1, 1, 0, 0, null, null);
       p.stiff = 0.78 + hash(i, 12) * 0.44;   // how hard it answers the wind
       p.lag = hash(i, 13) * 800;             // ms behind the gust front
+      p.tipSalt = 30 + i;                    // which twigs carry the highlight
+      p.grow = 1;                            // 1 fully grown, 0 receded away
+      p.growTarget = 1;
     });
 
     // A single wind field drives every plant, so the grove moves together.
@@ -1428,17 +1469,23 @@
       return noise1(t) * 0.55 + noise1(t * 2.13 + 7.3) * 0.29 + noise1(t * 4.51 + 19.7) * 0.16;
     }
 
-    function wind(now, x) {
+    // The wind is returned as separate bands rather than one number, so a
+    // branch can take as much of each as its thickness allows.
+    function windAt(now, x) {
       const t = now * 0.001;
       // small x term: a gust crosses the grove as a ripple, rather than
       // leaving the ends leaning opposite ways at the same moment
       const travel = x * 0.0011;
-      const swell = (fbm(t * 0.23 - travel * 0.4) - 0.5) * 2;   // slow lean, ±1
-      const ripple = (fbm(t * 0.85 - travel * 0.9) - 0.5) * 0.9;
-      const flutter = (fbm(t * 2.40 - travel * 1.7) - 0.5) * 0.4;
-      const calm = 0.30 + 0.85 * fbm(t * 0.09 + 4.1);           // lulls and gusts
-      return (swell + ripple + flutter) * calm;
+      return {
+        swell:   (fbm(t * 0.23 - travel * 0.4) - 0.5) * 2,      // slow lean, ±1
+        ripple:  (fbm(t * 0.85 - travel * 0.9) - 0.5) * 0.9,
+        flutter: (fbm(t * 2.40 - travel * 1.7) - 0.5) * 0.4,
+        calm:    0.30 + 0.85 * fbm(t * 0.09 + 4.1),             // lulls and gusts
+      };
     }
+
+    // How far up the plant a gust has travelled after one branching level.
+    const LEVEL_LAG = 105;   // ms
 
     let W = 0, H = 0, dpr = 1;
     const pointer = { x: -1e4, y: -1e4, tx: -1e4, ty: -1e4, amp: 0, target: 0 };
@@ -1469,6 +1516,18 @@
       const usable = (W - edge * 2) - gap * (n - 1);
       const slot = usable / n;
 
+      // How much narrowing the broadest species needs in order to still reach
+      // its target height. Deriving this from the band means the row re-fits
+      // itself when the text beside it reflows, instead of the widest tree
+      // quietly falling short of the title.
+      let needed = 1;
+      trees.forEach(t => {
+        const spanX = Math.max(1e-6, t.box.maxX - t.box.minX);
+        const spanY = Math.max(1e-6, -t.box.minY);
+        needed = Math.min(needed, (slot / spanX) / ((band * t.rise) / spanY));
+      });
+      const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
+
       let x = edge;
       trees.forEach(t => {
         const b = t.box;
@@ -1477,14 +1536,15 @@
 
         let sy = (band * t.rise) / spanY;
         let sx = Math.min(sy, slot / spanX);
-        // Rather than let a broad species overlap its neighbour, narrow it —
-        // but only so far, then give up height instead of looking stretched.
-        if (sx < sy * MIN_RATIO) sy = sx / MIN_RATIO;
+        // Rather than let a broad species overlap its neighbour, narrow it.
+        if (sx < sy * ratio) sy = sx / ratio;
 
         t.sx = sx; t.sy = sy;
         t.ox = x + (slot - spanX * sx) / 2 - b.minX * sx;
         t.oy = treeBase;
-        t.width = Math.max(0.9, Math.min(2.6, (sx + sy) * 0.17));
+        t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
+        t.tipWidth = Math.max(0.6, t.width * 0.24);
+        t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
         x += slot + gap;
       });
 
@@ -1512,11 +1572,37 @@
         u.ox = spots[i] ?? (edge + hash(i, 9) * spanW);
         u.oy = treeBase;                    // same ground line as the trees
         u.width = Math.max(0.5, Math.min(1.4, sy * 0.16));
+        u.tipWidth = Math.max(0.45, u.width * 0.5);
+        u.tipTone = u.tipTone || `rgb(${u.tip},${u.tip},${u.tip})`;
       });
     }
 
+    // Fraction of full growth per second, so every plant takes the same time
+    // to withdraw regardless of how many levels deep it branches.
+    const GROW_RATE = 1.25;
+    let lastNow = 0;
+
     function render(now) {
       ctx.clearRect(0, 0, W, H);
+
+      // Ungrowing runs at a fixed rate rather than easing exponentially, so
+      // each level takes the same time to withdraw and the retreat reads as a
+      // steady march down the plant.
+      const dt = lastNow ? Math.min(0.05, (now - lastNow) / 1000) : 0;
+      lastNow = now;
+      for (const p of plants) {
+        if (p.grow !== p.growTarget) {
+          const step = GROW_RATE * dt;
+          p.grow = p.grow < p.growTarget
+            ? Math.min(p.growTarget, p.grow + step)
+            : Math.max(p.growTarget, p.grow - step);
+        }
+        if (p.grow >= 1) { p.front = Infinity; p.shrink = 1; }
+        else {
+          p.front = p.grow * (p.maxDepth + SOFT);
+          p.shrink = 0.5 + 0.5 * p.grow;
+        }
+      }
 
       // slow easing on both the pointer and its strength, so the grove drifts
       // rather than snaps
@@ -1530,17 +1616,30 @@
 
       for (const p of plants) {
         if (!p.sx) continue;
-        const buckets = [];
-        const give = p.kind === 'under' ? 1.9 : 1;   // small plants flex more
-        // each plant answers the same wind with its own stiffness and lag,
-        // so the grove never moves in lockstep
-        const gust = wind(now - p.lag, p.ox) * p.stiff;
+        const buckets = [], tipSegs = [];
+        // The scrub is only tens of pixels tall, so the same bend per segment
+        // barely shows on it. It needs a much larger multiplier to read as
+        // moving at all next to the trees.
+        const give = p.kind === 'under' ? 4.5 : 1;
+        // One gust value per branching level, not one per plant. Each level is
+        // sampled slightly later than the one below it, so a gust runs up the
+        // plant as a wave instead of swinging every part at once, and each
+        // level takes only the frequencies its thickness would allow: the
+        // trunk leans on the slow swell, twigs get the flutter as well.
+        const levels = [];
+        for (let d = 0; d <= p.maxDepth; d++) {
+          const dn = p.maxDepth ? d / p.maxDepth : 1;
+          const w = windAt(now - p.lag - d * LEVEL_LAG, p.ox);
+          levels[d] = (w.swell +
+                       w.ripple * (0.25 + 0.75 * dn) +
+                       w.flutter * dn * dn) * w.calm * p.stiff;
+        }
 
         walk(p, p.sx, p.sy, p.ox, p.oy, (depth, x, y) => {
           const d = depth / p.maxDepth;
           // the 0.16 floor lets the trunk lean too, so whole plants move
           // rather than only their twigs
-          let b = gust * 0.0072 * (0.16 + 0.84 * d) * give * breeze;
+          let b = levels[depth] * 0.0072 * (0.16 + 0.84 * d) * give * breeze;
           if (pointer.amp > 0.002) {
             const dx = x - pointer.x, dy = y - pointer.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1552,7 +1651,7 @@
             }
           }
           return b;
-        }, buckets);
+        }, buckets, tipSegs);
 
         const [tone0, tone1] = p.tone;
         for (let depth = 0; depth < buckets.length; depth++) {
@@ -1560,11 +1659,23 @@
           if (!seg) continue;
           const g = Math.round(tone0 + (depth / p.maxDepth) * (tone1 - tone0));
           ctx.strokeStyle = `rgb(${g},${g},${g})`;
-          ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.76, depth));
+          ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, depth));
           ctx.beginPath();
           for (let k = 0; k < seg.length; k += 4) {
             ctx.moveTo(seg[k], seg[k + 1]);
             ctx.lineTo(seg[k + 2], seg[k + 3]);
+          }
+          ctx.stroke();
+        }
+
+        // Twig ends drawn last, so the highlight sits over the branches.
+        if (tipSegs.length) {
+          ctx.strokeStyle = p.tipTone;
+          ctx.lineWidth = p.tipWidth;
+          ctx.beginPath();
+          for (let k = 0; k < tipSegs.length; k += 4) {
+            ctx.moveTo(tipSegs[k], tipSegs[k + 1]);
+            ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
           }
           ctx.stroke();
         }
@@ -1587,6 +1698,25 @@
 
     window.addEventListener('blur', () => { pointer.target = 0; });
     document.addEventListener('pointerleave', () => { pointer.target = 0; });
+
+    // Press a tree and it withdraws into itself, twigs first; let go and it
+    // grows back. Listening on the window keeps the canvas pointer-transparent,
+    // so this can never swallow a click meant for the page.
+    window.addEventListener('pointerdown', e => {
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (x < 0 || y < 0 || x > r.width || y > r.height) return;
+      let hit = null, best = Infinity;
+      for (const t of trees) {
+        const d = Math.abs(x - t.ox);
+        if (d < best) { best = d; hit = t; }
+      }
+      if (hit) hit.growTarget = 0;
+    });
+
+    const regrow = () => { for (const t of trees) t.growTarget = 1; };
+    window.addEventListener('pointerup', regrow);
+    window.addEventListener('pointercancel', regrow);
 
     const relayout = () => { layout(); if (!running) render(performance.now()); };
     const ro = new ResizeObserver(relayout);
