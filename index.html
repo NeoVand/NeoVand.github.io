@@ -52,6 +52,12 @@
     .hero-lead {
       position: relative;
       min-height: 0;
+      /* Pressing a tree on a touch screen would otherwise long-press onto the
+         visually-hidden heading underneath and pop up the selection handles. */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* bleeds past the column so swaying branches are never clipped;
@@ -853,7 +859,7 @@
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#140820,#0d0618)">
         <a class="card-link" href="https://macmac.lol/" target="_blank" rel="noopener" aria-label="Open the MacMac demo"></a>
         <div class="card-thumb">
-          <img src="https://macmac.lol/og-image.png" alt="MacMac" loading="lazy" />
+          <img src="media/macmac.jpg" alt="MacMac" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
@@ -895,20 +901,20 @@
         </div>
       </article>
 
-      <!-- Gradient Descent Explorer -->
+      <!-- gradientlab.ai -->
       <article class="card"
          data-categories="educational ml"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#180828,#0f0520)">
-        <a class="card-link" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener" aria-label="Open the Gradient Descent Explorer demo"></a>
+        <a class="card-link" href="https://gradientlab.ai" target="_blank" rel="noopener" aria-label="Open gradientlab.ai"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/GradientDescent/screenshot.gif" alt="Gradient Descent Explorer" loading="lazy" />
+          <img src="https://neovand.github.io/GradientDescent/screenshot.gif" alt="gradientlab.ai" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
-            <span class="card-title">Gradient Descent Explorer</span>
+            <span class="card-title">gradientlab.ai</span>
             <span class="card-actions">
               <a class="card-repo" href="https://github.com/NeoVand/GradientDescent" target="_blank" rel="noopener"
-                 title="Source on GitHub" aria-label="Gradient Descent Explorer source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+                 title="Source on GitHub" aria-label="gradientlab.ai source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
               <span class="card-arrow">↗</span>
             </span>
           </div>
