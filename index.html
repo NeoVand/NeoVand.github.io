@@ -518,6 +518,14 @@
     footer a:hover { color: var(--muted); }
 
     /* ─── RESPONSIVE ─── */
+    /* On a wide window the container opens up and the gallery runs four
+       across, rather than leaving three stretched cards in a sea of margin. */
+    @media (min-width: 1500px) {
+      .hero, .gallery-wrap, .research-inner { max-width: 1520px; }
+      .grid { grid-template-columns: repeat(4, 1fr); }
+      .research-grid { grid-template-columns: repeat(6, 1fr); }
+    }
+
     @media (max-width: 900px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
       .hero {
