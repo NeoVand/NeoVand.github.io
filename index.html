@@ -1487,7 +1487,85 @@
     // How far up the plant a gust has travelled after one branching level.
     const LEVEL_LAG = 105;   // ms
 
+    // A defocused moon, pre-rendered once and stamped behind the grove. Built
+    // from two gradients: a wide halo, and a disc with a flat-ish core and a
+    // soft edge — which is what an out-of-focus disc looks like, rather than
+    // the single falloff of a blurred point.
+    // The sprite is mostly halo: the disc is a small fraction of it, so the
+    // glow can reach well past the moon without enlarging the moon itself.
+    const moon = document.createElement('canvas');
+    moon.width = moon.height = 1024;
+    let moonReady = false;
+    {
+      const C = 512, DISC = 94;
+      const g = moon.getContext('2d');
+
+      // The glow it casts into the sky. Many stops approximating an
+      // exponential falloff, reaching true zero well inside the sprite: a
+      // gradient that is still faintly non-zero at the sprite edge leaves a
+      // visible rim, and shows a hard seam anywhere the canvas clips it.
+      let grad = g.createRadialGradient(C, C, DISC * 0.8, C, C, C);
+      grad.addColorStop(0.00, 'rgba(255,255,255,0.32)');
+      grad.addColorStop(0.05, 'rgba(255,255,255,0.220)');
+      grad.addColorStop(0.10, 'rgba(255,255,255,0.145)');
+      grad.addColorStop(0.16, 'rgba(255,255,255,0.085)');
+      grad.addColorStop(0.23, 'rgba(255,255,255,0.045)');
+      grad.addColorStop(0.30, 'rgba(255,255,255,0.020)');
+      grad.addColorStop(0.37, 'rgba(255,255,255,0.007)');
+      grad.addColorStop(0.45, 'rgba(255,255,255,0)');
+      grad.addColorStop(1.00, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 1024, 1024);
+
+      // The moon face itself is a CC0 drawing (gnokii / Open Clipart, via
+      // Wikimedia Commons). It loads separately rather than being inlined —
+      // it is ~236 KB of path data — and is stamped into the sprite once it
+      // arrives, leaving only the halo above until then.
+      const art = new Image();
+      art.decoding = 'async';
+      art.onload = () => {
+        const d = DISC * 2;
+        // the artwork tops out at #ccc, which reads grey against this
+        // background — lift it towards white without flattening the craters
+        if ('filter' in g) g.filter = 'brightness(1.28) contrast(1.06)';
+        g.drawImage(art, C - DISC, C - DISC, d, d);
+        if ('filter' in g) g.filter = 'none';
+        moonReady = true;
+        if (!running) render(performance.now());
+      };
+      art.src = 'media/moon.svg';
+    }
+
+    // ─── Fireflies on the centre tree ───
+    // A soft dot, stamped rather than drawn as a gradient each frame.
+    const spark = document.createElement('canvas');
+    spark.width = spark.height = 64;
+    {
+      const g = spark.getContext('2d');
+      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0.00, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.14, 'rgba(255,255,255,0.85)');
+      grad.addColorStop(0.34, 'rgba(255,255,255,0.25)');
+      grad.addColorStop(0.62, 'rgba(255,255,255,0.06)');
+      grad.addColorStop(1.00, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 64, 64);
+    }
+
+    const fireflies = Array.from({ length: 18 }, (_, i) => ({
+      pick: hash(i, 40),                        // which twig it perches on
+      phase: hash(i, 41) * Math.PI * 2,
+      speed: 0.7 + hash(i, 42) * 1.6,           // blink rate
+      duty: 0.30 + hash(i, 43) * 0.34,          // how much of the cycle it is lit
+      size: 1.6 + hash(i, 44) * 1.5,
+      x: 0, y: 0, alpha: 0,
+      state: 'perched',        // perched ⇄ flying
+      hold: 0,                 // stays lit this long after landing
+      sx: 0, sy: 0, t: 0, dur: 1, delay: 0, bow: 0, lift: 0,
+    }));
+
     let W = 0, H = 0, dpr = 1;
+    let moonX = 0, moonY = 0, moonR = 0;
     const pointer = { x: -1e4, y: -1e4, tx: -1e4, ty: -1e4, amp: 0, target: 0 };
 
     function layout() {
@@ -1507,6 +1585,15 @@
         treeBase = linksEl.getBoundingClientRect().bottom - rect.top;
       }
       const band = Math.max(40, treeBase - top);
+
+      // sits high and left, so the canopies break across it
+      // moonR is the sprite's half-size; the glow dies out by about 0.53 of
+      // it and the disc is smaller still. Keep the whole glow inside the
+      // canvas, or its edge shows as a straight cut across the sky.
+      moonR = band * 0.34;
+      const halo = moonR * 0.55;
+      moonX = Math.min(Math.max(W * 0.30, halo + 4), W - halo - 4);
+      moonY = Math.max(top + band * 0.15, halo + 4);
 
       // a gutter inside the bleed, so the outermost plants still have somewhere
       // to lean when a gust hits
@@ -1584,6 +1671,7 @@
 
     function render(now) {
       ctx.clearRect(0, 0, W, H);
+      if (moonR > 0) ctx.drawImage(moon, moonX - moonR, moonY - moonR, moonR * 2, moonR * 2);
 
       // Ungrowing runs at a fixed rate rather than easing exponentially, so
       // each level takes the same time to withdraw and the retreat reads as a
@@ -1679,6 +1767,102 @@
           }
           ctx.stroke();
         }
+
+        if (p === host) hostTips = tipSegs;
+      }
+
+      drawFireflies(now, dt, hostTips);
+    }
+
+    // Whichever tree currently carries them. Pressing that tree sends the
+    // swarm off to a different one; there is no returning home.
+    let host = trees[2];
+    let hostTips = null;
+
+    function migrate() {
+      const others = trees.filter(t => t !== host);
+      host = others[(Math.random() * others.length) | 0];
+      for (const f of fireflies) {
+        f.state = 'flying';
+        f.pick = Math.random();                  // a twig on the new tree
+        f.sx = f.x; f.sy = f.y;
+        f.t = 0;
+        f.delay = Math.random() * 0.45;          // they leave raggedly
+        f.dur = 1.5 + Math.random() * 1.2;
+        f.bow = (Math.random() - 0.5) * 0.9;     // how far the arc bends sideways
+        f.lift = 0.18 + Math.random() * 0.30;    // and how high it rises
+      }
+    }
+
+    const easeInOut = e => (e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2);
+
+    function drawFireflies(now, dt, tips) {
+      const n = tips ? tips.length / 4 : 0;
+
+      for (let i = 0; i < fireflies.length; i++) {
+        const f = fireflies[i];
+
+        // the twig it is heading for, or sitting on — recomputed every frame,
+        // so the target tracks the branch as the wind moves it
+        let px = f.x, py = f.y;
+        if (n) {
+          const k = Math.min(n - 1, Math.floor(f.pick * n)) * 4;
+          px = tips[k + 2];
+          py = tips[k + 3];
+        }
+
+        if (f.state === 'flying') {
+          if (f.delay > 0) {
+            f.delay -= dt;                       // still sitting, lit, about to go
+            f.alpha += (1 - f.alpha) * 0.2;
+          } else {
+            f.t = Math.min(1, f.t + dt / f.dur);
+            const e = easeInOut(f.t);
+
+            // Quadratic Bezier: the control point is offset perpendicular to
+            // the crossing and lifted, which gives a curved, unhurried path
+            // instead of a straight dash between trees.
+            const dx = px - f.sx, dy = py - f.sy;
+            const cx = (f.sx + px) / 2 - dy * f.bow;
+            const cy = (f.sy + py) / 2 + dx * f.bow - Math.hypot(dx, dy) * f.lift;
+            const u = 1 - e;
+            // a small waver, fading out so the landing is clean
+            const wob = Math.sin(now * 0.005 + f.phase) * 4 * (1 - e);
+
+            f.x = u * u * f.sx + 2 * u * e * cx + e * e * px + wob;
+            f.y = u * u * f.sy + 2 * u * e * cy + e * e * py + wob * 0.6;
+            f.alpha += (0.95 - f.alpha) * 0.2;   // stays lit the whole crossing
+
+            if (f.t >= 1) {
+              f.state = 'perched';
+              f.hold = 0.9 + Math.random() * 0.5;   // glows a moment after landing
+            }
+          }
+        } else {
+          if (!n) continue;
+          f.x = px; f.y = py;
+          if (f.hold > 0) {
+            f.hold -= dt;
+            f.alpha += (1 - f.alpha) * 0.15;
+          } else {
+            const s = 0.5 + 0.5 * Math.sin(now * 0.001 * f.speed + f.phase);
+            const lit = s > 1 - f.duty ? (s - (1 - f.duty)) / f.duty : 0;
+            f.alpha += (lit - f.alpha) * 0.14;
+          }
+        }
+
+        if (f.alpha > 0.015) {
+          // The halo stays the same size in flight — scaling it up just reads
+          // as going out of focus — and a hard core keeps the centre white.
+          const r = f.size * 3.0;
+          ctx.globalAlpha = Math.min(1, f.alpha);
+          ctx.drawImage(spark, f.x - r, f.y - r, r * 2, r * 2);
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, Math.max(0.7, f.size * 0.44), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
       }
     }
 
@@ -1711,7 +1895,10 @@
         const d = Math.abs(x - t.ox);
         if (d < best) { best = d; hit = t; }
       }
-      if (hit) hit.growTarget = 0;
+      if (hit) {
+        hit.growTarget = 0;
+        if (hit === host) migrate();   // disturb their tree and they move on
+      }
     });
 
     const regrow = () => { for (const t of trees) t.growTarget = 1; };
