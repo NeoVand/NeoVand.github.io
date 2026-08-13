@@ -388,6 +388,10 @@
       filter: saturate(0.7);
     }
 
+    /* The Physiophone render is a transparent PNG of a dark necklace, which
+       all but vanishes against the dark card. It needs a light ground. */
+    .rcard-thumb.on-grey { background: #a8a8a8; }
+
     .rcard-thumb img.loaded { opacity: 1; }
     .rcard:hover .rcard-thumb img {
       transform: scale(1.05);
@@ -1252,7 +1256,7 @@
         </a>
 
         <a class="rcard" href="https://www.media.mit.edu/projects/physiophone/overview/" target="_blank" rel="noopener">
-          <div class="rcard-thumb">
+          <div class="rcard-thumb on-grey">
             <img src="https://dam-prod.media.mit.edu/thumb/2021/02/24/perspective copy.png.1400x1400.png" alt="Physiophone" loading="lazy" />
           </div>
           <div class="rcard-body">
