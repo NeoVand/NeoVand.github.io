@@ -427,6 +427,149 @@
       .research-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
+    /* Older work has no page of its own to link to, so those cards are buttons
+       that open a modal instead of anchors. Strip the UA button styling so they
+       sit in the same grid as the anchors above. */
+    button.rcard {
+      font: inherit;
+      text-align: left;
+      padding: 0;
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    /* ─── PROJECT MODAL ─── */
+    .modal[hidden] { display: none; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 24px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      animation: modal-fade 180ms var(--ease);
+    }
+
+    .modal-panel {
+      position: relative;
+      width: 100%;
+      max-width: 780px;
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 14px;
+      padding: 32px 36px 36px;
+      margin: auto;
+      animation: modal-rise 220ms var(--ease);
+    }
+
+    @keyframes modal-fade { from { opacity: 0 } }
+    @keyframes modal-rise { from { opacity: 0; transform: translateY(12px) } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .modal-backdrop, .modal-panel { animation: none; }
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 160ms, border-color 160ms;
+    }
+
+    .modal-close:hover { color: var(--fg); border-color: var(--border-2); }
+
+    .modal-title {
+      font-size: 21px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      margin: 0 40px 4px 0;
+    }
+
+    .modal-year {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .modal-body p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #b8b8b8;
+      margin-bottom: 14px;
+    }
+
+    .modal-body a { color: #ddd; text-decoration: underline; text-underline-offset: 2px; }
+
+    .modal-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 4px;
+      padding: 9px 15px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #ddd;
+      text-decoration: none;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-2);
+      border-radius: 8px;
+      transition: background 160ms, color 160ms;
+    }
+
+    .modal-link:hover { background: rgba(255,255,255,0.09); color: #fff; }
+    .modal-link[hidden] { display: none; }
+
+    /* Every one of these figures is a diagram or plot drawn on white, so the
+       gallery gives them a light ground rather than fighting the dark panel. */
+    .modal-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .modal-gallery img {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    @media (max-width: 600px) {
+      .modal { padding: 0; }
+      .modal-panel { border-radius: 0; border: none; min-height: 100%; padding: 28px 20px 32px; }
+    }
+
     /* ─── ABOUT ─── */
     .section-label {
       font-size: 11px;
@@ -1369,9 +1512,222 @@
           </div>
         </a>
 
+        <button class="rcard" type="button" data-proj="ontology">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/ontology.jpg" alt="Ontology Generation from Unstructured Data" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Ontology Generation from Unstructured Data</span>
+            <p class="rcard-desc">Inducing an ontology tree from a million social media posts so the set can be navigated by meaning.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="storytelling">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/storytelling.jpg" alt="Fundamental Laws of Storytelling" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Fundamental Laws of Storytelling</span>
+            <p class="rcard-desc">Turning a walk through a dataset's ontology tree into readable narrative.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="beauty">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/beauty.jpg" alt="Beauty and the Code" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Beauty and the Code</span>
+            <p class="rcard-desc">Testing Schmidhuber's compression progress theory of beauty on 300 human subjects.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="socialnets">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/socialnets.jpg" alt="From Neural Networks to Social Networks" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">From Neural Networks to Social Networks</span>
+            <p class="rcard-desc">Social force as a rate-based neural network, and a way to see the Milgram gaze experiment.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="allenapi">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/allenapi.jpg" alt="Python API for the Allen Connectivity Atlas" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Allen Connectivity Atlas API</span>
+            <p class="rcard-desc">A Python client for fetching, searching and visualizing mouse brain connectivity data.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="scriptdraw">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/scriptdraw.jpg" alt="Script-Draw programming language" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Script-Draw Language</span>
+            <p class="rcard-desc">A REPL-driven language for creative coding, where a hand-drawn line arrives as a list of points.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="beating">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/beating.jpg" alt="Beating hypothesis for time-scales in complex networks" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Beating and Network Time-Scales</span>
+            <p class="rcard-desc">Beating between oscillators as the source of many time-scales, and of time perception.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="communicability">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/communicability.jpg" alt="Communicability in complex networks" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Communicability in Complex Networks</span>
+            <p class="rcard-desc">A new bound on communicability, a measure built on Beer-Lambert attenuation, applied to stroke.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="gridopto">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/gridopto.jpg" alt="Grid optogenetics" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Grid Optogenetics</span>
+            <p class="rcard-desc">Robotic laser stimulation on a grid, building an overcomplete dictionary of cortical responses.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="calibrated">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/calibrated.jpg" alt="Calibrated sensing for sparse recovery of video" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Calibrated Sensing for Video</span>
+            <p class="rcard-desc">Fitting the sensing matrix to the signal's energy distribution to escape the complexity/RIP trade-off.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="shiftadaptive">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/shiftadaptive.jpg" alt="Shift-adaptive sparse recovery for video" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Shift-Adaptive Sparse Recovery</span>
+            <p class="rcard-desc">Tuning the shifts inside the sensing matrix by binary search for a large gain in accuracy.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="brownian">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/brownian.jpg" alt="Brownian bridge vectorization" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Brownian Bridge Vectorization</span>
+            <p class="rcard-desc">Images redrawn as wandering paths, using segmentation and travelling salesman tours.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="opticalflow">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/opticalflow.jpg" alt="Optical flow analysis of VSD signals" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Optical Flow of Cortical Waves</span>
+            <p class="rcard-desc">Measuring the velocity of cortical waves to locate sinks and sources. Published in Nature Neuroscience.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="rodtheory">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/rodtheory.jpg" alt="Rod theory applied to foldable tents" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Rod Theory for Foldable Tents</span>
+            <p class="rcard-desc">Modelling how a pop-up tent folds with the same theory used for DNA mechanics.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="neuralfield">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/neuralfield.jpg" alt="Real-time neural field simulator" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Real-time Neural Field Simulator</span>
+            <p class="rcard-desc">Integrating neural field equations fast enough to watch bumps, stripes and labyrinths form.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="satellite">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/satellite.jpg" alt="Real-time satellite attitude control system" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Satellite Attitude Control</span>
+            <p class="rcard-desc">A Simulink attitude controller flown by joystick, with injected noise, rendered in VR.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="tumor">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/tumor.jpg" alt="Tumor growth simulation using cellular automata" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Tumour Growth by Cellular Automata</span>
+            <p class="rcard-desc">Local rules for tissue growth under varying conditions, shown here as a simulated tumour.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="seizure">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/seizure.jpg" alt="Seizure suppression using optogenetics" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Optogenetic Seizure Suppression</span>
+            <p class="rcard-desc">A two-part viral vector that finds epileptic tissue, marks it, and makes it silenceable by light.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="compacttopology">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/compacttopology.jpg" alt="Compact topology affects central forces" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Compact Topology and Central Forces</span>
+            <p class="rcard-desc">On a cylinder, a two-dimensional electrostatic force stops decaying to zero at long range.</p>
+          </div>
+        </button>
+
+        <button class="rcard" type="button" data-proj="unknotting">
+          <div class="rcard-thumb">
+            <img src="media/legacy/thumbs/unknotting.jpg" alt="Unknotting behavior of knots" loading="lazy" />
+          </div>
+          <div class="rcard-body">
+            <span class="rcard-title">Unknotting Behaviour of Knots</span>
+            <p class="rcard-desc">A polynomial encoding of the graph left behind when a knot's crossings are switched.</p>
+          </div>
+        </button>
+
       </div>
     </div>
   </section>
+
+  <!-- Detail view for the older projects, which have no page of their own -->
+  <div class="modal" id="proj-modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" type="button" data-close aria-label="Close">✕</button>
+      <h3 class="modal-title" id="modal-title"></h3>
+      <p class="modal-year"></p>
+      <div class="modal-body"></div>
+      <a class="modal-link" target="_blank" rel="noopener" hidden></a>
+      <div class="modal-gallery"></div>
+    </div>
+  </div>
 
   <footer>
     <p>© 2025 Neo Mohsenvand</p>
@@ -2051,6 +2407,275 @@
         });
       });
     });
+  </script>
+
+  <script>
+  // ─── Older projects: card → modal ───
+  // These predate the current site and have no page to link out to, so the
+  // write-up and the figures live here instead.
+  (() => {
+    const PDF = 'https://1554bc9a-5d6c-42cc-a343-10a96a535ed0.filesusr.com/ugd/';
+
+    const PROJECTS = {
+      ontology: {
+        title: 'Ontology Generation from Unstructured Data',
+        year: 'MIT Media Lab, Laboratory for Social Machines',
+        body: [
+          'Half of a research proposal on exploring very large collections of social media posts. The idea is to treat the posts, their replies and their attributes as a network, recover its community structure recursively, and read the resulting hierarchy as an ontology tree.',
+          'That tree becomes the navigation surface. You can move between levels of abstraction rather than scrolling a flat list, compare ongoing trends when there are far too many time series to plot at once, and search semantically instead of by keyword. Different ontologies over the same data simplify different kinds of search.',
+          'The underlying graph is held in a Neo4j database so that other people in the lab can run their own queries against it.'
+        ],
+        link: { label: 'Read the full proposal', href: PDF + 'a45a4a_b34fd433ea7746c9809d9310b051f687.pdf' },
+        images: 3
+      },
+      storytelling: {
+        title: 'Fundamental Laws of Storytelling',
+        year: 'MIT Media Lab, Laboratory for Social Machines',
+        body: [
+          'The companion half of the same proposal. Once a dataset has been folded into an ontology tree, a description of that dataset is just a traversal of the tree.',
+          'Parent nodes hold information aggregated from their children, so walking the tree emits a continuous sequence of bullet points, which a natural language generation step then stitches into readable prose.',
+          'Because the traversal is parameterized, the same data can be retold at different lengths, with different sentiment and different emphasis, by changing how you walk rather than by rewriting anything.'
+        ],
+        link: { label: 'Read the full proposal', href: PDF + 'a45a4a_b34fd433ea7746c9809d9310b051f687.pdf' },
+        images: 1
+      },
+      beauty: {
+        title: 'Beauty and the Code',
+        year: 'Computational aesthetics',
+        body: [
+          'An attempt to put a computational account of beauty and interestingness perception on empirical footing, starting from Jürgen Schmidhuber’s coherence progress (or compression progress) theory, which had mostly been used to drive exploration in intelligent agents.',
+          'To make the theory testable, mathematical formulas were treated as the generative algorithms behind two-dimensional plots. Over 100 people first rated how complex they found a set of formulas, and those ratings were fitted with Bayesian and evolutionary models of formula complexity perception. The fitted models then generated plots spanning a wide range of perceived complexity.',
+          'More than 200 further subjects rated those plots for interestingness, before and after being shown the formula that generated them. Two hypotheses held: interestingness rises once you see the formula behind a plot, and it rises further for a simple formula than for a complex one. Both agree with Schmidhuber’s framework, and the fitted relationship between the two suggests a refinement of it.'
+        ],
+        link: { label: 'Read the full article', href: PDF + 'a45a4a_03f77d5d6fca440e8e88b683e56d5673.pdf' },
+        images: 6
+      },
+      socialnets: {
+        title: 'From Neural Networks to Social Networks',
+        year: 'Essay',
+        body: [
+          'An informal essay on modelling social force through a simple rate-based neural network, written partly as a critique of the social <em>F = ma</em> analogy and of where it stops being useful.',
+          'It introduces a visualization of the Milgram crowd gaze experiment as a thinking tool, one that makes competition bias and attention inversion visible, and closes with a modified model that takes both into account.'
+        ],
+        link: { label: 'Read the full essay', href: PDF + 'a45a4a_ecc4dbbf7dd14dc5985b77b9d6b8cf95.pdf' },
+        images: 3
+      },
+      allenapi: {
+        title: 'Python API for the Allen Connectivity Atlas',
+        year: 'Open-source tooling',
+        body: [
+          'A Python client for the <a href="http://connectivity.brain-map.org/" target="_blank" rel="noopener">Allen Connectivity Atlas</a>, so that fetching, searching and visualizing mouse brain connectivity data and the underlying section images takes a few lines rather than a pipeline.',
+          'Beyond retrieval, it was designed to let the user run basic data mining and machine learning directly on the volumes it returns.'
+        ],
+        images: 4
+      },
+      scriptdraw: {
+        title: 'Script-Draw Programming Language',
+        year: 'Creative coding',
+        body: [
+          'A language for creative coding. Where Processing, OpenFrameworks and Cinder are compiled languages or APIs, Script-Draw is dynamically typed and driven from a REPL, so results can be evaluated interactively while you work.',
+          'A short script sets up a drawing surface. You then draw a line by hand, and that line arrives in the scripting environment as a list of points. From there the coordinates and their ordering are yours to manipulate, and a single drawn stroke can be turned into a whole family of forms.',
+          'The same pipeline drives audio and general analog signals, which means it can also control external devices.'
+        ],
+        images: 2
+      },
+      beating: {
+        title: 'Beating Hypothesis for Time-Scales in Complex Networks',
+        year: 'Essay',
+        body: [
+          'Beating is a familiar phenomenon with some under-explored consequences. This report demonstrates how robust it stays under various kinds of noise and disturbance.',
+          'The central claim is that beating can account for the coexistence of very different time-scales in a complex network, without anything in the network being tuned to those scales. It ends with a speculation about time perception in the brain, built on a simple beating clock.'
+        ],
+        link: { label: 'Read the full essay', href: PDF + 'a45a4a_990f5fe4add743feb44d6abf962f3b88.pdf' },
+        images: 2
+      },
+      communicability: {
+        title: 'Communicability in Complex Networks',
+        year: 'Network theory',
+        body: [
+          'Starting from the standard properties of network communicability, this work proves a new bound relating it to the number of edges in the graph.',
+          'It then defines an alternative measure grounded in physical networks and exponential signal attenuation, following the Beer-Lambert law. The new measure recovers the topology of the network slightly better than the usual one.',
+          'Both measures are finally applied to brain connectivity data, before and eight weeks after stroke.'
+        ],
+        link: { label: 'Read the full report', href: PDF + 'a45a4a_89c6be3a4e784716a043854474833640.pdf' },
+        images: 3
+      },
+      gridopto: {
+        title: 'Grid Optogenetics',
+        year: 'MSc thesis',
+        body: [
+          'A method for acquiring an overcomplete dictionary of evoked cortical signals. The cortex of a ChR2 transgenic mouse is stimulated at a grid of equally spaced points, one at a time.',
+          'The grid is generated automatically from the size and geometry of the craniotomy window and registered to the hind-limb primary sensory cortex, and a robotic system steers the laser beam between points. I designed the experiment and programmed the robot.'
+        ],
+        images: 1
+      },
+      calibrated: {
+        title: 'Calibrated Sensing for Sparse Recovery of Video',
+        year: 'Compressed sensing',
+        body: [
+          'Sparse recovery over shift-invariant unions of subspaces runs into a trade-off between computational complexity and the restricted isometry property of the sensing matrix.',
+          'The strategy here is to calibrate the sensing matrix to the energy distribution along the signal. The matrix ends up much smaller, and its restricted isometry property improves rather than degrades. Results were in preparation for publication.'
+        ],
+        images: 3
+      },
+      shiftadaptive: {
+        title: 'Shift-Adaptive Sparse Recovery for Video',
+        year: 'Compressed sensing',
+        body: [
+          'The more advanced form of the calibrated sensing work. Instead of fixing the shifts in the sensing matrix once, they are tuned iteratively by a simple binary search over the search intervals.',
+          'This costs more computation per iteration but improves the accuracy of recovery substantially. Results were in preparation for publication.'
+        ],
+        images: 2
+      },
+      brownian: {
+        title: 'Brownian Bridge Vectorization',
+        year: 'Generative art',
+        body: [
+          'These images are built from two-dimensional Brownian bridges, morphological segmentation of a source image, and approximate solutions to the travelling salesman problem, so that a photograph is redrawn as a single wandering path.',
+          'The method is straightforward to implement in the Script-Draw language.'
+        ],
+        // The old Drive link for this report is no longer shared publicly.
+        images: 4
+      },
+      opticalflow: {
+        title: 'Optical Flow Analysis of VSD Signals',
+        year: 'Published in Nature Neuroscience',
+        body: [
+          'Optical flow algorithms applied to voltage-sensitive dye imaging, to measure the velocity of waves travelling across the cortex. Analysing the resulting vector fields locates the cortical sinks and sources those waves run between.',
+          'The work contributed to Mohajerani MH*, Chan AW*, Mohsenvand M, LeDue J, Liu R, McVea D, Boyd J, Reimer M, Wang YT, Murphy TH (2013), <em>Spontaneous cortical activity alternates between motifs defined by regional axonal projections</em>, Nature Neuroscience 16:1426–1435, which was selected for the journal cover.'
+        ],
+        link: { label: 'Read the paper', href: 'http://www.nature.com/neuro/journal/v16/n10/abs/nn.3499.html' },
+        images: 3
+      },
+      rodtheory: {
+        title: 'Rod Theory Applied to Foldable Tents',
+        year: 'Applied mathematics',
+        body: [
+          'Rod theory describes how a thin elastic filament bends and twists. It has found recent use in the mechanics of DNA molecules and in computer graphics.',
+          'Here it is applied to a pop-up tent, to model how the frame stores and releases energy as it is folded and sprung open.'
+        ],
+        // The old Drive link for this report is no longer shared publicly.
+        images: 4
+      },
+      neuralfield: {
+        title: 'Real-time Neural Field Simulator',
+        year: 'Simulation',
+        body: [
+          'A simulator for neural field models, integrating the governing integro-differential equations with a simple Eulerian scheme and running fast enough to explore parameter space by hand.',
+          'Because the response is visible as you change the connectivity kernel, a whole range of pattern-formation regimes can be found by feel: bumps, spots, rings, stripes and labyrinths.'
+        ],
+        images: 5
+      },
+      satellite: {
+        title: 'Real-time Satellite Attitude Control System',
+        year: 'Control engineering',
+        body: [
+          'A satellite attitude control system built in Simulink. Attitude is commanded live from a joystick while noise and distortion are injected into the loop, and the resulting motion is displayed as a virtual reality view of the spacecraft.'
+        ],
+        images: 2
+      },
+      tumor: {
+        title: 'Tumour Growth Simulation using Cellular Automata',
+        year: 'Simulation',
+        body: [
+          'A set of cellular automaton rules for simulating tissue growth under varying nutrient and crowding conditions. The figures show a tumour grown under those rules.'
+        ],
+        images: 2
+      },
+      seizure: {
+        title: 'Seizure Suppression using Optogenetics',
+        year: 'Proposal',
+        body: [
+          'A proposal for desynchronizing and inhibiting seizure activity in epileptic patients using optogenetics.',
+          'The viral vector has two parts. Part T detects and marks the epileptic area by responding to seizure activity itself, and part S infects that marked area with NpHR so it can be silenced with light. The region also expresses a fluorescent protein, so a surgeon can see exactly which tissue was implicated.'
+        ],
+        images: 1
+      },
+      compacttopology: {
+        title: 'Compact Topology Affects Central Forces',
+        year: 'Theoretical physics',
+        body: [
+          'A short letter on central forces over manifolds with a compact dimension. For simplicity it works out a two-dimensional electrostatic-like interaction between two point charges embedded in a cylindrical space.',
+          'The form of the interaction turns out to differ from the flat two-dimensional case. The striking result is that at long range the force does not fall to zero but tends to a constant set by the inverse radius of the cylinder, while for very large radii or very short distances it approaches the classical form.'
+        ],
+        link: { label: 'Read the full report', href: PDF + 'a45a4a_db8b164fee43403396dff884955e8b00.pdf' },
+        images: 3
+      },
+      unknotting: {
+        title: 'Unknotting Behaviour of Knots',
+        year: 'Knot theory',
+        body: [
+          'A combinatorial representation of the process by which a knot comes undone. Switching the crossings of a knot leaves behind a graph structure, and this work introduces a simple polynomial representation of that structure to describe the unknotting.'
+        ],
+        images: 1
+      }
+    };
+
+    const modal = document.getElementById('proj-modal');
+    if (!modal) return;
+    const panel  = modal.querySelector('.modal-panel');
+    const elTitle = modal.querySelector('.modal-title');
+    const elYear  = modal.querySelector('.modal-year');
+    const elBody  = modal.querySelector('.modal-body');
+    const elLink  = modal.querySelector('.modal-link');
+    const elGal   = modal.querySelector('.modal-gallery');
+    const closeBtn = modal.querySelector('.modal-close');
+    let opener = null;
+
+    // The gallery filenames follow the thumbnails: <slug>-1.jpg … <slug>-N.jpg
+    function open(key, from) {
+      const p = PROJECTS[key];
+      if (!p) return;
+      opener = from || null;
+
+      elTitle.textContent = p.title;
+      elYear.textContent = p.year || '';
+      elYear.hidden = !p.year;
+      elBody.innerHTML = p.body.map(t => '<p>' + t + '</p>').join('');
+
+      if (p.link) {
+        elLink.href = p.link.href;
+        elLink.textContent = p.link.label + ' ↗';
+        elLink.hidden = false;
+      } else {
+        elLink.hidden = true;
+      }
+
+      elGal.innerHTML = '';
+      for (let i = 1; i <= p.images; i++) {
+        const img = document.createElement('img');
+        img.src = 'media/legacy/' + key + '-' + i + '.jpg';
+        img.alt = p.title + ', figure ' + i;
+        img.loading = 'lazy';
+        elGal.appendChild(img);
+      }
+
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      panel.scrollTop = 0;
+      modal.scrollTop = 0;
+      closeBtn.focus();
+    }
+
+    function close() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      elGal.innerHTML = '';        // stop any in-flight image loads
+      if (opener) { opener.focus(); opener = null; }
+    }
+
+    document.querySelectorAll('.rcard[data-proj]').forEach(card => {
+      card.addEventListener('click', () => open(card.dataset.proj, card));
+    });
+
+    modal.addEventListener('click', e => {
+      if (e.target.closest('[data-close]')) close();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !modal.hidden) close();
+    });
+  })();
   </script>
 
 </body>

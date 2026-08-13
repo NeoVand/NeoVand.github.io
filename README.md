@@ -9,9 +9,10 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 ## Structure
 
 ```
-/             ← gallery homepage
-/media/       ← thumbnails, and the moon behind the grove
-/archive/     ← original Three.js network visualization (preserved)
+/               ← gallery homepage
+/media/         ← thumbnails, and the moon behind the grove
+/media/legacy/  ← figures for the older projects, shown in their modals
+/archive/       ← original Three.js network visualization (preserved)
 ```
 
 ## The grove
