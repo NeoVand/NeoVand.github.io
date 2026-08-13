@@ -2122,6 +2122,11 @@
         }
       }
 
+      // Wander off to another tree now and then, but never mid-crossing:
+      // if any of them is still in the air the countdown just waits.
+      migrateIn -= dt;
+      if (migrateIn <= 0 && !fireflies.some(f => f.state === 'flying')) migrate();
+
       // slow easing on both the pointer and its strength, so the grove drifts
       // rather than snaps
       pointer.amp += (pointer.target - pointer.amp) * 0.035;
@@ -2139,6 +2144,10 @@
         // barely shows on it. It needs a much larger multiplier to read as
         // moving at all next to the trees.
         const give = p.kind === 'under' ? 4.5 : 1;
+        // The wind reads even more weakly on the scrub than the pointer does.
+        // A gust is spread over the branching levels, and these plants only
+        // have three, so almost none of it accumulates before the twig ends.
+        const windGive = p.kind === 'under' ? 13 : 1;
         // One gust value per branching level, not one per plant. Each level is
         // sampled slightly later than the one below it, so a gust runs up the
         // plant as a wave instead of swinging every part at once, and each
@@ -2157,7 +2166,7 @@
           const d = depth / p.maxDepth;
           // the 0.16 floor lets the trunk lean too, so whole plants move
           // rather than only their twigs
-          let b = levels[depth] * 0.0072 * (0.16 + 0.84 * d) * give * breeze;
+          let b = levels[depth] * 0.0072 * (0.16 + 0.84 * d) * windGive * breeze;
           if (pointer.amp > 0.002) {
             const dx = x - pointer.x, dy = y - pointer.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2209,7 +2218,14 @@
     let host = trees[2];
     let hostTips = null;
 
+    // They also move on by themselves every 20 to 30 seconds. The countdown
+    // runs on the clamped frame delta rather than the clock, so a grove that
+    // was scrolled out of view does not come back owing several crossings.
+    const MIGRATE_MIN = 20, MIGRATE_MAX = 30;
+    let migrateIn = MIGRATE_MIN + Math.random() * (MIGRATE_MAX - MIGRATE_MIN);
+
     function migrate() {
+      migrateIn = MIGRATE_MIN + Math.random() * (MIGRATE_MAX - MIGRATE_MIN);
       const others = trees.filter(t => t !== host);
       host = others[(Math.random() * others.length) | 0];
       for (const f of fireflies) {
