@@ -186,7 +186,8 @@
       flex-shrink: 0;
     }
 
-    .card-thumb img {
+    .card-thumb img,
+    .card-thumb video {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -197,8 +198,24 @@
       transition: opacity 300ms, transform 400ms var(--ease);
     }
 
-    .card-thumb img.loaded { opacity: 1; }
-    .card:hover .card-thumb img { transform: scale(1.04); }
+    .card-thumb img.loaded,
+    .card-thumb video.loaded { opacity: 1; }
+
+    .card:hover .card-thumb img,
+    .card:hover .card-thumb video { transform: scale(1.04); }
+
+    /* Whole-card link — sits under the repo icon */
+    .card-link {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      border-radius: var(--radius);
+    }
+
+    .card-link:focus-visible {
+      outline: 2px solid var(--accent, #6366f1);
+      outline-offset: 2px;
+    }
 
     /* "soon" badge */
     .soon-badge {
@@ -241,6 +258,13 @@
       line-height: 1.3;
     }
 
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-shrink: 0;
+    }
+
     .card-arrow {
       font-size: 15px;
       color: var(--muted);
@@ -253,6 +277,20 @@
       color: var(--accent, #6366f1);
       transform: translate(2px, -2px);
     }
+
+    /* Source-repo icon — must outrank .card-link */
+    .card-repo {
+      position: relative;
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      transition: color 150ms;
+      margin-top: 2px;
+    }
+
+    .card-repo:hover { color: #fff; }
+    .card-repo svg { display: block; }
 
     .card-desc {
       font-size: 12.5px;
@@ -483,6 +521,13 @@
 </head>
 <body>
 
+  <!-- Shared icon sprite -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="icon-github" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+    </symbol>
+  </svg>
+
   <!-- NAV -->
   <nav>
     <a class="nav-logo" href="/">Neo Mohsenvand</a>
@@ -507,300 +552,541 @@
       <button class="filter-btn" data-filter="educational">Educational</button>
       <button class="filter-btn" data-filter="art">Art</button>
       <button class="filter-btn" data-filter="game">Game</button>
-      <button class="filter-btn" data-filter="speculative">Speculative</button>
+      <button class="filter-btn" data-filter="alife">Artificial Life</button>
+      <button class="filter-btn" data-filter="webgpu">WebGPU</button>
+      <button class="filter-btn" data-filter="ai">AI</button>
+      <button class="filter-btn" data-filter="ml">Machine Learning</button>
     </div>
 
     <div class="grid" id="grid">
 
-      <!-- Swarm | featured, art -->
-      <a class="card" href="https://neovand.github.io/swarm/" target="_blank" rel="noopener"
-         data-categories="featured art"
+      <!-- Swarm -->
+      <article class="card"
+         data-categories="featured art alife webgpu"
          style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0b1130,#07091e)">
+        <a class="card-link" href="https://neovand.github.io/swarm/" target="_blank" rel="noopener" aria-label="Open the Swarm demo"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/swarm/swarmscreenshot.jpg" alt="Swarm" loading="lazy" />
+          <video data-src="media/swarm.mp4" poster="media/swarm.jpg" muted loop playsinline preload="none" aria-label="Swarm"></video>
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Swarm</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/swarm" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Swarm source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">Thousands of agents navigating emergent behavior — WebGPU-accelerated, running entirely in your browser.</p>
           <div class="card-tags">
-            <span class="tag">WebGPU</span><span class="tag">Svelte</span><span class="tag">Simulation</span>
+            <span class="tag">WebGPU</span><span class="tag">Artificial Life</span><span class="tag">Svelte</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Games of Life | featured, art -->
-      <a class="card" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener"
+      <!-- Voicebook -->
+      <article class="card"
+         data-categories="featured ai webgpu"
+         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
+        <a class="card-link" href="https://neovand.github.io/voicebook/" target="_blank" rel="noopener" aria-label="Open the Voicebook demo"></a>
+        <div class="card-thumb">
+          <img src="media/voicebook.jpg" alt="Voicebook" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Voicebook</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/voicebook" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Voicebook source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">Turn documents into expressive, private speech — text-to-speech that runs entirely on your own machine.</p>
+          <div class="card-tags">
+            <span class="tag">AI</span><span class="tag">WebGPU</span><span class="tag">TypeScript</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Games of Life -->
+      <article class="card"
          data-categories="featured art"
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#061408,#040e06)">
+        <a class="card-link" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener" aria-label="Open the Games of Life demo"></a>
         <div class="card-thumb">
           <img src="https://neovand.github.io/games-of-life/thumbnail.jpg" alt="Games of Life" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Games of Life</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/games-of-life" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Games of Life source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.</p>
           <div class="card-tags">
             <span class="tag">WebGPU</span><span class="tag">Svelte</span><span class="tag">Cellular Automata</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Algocell | featured, art -->
-      <a class="card" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener"
+      <!-- Algocell -->
+      <article class="card"
          data-categories="featured art"
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#041808,#030f06)">
+        <a class="card-link" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener" aria-label="Open the Algocell demo"></a>
         <div class="card-thumb">
           <img src="https://neovand.github.io/algocell/og-image.png" alt="Algocell" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Algocell</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/algocell" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Algocell source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">Artificial life emerging from Z80 machine code bytes — evolution in your browser.</p>
           <div class="card-tags">
             <span class="tag">TypeScript</span><span class="tag">Artificial Life</span><span class="tag">Z80</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- MacMac | game -->
-      <a class="card" href="https://macmac.lol/" target="_blank" rel="noopener"
+      <!-- Zilion | repo only -->
+      <article class="card"
+         data-categories="alife webgpu"
+         style="--accent:#22c55e; --gradient:linear-gradient(135deg,#041808,#030f06)">
+        <a class="card-link" href="https://github.com/NeoVand/zilion" target="_blank" rel="noopener" aria-label="Open the Zilion repository"></a>
+        <div class="card-thumb">
+          <img src="media/zilion.jpg" alt="Zilion" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Zilion</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/zilion" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Zilion source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">Thousands of Z80 CPUs running at once in a single WebGPU dispatch — an emulator built for artificial life and genetic programming.</p>
+          <div class="card-tags">
+            <span class="tag">WebGPU</span><span class="tag">Z80</span><span class="tag">TypeScript</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- LangX -->
+      <article class="card"
+         data-categories="educational ai ml"
+         style="--accent:#a855f7; --gradient:linear-gradient(135deg,#150828,#0d0520)">
+        <a class="card-link" href="https://langx.lol/" target="_blank" rel="noopener" aria-label="Open the LangX demo"></a>
+        <div class="card-thumb">
+          <img src="media/langx.jpg" alt="LangX" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">LangX</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/LangX" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="LangX source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">An interactive course in AI engineering — 29 lessons on the LangChain stack, every concept a live demo.</p>
+          <div class="card-tags">
+            <span class="tag">AI</span><span class="tag">LangChain</span><span class="tag">Course</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- jaxverse -->
+      <article class="card"
+         data-categories="educational ml webgpu"
+         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
+        <a class="card-link" href="https://neovand.github.io/jaxverse/" target="_blank" rel="noopener" aria-label="Open the jaxverse demo"></a>
+        <div class="card-thumb">
+          <video data-src="media/jaxverse.mp4" poster="media/jaxverse.jpg" muted loop playsinline preload="none" aria-label="jaxverse"></video>
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">jaxverse</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/jaxverse" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="jaxverse source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">An interactive book about deep learning where every model is real — eight chapters that train live on your own GPU.</p>
+          <div class="card-tags">
+            <span class="tag">WebGPU</span><span class="tag">Deep Learning</span><span class="tag">jax-js</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- jax-js skill | repo only -->
+      <article class="card"
+         data-categories="ai ml"
+         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
+        <a class="card-link" href="https://github.com/NeoVand/jax-js-skill" target="_blank" rel="noopener" aria-label="Open the jax-js skill repository"></a>
+        <div class="card-thumb">
+          <img src="media/jax-js-skill.jpg" alt="jax-js skill" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">jax-js skill</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/jax-js-skill" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="jax-js skill source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">An agent skill for training real neural networks in the browser with jax-js — verified templates and measured performance.</p>
+          <div class="card-tags">
+            <span class="tag">Agent Skill</span><span class="tag">jax-js</span><span class="tag">TypeScript</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- TerminalVibes -->
+      <article class="card"
+         data-categories="educational"
+         style="--accent:#22c55e; --gradient:linear-gradient(135deg,#08160a,#050e07)">
+        <a class="card-link" href="https://neovand.github.io/terminalvibes/" target="_blank" rel="noopener" aria-label="Open the TerminalVibes demo"></a>
+        <div class="card-thumb">
+          <img src="media/terminalvibes.jpg" alt="TerminalVibes" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">TerminalVibes</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/terminalvibes" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="TerminalVibes source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">A visual guide to the shell for the AI era — read, verify, and run commands in an in-browser playground.</p>
+          <div class="card-tags">
+            <span class="tag">TypeScript</span><span class="tag">Bash</span><span class="tag">Guide</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- MacMac -->
+      <article class="card"
          data-categories="game"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#140820,#0d0618)">
+        <a class="card-link" href="https://macmac.lol/" target="_blank" rel="noopener" aria-label="Open the MacMac demo"></a>
         <div class="card-thumb">
           <img src="https://macmac.lol/og-image.png" alt="MacMac" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">MacMac</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/MacMac" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="MacMac source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">A game about sampling probability distributions with the fewest clicks.</p>
           <div class="card-tags">
             <span class="tag">Svelte</span><span class="tag">Probability</span><span class="tag">Game</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Vibe Coding | art -->
-      <a class="card" href="https://neovand.github.io/vibe-coding/" target="_blank" rel="noopener"
-         data-categories="art"
+      <!-- harnessXray -->
+      <article class="card"
+         data-categories="educational ai"
          style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0a0a1e,#060614)">
-        <div class="card-thumb"></div>
+        <a class="card-link" href="https://neovand.github.io/harnessXray/" target="_blank" rel="noopener" aria-label="Open the harnessXray demo"></a>
+        <div class="card-thumb">
+          <img src="media/harnessxray.jpg" alt="harnessXray" loading="lazy" />
+        </div>
         <div class="card-body">
           <div class="card-header">
-            <span class="card-title">Vibe Coding</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-title">harnessXray</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/harnessXray" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="harnessXray source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
-          <p class="card-desc">A generative audiovisual experience — visuals and sound responding to real-time controls.</p>
+          <p class="card-desc">A lab for seeing how an AI agent actually works — prompts, tools, memory, and token cost laid bare.</p>
           <div class="card-tags">
-            <span class="tag">Svelte</span><span class="tag">Audio</span><span class="tag">Generative</span>
+            <span class="tag">AI</span><span class="tag">Agents</span><span class="tag">TypeScript</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Fields | art, speculative -->
-      <a class="card" href="https://neovand.github.io/fields/" target="_blank" rel="noopener"
-         data-categories="art speculative"
-         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#040c1c,#020814)">
-        <div class="card-thumb"></div>
-        <div class="card-body">
-          <div class="card-header">
-            <span class="card-title">Fields</span>
-            <span class="card-arrow">↗</span>
-          </div>
-          <p class="card-desc">An electromagnetic lab — place charges and currents, watch field lines respond in real time.</p>
-          <div class="card-tags">
-            <span class="tag">TypeScript</span><span class="tag">Physics</span><span class="tag">Interactive</span>
-          </div>
-        </div>
-      </a>
-
-      <!-- Gradient Descent | educational -->
-      <a class="card" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener"
-         data-categories="educational"
+      <!-- Gradient Descent Explorer -->
+      <article class="card"
+         data-categories="educational ml"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#180828,#0f0520)">
+        <a class="card-link" href="https://neovand.github.io/GradientDescent/" target="_blank" rel="noopener" aria-label="Open the Gradient Descent Explorer demo"></a>
         <div class="card-thumb">
           <img src="https://neovand.github.io/GradientDescent/screenshot.gif" alt="Gradient Descent Explorer" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Gradient Descent Explorer</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/GradientDescent" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Gradient Descent Explorer source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">Watch optimizers navigate loss landscapes in real time, with D3-powered animations.</p>
           <div class="card-tags">
             <span class="tag">Svelte</span><span class="tag">D3.js</span><span class="tag">ML</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Protocol Lab | educational -->
-      <a class="card" href="https://neovand.github.io/coms/" target="_blank" rel="noopener"
+      <!-- Protocol Lab -->
+      <article class="card"
          data-categories="educational"
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1c1006,#130b04)">
+        <a class="card-link" href="https://neovand.github.io/coms/" target="_blank" rel="noopener" aria-label="Open the Protocol Lab demo"></a>
         <div class="card-thumb">
           <img src="https://neovand.github.io/coms/og-image.png" alt="Protocol Lab" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Protocol Lab</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/coms" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Protocol Lab source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">An interactive atlas of 46 network protocols — from the TCP handshake to modern QUIC streams.</p>
           <div class="card-tags">
             <span class="tag">TypeScript</span><span class="tag">Networking</span><span class="tag">Interactive</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- GitVibes | educational -->
-      <a class="card" href="https://neovand.github.io/gitvibes/" target="_blank" rel="noopener"
+      <!-- GitVibes -->
+      <article class="card"
          data-categories="educational"
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1a1004,#110c03)">
+        <a class="card-link" href="https://neovand.github.io/gitvibes/" target="_blank" rel="noopener" aria-label="Open the GitVibes demo"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/gitvibes/og-image.png" alt="GitVibes" loading="lazy" />
+          <img src="media/gitvibes.jpg" alt="GitVibes" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">GitVibes</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/gitvibes" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="GitVibes source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders — concepts without the jargon.</p>
           <div class="card-tags">
             <span class="tag">Svelte</span><span class="tag">Git</span><span class="tag">Guide</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- SoftMax Explainer | educational -->
-      <a class="card" href="https://neovand.github.io/SoftMaxExplainer/" target="_blank" rel="noopener"
-         data-categories="educational"
+      <!-- SoftMax Explainer -->
+      <article class="card"
+         data-categories="educational ml"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#120828,#0c0620)">
-        <div class="card-thumb"></div>
+        <a class="card-link" href="https://neovand.github.io/SoftMaxExplainer/" target="_blank" rel="noopener" aria-label="Open the SoftMax Explainer demo"></a>
+        <div class="card-thumb">
+          <img src="media/softmax.jpg" alt="SoftMax Explainer" loading="lazy" />
+        </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">SoftMax Explainer</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/SoftMaxExplainer" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="SoftMax Explainer source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">Explore the softmax function interactively — temperature, logits, and probability all in one view.</p>
           <div class="card-tags">
             <span class="tag">Svelte</span><span class="tag">TypeScript</span><span class="tag">ML</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Neocalculus | educational -->
-      <a class="card" href="https://neovand.github.io/neocalculus/" target="_blank" rel="noopener"
+      <!-- Neocalculus -->
+      <article class="card"
          data-categories="educational"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#0e0622,#080418)">
-        <div class="card-thumb"></div>
+        <a class="card-link" href="https://neovand.github.io/neocalculus/" target="_blank" rel="noopener" aria-label="Open the Neocalculus demo"></a>
+        <div class="card-thumb">
+          <img src="media/neocalculus.jpg" alt="Neocalculus" loading="lazy" />
+        </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">Neocalculus</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/neocalculus" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Neocalculus source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">An infinitesimal-first interactive calculus book — learn through manipulation, not memorization.</p>
           <div class="card-tags">
             <span class="tag">Svelte</span><span class="tag">Math</span><span class="tag">Interactive</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- RDB | educational -->
-      <a class="card" href="https://neovand.github.io/RDB/" target="_blank" rel="noopener"
+      <!-- RDB -->
+      <article class="card"
          data-categories="educational"
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1a1206,#120d04)">
-        <div class="card-thumb"></div>
+        <a class="card-link" href="https://neovand.github.io/RDB/" target="_blank" rel="noopener" aria-label="Open the RDB demo"></a>
+        <div class="card-thumb">
+          <img src="media/rdb.jpg" alt="RDB" loading="lazy" />
+        </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">RDB</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/RDB" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="RDB source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">Relational databases from first principles — with live SQL playgrounds in every section.</p>
           <div class="card-tags">
             <span class="tag">TypeScript</span><span class="tag">SQL</span><span class="tag">Guide</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- UI Atlas | educational -->
-      <a class="card" href="https://neovand.github.io/ui-component-guide/" target="_blank" rel="noopener"
+      <!-- UI Atlas -->
+      <article class="card"
          data-categories="educational"
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#18130a,#100e06)">
-        <div class="card-thumb"></div>
+        <a class="card-link" href="https://neovand.github.io/ui-component-guide/" target="_blank" rel="noopener" aria-label="Open the UI Atlas demo"></a>
+        <div class="card-thumb">
+          <img src="media/ui-atlas.jpg" alt="UI Atlas" loading="lazy" />
+        </div>
         <div class="card-body">
           <div class="card-header">
             <span class="card-title">UI Atlas</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/ui-component-guide" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="UI Atlas source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
           <p class="card-desc">A unified component reference for vibe coders — browse, compare, and copy from a single place.</p>
           <div class="card-tags">
             <span class="tag">TypeScript</span><span class="tag">UI</span><span class="tag">Reference</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- ScatteringMachine | speculative -->
-      <a class="card" href="https://neovand.github.io/scatteringmachine/" target="_blank" rel="noopener"
-         data-categories="speculative"
-         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#031418,#020e12)">
-        <div class="card-thumb"></div>
-        <div class="card-body">
-          <div class="card-header">
-            <span class="card-title">Scattering Machine</span>
-            <span class="card-arrow">↗</span>
-          </div>
-          <p class="card-desc">A visual exploration of light scattering — particles, waves, and the physics of dispersion.</p>
-          <div class="card-tags">
-            <span class="tag">Svelte</span><span class="tag">Physics</span><span class="tag">Visualization</span>
-          </div>
-        </div>
-      </a>
-
-      <!-- Knotty | speculative — not yet deployed -->
-      <a class="card" href="https://github.com/NeoVand/knotty" target="_blank" rel="noopener"
-         data-categories="speculative"
-         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#060c1a,#040812)">
+      <!-- VLMOCR -->
+      <article class="card"
+         data-categories="ai"
+         style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1a1206,#120d04)">
+        <a class="card-link" href="https://neovand.github.io/VLMOCR/" target="_blank" rel="noopener" aria-label="Open the VLMOCR demo"></a>
         <div class="card-thumb">
-          <span class="soon-badge">coming soon</span>
+          <img src="media/vlmocr.jpg" alt="VLMOCR" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
-            <span class="card-title">Knotty</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-title">VLMOCR</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/VLMOCR" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="VLMOCR source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
-          <p class="card-desc">Knot theory meets the browser — an interactive explorer for topological structures.</p>
+          <p class="card-desc">Multi-region image-to-text with vision language models — select patches, prompt, and stream the output.</p>
           <div class="card-tags">
-            <span class="tag">TypeScript</span><span class="tag">Topology</span><span class="tag">Math</span>
+            <span class="tag">AI</span><span class="tag">VLM</span><span class="tag">TypeScript</span>
           </div>
         </div>
-      </a>
+      </article>
 
-      <!-- Solitons | speculative — not yet deployed -->
-      <a class="card" href="https://github.com/NeoVand/solitons" target="_blank" rel="noopener"
-         data-categories="speculative"
-         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#02101a,#010c14)">
+      <!-- Boids -->
+      <article class="card"
+         data-categories="art alife"
+         style="--accent:#a855f7; --gradient:linear-gradient(135deg,#140820,#0d0618)">
+        <a class="card-link" href="https://neovand.github.io/boids/" target="_blank" rel="noopener" aria-label="Open the Boids demo"></a>
         <div class="card-thumb">
-          <span class="soon-badge">coming soon</span>
+          <img src="media/boids.jpg" alt="Boids" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
-            <span class="card-title">Solitons</span>
-            <span class="card-arrow">↗</span>
+            <span class="card-title">Boids</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/boids" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Boids source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
           </div>
-          <p class="card-desc">Self-reinforcing solitary waves — a simulation of nonlinear wave propagation.</p>
+          <p class="card-desc">Craig Reynolds' flocking algorithm rendered in WebGL, with every rule exposed as a live control.</p>
           <div class="card-tags">
-            <span class="tag">Svelte</span><span class="tag">Wave Physics</span><span class="tag">Simulation</span>
+            <span class="tag">WebGL</span><span class="tag">Artificial Life</span><span class="tag">TypeScript</span>
           </div>
         </div>
-      </a>
+      </article>
+
+      <!-- Vibe Coding -->
+      <article class="card"
+         data-categories="art"
+         style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0a0a1e,#060614)">
+        <a class="card-link" href="https://neovand.github.io/vibe-coding/" target="_blank" rel="noopener" aria-label="Open the Vibe Coding demo"></a>
+        <div class="card-thumb">
+          <video data-src="media/vibe-coding.mp4" poster="media/vibe-coding.jpg" muted loop playsinline preload="none" aria-label="Vibe Coding"></video>
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Vibe Coding</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/vibe-coding" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Vibe Coding source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">A first-person flight through volumetric clouds and ocean waves, raymarched in real time and scored to an original soundtrack.</p>
+          <div class="card-tags">
+            <span class="tag">Shaders</span><span class="tag">Audio</span><span class="tag">Svelte</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Potential Fields -->
+      <article class="card"
+         data-categories="educational"
+         style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#040c1c,#020814)">
+        <a class="card-link" href="https://neovand.github.io/dpp/" target="_blank" rel="noopener" aria-label="Open the Potential Fields demo"></a>
+        <div class="card-thumb">
+          <img src="media/dpp.jpg" alt="Potential Fields" loading="lazy" />
+        </div>
+        <div class="card-body">
+          <div class="card-header">
+            <span class="card-title">Potential Fields</span>
+            <span class="card-actions">
+              <a class="card-repo" href="https://github.com/NeoVand/dpp" target="_blank" rel="noopener"
+                 title="Source on GitHub" aria-label="Potential Fields source on GitHub"><svg width="14" height="14" aria-hidden="true"><use href="#icon-github" /></svg></a>
+              <span class="card-arrow">↗</span>
+            </span>
+          </div>
+          <p class="card-desc">Robot path planning through artificial potential fields — watch attraction and repulsion shape the route.</p>
+          <div class="card-tags">
+            <span class="tag">React</span><span class="tag">Robotics</span><span class="tag">Visualization</span>
+          </div>
+        </div>
+      </article>
 
     </div>
   </main>
@@ -959,6 +1245,34 @@
       if (img.complete) img.classList.add('loaded');
       else img.addEventListener('load', () => img.classList.add('loaded'));
     });
+
+    // Video thumbs: only fetch and play once the card is on screen
+    const videos = document.querySelectorAll('.card-thumb video[data-src]');
+
+    if (videos.length) {
+      const vidObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const v = entry.target;
+          if (entry.isIntersecting) {
+            if (!v.src) {
+              // fade the poster in first, then let the video frames take over
+              if (v.poster) {
+                const p = new Image();
+                p.onload = () => v.classList.add('loaded');
+                p.src = v.poster;
+              }
+              v.addEventListener('loadeddata', () => v.classList.add('loaded'), { once: true });
+              v.src = v.dataset.src;
+            }
+            v.play().catch(() => {});
+          } else if (v.src) {
+            v.pause();
+          }
+        });
+      }, { rootMargin: '200px' });
+
+      videos.forEach(v => vidObserver.observe(v));
+    }
 
     // Category filter
     const btns = document.querySelectorAll('.filter-btn');
