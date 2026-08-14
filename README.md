@@ -33,7 +33,8 @@ twigs first, and releasing grows it back. Fireflies perch on one tree's twig
 ends and cross to another when their tree is disturbed.
 
 The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
-Commons), which requires no attribution.
+Commons), which requires no attribution. It is also the favicon, rendered over
+a night ground with the same glow it has on the page.
 
 ## The section flourishes
 
