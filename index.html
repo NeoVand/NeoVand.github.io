@@ -22,6 +22,16 @@
        stylesheet on a third-party origin, and nothing on the page painted until
        it came back. SIL Open Font License; see media/fonts/OFL.txt. -->
   <link rel="preload" href="media/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
+
+  <script>
+    // One clock for the whole opening, so the grove and the text beside it
+    // finish together rather than merely taking a similar length of time. The
+    // class goes on before first paint, or the head of the page would show
+    // itself finished and then start over.
+    window.__intro = { dur: 2800, t0: 0, done: false };
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+      document.documentElement.classList.add('has-intro');
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -381,13 +391,76 @@
 
     .fi { width: 13px; height: 13px; flex-shrink: 0; }
 
+    /* ─── OPENING ─── */
+    /* The head of the page arrives as one piece: the grove grows in, the name
+       and bio write themselves, and the buttons land one after another, all
+       starting and finishing together. Then the filters and the gallery follow.
+       Everything here is opt-in via .is-lit, so with JS off the page is simply
+       already in its finished state. */
+    .has-intro .about-name,
+    .has-intro .about-bio,
+    .has-intro .about-links > * { opacity: 0; }
+
+    .has-intro .about-name {
+      transform: translateY(10px);
+      transition: opacity 760ms var(--ease), transform 760ms var(--ease);
+    }
+
+    .has-intro .about-bio { transition: opacity 260ms linear; }
+
+    .has-intro .about-links > * {
+      transform: translateY(9px);
+      transition: opacity 460ms var(--ease) var(--bd, 0ms),
+                  transform 520ms var(--ease) var(--bd, 0ms);
+    }
+
+    .is-lit .about-name,
+    .is-lit .about-bio,
+    .is-lit .about-links > * { opacity: 1; transform: none; }
+
+    /* the caret, which rides the end of the text while it is being written */
+    .about-bio.typing::after {
+      content: '';
+      display: inline-block;
+      width: 2px;
+      height: 0.95em;
+      margin-left: 2px;
+      vertical-align: -0.14em;
+      background: var(--muted-2);
+      animation: caret 780ms steps(1, end) infinite;
+    }
+
+    @keyframes caret { 50% { opacity: 0; } }
+
+    .has-intro .filter-btn {
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 420ms var(--ease) var(--fd, 0ms),
+                  transform 460ms var(--ease) var(--fd, 0ms);
+    }
+
+    .filters-in .filter-btn { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .has-intro .about-name,
+      .has-intro .about-bio,
+      .has-intro .about-links > *,
+      .has-intro .filter-btn { opacity: 1; transform: none; transition: none; }
+      .about-bio.typing::after { display: none; }
+    }
+
     /* ─── REVEAL ─── */
     /* Papers and earlier work come in as you reach them rather than all being
        painted at once. Items in the same row ripple across rather than landing
        together, which reads as arriving with the divider above them. */
-    .reveal {
-      opacity: 0;
-      transform: translateY(14px);
+    .reveal { opacity: 0; transform: translateY(14px); }
+
+    /* Doubled up on purpose. Cards further down the sheet declare their own
+       transition for hover, which replaces this one wholesale and leaves
+       opacity with nothing to animate, so the section snapped into place
+       instead of arriving. The classes come off once the item has landed, so
+       hover goes back to its own timing. */
+    .reveal.reveal {
       transition: opacity 620ms var(--ease) var(--rd, 0ms),
                   transform 720ms var(--ease) var(--rd, 0ms);
     }
@@ -2203,6 +2276,8 @@
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34;
+    // whether an opening is expected; if none arrives the grove grows itself in
+    const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const WIDE = window.matchMedia('(min-width: 901px)');   // matches the CSS breakpoint
 
     // Canopy: five grammars, each with its own silhouette, height and grey ramp.
@@ -2345,8 +2420,11 @@
       p.stiff = 0.78 + hash(i, 12) * 0.44;   // how hard it answers the wind
       p.lag = hash(i, 13) * 800;             // ms behind the gust front
       p.tipSalt = 30 + i;                    // which twigs carry the highlight
-      p.grow = 1;                            // 1 fully grown, 0 receded away
+      p.grow = INTRO ? 0 : 1;                // 1 fully grown, 0 receded away
       p.growTarget = 1;
+      // each plant breaks ground at its own moment but they all finish
+      // together, so the grove fills in rather than inflating as one piece
+      p.introOff = hash(i, 71) * 0.42;
       p.popAmp = 0;                          // spring left over from a press
       p.popT = POP_LIFE;                     // already settled
     });
@@ -2477,7 +2555,7 @@
     const MOON_BOLT = 0.9;      // the point at which it stops edging and runs
     const MOON_TRAVEL = 0.62;   // s to cross, when it bolts
     const MOON_BOUNCE = 0.09;   // overshoot on arrival, as a share of the trip
-    let moonLo = 0, moonHi = 0, moonYLo = 0, moonYHi = 0, moonYHome = 0, moonYSpan = 0;
+    let moonLo = 0, moonHi = 0, moonYLo = 0, moonYHi = 0, moonXHome = 0, moonYHome = 0, moonYSpan = 0;
     let moonFromX = 0, moonFromY = 0, moonToX = 0, moonToY = 0;
     let moonT = -1;             // seconds into a bolt, or -1 when it is not running
     let moonFear = 0;
@@ -2520,7 +2598,8 @@
       // abandoned, since its endpoints belong to the old layout.
       const cx = v => Math.min(Math.max(v, moonLo), moonHi);
       const cy = v => Math.min(Math.max(v, moonYLo), moonYHi);
-      moonX = moonPlaced ? cx(moonX) : cx(W * 0.30);
+      moonXHome = cx(W * 0.30);
+      moonX = moonPlaced ? cx(moonX) : moonXHome;
       moonY = moonPlaced ? cy(moonY) : moonYHome;
       moonT = -1;
       moonFear = 0;
@@ -2678,7 +2757,33 @@
         ctx.drawImage(moon, moonX - moonR, moonY - moonR, moonR * 2, moonR * 2);
       }
 
-      for (const p of plants) {
+      // ── the opening ──────────────────────────────────────────────────────
+      // Plants push up, the moon slides in off the corner, and the fireflies
+      // arrive from below, all on the same clock as the text beside them. If
+      // no opening ever starts, the grove grows itself in rather than sitting
+      // invisible.
+      if (introing) {
+        const I = window.__intro;
+        if (!I.t0) {
+          introWait += dt;
+          if (introWait > 1.4) { I.t0 = now; introBegin(); }
+        } else if (!introStarted) {
+          introBegin();
+        }
+        if (I.t0) {
+          const u = Math.min(1, (now - I.t0) / I.dur);
+          const e = 1 - Math.pow(1 - u, 3);
+          for (const p of plants) {
+            const o = p.introOff;
+            p.grow = 1 - Math.pow(1 - Math.max(0, (u - o) / (1 - o)), 3);
+          }
+          if (moonR > 0) {
+            moonX = introMoonX + (moonXHome - introMoonX) * e;
+            moonY = introMoonY + (moonYHome - introMoonY) * e;
+          }
+          if (u >= 1) { introing = false; I.done = true; for (const p of plants) p.grow = 1; }
+        }
+      } else for (const p of plants) {
         if (p.grow !== p.growTarget) {
           const step = GROW_RATE * dt;
           if (p.grow < p.growTarget) {
@@ -2703,6 +2808,15 @@
           p.front = Infinity;
           p.shrink = 1 + over;
         } else {
+          p.front = p.grow * (p.maxDepth + SOFT);
+          p.shrink = 0.5 + 0.5 * p.grow;
+        }
+      }
+
+      // growth drives the drawing state whichever way it was set
+      if (introing) for (const p of plants) {
+        if (p.grow >= 1) { p.front = Infinity; p.shrink = 1; }
+        else {
           p.front = p.grow * (p.maxDepth + SOFT);
           p.shrink = 0.5 + 0.5 * p.grow;
         }
@@ -2828,6 +2942,38 @@
 
     const easeInOut = e => (e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2);
 
+    // ── opening state ──────────────────────────────────────────────────────
+    let introing = INTRO, introStarted = false, introWait = 0;
+    let introMoonX = 0, introMoonY = 0;
+
+    // Called on the first frame of the opening, once the canvas has been laid
+    // out, so the entry points are in real coordinates.
+    function introBegin() {
+      introStarted = true;
+      // the moon comes in over the top-left corner, outside the canvas
+      introMoonX = -moonR * 0.7;
+      introMoonY = -moonR * 0.9;
+      moonX = introMoonX; moonY = introMoonY;
+
+      // fireflies rise from below and off to the side, landing on the middle
+      // tree just before the rest of the opening lands
+      const secs = window.__intro.dur / 1000;
+      host = trees[2];
+      for (const f of fireflies) {
+        f.state = 'flying';
+        f.pick = Math.random();
+        f.sx = W * (0.15 + Math.random() * 0.7) + (Math.random() - 0.5) * W * 0.5;
+        f.sy = H + 40 + Math.random() * 120;
+        f.x = f.sx; f.y = f.sy;
+        f.t = 0;
+        f.delay = Math.random() * secs * 0.22;
+        f.dur = Math.max(0.5, secs * 0.86 - f.delay);
+        f.bow = (Math.random() - 0.5) * 0.9;
+        f.lift = 0.18 + Math.random() * 0.3;
+        f.alpha = 0;
+      }
+    }
+
     function drawFireflies(now, dt, tips) {
       const n = tips ? tips.length / 4 : 0;
 
@@ -2937,7 +3083,10 @@
     window.addEventListener('pointerup', regrow);
     window.addEventListener('pointercancel', regrow);
 
-    const relayout = () => { layout(); if (!running) render(performance.now()); };
+    // Resizing the backing store clears it, so redraw in the same frame.
+    // Waiting for the next one showed a blank canvas for 16ms, which read as
+    // the grove blinking out at the end of the opening.
+    const relayout = () => { layout(); render(performance.now()); };
     const ro = new ResizeObserver(relayout);
     ro.observe(canvas);
     // the band tracks the text block, so a reflow has to re-fit the grove
@@ -3022,9 +3171,103 @@
   </script>
 
   <script>
+  // ─── The opening: name, bio and buttons, on the grove's clock ───
+  (() => {
+    const I = window.__intro;
+    const root = document.documentElement;
+    const nameEl = document.querySelector('.about-name');
+    const bioEl = document.querySelector('.about-bio');
+    const links = [...document.querySelectorAll('.about-links > *')];
+    const filters = [...document.querySelectorAll('.filter-btn')];
+
+    const finish = () => {
+      if (root.classList.contains('lit-done')) return;
+      root.classList.add('lit-done', 'is-lit', 'filters-in');
+      bioEl && bioEl.classList.remove('typing');
+      if (bioEl) restore();   // the reserved height stays, so nothing reflows
+      I.done = true;
+      if (!I.t0) I.t0 = performance.now() - I.dur;   // tell the grove to land now
+      document.dispatchEvent(new Event('intro:done'));
+    };
+
+    if (!root.classList.contains('has-intro') || !bioEl) { finish(); return; }
+
+    // Reserve the height the finished bio takes before emptying it, or the
+    // column would grow line by line and drag the grove's canopy with it.
+    bioEl.style.minHeight = Math.ceil(bioEl.getBoundingClientRect().height) + 'px';
+
+    // Type over the text nodes rather than the markup, so the links and the
+    // bold names inside the bio survive being written out.
+    const runs = [];
+    (function collect(n) {
+      for (const c of n.childNodes) {
+        if (c.nodeType === 3) runs.push({ node: c, full: c.nodeValue });
+        else if (c.nodeType === 1) collect(c);
+      }
+    })(bioEl);
+    const total = runs.reduce((a, r) => a + r.full.length, 0);
+    function write(k) {
+      let left = k;
+      for (const r of runs) {
+        const take = left <= 0 ? 0 : Math.min(left, r.full.length);
+        if (r.node.nodeValue.length !== take) r.node.nodeValue = r.full.slice(0, take);
+        left -= take;
+      }
+    }
+    function restore() { for (const r of runs) r.node.nodeValue = r.full; }
+    write(0);
+
+    // The buttons land one after another and the last one lands with everything
+    // else, so the whole head of the page settles on the same beat.
+    const last = I.dur - 480, first = I.dur * 0.42;
+    links.forEach((b, i) => b.style.setProperty('--bd',
+      Math.round(links.length > 1 ? first + i * (last - first) / (links.length - 1) : first) + 'ms'));
+    filters.forEach((b, i) => b.style.setProperty('--fd', Math.round(i * 45) + 'ms'));
+
+    let raf = 0;
+    function tick(now) {
+      const u = Math.min(1, (now - I.t0) / I.dur);
+      write(Math.round(u * total));
+      if (u < 1) raf = requestAnimationFrame(tick);
+      else { bioEl.classList.remove('typing'); restore(); finishPhase2(); }
+    }
+
+    function finishPhase2() {
+      root.classList.add('lit-done', 'filters-in');
+      I.done = true;
+      document.dispatchEvent(new Event('intro:done'));
+    }
+
+    function start() {
+      if (I.t0) return;
+      I.t0 = performance.now();
+      root.classList.add('is-lit');
+      bioEl.classList.add('typing');
+      raf = requestAnimationFrame(tick);
+    }
+
+    // Wait for the webfont: starting first would type in the fallback and then
+    // reflow mid-sentence when Inter arrives.
+    const go = () => requestAnimationFrame(start);
+    if (document.fonts && document.fonts.ready) {
+      let fired = false;
+      const once = () => { if (!fired) { fired = true; go(); } };
+      document.fonts.ready.then(once);
+      setTimeout(once, 900);
+    } else go();
+
+    // Anyone who scrolls or clicks has stopped watching: land it immediately.
+    const skip = () => { if (!I.done) { cancelAnimationFrame(raf); finish(); } };
+    addEventListener('scroll', () => { if (scrollY > 40) skip(); }, { passive: true });
+    addEventListener('pointerdown', skip, { once: true, passive: true });
+    addEventListener('keydown', e => { if (e.key === 'Escape') skip(); });
+  })();
+  </script>
+
+  <script>
   // ─── Reveal the papers and the earlier work as you reach them ───
   (() => {
-    const items = document.querySelectorAll('.deck, .rcard');
+    const items = document.querySelectorAll('.card, .deck, .rcard');
     if (!items.length) return;
 
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -3041,17 +3284,31 @@
     const io = new IntersectionObserver((entries, obs) => {
       const hits = entries.filter(e => e.isIntersecting);
       if (!hits.length) return;
-      const lefts = hits.map(e => e.target.getBoundingClientRect().left);
-      const lo = Math.min(...lefts), hi = Math.max(...lefts);
+      // Reading order, so a batch arrives row by row and left to right. Keying
+      // the delay off column alone made a whole screenful land at once, which
+      // is what made a section look like it simply appeared.
+      hits.sort((a, b) => {
+        const ra = a.target.getBoundingClientRect(), rb = b.target.getBoundingClientRect();
+        return (ra.top - rb.top) || (ra.left - rb.left);
+      });
+      const spread = Math.min(560, hits.length * 60);
       hits.forEach((e, i) => {
-        const t = hi > lo ? (lefts[i] - lo) / (hi - lo) : 0;
-        e.target.style.setProperty('--rd', Math.round(t * 220) + 'ms');
+        const t = hits.length > 1 ? i / (hits.length - 1) : 0;
+        const wait = Math.round(t * spread);
+        e.target.style.setProperty('--rd', wait + 'ms');
         e.target.classList.add('in');
         obs.unobserve(e.target);
+        // hand the element back to its own styles once it has arrived
+        setTimeout(() => e.target.classList.remove('reveal', 'in'), wait + 820);
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
-    items.forEach(el => io.observe(el));
+    // The gallery waits for the head of the page to finish before it starts
+    // arriving, so the two do not compete for attention.
+    const begin = () => items.forEach(el => io.observe(el));
+    window.__intro && !window.__intro.done
+      ? document.addEventListener('intro:done', begin, { once: true })
+      : begin();
   })();
   </script>
 
