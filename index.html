@@ -338,15 +338,22 @@
 
     .fl .st1 { fill-rule: evenodd; clip-rule: evenodd; }
 
+    /* The closed state carries its own, shorter delays, so folding away runs
+       tails-first and quicker than opening rather than replaying it backwards. */
     .fl > * {
       transform-box: fill-box;
       opacity: 0;
       transform: scale(0.3) rotate(var(--r, 0deg));
+      transition: opacity 360ms var(--ease) var(--dc, 0ms),
+                  transform 520ms cubic-bezier(0.4, 0, 0.7, 0.2) var(--dc, 0ms);
+    }
+
+    .rule.is-open .fl > * {
+      opacity: 1;
+      transform: none;
       transition: opacity 560ms var(--ease) var(--d, 0ms),
                   transform 980ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms);
     }
-
-    .rule.is-open .fl > * { opacity: 1; transform: none; }
 
     @media (prefers-reduced-motion: reduce) {
       .fl > * { transform: none; transition: opacity 300ms linear; }
@@ -2903,15 +2910,32 @@
           p.style.setProperty('--r', (dx > 0 ? -14 : 14) + 'deg');
         }
         p.style.setProperty('--d', Math.round(Math.pow(t, 0.8) * 620) + 'ms');
+        p.style.setProperty('--dc', Math.round(Math.pow(1 - t, 1.2) * 300) + 'ms');
       });
     });
 
-    const open = el => el.classList.add('is-open');
-    if (!('IntersectionObserver' in window)) { strips.forEach(open); return; }
-    const io = new IntersectionObserver((entries, obs) => {
-      for (const e of entries) if (e.isIntersecting) { open(e.target); obs.unobserve(e.target); }
-    }, { threshold: 0.4 });
-    strips.forEach(s => io.observe(s));
+    if (!('IntersectionObserver' in window)) {
+      strips.forEach(s => s.classList.add('is-open'));
+      return;
+    }
+
+    // Two thresholds rather than one: it opens once it is properly on screen
+    // and only folds away once it has all but gone, so a divider sitting near
+    // the edge of the viewport does not flicker open and shut while scrolling.
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (e.intersectionRatio >= 0.45) e.target.classList.add('is-open');
+        else if (e.intersectionRatio <= 0.05) e.target.classList.remove('is-open');
+      }
+    }, { threshold: [0, 0.05, 0.45, 1] });
+
+    // Wait for the page to finish loading before watching. Until the gallery
+    // images have their real heights the document is far shorter than it ends
+    // up, which put both dividers inside the viewport on the first frame and
+    // spent the animation before anyone had scrolled anywhere.
+    const watch = () => strips.forEach(s => io.observe(s));
+    if (document.readyState === 'complete') watch();
+    else window.addEventListener('load', watch, { once: true });
   })();
   </script>
 
