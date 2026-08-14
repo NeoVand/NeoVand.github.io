@@ -435,7 +435,9 @@
       object-position: top center;
       background: #fff;
       border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.45), 0 14px 30px rgba(0,0,0,0.42);
+      /* The shadow is part of the filter chain, after the inversion, or it
+         would be inverted too and ring each page in a white halo. */
+      --sh: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 12px 22px rgba(0,0,0,0.5));
       /* Every page pivots on the same point at the foot of the deck, where a
          hand would hold them. The angles are taken about the middle page
          rather than the first, so the arc is balanced either side of vertical
@@ -443,11 +445,15 @@
          back from the top page, which is the leftmost. */
       transform-origin: 50% 100%;
       transform: rotate(calc((var(--i) - 2) * var(--fan, 5.5deg)));
-      transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
+      transition: transform 420ms var(--ease), filter 420ms var(--ease);
       will-change: transform;
-      /* pages further back sit deeper in shadow, so the deck reads as having
-         thickness rather than as five flat cut-outs */
-      filter: brightness(calc(1 - var(--i) * 0.045));
+      /* Pages are inverted, so a paper reads as dark on the dark page rather
+         than as a slab of white. Not a full inversion: at 1.0 they sink into
+         the background. hue-rotate puts the colour back into the figures,
+         which a plain invert turns into negatives. Pages further back are
+         dimmed on top of that, so the deck keeps its thickness. */
+      filter: invert(0.87) hue-rotate(180deg) contrast(0.88)
+              brightness(calc(1 - var(--i) * 0.06)) var(--sh);
     }
 
     .deck:hover .deck-fan,
@@ -455,7 +461,7 @@
 
     .deck:hover .deck-page,
     .deck:focus-visible .deck-page {
-      box-shadow: 0 3px 8px rgba(0,0,0,0.5), 0 20px 44px rgba(0,0,0,0.55);
+      --sh: drop-shadow(0 3px 6px rgba(0,0,0,0.65)) drop-shadow(0 20px 38px rgba(0,0,0,0.6));
     }
 
     .deck-meta {
