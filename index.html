@@ -317,6 +317,127 @@
       letter-spacing: 0.02em;
     }
 
+    /* ─── PUBLICATIONS ─── */
+    /* Each paper is its first five pages fanned out like a hand of cards: the
+       first page upright on the left with the rest splayed to the right. The
+       whole fan pivots about the bottom-left corner, which every page shares,
+       so opening it wider on hover reads as a thumb running down the deck. */
+    #papers {
+      border-top: 1px solid var(--border);
+      padding: 80px 0 84px;
+    }
+
+    .papers-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .papers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 34px 28px;
+    }
+
+    .deck {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .deck-fan {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 0.838;
+      margin-bottom: 18px;
+    }
+
+    .deck-page {
+      position: absolute;
+      left: 22.4%;
+      /* the outer pages of the fan swing below the middle one, so the deck is
+         lifted off the floor of its box by as much as the widest fan drops */
+      bottom: 10.6%;
+      width: 52%;
+      aspect-ratio: 1 / 1.35;
+      object-fit: cover;
+      object-position: top center;
+      background: #fff;
+      border-radius: 3px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.45), 0 14px 30px rgba(0,0,0,0.42);
+      /* Every page pivots on the same point at the foot of the deck, where a
+         hand would hold them. The angles are taken about the middle page
+         rather than the first, so the arc is balanced either side of vertical
+         instead of standing upright and leaning off to one side. --i counts
+         back from the top page, which is the leftmost. */
+      transform-origin: 50% 100%;
+      transform: rotate(calc((var(--i) - 2) * var(--fan, 5.5deg)));
+      transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
+      will-change: transform;
+      /* pages further back sit deeper in shadow, so the deck reads as having
+         thickness rather than as five flat cut-outs */
+      filter: brightness(calc(1 - var(--i) * 0.045));
+    }
+
+    .deck:hover .deck-fan,
+    .deck:focus-visible .deck-fan { --fan: 10deg; }
+
+    .deck:hover .deck-page,
+    .deck:focus-visible .deck-page {
+      box-shadow: 0 3px 8px rgba(0,0,0,0.5), 0 20px 44px rgba(0,0,0,0.55);
+    }
+
+    .deck-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .deck-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #ddd;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      transition: color 200ms var(--ease);
+    }
+
+    .deck:hover .deck-title { color: #fff; }
+
+    .deck-title .deck-arrow {
+      display: inline-block;
+      margin-left: 4px;
+      color: var(--muted);
+      opacity: 0;
+      transform: translate(-3px, 3px);
+      transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+    }
+
+    .deck:hover .deck-arrow,
+    .deck:focus-visible .deck-arrow { opacity: 1; transform: none; }
+
+    .deck-venue {
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    .deck:focus-visible { outline: none; }
+    .deck:focus-visible .deck-title { text-decoration: underline; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .deck-page { transition: none; }
+    }
+
+    @media (max-width: 900px) {
+      .papers-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .papers-grid { grid-template-columns: 1fr; gap: 30px; }
+      .deck-fan { max-width: 340px; }
+    }
+
     /* ─── RESEARCH ─── */
     #research {
       border-top: 1px solid var(--border);
@@ -1357,6 +1478,104 @@
 
     </div>
   </main>
+
+  <!-- PUBLICATIONS -->
+  <!-- Pages run 5 → 1 in the markup so page one paints last and lands on top
+       of the fan without needing a z-index on every card. -->
+  <section id="papers">
+    <div class="papers-inner">
+      <div class="research-header">
+        <p class="section-label" style="margin-bottom:0">Selected Publications</p>
+      </div>
+      <div class="papers-grid">
+
+        <a class="deck" href="papers/motifs.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/motifs-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/motifs-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/motifs-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/motifs-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/motifs-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Spontaneous cortical activity alternates between motifs defined by regional axonal projections<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">Nature Neuroscience · 2013</span>
+          </div>
+        </a>
+
+        <a class="deck" href="papers/optical-flow.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/optical-flow-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/optical-flow-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/optical-flow-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/optical-flow-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/optical-flow-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Optical-flow analysis toolbox for characterization of spatiotemporal dynamics in mesoscale optical imaging of brain activity<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">NeuroImage · 2017</span>
+          </div>
+        </a>
+
+        <a class="deck" href="papers/rumor-gauge.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/rumor-gauge-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/rumor-gauge-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/rumor-gauge-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/rumor-gauge-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/rumor-gauge-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Rumor Gauge: Predicting the Veracity of Rumors on Twitter<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">ACM Transactions on Knowledge Discovery from Data · 2017</span>
+          </div>
+        </a>
+
+        <a class="deck" href="papers/seqclr.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/seqclr-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/seqclr-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/seqclr-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/seqclr-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/seqclr-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Contrastive Representation Learning for Electroencephalogram Classification<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">Machine Learning for Health, PMLR · 2020</span>
+          </div>
+        </a>
+
+        <a class="deck" href="papers/bone-conduction.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/bone-conduction-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/bone-conduction-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/bone-conduction-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/bone-conduction-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/bone-conduction-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Soft Speech, Loud World: Bone Conduction Microphones Enhance Voice Assistant Interaction<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">IEEE International Conference on Consumer Electronics · 2024</span>
+          </div>
+        </a>
+
+        <a class="deck" href="papers/breathing.pdf" target="_blank" rel="noopener">
+          <div class="deck-fan">
+            <img class="deck-page" style="--i:4" src="media/papers/breathing-5.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:3" src="media/papers/breathing-4.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:2" src="media/papers/breathing-3.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:1" src="media/papers/breathing-2.jpg" alt="" loading="lazy" />
+            <img class="deck-page" style="--i:0" src="media/papers/breathing-1.jpg" alt="First page of the paper" loading="lazy" />
+          </div>
+          <div class="deck-meta">
+            <span class="deck-title">Generating Breathing Patterns in Real-Time: Low-Latency Respiratory Phase Tracking from 25 Hz PPG<span class="deck-arrow">↗</span></span>
+            <span class="deck-venue">HealthyIoT / HealthWear, Springer LNICST · 2024</span>
+          </div>
+        </a>
+
+      </div>
+    </div>
+  </section>
 
   <!-- RESEARCH / EARLIER WORK -->
   <section id="research">

@@ -12,6 +12,8 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 /               ← gallery homepage
 /media/         ← thumbnails, and the moon behind the grove
 /media/legacy/  ← figures for the older projects, shown in their modals
+/media/papers/  ← first five pages of each paper, rendered for the deck fans
+/papers/        ← the PDFs themselves
 /archive/       ← original Three.js network visualization (preserved)
 ```
 
