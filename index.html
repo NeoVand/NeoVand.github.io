@@ -118,13 +118,16 @@
     }
 
     .filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       background: transparent;
       border: 1px solid var(--border);
       color: var(--muted);
       font-family: inherit;
       font-size: 12.5px;
       font-weight: 500;
-      padding: 6px 14px;
+      padding: 6px 13px 6px 11px;
       border-radius: 99px;
       cursor: pointer;
       transition: color 150ms, border-color 150ms, background 150ms;
@@ -297,6 +300,13 @@
       font-size: 12.5px;
       color: var(--muted-2);
       line-height: 1.55;
+      /* fixed at two lines: shorter blurbs still reserve the space, so cards
+         come out the same height whatever they say */
+      height: 3.1em;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .card-tags {
@@ -306,16 +316,36 @@
       margin-top: 4px;
     }
 
+    /* On the cards the tag is the icon alone. Text would wrap to a second line
+       on the longer sets and leave the cards uneven; the label is still there
+       for a screen reader and on hover. */
     .tag {
-      font-size: 10.5px;
-      font-weight: 500;
-      padding: 2px 7px;
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
       border-radius: 99px;
       background: rgba(255,255,255,0.04);
       color: var(--muted);
       border: 1px solid rgba(255,255,255,0.06);
-      letter-spacing: 0.02em;
+      transition: color 200ms var(--ease), border-color 200ms var(--ease);
     }
+
+    .card:hover .tag { color: var(--muted-2); border-color: rgba(255,255,255,0.11); }
+
+    .ti { width: 13px; height: 13px; display: block; }
+
+    /* label kept for assistive tech only */
+    .sr {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .fi { width: 13px; height: 13px; flex-shrink: 0; }
 
     /* ─── SECTION FLOURISH ─── */
     /* A calligraphic divider that draws itself outward from the middle when it
@@ -848,6 +878,57 @@
 
   <!-- Shared icon sprite -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <!-- Tag icons. Stroked rather than filled, to sit with the text weight. -->
+    <symbol id="tag-ai" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.5l1.7 4.9 4.9 1.7-4.9 1.7L12 15.7l-1.7-4.9L5.4 9.1l4.9-1.7z"/>
+      <path d="M18.2 14.2l.85 2.45 2.45.85-2.45.85-.85 2.45-.85-2.45-2.45-.85 2.45-.85z"/>
+      <path d="M6.4 15.6l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z"/>
+    </symbol>
+    <symbol id="tag-art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a9 9 0 1 0 0 18 1.9 1.9 0 0 0 1.5-3 1.9 1.9 0 0 1 1.5-3h1.8A4.2 4.2 0 0 0 21 10.8 9 9 0 0 0 12 3z"/>
+      <circle cx="7.7" cy="12.2" r="1.1" fill="currentColor" stroke="none"/>
+      <circle cx="9.9" cy="8.1" r="1.1" fill="currentColor" stroke="none"/>
+      <circle cx="14.4" cy="7.9" r="1.1" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="tag-alife" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21v-8.4"/>
+      <path d="M12 12.6C8.9 12.6 6.4 10.1 6.4 7 9.5 7 12 9.5 12 12.6z"/>
+      <path d="M12 12.6c0-3.7 3-6.7 6.7-6.7 0 3.7-3 6.7-6.7 6.7z"/>
+    </symbol>
+    <symbol id="tag-educational" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 7.2C10.3 5.9 8.1 5.2 6 5.2H3v12h3c2.1 0 4.3.7 6 2"/>
+      <path d="M12 7.2c1.7-1.3 3.9-2 6-2h3v12h-3c-2.1 0-4.3.7-6 2"/>
+      <path d="M12 7.2v12"/>
+    </symbol>
+    <symbol id="tag-game" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 8h10a4.6 4.6 0 0 1 4.6 4.6v.7a3.7 3.7 0 0 1-6.7 2.2l-.7-1H9.8l-.7 1A3.7 3.7 0 0 1 2.4 13.3v-.7A4.6 4.6 0 0 1 7 8z"/>
+      <path d="M7.1 11.1v2.6M5.8 12.4h2.6"/>
+      <circle cx="16.3" cy="11.7" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="18.3" cy="13.5" r="1" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="tag-research" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.3 3h5.4"/>
+      <path d="M10.2 3v6.3l-4.9 8A2 2 0 0 0 7 20.4h10a2 2 0 0 0 1.7-3.1l-4.9-8V3"/>
+      <path d="M7.6 15.2h8.8"/>
+    </symbol>
+    <symbol id="tag-tool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.8 5.1l-3.3 3.3-2.4-2.4 3.3-3.3a5.4 5.4 0 0 0-6.9 6.6l-7.3 7.3a2.2 2.2 0 0 0 3.1 3.1l7.3-7.3a5.4 5.4 0 0 0 6.2-7.3z"/>
+    </symbol>
+    <symbol id="tag-webgl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.2l9 16.4H3z"/>
+      <path d="M7.5 11.4h9L12 19.6z"/>
+    </symbol>
+    <symbol id="tag-webgpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="2.2"/>
+      <rect x="9.4" y="9.4" width="5.2" height="5.2" rx="0.8"/>
+      <path d="M9.4 5.2V2.4M14.6 5.2V2.4M9.4 21.6v-2.8M14.6 21.6v-2.8M5.2 9.4H2.4M5.2 14.6H2.4M21.6 9.4h-2.8M21.6 14.6h-2.8"/>
+    </symbol>
+    <symbol id="tag-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
+      <rect x="13.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
+      <rect x="3.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
+      <rect x="13.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
+    </symbol>
     <symbol id="icon-github" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
     </symbol>
@@ -916,19 +997,17 @@
   <main class="gallery-wrap">
 
     <div class="filters">
-      <button class="filter-btn active" data-filter="all">All</button>
-      
-      <button class="filter-btn" data-filter="educational">Educational</button>
-        <button class="filter-btn" data-filter="research">Research</button>
-      <button class="filter-btn" data-filter="art">Art</button>
-      <button class="filter-btn" data-filter="game">Game</button>
-      <button class="filter-btn" data-filter="alife">Artificial Life</button>
-        <button class="filter-btn" data-filter="webgl">WebGL</button>
-      <button class="filter-btn" data-filter="webgpu">WebGPU</button>
-      <button class="filter-btn" data-filter="ai">AI</button>
-      
-      <button class="filter-btn" data-filter="tool">Tools</button>
-    </div>
+        <button class="filter-btn active" data-filter="all"><svg class="fi" aria-hidden="true"><use href="#tag-all" /></svg>All</button>
+        <button class="filter-btn" data-filter="ai"><svg class="fi" aria-hidden="true"><use href="#tag-ai" /></svg>AI</button>
+        <button class="filter-btn" data-filter="art"><svg class="fi" aria-hidden="true"><use href="#tag-art" /></svg>Art</button>
+        <button class="filter-btn" data-filter="alife"><svg class="fi" aria-hidden="true"><use href="#tag-alife" /></svg>Artificial Life</button>
+        <button class="filter-btn" data-filter="educational"><svg class="fi" aria-hidden="true"><use href="#tag-educational" /></svg>Educational</button>
+        <button class="filter-btn" data-filter="game"><svg class="fi" aria-hidden="true"><use href="#tag-game" /></svg>Game</button>
+        <button class="filter-btn" data-filter="research"><svg class="fi" aria-hidden="true"><use href="#tag-research" /></svg>Research</button>
+        <button class="filter-btn" data-filter="tool"><svg class="fi" aria-hidden="true"><use href="#tag-tool" /></svg>Tools</button>
+        <button class="filter-btn" data-filter="webgl"><svg class="fi" aria-hidden="true"><use href="#tag-webgl" /></svg>WebGL</button>
+        <button class="filter-btn" data-filter="webgpu"><svg class="fi" aria-hidden="true"><use href="#tag-webgpu" /></svg>WebGPU</button>
+      </div>
 
     <div class="grid" id="grid">
 
@@ -949,9 +1028,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Thousands of agents navigating emergent behavior — WebGPU-accelerated, running entirely in your browser.</p>
+          <p class="card-desc">Thousands of agents forming emergent flocks, GPU-accelerated in your browser.</p>
           <div class="card-tags">
-              <span class="tag">Research</span><span class="tag">Art</span><span class="tag">Artificial Life</span><span class="tag">WebGPU</span>
+              <span class="tag" title="Art"><svg class="ti" aria-hidden="true"><use href="#tag-art" /></svg><span class="sr">Art</span></span><span class="tag" title="Artificial Life"><svg class="ti" aria-hidden="true"><use href="#tag-alife" /></svg><span class="sr">Artificial Life</span></span><span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -973,9 +1052,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Turn documents into expressive, private speech — text-to-speech that runs entirely on your own machine.</p>
+          <p class="card-desc">Turn documents into expressive speech, running entirely on your own machine.</p>
           <div class="card-tags">
-              <span class="tag">WebGPU</span><span class="tag">AI</span><span class="tag">Tool</span><span class="tag">TypeScript</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Tools"><svg class="ti" aria-hidden="true"><use href="#tag-tool" /></svg><span class="sr">Tools</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -999,7 +1078,7 @@
           </div>
           <p class="card-desc">WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.</p>
           <div class="card-tags">
-              <span class="tag">Art</span><span class="tag">Artificial Life</span><span class="tag">WebGPU</span><span class="tag">Svelte</span>
+              <span class="tag" title="Art"><svg class="ti" aria-hidden="true"><use href="#tag-art" /></svg><span class="sr">Art</span></span><span class="tag" title="Artificial Life"><svg class="ti" aria-hidden="true"><use href="#tag-alife" /></svg><span class="sr">Artificial Life</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1023,7 +1102,7 @@
           </div>
           <p class="card-desc">Artificial life emerging from Z80 machine code bytes — evolution in your browser.</p>
           <div class="card-tags">
-              <span class="tag">Artificial Life</span><span class="tag">WebGPU</span><span class="tag">TypeScript</span><span class="tag">Z80</span>
+              <span class="tag" title="Artificial Life"><svg class="ti" aria-hidden="true"><use href="#tag-alife" /></svg><span class="sr">Artificial Life</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1045,9 +1124,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Thousands of Z80 CPUs running at once in a single WebGPU dispatch — an emulator built for artificial life and genetic programming.</p>
+          <p class="card-desc">Thousands of Z80 CPUs in a single WebGPU dispatch, an emulator built for artificial life.</p>
           <div class="card-tags">
-              <span class="tag">WebGPU</span><span class="tag">Z80</span><span class="tag">TypeScript</span>
+              <span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1069,9 +1148,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">An interactive course in AI engineering — 29 lessons on the LangChain stack, every concept a live demo.</p>
+          <p class="card-desc">An interactive AI engineering course: 29 lessons on the LangChain stack.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">AI</span><span class="tag">LangChain</span><span class="tag">Course</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1093,9 +1172,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">An interactive book about deep learning where every model is real — eight chapters that train live on your own GPU.</p>
+          <p class="card-desc">An interactive book on deep learning where every model trains live on your own GPU.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">WebGPU</span><span class="tag">AI</span><span class="tag">Deep Learning</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1117,9 +1196,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Five labs for poking at text-embedding models — compare, trace a sentence's path, search, classify, and cluster, all running locally.</p>
+          <p class="card-desc">Five labs for text-embedding models: compare, trace, search, classify, cluster.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">WebGPU</span><span class="tag">AI</span><span class="tag">Embeddings</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1141,9 +1220,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">An agent skill for training real neural networks in the browser with jax-js — verified templates and measured performance.</p>
+          <p class="card-desc">An agent skill for training real neural networks in the browser with jax-js.</p>
           <div class="card-tags">
-              <span class="tag">WebGPU</span><span class="tag">AI</span><span class="tag">Agent Skill</span><span class="tag">jax-js</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1165,9 +1244,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">A visual guide to the shell for the AI era — read, verify, and run commands in an in-browser playground.</p>
+          <p class="card-desc">A visual guide to the shell for the AI era. Read, verify, and run in a browser playground.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">TypeScript</span><span class="tag">Bash</span><span class="tag">Guide</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1191,7 +1270,7 @@
           </div>
           <p class="card-desc">A game about sampling probability distributions with the fewest clicks.</p>
           <div class="card-tags">
-              <span class="tag">Research</span><span class="tag">Game</span><span class="tag">Svelte</span><span class="tag">Probability</span>
+              <span class="tag" title="Game"><svg class="ti" aria-hidden="true"><use href="#tag-game" /></svg><span class="sr">Game</span></span><span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span>
             </div>
         </div>
       </article>
@@ -1213,9 +1292,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">A lab for seeing how an AI agent actually works — prompts, tools, memory, and token cost laid bare.</p>
+          <p class="card-desc">See how an AI agent really works: prompts, tools, memory, and token cost.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">Research</span><span class="tag">AI</span><span class="tag">Agents</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span><span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span>
             </div>
         </div>
       </article>
@@ -1239,7 +1318,7 @@
           </div>
           <p class="card-desc">Watch optimizers navigate loss landscapes in real time, with D3-powered animations.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">Research</span><span class="tag">AI</span><span class="tag">Svelte</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span><span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span>
             </div>
         </div>
       </article>
@@ -1261,9 +1340,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">An interactive atlas of 46 network protocols — from the TCP handshake to modern QUIC streams.</p>
+          <p class="card-desc">An interactive atlas of 46 network protocols, from TCP to QUIC.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">TypeScript</span><span class="tag">Networking</span><span class="tag">Interactive</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1285,9 +1364,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders — concepts without the jargon.</p>
+          <p class="card-desc">A visual, interactive guide to Git for AI-assisted coders, minus the jargon.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">Svelte</span><span class="tag">Git</span><span class="tag">Guide</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1309,9 +1388,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Explore the softmax function interactively — temperature, logits, and probability all in one view.</p>
+          <p class="card-desc">The softmax function made interactive: temperature, logits, probability.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">Svelte</span><span class="tag">TypeScript</span><span class="tag">ML</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1333,9 +1412,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">An infinitesimal-first interactive calculus book — learn through manipulation, not memorization.</p>
+          <p class="card-desc">An infinitesimal-first calculus book. Learn by manipulation, not memory.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">Svelte</span><span class="tag">Math</span><span class="tag">Interactive</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1359,7 +1438,7 @@
           </div>
           <p class="card-desc">Relational databases from first principles — with live SQL playgrounds in every section.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">TypeScript</span><span class="tag">SQL</span><span class="tag">Guide</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1381,9 +1460,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">A unified component reference for vibe coders — browse, compare, and copy from a single place.</p>
+          <p class="card-desc">A component reference for vibe coders: browse, compare, copy in one place.</p>
           <div class="card-tags">
-              <span class="tag">Educational</span><span class="tag">TypeScript</span><span class="tag">UI</span><span class="tag">Reference</span>
+              <span class="tag" title="Educational"><svg class="ti" aria-hidden="true"><use href="#tag-educational" /></svg><span class="sr">Educational</span></span>
             </div>
         </div>
       </article>
@@ -1405,9 +1484,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Multi-region image-to-text with vision language models — select patches, prompt, and stream the output.</p>
+          <p class="card-desc">Multi-region image-to-text with vision language models. Prompt and stream.</p>
           <div class="card-tags">
-              <span class="tag">Research</span><span class="tag">AI</span><span class="tag">VLM</span><span class="tag">TypeScript</span>
+              <span class="tag" title="AI"><svg class="ti" aria-hidden="true"><use href="#tag-ai" /></svg><span class="sr">AI</span></span><span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span>
             </div>
         </div>
       </article>
@@ -1429,9 +1508,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Record a browser tab with mic and webcam overlay, then export to video or GIF — no account, no cloud, all local.</p>
+          <p class="card-desc">Record a browser tab with mic and webcam overlay, then export to video or GIF. All local.</p>
           <div class="card-tags">
-              <span class="tag">Tool</span><span class="tag">Chrome Extension</span><span class="tag">Recording</span><span class="tag">GIF</span>
+              <span class="tag" title="Tools"><svg class="ti" aria-hidden="true"><use href="#tag-tool" /></svg><span class="sr">Tools</span></span>
             </div>
         </div>
       </article>
@@ -1453,9 +1532,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Craig Reynolds' flocking algorithm rendered in WebGL, with every rule exposed as a live control.</p>
+          <p class="card-desc">Craig Reynolds' flocking algorithm in WebGL, every rule a live control.</p>
           <div class="card-tags">
-              <span class="tag">Art</span><span class="tag">Artificial Life</span><span class="tag">WebGL</span><span class="tag">TypeScript</span>
+              <span class="tag" title="Art"><svg class="ti" aria-hidden="true"><use href="#tag-art" /></svg><span class="sr">Art</span></span><span class="tag" title="Artificial Life"><svg class="ti" aria-hidden="true"><use href="#tag-alife" /></svg><span class="sr">Artificial Life</span></span><span class="tag" title="WebGL"><svg class="ti" aria-hidden="true"><use href="#tag-webgl" /></svg><span class="sr">WebGL</span></span>
             </div>
         </div>
       </article>
@@ -1477,9 +1556,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">A first-person flight through volumetric clouds and ocean waves, raymarched in real time and scored to an original soundtrack.</p>
+          <p class="card-desc">A first-person flight through volumetric clouds and ocean waves, raymarched in real time.</p>
           <div class="card-tags">
-              <span class="tag">Art</span><span class="tag">WebGL</span><span class="tag">WebGPU</span><span class="tag">Shaders</span>
+              <span class="tag" title="Art"><svg class="ti" aria-hidden="true"><use href="#tag-art" /></svg><span class="sr">Art</span></span><span class="tag" title="WebGL"><svg class="ti" aria-hidden="true"><use href="#tag-webgl" /></svg><span class="sr">WebGL</span></span><span class="tag" title="WebGPU"><svg class="ti" aria-hidden="true"><use href="#tag-webgpu" /></svg><span class="sr">WebGPU</span></span>
             </div>
         </div>
       </article>
@@ -1501,9 +1580,9 @@
               <span class="card-arrow">↗</span>
             </span>
           </div>
-          <p class="card-desc">Robot path planning through artificial potential fields — watch attraction and repulsion shape the route.</p>
+          <p class="card-desc">Robot path planning by potential fields: watch attraction and repulsion.</p>
           <div class="card-tags">
-              <span class="tag">Research</span><span class="tag">React</span><span class="tag">Robotics</span><span class="tag">Visualization</span>
+              <span class="tag" title="Research"><svg class="ti" aria-hidden="true"><use href="#tag-research" /></svg><span class="sr">Research</span></span>
             </div>
         </div>
       </article>
