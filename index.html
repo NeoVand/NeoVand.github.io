@@ -317,22 +317,39 @@
       letter-spacing: 0.02em;
     }
 
-    /* ─── SECTION RULE ─── */
-    /* A plain hairline with 80px of nothing either side is a lot of page spent
-       on a divider. The line is still there, but it is the ground a row of
-       small L-system sprigs grows out of when the pointer runs along it. */
+    /* ─── SECTION FLOURISH ─── */
+    /* A calligraphic divider that draws itself outward from the middle when it
+       comes into view: each piece of the flourish swings open from the end
+       that joins the centre, the terminal spirals arriving last. */
     .rule {
-      position: relative;
-      height: 88px;
-      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 26px 24px 30px;
     }
 
-    .rule canvas {
-      position: absolute;
-      inset: 0;
+    .fl {
       width: 100%;
-      height: 100%;
+      max-width: 600px;
+      height: auto;
       display: block;
+      overflow: visible;
+      fill: #6e6e6e;
+    }
+
+    .fl .st1 { fill-rule: evenodd; clip-rule: evenodd; }
+
+    .fl > * {
+      transform-box: fill-box;
+      opacity: 0;
+      transform: scale(0.3) rotate(var(--r, 0deg));
+      transition: opacity 560ms var(--ease) var(--d, 0ms),
+                  transform 980ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms);
+    }
+
+    .rule.is-open .fl > * { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .fl > * { transform: none; transition: opacity 300ms linear; }
     }
 
     /* ─── PUBLICATIONS ─── */
@@ -1485,7 +1502,69 @@
     </div>
   </main>
 
-  <div class="rule" aria-hidden="true"><canvas></canvas></div>
+  <div class="rule" aria-hidden="true"></div>
+
+  <template id="flourish">
+    <svg class="fl" viewBox="48 338 1004 154" xmlns="http://www.w3.org/2000/svg" role="presentation" focusable="false">
+<path class="st1" d="M607.1,396.4c10.7,4.4,23.8,12.1,33.3,18.7c4.9,3.4,9.5,7.1,14.9,9.8c12.4,6.1,24,9.9,36.8,2.5
+	c15.4-8.9,26.2-38.2,3.3-50.5c-4.6-2.5-7.2-1.4-11.9,0.5c-0.5,0.2-1.1,0.4-1.6,0.4c-1.2-0.1-1.9-1.7-1.4-2.8
+	c2.4-5.5,15.9-0.2,19.3,1.7c16,9.1,15.7,33.6,4.6,45.3c-32.3,34.2-67.4-1.1-92.7-18.1l0,0.1c-18.4-12.5-40.3-8.8-50.8,3.7
+	c-5.8,6.9-7.2,18.1-3.5,27.2c3.3,8,9.8,14.9,17.6,17c14.3,3.9,26.8-5.3,27-18.1c0.1-5.7-1-14.4-8.2-18.2c-4.6-2.4-13.4-3.9-15.3,2.9
+	c-0.7,2.5,1.1,5.6,3.7,5.7c1.4,0,2.7-0.8,4.1-0.9c1.6-0.2,3.2,0.6,4.1,1.9c0.9,1.3,1,3.1,0.2,4.5c-2.1,3.9-9.6,3.9-12.8,1.6
+	c-3.4-2.5-5.2-7.4-4.3-12c0.7-3.6,3-6.6,6.2-8.1c4.4-2.1,12-2,18,1.2c8.9,4.8,14.5,16.8,11.1,29.4c-4.1,15.5-16.3,24.1-35.4,19.2
+	c-9.4-2.4-17.2-12.9-20.3-24.1c-3-11.1-2.2-23.2,4.7-31.4C571.2,389.6,589.4,389.2,607.1,396.4z"/>
+<path d="M691.2,478c1.4,1,0.5,1.5,0,1.2c-4.7-3.6-6.8-0.5-7.1,1c-0.1,3.8,4.3,5.3,7.8,2.8c2.4-1.5,4.6-4.4,5.4-8.7
+	c1.6-6.7-0.4-34.5-38.3-40.8c-0.6-0.1-0.9-0.2-1.5-0.3c-1.4-0.3-2-1.1,0.1-1c0.5,0,1.1,0.1,1.6,0.2c6.7,1.4,31.9,6.3,37.8,30.2
+	c1.6,6.2,1.9,12.7-2.2,18.2c-6.2,7.1-11.5,2.6-11.2-0.8C684.3,476.9,688.5,475.8,691.2,478z"/>
+<path d="M635.7,419.7c3.4,3.4,5.7,9.3,4,13.6c-1,2.5-4.2,5-7.1,5.6c-2.9,0.7-5.8-0.7-7.4-2.5c-5-5.5-1.2-12.7,5.8-12.1
+	c1.1,0.1,2.5,0.6,2.7,1.8c0.2,1-1,2.5-2.1,2.4c-1.1-0.1-1.5-1.5-2.5-2c-1-0.6-2.4,0.1-3.1,1c-1.5,2-1.8,4.9-0.5,7
+	c3.4,5.6,11.4,2.3,13.2-1.6c1.7-3.8-0.7-9.6-4-12.7L635.7,419.7z"/>
+<path d="M683.7,432.1c4.7-1,9.9-4.6,10.9-9.1c0.6-2.7-0.7-6.5-2.7-8.6c-2.1-2.2-5.2-2.6-7.6-2c-7.2,1.8-8.1,9.9-1.9,13.3
+	c1,0.5,2.4,0.9,3.2,0c0.7-0.8,0.6-2.6-0.4-3.1c-1-0.5-2.1,0.4-3.2,0.3c-1.2-0.1-1.9-1.4-2-2.6c-0.2-2.5,1.2-5,3.5-6.1
+	c5.9-2.8,10.8,4.4,10.1,8.6c-0.7,4.1-5.9,7.6-10.4,8.4L683.7,432.1z"/>
+<path class="st1" d="M691.1,450.2c14.8,5.6,38.8,0,42.1-17.2c1.4-7.2,0.1-17.3-7.4-20.8c-3.4-1.6-9.1-1.1-10.7,3.4
+	c-1.1,3.3,2.4,7.5,6.1,5.4c4.9-2.9,2.1-8.2-2.8-7.8c15.1-3.2,16.6,16.7,10.9,26.2c-6.8,11.3-30.5,15.4-40.7,8L691.1,450.2z"/>
+<path class="st1" d="M704.7,416.8c23.4-21,71.7-27.8,90.3,1.6c7.7,12.2,12.7,32,1.2,43.8c-5.2,5.4-16.1,8.6-22.3,1.3
+	c-4.5-5.2-0.9-15.7,7.5-14.3c11.1,1.8,9.8,13.6,0.5,16.4c30.1-4.9,18.7-42.9,1.4-56.3c-20.7-16-67.6-6.5-81,14.4L704.7,416.8z"/>
+<path d="M973.7,413.3c5.2,1.7,4.7-1.6,3.2-2.2c-18.7-5.3-14.5-17.1-11-20.6c9.7-7.6,22.3,0.8,22.6,15c0.7,9.2-2.7,20.7-12.2,31.1
+	c-14.6,17.3-91.5,66.2-182-21.3c-1.3-1.4-2.3-2-3.6-3.3c-3.5-3.1-5.7-4.2-1.2,1.2c1.2,1.3,2.4,2.7,3.7,3.8
+	c16.7,14.8,77.5,72.7,152.1,41.6c19.4-8,37.2-19.6,43.5-41.2c6.6-30.2-15.5-35.4-23.9-27.8C957.3,397.3,962.8,410.5,973.7,413.3z"/>
+<path class="st1" d="M974.7,437.3c15.4-16.5,49.5-24.4,64.7-4.5c6.3,8.3,11.1,22.1,3.6,31.2c-3.4,4.2-11,7.1-15.8,2.3
+	c-3.5-3.5-1.6-11.2,4.5-10.7c8,0.6,7.9,9.1,1.4,11.7c21.2-5.4,10.7-31.8-2.5-40.3c-15.8-10.2-48.7-0.5-57,15.4L974.7,437.3z"/>
+<path class="st1" d="M491.3,396.4c-10.7,4.4-23.8,12.1-33.3,18.7c-4.9,3.4-9.5,7.1-14.9,9.8c-12.4,6.1-24,9.9-36.8,2.5
+	c-15.4-8.9-26.2-38.2-3.3-50.5c4.6-2.5,7.2-1.4,11.9,0.5c0.5,0.2,1.1,0.4,1.6,0.4c1.2-0.1,1.9-1.7,1.4-2.8
+	c-2.4-5.5-15.9-0.2-19.3,1.7c-16,9.1-15.7,33.6-4.6,45.3c32.3,34.2,67.4-1.1,92.7-18.1l0,0.1c18.4-12.5,40.3-8.8,50.8,3.7
+	c5.8,6.9,7.2,18.1,3.5,27.2c-3.3,8-9.8,14.9-17.6,17c-14.3,3.9-26.8-5.3-27-18.1c-0.1-5.7,1-14.4,8.2-18.2
+	c4.6-2.4,13.4-3.9,15.3,2.9c0.7,2.5-1.1,5.6-3.7,5.7c-1.4,0-2.7-0.8-4.1-0.9c-1.6-0.2-3.2,0.6-4.1,1.9c-0.9,1.3-1,3.1-0.2,4.5
+	c2.1,3.9,9.6,3.9,12.8,1.6c3.4-2.5,5.2-7.4,4.3-12c-0.7-3.6-3-6.6-6.2-8.1c-4.4-2.1-12-2-18,1.2c-8.9,4.8-14.5,16.8-11.1,29.4
+	c4.1,15.5,16.3,24.1,35.4,19.2c9.4-2.4,17.2-12.9,20.3-24.1c3-11.1,2.2-23.2-4.7-31.4C527.2,389.6,509,389.2,491.3,396.4z"/>
+<path d="M407.1,478c-1.4,1-0.5,1.5,0,1.2c4.7-3.6,6.8-0.5,7.1,1c0.1,3.8-4.3,5.3-7.8,2.8c-2.4-1.5-4.6-4.4-5.4-8.7
+	c-1.6-6.7,0.4-34.5,38.3-40.8c0.6-0.1,0.9-0.2,1.5-0.3c1.4-0.3,2-1.1-0.1-1c-0.5,0-1.1,0.1-1.6,0.2c-6.7,1.4-31.9,6.3-37.8,30.2
+	c-1.6,6.2-1.9,12.7,2.2,18.2c6.2,7.1,11.5,2.6,11.2-0.8C414.1,476.9,409.8,475.8,407.1,478z"/>
+<path d="M462.6,419.7c-3.4,3.4-5.7,9.3-4,13.6c1,2.5,4.2,5,7.1,5.6c2.9,0.7,5.8-0.7,7.4-2.5c5-5.5,1.2-12.7-5.8-12.1
+	c-1.1,0.1-2.5,0.6-2.7,1.8c-0.2,1,1,2.5,2.1,2.4c1.1-0.1,1.5-1.5,2.5-2c1-0.6,2.4,0.1,3.1,1c1.5,2,1.8,4.9,0.5,7
+	c-3.4,5.6-11.4,2.3-13.2-1.6c-1.7-3.8,0.7-9.6,4-12.7L462.6,419.7z"/>
+<path d="M414.6,432.1c-4.7-1-9.9-4.6-10.9-9.1c-0.6-2.7,0.7-6.5,2.7-8.6c2.1-2.2,5.2-2.6,7.6-2c7.2,1.8,8.1,9.9,1.9,13.3
+	c-1,0.5-2.4,0.9-3.2,0c-0.7-0.8-0.6-2.6,0.4-3.1c1-0.5,2.1,0.4,3.2,0.3c1.2-0.1,1.9-1.4,2-2.6c0.2-2.5-1.2-5-3.5-6.1
+	c-5.9-2.8-10.8,4.4-10.1,8.6c0.7,4.1,5.9,7.6,10.4,8.4L414.6,432.1z"/>
+<path class="st1" d="M407.2,450.2c-14.8,5.6-38.8,0-42.1-17.2c-1.4-7.2-0.1-17.3,7.4-20.8c3.4-1.6,9.1-1.1,10.7,3.4
+	c1.1,3.3-2.4,7.5-6.1,5.4c-4.9-2.9-2.1-8.2,2.8-7.8c-15.1-3.2-16.6,16.7-10.9,26.2c6.8,11.3,30.6,15.4,40.7,8L407.2,450.2z"/>
+<path class="st1" d="M393.7,416.8c-23.4-21-71.7-27.8-90.3,1.6c-7.7,12.2-12.7,32-1.2,43.8c5.2,5.4,16.1,8.6,22.3,1.3
+	c4.5-5.2,0.9-15.7-7.5-14.3c-11.1,1.8-9.8,13.6-0.5,16.4c-30.1-4.9-18.7-42.9-1.4-56.3c20.7-16,67.6-6.5,81,14.4L393.7,416.8z"/>
+<path d="M124.7,413.3c-5.2,1.7-4.7-1.6-3.2-2.2c18.7-5.3,14.5-17.1,11-20.6c-9.7-7.6-22.3,0.8-22.6,15c-0.7,9.2,2.7,20.7,12.2,31.1
+	c14.6,17.3,91.5,66.2,182-21.3c1.3-1.4,2.3-2,3.6-3.3c3.5-3.1,5.7-4.2,1.2,1.2c-1.2,1.3-2.4,2.7-3.7,3.8
+	c-16.7,14.8-77.5,72.7-152.1,41.6c-19.4-8-37.2-19.6-43.5-41.2c-6.6-30.2,15.5-35.4,23.9-27.8C141.1,397.3,135.5,410.5,124.7,413.3z
+	"/>
+<path class="st1" d="M123.7,437.3c-15.4-16.5-49.5-24.4-64.7-4.5c-6.3,8.3-11.1,22.1-3.6,31.2c3.4,4.2,11,7.1,15.8,2.3
+	c3.5-3.5,1.6-11.2-4.5-10.7c-8,0.6-7.9,9.1-1.4,11.7c-21.2-5.4-10.7-31.8,2.5-40.3c15.8-10.2,48.7-0.5,57,15.4L123.7,437.3z"/>
+<g>
+	<path d="M549,345.1c0,0,0,0.1,0,0.2C549.1,345.1,549.1,345.1,549,345.1z"/>
+	<path d="M560.9,372.4c-4.1-14.3-11.2-25.7-11.8-27.2c-0.4,1.5-8.3,13.1-11.9,27.2c-3.7,14.6,5.3,27.3,11.8,27.3
+		C555.6,399.7,565,386.9,560.9,372.4z M549,398.2c-4.9,0-11.7-9.6-8.9-20.6c2.7-10.6,8.6-19.4,8.9-20.5c0-0.1,0-0.1,0-0.1
+		c0,0,0,0,0,0.1c0.4,1.1,5.8,9.7,8.9,20.5C561.1,388.6,554,398.2,549,398.2z"/>
+</g>
+    </svg>
+  </template>
 
   <!-- PUBLICATIONS -->
   <!-- Pages run 5 → 1 in the markup so page one paints last and lands on top
@@ -1585,7 +1664,7 @@
     </div>
   </section>
 
-  <div class="rule" aria-hidden="true"><canvas></canvas></div>
+  <div class="rule" aria-hidden="true"></div>
 
   <!-- RESEARCH / EARLIER WORK -->
   <section id="research">
@@ -2789,211 +2868,50 @@
   </script>
 
   <script>
-  // ─── Section breaks: a meadow instead of a rule ───
-  // A hairline with 80px of nothing either side is a lot of page spent on one
-  // grey line. This is the same undergrowth that grows under the trees at the
-  // top of the page, sown along a strip: squat, wide little bushes that put
-  // out more growth wherever the pointer runs along them.
+  // ─── Section flourish: opens outward when it scrolls into view ───
+  // The ornament is symmetric and calligraphic: it wants to be drawn from the
+  // middle out to the tails, not scaled up whole. Each piece is pivoted on the
+  // end that joins the centre and delayed by how far out it sits, so the
+  // flourish unrolls and the terminal spirals land last.
   (() => {
+    const tpl = document.getElementById('flourish');
     const strips = document.querySelectorAll('.rule');
-    if (!strips.length) return;
+    if (!tpl || !strips.length) return;
 
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const SPEC = { rules: { F: 'F[+F]F[-F]F' }, angle: 42, iters: 3 };
-    const SOFT = 1.5;      // branching levels unfurling at once
-    const SPACING = 19;    // px between plants; they overlap into a thicket
-    const NEAR = 250;      // how far along the strip the extra growth carries
-    const BAND = 90;       // how far above or below it the pointer still counts
-    const REST = 0.5;      // how much is out before anyone touches it
+    strips.forEach(strip => {
+      strip.appendChild(tpl.content.cloneNode(true));
+      const svg = strip.querySelector('.fl');
+      const parts = [...svg.children];
+      const boxes = parts.map(p => p.getBBox());
 
-    const hash = (i, salt) => {
-      const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
-      return v - Math.floor(v);
-    };
+      let lo = Infinity, hi = -Infinity;
+      for (const b of boxes) { lo = Math.min(lo, b.x); hi = Math.max(hi, b.x + b.width); }
+      const mid = (lo + hi) / 2;
 
-    let str = 'F';
-    for (let n = 0; n < SPEC.iters; n++) {
-      let out = '';
-      for (const c of str) out += SPEC.rules[c] ?? c;
-      str = out;
-    }
+      let far = 1;
+      for (const b of boxes) far = Math.max(far, Math.abs(b.x + b.width / 2 - mid));
 
-    let maxDepth = 0;
-    { let d = 0;
-      for (const c of str) {
-        if (c === '[') { d++; if (d > maxDepth) maxDepth = d; }
-        else if (c === ']') d--;
-      } }
-
-    // One walk of the string, either to measure the shape or to draw it. Growth
-    // runs as a front down the branching levels, so a plant thickens outward
-    // from its stem rather than simply scaling up.
-    function walk(p, sx, sy, g, buckets, tips) {
-      const front = g * (maxDepth + SOFT);
-      const turn = SPEC.angle * Math.PI / 180;
-      let x = 0, y = 0, a = -Math.PI / 2, depth = 0;
-      let minX = 0, maxX = 0, minY = 0, maxY = 0;
-      const stack = [];
-      for (let i = 0; i < str.length; i++) {
-        const c = str[i];
-        if (c === 'F') {
-          const reach = Math.max(0, Math.min(1, (front - depth) / SOFT));
-          if (reach <= 0.001) continue;
-          const px = x, py = y;
-          x += Math.cos(a) * sx * reach;
-          y += Math.sin(a) * sy * reach;
-          if (buckets) {
-            let j = i + 1;
-            while (j < str.length && str[j] !== 'F' && str[j] !== '[' && str[j] !== ']') j++;
-            const tip = j >= str.length || str[j] === ']';
-            if (tip && tips && reach > 0.55) tips.push(px, py, x, y);
-            else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y);
-          }
-          if (x < minX) minX = x; else if (x > maxX) maxX = x;
-          if (y < minY) minY = y; else if (y > maxY) maxY = y;
-        } else if (c === '+') a += turn;
-        else if (c === '-') a -= turn;
-        else if (c === '[') { stack.push(x, y, a, depth); depth++; }
-        else if (c === ']') { depth = stack.pop(); a = stack.pop(); y = stack.pop(); x = stack.pop(); }
-      }
-      return { minX, maxX, minY, maxY };
-    }
-
-    const BOX = walk({}, 1, 1, 1, null, null);
-    const SPAN_Y = Math.max(1e-6, -BOX.minY);
-    const pointer = { x: 0, y: 0, on: false };
-
-    strips.forEach((strip, si) => {
-      const canvas = strip.querySelector('canvas');
-      const ctx = canvas.getContext('2d');
-      let W = 0, H = 0, plants = [], raf = 0, visible = true;
-
-      function layout() {
-        const r = strip.getBoundingClientRect();
-        if (!r.width || !r.height) return;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        W = r.width; H = r.height;
-        canvas.width = Math.round(W * dpr);
-        canvas.height = Math.round(H * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const ground = H - 10;
-        const n = Math.max(8, Math.round(W / SPACING));
-        const keep = new Map(plants.map(p => [p.k, p.g]));
-        plants = [];
-        for (let i = 0; i < n; i++) {
-          const k = si * 2000 + i;
-          // heights skew small: a lot of low scrub, a few taller clumps
-          const tall = (H - 16) * (0.16 + Math.pow(hash(i, 2 + si), 1.9) * 0.62);
-          const sy = tall / SPAN_Y;
-          const tone0 = Math.round(32 + hash(i, 4 + si) * 20);
-          plants.push({
-            k,
-            // jittered off the grid, so the row does not read as a comb
-            x: (i + 0.5 + (hash(i, 5 + si) - 0.5) * 0.85) * (W / n),
-            y: ground,
-            sy,
-            sx: sy * (1.5 + hash(i, 6 + si) * 0.9) * (hash(i, 3 + si) > 0.5 ? 1 : -1),
-            tone: [tone0, tone0 + 16 + Math.round(hash(i, 7 + si) * 18)],
-            tip: 78 + Math.round(hash(i, 14 + si) * 26),
-            width: Math.max(0.55, Math.min(1.35, sy * 0.15)),
-            g: keep.get(k) ?? REST,
-            target: REST
-          });
+      parts.forEach((p, i) => {
+        const b = boxes[i];
+        const dx = b.x + b.width / 2 - mid;
+        const t = Math.abs(dx) / far;
+        if (Math.abs(dx) < 24) {
+          // the finial at the centre: it rises rather than swings
+          p.style.transformOrigin = '50% 100%';
+        } else {
+          p.style.transformOrigin = dx > 0 ? '0% 50%' : '100% 50%';
+          p.style.setProperty('--r', (dx > 0 ? -14 : 14) + 'deg');
         }
-        plants.sort((a, b) => a.sy - b.sy);   // small ones in front
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, W, H);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        for (const p of plants) {
-          if (p.g <= 0.002) continue;
-          const buckets = [], tips = [];
-          walk(p, p.sx, p.sy, p.g, buckets, tips);
-          const [t0, t1] = p.tone;
-          for (let d = 0; d < buckets.length; d++) {
-            const seg = buckets[d];
-            if (!seg) continue;
-            const v = Math.round(t0 + (d / maxDepth) * (t1 - t0));
-            ctx.strokeStyle = `rgb(${v},${v},${v})`;
-            ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.75, d));
-            ctx.beginPath();
-            for (let i = 0; i < seg.length; i += 4) {
-              ctx.moveTo(p.x + seg[i], p.y + seg[i + 1]);
-              ctx.lineTo(p.x + seg[i + 2], p.y + seg[i + 3]);
-            }
-            ctx.stroke();
-          }
-          if (tips.length) {
-            ctx.strokeStyle = `rgb(${p.tip},${p.tip},${p.tip})`;
-            ctx.lineWidth = Math.max(0.5, p.width * 0.55);
-            ctx.beginPath();
-            for (let i = 0; i < tips.length; i += 4) {
-              ctx.moveTo(p.x + tips[i], p.y + tips[i + 1]);
-              ctx.lineTo(p.x + tips[i + 2], p.y + tips[i + 3]);
-            }
-            ctx.stroke();
-          }
-        }
-      }
-
-      function retarget() {
-        const r = strip.getBoundingClientRect();
-        const near = pointer.on && pointer.y > r.top - BAND && pointer.y < r.bottom + BAND;
-        const px = pointer.x - r.left;
-        let moving = false;
-        for (const p of plants) {
-          let extra = 0;
-          if (near) {
-            const f = Math.max(0, 1 - Math.abs(p.x - px) / NEAR);
-            extra = f * f * (3 - 2 * f);
-          }
-          p.target = REST + (1 - REST) * extra;
-          if (Math.abs(p.target - p.g) > 0.002) moving = true;
-        }
-        return moving;
-      }
-
-      function frame() {
-        let moving = false;
-        for (const p of plants) {
-          // eager on the way out, slower folding back, so growth trails behind
-          const k = p.target > p.g ? 0.11 : 0.055;
-          p.g += (p.target - p.g) * k;
-          if (Math.abs(p.target - p.g) > 0.002) moving = true;
-        }
-        draw();
-        raf = moving ? requestAnimationFrame(frame) : 0;
-      }
-
-      function wake() {
-        if (!visible || reduced) return;
-        if (retarget() && !raf) raf = requestAnimationFrame(frame);
-      }
-
-      layout();
-      draw();
-
-      new ResizeObserver(() => { layout(); draw(); }).observe(strip);
-      new IntersectionObserver(e => {
-        visible = e[0].isIntersecting;
-        if (!visible && raf) { cancelAnimationFrame(raf); raf = 0; }
-      }, { rootMargin: '140px' }).observe(strip);
-
-      strip._wake = wake;
+        p.style.setProperty('--d', Math.round(Math.pow(t, 0.8) * 620) + 'ms');
+      });
     });
 
-    window.addEventListener('pointermove', e => {
-      pointer.x = e.clientX; pointer.y = e.clientY; pointer.on = true;
-      strips.forEach(s => s._wake());
-    }, { passive: true });
-
-    const leave = () => { pointer.on = false; strips.forEach(s => s._wake()); };
-    window.addEventListener('blur', leave);
-    document.addEventListener('pointerleave', leave);
+    const open = el => el.classList.add('is-open');
+    if (!('IntersectionObserver' in window)) { strips.forEach(open); return; }
+    const io = new IntersectionObserver((entries, obs) => {
+      for (const e of entries) if (e.isIntersecting) { open(e.target); obs.unobserve(e.target); }
+    }, { threshold: 0.4 });
+    strips.forEach(s => io.observe(s));
   })();
   </script>
 
