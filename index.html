@@ -919,12 +919,14 @@
       <button class="filter-btn active" data-filter="all">All</button>
       <button class="filter-btn" data-filter="featured">Featured</button>
       <button class="filter-btn" data-filter="educational">Educational</button>
+        <button class="filter-btn" data-filter="research">Research</button>
       <button class="filter-btn" data-filter="art">Art</button>
       <button class="filter-btn" data-filter="game">Game</button>
       <button class="filter-btn" data-filter="alife">Artificial Life</button>
+        <button class="filter-btn" data-filter="webgl">WebGL</button>
       <button class="filter-btn" data-filter="webgpu">WebGPU</button>
       <button class="filter-btn" data-filter="ai">AI</button>
-      <button class="filter-btn" data-filter="ml">Machine Learning</button>
+      
       <button class="filter-btn" data-filter="tool">Tools</button>
     </div>
 
@@ -932,7 +934,7 @@
 
       <!-- Swarm -->
       <article class="card"
-         data-categories="featured art alife webgpu"
+         data-categories="featured research art alife webgpu"
          style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0b1130,#07091e)">
         <a class="card-link" href="https://neovand.github.io/swarm/" target="_blank" rel="noopener" aria-label="Open the Swarm demo"></a>
         <div class="card-thumb">
@@ -956,7 +958,7 @@
 
       <!-- Voicebook -->
       <article class="card"
-         data-categories="featured ai webgpu"
+         data-categories="featured ai webgpu tool"
          style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
         <a class="card-link" href="https://neovand.github.io/voicebook/" target="_blank" rel="noopener" aria-label="Open the Voicebook demo"></a>
         <div class="card-thumb">
@@ -980,7 +982,7 @@
 
       <!-- Games of Life -->
       <article class="card"
-         data-categories="featured art"
+         data-categories="featured art alife webgpu"
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#061408,#040e06)">
         <a class="card-link" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener" aria-label="Open the Games of Life demo"></a>
         <div class="card-thumb">
@@ -1004,7 +1006,7 @@
 
       <!-- Algocell -->
       <article class="card"
-         data-categories="featured art"
+         data-categories="featured alife webgpu"
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#041808,#030f06)">
         <a class="card-link" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener" aria-label="Open the Algocell demo"></a>
         <div class="card-thumb">
@@ -1028,7 +1030,7 @@
 
       <!-- Zilion | repo only -->
       <article class="card"
-         data-categories="alife webgpu"
+         data-categories="webgpu"
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#041808,#030f06)">
         <a class="card-link" href="https://github.com/NeoVand/zilion" target="_blank" rel="noopener" aria-label="Open the Zilion repository"></a>
         <div class="card-thumb">
@@ -1052,7 +1054,7 @@
 
       <!-- LangX -->
       <article class="card"
-         data-categories="educational ai ml"
+         data-categories="educational ai"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#150828,#0d0520)">
         <a class="card-link" href="https://langx.lol/" target="_blank" rel="noopener" aria-label="Open the LangX demo"></a>
         <div class="card-thumb">
@@ -1076,7 +1078,7 @@
 
       <!-- jaxverse -->
       <article class="card"
-         data-categories="educational ml webgpu"
+         data-categories="educational ai webgpu"
          style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
         <a class="card-link" href="https://neovand.github.io/jaxverse/" target="_blank" rel="noopener" aria-label="Open the jaxverse demo"></a>
         <div class="card-thumb">
@@ -1100,7 +1102,7 @@
 
       <!-- Embedding Playground -->
       <article class="card"
-         data-categories="educational ml webgpu"
+         data-categories="educational ai webgpu"
          style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
         <a class="card-link" href="https://neovand.github.io/EmbeddingPlayground/" target="_blank" rel="noopener" aria-label="Open the Embedding Playground demo"></a>
         <div class="card-thumb">
@@ -1124,7 +1126,7 @@
 
       <!-- jax-js skill | repo only -->
       <article class="card"
-         data-categories="ai ml"
+         data-categories="ai webgpu"
          style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#04121c,#020c14)">
         <a class="card-link" href="https://github.com/NeoVand/jax-js-skill" target="_blank" rel="noopener" aria-label="Open the jax-js skill repository"></a>
         <div class="card-thumb">
@@ -1172,7 +1174,7 @@
 
       <!-- MacMac -->
       <article class="card"
-         data-categories="game"
+         data-categories="game research"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#140820,#0d0618)">
         <a class="card-link" href="https://macmac.lol/" target="_blank" rel="noopener" aria-label="Open the MacMac demo"></a>
         <div class="card-thumb">
@@ -1196,7 +1198,7 @@
 
       <!-- harnessXray -->
       <article class="card"
-         data-categories="educational ai"
+         data-categories="educational ai research"
          style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0a0a1e,#060614)">
         <a class="card-link" href="https://neovand.github.io/harnessXray/" target="_blank" rel="noopener" aria-label="Open the harnessXray demo"></a>
         <div class="card-thumb">
@@ -1220,7 +1222,7 @@
 
       <!-- gradientlab.ai -->
       <article class="card"
-         data-categories="educational ml"
+         data-categories="educational ai research"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#180828,#0f0520)">
         <a class="card-link" href="https://gradientlab.ai" target="_blank" rel="noopener" aria-label="Open gradientlab.ai"></a>
         <div class="card-thumb">
@@ -1292,7 +1294,7 @@
 
       <!-- SoftMax Explainer -->
       <article class="card"
-         data-categories="educational ml"
+         data-categories="educational"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#120828,#0c0620)">
         <a class="card-link" href="https://neovand.github.io/SoftMaxExplainer/" target="_blank" rel="noopener" aria-label="Open the SoftMax Explainer demo"></a>
         <div class="card-thumb">
@@ -1388,7 +1390,7 @@
 
       <!-- VLMOCR -->
       <article class="card"
-         data-categories="ai"
+         data-categories="ai research"
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1a1206,#120d04)">
         <a class="card-link" href="https://neovand.github.io/VLMOCR/" target="_blank" rel="noopener" aria-label="Open the VLMOCR demo"></a>
         <div class="card-thumb">
@@ -1436,7 +1438,7 @@
 
       <!-- Boids -->
       <article class="card"
-         data-categories="art alife"
+         data-categories="art alife webgl"
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#140820,#0d0618)">
         <a class="card-link" href="https://neovand.github.io/boids/" target="_blank" rel="noopener" aria-label="Open the Boids demo"></a>
         <div class="card-thumb">
@@ -1460,7 +1462,7 @@
 
       <!-- Vibe Coding -->
       <article class="card"
-         data-categories="art"
+         data-categories="art webgpu webgl"
          style="--accent:#6366f1; --gradient:linear-gradient(135deg,#0a0a1e,#060614)">
         <a class="card-link" href="https://neovand.github.io/vibe-coding/" target="_blank" rel="noopener" aria-label="Open the Vibe Coding demo"></a>
         <div class="card-thumb">
@@ -1484,7 +1486,7 @@
 
       <!-- Potential Fields -->
       <article class="card"
-         data-categories="educational"
+         data-categories="research"
          style="--accent:#38bdf8; --gradient:linear-gradient(135deg,#040c1c,#020814)">
         <a class="card-link" href="https://neovand.github.io/dpp/" target="_blank" rel="noopener" aria-label="Open the Potential Fields demo"></a>
         <div class="card-thumb">
