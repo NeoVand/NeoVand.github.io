@@ -18,11 +18,45 @@
   <meta name="twitter:title" content="Neo Mohsenvand" />
   <meta name="twitter:description" content="Interactive simulations, visualizations, and tools built for the browser." />
   <meta name="twitter:image" content="https://neovand.github.io/media/og.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <!-- Inter, self-hosted. As a Google Fonts <link> this was a render-blocking
+       stylesheet on a third-party origin, and nothing on the page painted until
+       it came back. SIL Open Font License; see media/fonts/OFL.txt. -->
+  <link rel="preload" href="media/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url('media/fonts/inter-300.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('media/fonts/inter-400.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('media/fonts/inter-500.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('media/fonts/inter-600.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
 
     :root {
       --bg:        #080808;
@@ -346,6 +380,23 @@
     }
 
     .fi { width: 13px; height: 13px; flex-shrink: 0; }
+
+    /* ─── REVEAL ─── */
+    /* Papers and earlier work come in as you reach them rather than all being
+       painted at once. Items in the same row ripple across rather than landing
+       together, which reads as arriving with the divider above them. */
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 620ms var(--ease) var(--rd, 0ms),
+                  transform 720ms var(--ease) var(--rd, 0ms);
+    }
+
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+    }
 
     /* ─── SECTION FLOURISH ─── */
     /* A calligraphic divider that draws itself outward from the middle when it
@@ -1071,7 +1122,7 @@
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#061408,#040e06)">
         <a class="card-link" href="https://neovand.github.io/games-of-life/" target="_blank" rel="noopener" aria-label="Open the Games of Life demo"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/games-of-life/thumbnail.jpg" alt="Games of Life" loading="lazy" />
+          <img src="media/games-of-life.jpg" alt="Games of Life" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
@@ -1095,7 +1146,7 @@
          style="--accent:#22c55e; --gradient:linear-gradient(135deg,#041808,#030f06)">
         <a class="card-link" href="https://neovand.github.io/algocell/" target="_blank" rel="noopener" aria-label="Open the Algocell demo"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/algocell/og-image.png" alt="Algocell" loading="lazy" />
+          <img src="media/algocell.jpg" alt="Algocell" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
@@ -1311,7 +1362,7 @@
          style="--accent:#a855f7; --gradient:linear-gradient(135deg,#180828,#0f0520)">
         <a class="card-link" href="https://gradientlab.ai" target="_blank" rel="noopener" aria-label="Open gradientlab.ai"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/GradientDescent/screenshot.gif" alt="gradientlab.ai" loading="lazy" />
+          <img src="media/gradientlab.jpg" alt="gradientlab.ai" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
@@ -1335,7 +1386,7 @@
          style="--accent:#e89c3e; --gradient:linear-gradient(135deg,#1c1006,#130b04)">
         <a class="card-link" href="https://neovand.github.io/coms/" target="_blank" rel="noopener" aria-label="Open the Protocol Lab demo"></a>
         <div class="card-thumb">
-          <img src="https://neovand.github.io/coms/og-image.png" alt="Protocol Lab" loading="lazy" />
+          <img src="media/protocol-lab.jpg" alt="Protocol Lab" loading="lazy" />
         </div>
         <div class="card-body">
           <div class="card-header">
@@ -1769,7 +1820,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/insight-deep-neurofeedback/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2019/04/08/DNF-01_IHlgqLt.png.1400x1400.png" alt="inSight" loading="lazy" />
+            <img src="media/mit/dnf-01-ihlgqlt.jpg" alt="inSight" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">inSight: Deep Neurofeedback</span>
@@ -1779,7 +1830,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/affective-memory-summarization/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2021/01/24/affective.png.1400x1400.png" alt="Affective Memory Summarization" loading="lazy" />
+            <img src="media/mit/affective.jpg" alt="Affective Memory Summarization" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Affective Memory Summarization</span>
@@ -1789,7 +1840,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/large-scale-eeg-biometrics-through-self-supervised-learning/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2021/01/24/fig-topo-01.png.1400x1400.png" alt="EEG Biometrics" loading="lazy" />
+            <img src="media/mit/fig-topo-01.jpg" alt="EEG Biometrics" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Large-Scale EEG Biometrics</span>
@@ -1799,7 +1850,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/physiophone/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb on-grey">
-            <img src="https://dam-prod.media.mit.edu/thumb/2021/02/24/perspective copy.png.1400x1400.png" alt="Physiophone" loading="lazy" />
+            <img src="media/mit/perspective-copy.jpg" alt="Physiophone" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Physiophone</span>
@@ -1809,7 +1860,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/flower-eeg-visualization-with-the-aid-of-machine-learning/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2019/10/04/flower-01.png.1400x1400.png" alt="Flower" loading="lazy" />
+            <img src="media/mit/flower-01.jpg" alt="Flower" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Flower: EEG Visualization</span>
@@ -1819,7 +1870,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/skipnorm/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2020/10/22/skipnorm.png.1400x1400.png" alt="SkipNorm" loading="lazy" />
+            <img src="media/mit/skipnorm.jpg" alt="SkipNorm" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">SkipNorm</span>
@@ -1829,7 +1880,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/q-ai-that-makes-the-graph-of-your-memories/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2019/04/08/Qpipe_sfgQFow.png.1400x1400.png" alt="Q" loading="lazy" />
+            <img src="media/mit/qpipe-sfgqfow.jpg" alt="Q" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Q: Conversational Data Labeling</span>
@@ -1839,7 +1890,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/datavrse/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2020/10/22/electome.png.1400x1400.png" alt="DataVRse" loading="lazy" />
+            <img src="media/mit/electome.jpg" alt="DataVRse" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">DataVRse</span>
@@ -1849,7 +1900,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/rhizome/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2022/09/02/laura-fuhrman-73OJLcahQHg-unsplash.jpg.1400x1400.jpg" alt="Rhizome" loading="lazy" />
+            <img src="media/mit/laura-fuhrman-73ojlcahqhg-un.jpg" alt="Rhizome" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">Rhizome</span>
@@ -1859,7 +1910,7 @@
 
         <a class="rcard" href="https://www.media.mit.edu/projects/the-electome-measuring-responsiveness-in-the-2016-election/overview/" target="_blank" rel="noopener">
           <div class="rcard-thumb">
-            <img src="https://dam-prod.media.mit.edu/thumb/2017/02/21/image(2).png.1400x1400.png" alt="The Electome" loading="lazy" />
+            <img src="media/mit/image-2.jpg" alt="The Electome" loading="lazy" />
           </div>
           <div class="rcard-body">
             <span class="rcard-title">The Electome</span>
@@ -2915,7 +2966,17 @@
     // Video thumbs: only fetch and play once the card is on screen
     const videos = document.querySelectorAll('.card-thumb video[data-src]');
 
-    if (videos.length) {
+    // The card videos are about a megabyte each and the first one is above the
+    // fold, so fetching them during the initial render held the load event open
+    // for seconds. The posters carry the cards until then.
+    const afterLoad = fn => {
+      const go = () => ('requestIdleCallback' in window)
+        ? requestIdleCallback(fn, { timeout: 1200 })
+        : setTimeout(fn, 200);
+      document.readyState === 'complete' ? go() : window.addEventListener('load', go, { once: true });
+    };
+
+    if (videos.length) afterLoad(() => {
       const vidObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           const v = entry.target;
@@ -2938,7 +2999,7 @@
       }, { rootMargin: '200px' });
 
       videos.forEach(v => vidObserver.observe(v));
-    }
+    });
 
     // Category filter
     const btns = document.querySelectorAll('.filter-btn');
@@ -2958,6 +3019,40 @@
         });
       });
     });
+  </script>
+
+  <script>
+  // ─── Reveal the papers and the earlier work as you reach them ───
+  (() => {
+    const items = document.querySelectorAll('.deck, .rcard');
+    if (!items.length) return;
+
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    items.forEach(el => el.classList.add('reveal'));
+
+    if (!('IntersectionObserver' in window)) {
+      items.forEach(el => el.classList.add('in'));
+      return;
+    }
+
+    // Delay by where the item sits across its row, so a row arrives as a sweep.
+    // Read off the left edge rather than the index, so it survives the grid
+    // changing how many columns it runs at.
+    const io = new IntersectionObserver((entries, obs) => {
+      const hits = entries.filter(e => e.isIntersecting);
+      if (!hits.length) return;
+      const lefts = hits.map(e => e.target.getBoundingClientRect().left);
+      const lo = Math.min(...lefts), hi = Math.max(...lefts);
+      hits.forEach((e, i) => {
+        const t = hi > lo ? (lefts[i] - lo) / (hi - lo) : 0;
+        e.target.style.setProperty('--rd', Math.round(t * 220) + 'ms');
+        e.target.classList.add('in');
+        obs.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+
+    items.forEach(el => io.observe(el));
+  })();
   </script>
 
   <script>

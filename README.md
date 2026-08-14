@@ -11,11 +11,16 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 ```
 /               ← gallery homepage
 /media/         ← thumbnails, and the moon behind the grove
+/media/fonts/   ← Inter, self-hosted (SIL Open Font License, see OFL.txt)
 /media/legacy/  ← figures for the older projects, shown in their modals
+/media/mit/     ← Media Lab project thumbnails, local copies
 /media/papers/  ← first five pages of each paper, rendered for the deck fans
 /papers/        ← the PDFs themselves
 /archive/       ← original Three.js network visualization (preserved)
 ```
+
+Every image the page loads is served from this repo. Nothing hotlinks, and
+nothing on the critical path comes from a third-party origin.
 
 ## The grove
 
