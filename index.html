@@ -106,7 +106,7 @@
     .gallery-wrap {
       max-width: 1140px;
       margin: 0 auto;
-      padding: 0 24px 100px;
+      padding: 0 24px 56px;
     }
 
     .filters {
@@ -317,14 +317,31 @@
       letter-spacing: 0.02em;
     }
 
+    /* ─── SECTION RULE ─── */
+    /* A plain hairline with 80px of nothing either side is a lot of page spent
+       on a divider. The line is still there, but it is the ground a row of
+       small L-system sprigs grows out of when the pointer runs along it. */
+    .rule {
+      position: relative;
+      height: 88px;
+      width: 100%;
+    }
+
+    .rule canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     /* ─── PUBLICATIONS ─── */
     /* Each paper is its first five pages fanned out like a hand of cards: the
        first page upright on the left with the rest splayed to the right. The
        whole fan pivots about the bottom-left corner, which every page shares,
        so opening it wider on hover reads as a thumb running down the deck. */
     #papers {
-      border-top: 1px solid var(--border);
-      padding: 80px 0 84px;
+      padding: 34px 0 72px;
     }
 
     .papers-inner {
@@ -404,17 +421,7 @@
 
     .deck:hover .deck-title { color: #fff; }
 
-    .deck-title .deck-arrow {
-      display: inline-block;
-      margin-left: 4px;
-      color: var(--muted);
-      opacity: 0;
-      transform: translate(-3px, 3px);
-      transition: opacity 200ms var(--ease), transform 200ms var(--ease);
-    }
 
-    .deck:hover .deck-arrow,
-    .deck:focus-visible .deck-arrow { opacity: 1; transform: none; }
 
     .deck-venue {
       font-size: 11.5px;
@@ -440,8 +447,7 @@
 
     /* ─── RESEARCH ─── */
     #research {
-      border-top: 1px solid var(--border);
-      padding: 80px 0 80px;
+      padding: 34px 0 76px;
     }
 
     /* The side padding sits on the inner box, not the section, so this grid
@@ -1479,6 +1485,8 @@
     </div>
   </main>
 
+  <div class="rule" aria-hidden="true"><canvas></canvas></div>
+
   <!-- PUBLICATIONS -->
   <!-- Pages run 5 → 1 in the markup so page one paints last and lands on top
        of the fan without needing a z-index on every card. -->
@@ -1498,7 +1506,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/motifs-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Spontaneous cortical activity alternates between motifs defined by regional axonal projections<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Spontaneous cortical activity alternates between motifs defined by regional axonal projections</span>
             <span class="deck-venue">Nature Neuroscience · 2013</span>
           </div>
         </a>
@@ -1512,7 +1520,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/optical-flow-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Optical-flow analysis toolbox for characterization of spatiotemporal dynamics in mesoscale optical imaging of brain activity<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Optical-flow analysis toolbox for characterization of spatiotemporal dynamics in mesoscale optical imaging of brain activity</span>
             <span class="deck-venue">NeuroImage · 2017</span>
           </div>
         </a>
@@ -1526,7 +1534,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/rumor-gauge-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Rumor Gauge: Predicting the Veracity of Rumors on Twitter<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Rumor Gauge: Predicting the Veracity of Rumors on Twitter</span>
             <span class="deck-venue">ACM Transactions on Knowledge Discovery from Data · 2017</span>
           </div>
         </a>
@@ -1540,7 +1548,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/seqclr-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Contrastive Representation Learning for Electroencephalogram Classification<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Contrastive Representation Learning for Electroencephalogram Classification</span>
             <span class="deck-venue">Machine Learning for Health, PMLR · 2020</span>
           </div>
         </a>
@@ -1554,7 +1562,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/bone-conduction-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Soft Speech, Loud World: Bone Conduction Microphones Enhance Voice Assistant Interaction<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Soft Speech, Loud World: Bone Conduction Microphones Enhance Voice Assistant Interaction</span>
             <span class="deck-venue">IEEE International Conference on Consumer Electronics · 2024</span>
           </div>
         </a>
@@ -1568,7 +1576,7 @@
             <img class="deck-page" style="--i:0" src="media/papers/breathing-1.jpg" alt="First page of the paper" loading="lazy" />
           </div>
           <div class="deck-meta">
-            <span class="deck-title">Generating Breathing Patterns in Real-Time: Low-Latency Respiratory Phase Tracking from 25 Hz PPG<span class="deck-arrow">↗</span></span>
+            <span class="deck-title">Generating Breathing Patterns in Real-Time: Low-Latency Respiratory Phase Tracking from 25 Hz PPG</span>
             <span class="deck-venue">HealthyIoT / HealthWear, Springer LNICST · 2024</span>
           </div>
         </a>
@@ -1576,6 +1584,8 @@
       </div>
     </div>
   </section>
+
+  <div class="rule" aria-hidden="true"><canvas></canvas></div>
 
   <!-- RESEARCH / EARLIER WORK -->
   <section id="research">
@@ -2776,6 +2786,215 @@
         });
       });
     });
+  </script>
+
+  <script>
+  // ─── Section breaks: a meadow instead of a rule ───
+  // A hairline with 80px of nothing either side is a lot of page spent on one
+  // grey line. This is the same undergrowth that grows under the trees at the
+  // top of the page, sown along a strip: squat, wide little bushes that put
+  // out more growth wherever the pointer runs along them.
+  (() => {
+    const strips = document.querySelectorAll('.rule');
+    if (!strips.length) return;
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const SPEC = { rules: { F: 'F[+F]F[-F]F' }, angle: 42, iters: 3 };
+    const SOFT = 1.5;      // branching levels unfurling at once
+    const SPACING = 19;    // px between plants; they overlap into a thicket
+    const NEAR = 250;      // how far along the strip the extra growth carries
+    const BAND = 90;       // how far above or below it the pointer still counts
+    const REST = 0.5;      // how much is out before anyone touches it
+
+    const hash = (i, salt) => {
+      const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+      return v - Math.floor(v);
+    };
+
+    let str = 'F';
+    for (let n = 0; n < SPEC.iters; n++) {
+      let out = '';
+      for (const c of str) out += SPEC.rules[c] ?? c;
+      str = out;
+    }
+
+    let maxDepth = 0;
+    { let d = 0;
+      for (const c of str) {
+        if (c === '[') { d++; if (d > maxDepth) maxDepth = d; }
+        else if (c === ']') d--;
+      } }
+
+    // One walk of the string, either to measure the shape or to draw it. Growth
+    // runs as a front down the branching levels, so a plant thickens outward
+    // from its stem rather than simply scaling up.
+    function walk(p, sx, sy, g, buckets, tips) {
+      const front = g * (maxDepth + SOFT);
+      const turn = SPEC.angle * Math.PI / 180;
+      let x = 0, y = 0, a = -Math.PI / 2, depth = 0;
+      let minX = 0, maxX = 0, minY = 0, maxY = 0;
+      const stack = [];
+      for (let i = 0; i < str.length; i++) {
+        const c = str[i];
+        if (c === 'F') {
+          const reach = Math.max(0, Math.min(1, (front - depth) / SOFT));
+          if (reach <= 0.001) continue;
+          const px = x, py = y;
+          x += Math.cos(a) * sx * reach;
+          y += Math.sin(a) * sy * reach;
+          if (buckets) {
+            let j = i + 1;
+            while (j < str.length && str[j] !== 'F' && str[j] !== '[' && str[j] !== ']') j++;
+            const tip = j >= str.length || str[j] === ']';
+            if (tip && tips && reach > 0.55) tips.push(px, py, x, y);
+            else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y);
+          }
+          if (x < minX) minX = x; else if (x > maxX) maxX = x;
+          if (y < minY) minY = y; else if (y > maxY) maxY = y;
+        } else if (c === '+') a += turn;
+        else if (c === '-') a -= turn;
+        else if (c === '[') { stack.push(x, y, a, depth); depth++; }
+        else if (c === ']') { depth = stack.pop(); a = stack.pop(); y = stack.pop(); x = stack.pop(); }
+      }
+      return { minX, maxX, minY, maxY };
+    }
+
+    const BOX = walk({}, 1, 1, 1, null, null);
+    const SPAN_Y = Math.max(1e-6, -BOX.minY);
+    const pointer = { x: 0, y: 0, on: false };
+
+    strips.forEach((strip, si) => {
+      const canvas = strip.querySelector('canvas');
+      const ctx = canvas.getContext('2d');
+      let W = 0, H = 0, plants = [], raf = 0, visible = true;
+
+      function layout() {
+        const r = strip.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = r.width; H = r.height;
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const ground = H - 10;
+        const n = Math.max(8, Math.round(W / SPACING));
+        const keep = new Map(plants.map(p => [p.k, p.g]));
+        plants = [];
+        for (let i = 0; i < n; i++) {
+          const k = si * 2000 + i;
+          // heights skew small: a lot of low scrub, a few taller clumps
+          const tall = (H - 16) * (0.16 + Math.pow(hash(i, 2 + si), 1.9) * 0.62);
+          const sy = tall / SPAN_Y;
+          const tone0 = Math.round(32 + hash(i, 4 + si) * 20);
+          plants.push({
+            k,
+            // jittered off the grid, so the row does not read as a comb
+            x: (i + 0.5 + (hash(i, 5 + si) - 0.5) * 0.85) * (W / n),
+            y: ground,
+            sy,
+            sx: sy * (1.5 + hash(i, 6 + si) * 0.9) * (hash(i, 3 + si) > 0.5 ? 1 : -1),
+            tone: [tone0, tone0 + 16 + Math.round(hash(i, 7 + si) * 18)],
+            tip: 78 + Math.round(hash(i, 14 + si) * 26),
+            width: Math.max(0.55, Math.min(1.35, sy * 0.15)),
+            g: keep.get(k) ?? REST,
+            target: REST
+          });
+        }
+        plants.sort((a, b) => a.sy - b.sy);   // small ones in front
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        for (const p of plants) {
+          if (p.g <= 0.002) continue;
+          const buckets = [], tips = [];
+          walk(p, p.sx, p.sy, p.g, buckets, tips);
+          const [t0, t1] = p.tone;
+          for (let d = 0; d < buckets.length; d++) {
+            const seg = buckets[d];
+            if (!seg) continue;
+            const v = Math.round(t0 + (d / maxDepth) * (t1 - t0));
+            ctx.strokeStyle = `rgb(${v},${v},${v})`;
+            ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.75, d));
+            ctx.beginPath();
+            for (let i = 0; i < seg.length; i += 4) {
+              ctx.moveTo(p.x + seg[i], p.y + seg[i + 1]);
+              ctx.lineTo(p.x + seg[i + 2], p.y + seg[i + 3]);
+            }
+            ctx.stroke();
+          }
+          if (tips.length) {
+            ctx.strokeStyle = `rgb(${p.tip},${p.tip},${p.tip})`;
+            ctx.lineWidth = Math.max(0.5, p.width * 0.55);
+            ctx.beginPath();
+            for (let i = 0; i < tips.length; i += 4) {
+              ctx.moveTo(p.x + tips[i], p.y + tips[i + 1]);
+              ctx.lineTo(p.x + tips[i + 2], p.y + tips[i + 3]);
+            }
+            ctx.stroke();
+          }
+        }
+      }
+
+      function retarget() {
+        const r = strip.getBoundingClientRect();
+        const near = pointer.on && pointer.y > r.top - BAND && pointer.y < r.bottom + BAND;
+        const px = pointer.x - r.left;
+        let moving = false;
+        for (const p of plants) {
+          let extra = 0;
+          if (near) {
+            const f = Math.max(0, 1 - Math.abs(p.x - px) / NEAR);
+            extra = f * f * (3 - 2 * f);
+          }
+          p.target = REST + (1 - REST) * extra;
+          if (Math.abs(p.target - p.g) > 0.002) moving = true;
+        }
+        return moving;
+      }
+
+      function frame() {
+        let moving = false;
+        for (const p of plants) {
+          // eager on the way out, slower folding back, so growth trails behind
+          const k = p.target > p.g ? 0.11 : 0.055;
+          p.g += (p.target - p.g) * k;
+          if (Math.abs(p.target - p.g) > 0.002) moving = true;
+        }
+        draw();
+        raf = moving ? requestAnimationFrame(frame) : 0;
+      }
+
+      function wake() {
+        if (!visible || reduced) return;
+        if (retarget() && !raf) raf = requestAnimationFrame(frame);
+      }
+
+      layout();
+      draw();
+
+      new ResizeObserver(() => { layout(); draw(); }).observe(strip);
+      new IntersectionObserver(e => {
+        visible = e[0].isIntersecting;
+        if (!visible && raf) { cancelAnimationFrame(raf); raf = 0; }
+      }, { rootMargin: '140px' }).observe(strip);
+
+      strip._wake = wake;
+    });
+
+    window.addEventListener('pointermove', e => {
+      pointer.x = e.clientX; pointer.y = e.clientY; pointer.on = true;
+      strips.forEach(s => s._wake());
+    }, { passive: true });
+
+    const leave = () => { pointer.on = false; strips.forEach(s => s._wake()); };
+    window.addEventListener('blur', leave);
+    document.addEventListener('pointerleave', leave);
+  })();
   </script>
 
   <script>
