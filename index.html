@@ -320,12 +320,15 @@
     /* ─── RESEARCH ─── */
     #research {
       border-top: 1px solid var(--border);
-      padding: 80px 24px 80px;
+      padding: 80px 0 80px;
     }
 
+    /* The side padding sits on the inner box, not the section, so this grid
+       lines up with the demo grid instead of overhanging it by 24px. */
     .research-inner {
       max-width: 1140px;
       margin: 0 auto;
+      padding: 0 24px;
     }
 
     .research-header {
@@ -663,10 +666,10 @@
     /* On a wide window the container opens up and the gallery runs four
        across, rather than leaving three stretched cards in a sea of margin. */
     @media (min-width: 1500px) {
-      .hero, .gallery-wrap, .research-inner { max-width: 1520px; }
+      .hero, .gallery-wrap, .research-inner { max-width: 1360px; }
       .grid { grid-template-columns: repeat(4, 1fr); }
-      /* earlier work stays five across at every width, so its 15 entries
-         always land as three complete rows */
+      /* earlier work stays five across at every width, so its 35 entries
+         always land as seven complete rows */
     }
 
     @media (max-width: 900px) {
@@ -684,6 +687,7 @@
       .hero { padding: 52px 20px 44px; gap: 32px; }
       .hero-lead { min-height: 240px; }
       .gallery-wrap { padding: 0 16px 72px; }
+      .research-inner { padding: 0 16px; }
       .grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; gap: 8px; padding: 20px; }
     }
@@ -1817,8 +1821,10 @@
       for (let i = 0; i < s.length; i++) {
         const c = s[i];
         if (c === 'F') {
+          // shrink applies at full growth too, so it can carry the slight
+          // overshoot a tree springs through on its way back up
           const reach = front === Infinity
-            ? 1
+            ? shrink
             : Math.max(0, Math.min(1, (front - depth) / SOFT)) * shrink;
           if (reach <= 0.001) continue;          // this level has receded away
           if (bend) a += bend(depth, x, y);
@@ -1873,6 +1879,13 @@
       };
     });
 
+    // The spring a tree rides out on when it finishes growing back: it carries
+    // a few percent past full length, dips, and settles inside a second.
+    const POP_MAX = 0.062;    // peak stretch, before damping, at a full press
+    const POP_FREQ = 19;      // rad/s, so the first crest lands about 80ms in
+    const POP_DECAY = 9.5;
+    const POP_LIFE = 0.7;     // s, by which point the ring-down is invisible
+
     // undergrowth first, so the trees read in front of it
     const plants = undergrowth.concat(trees);
     plants.forEach((p, i) => {
@@ -1882,6 +1895,8 @@
       p.tipSalt = 30 + i;                    // which twigs carry the highlight
       p.grow = 1;                            // 1 fully grown, 0 receded away
       p.growTarget = 1;
+      p.popAmp = 0;                          // spring left over from a press
+      p.popT = POP_LIFE;                     // already settled
     });
 
     // A single wind field drives every plant, so the grove moves together.
@@ -1996,6 +2011,25 @@
 
     let W = 0, H = 0, dpr = 1;
     let moonX = 0, moonY = 0, moonR = 0;
+
+    // Hold the pointer on the moon and it starts to edge away, at first so
+    // slowly you could miss it. Keep after it and it picks up speed, until it
+    // gives up on being polite and bolts across the sky. Let it be and it just
+    // stops wherever it got to. It has to be the moon itself and not its glow:
+    // the sprite is mostly halo, and the disc is this fraction of it.
+    const MOON_DISC = 94 / 512;
+    const MOON_GRAB = 1.4;      // how close counts as being bothered, in disc radii
+    const MOON_FEAR_UP = 1 / 1.25;   // steady hovering fills the meter this fast
+    const MOON_FEAR_DOWN = 0.5;      // and it ebbs about twice as slowly
+    const MOON_CREEP = 540;     // px/s it slides at, once thoroughly bothered
+    const MOON_BOLT = 0.9;      // the point at which it stops edging and runs
+    const MOON_TRAVEL = 0.62;   // s to cross, when it bolts
+    const MOON_BOUNCE = 0.09;   // overshoot on arrival, as a share of the trip
+    let moonLo = 0, moonHi = 0, moonYLo = 0, moonYHi = 0, moonYHome = 0, moonYSpan = 0;
+    let moonFromX = 0, moonFromY = 0, moonToX = 0, moonToY = 0;
+    let moonT = -1;             // seconds into a bolt, or -1 when it is not running
+    let moonFear = 0;
+    let moonPlaced = false;
     const pointer = { x: -1e4, y: -1e4, tx: -1e4, ty: -1e4, amp: 0, target: 0 };
 
     function layout() {
@@ -2022,8 +2056,23 @@
       // canvas, or its edge shows as a straight cut across the sky.
       moonR = band * 0.34;
       const halo = moonR * 0.55;
-      moonX = Math.min(Math.max(W * 0.30, halo + 4), W - halo - 4);
-      moonY = Math.max(top + band * 0.15, halo + 4);
+      moonLo = halo + 4;
+      moonHi = W - halo - 4;
+      moonYLo = halo + 4;
+      moonYHome = Math.max(top + band * 0.15, moonYLo);
+      moonYHi = Math.max(moonYHome, top + band * 0.28);
+      moonYSpan = band * 0.10;   // it wanders a little vertically, not far
+
+      // A resize re-fits the sky, but it must not march the moon back to where
+      // it started once the pointer has chased it off. Any move in flight is
+      // abandoned, since its endpoints belong to the old layout.
+      const cx = v => Math.min(Math.max(v, moonLo), moonHi);
+      const cy = v => Math.min(Math.max(v, moonYLo), moonYHi);
+      moonX = moonPlaced ? cx(moonX) : cx(W * 0.30);
+      moonY = moonPlaced ? cy(moonY) : moonYHome;
+      moonT = -1;
+      moonFear = 0;
+      moonPlaced = true;
 
       // a gutter inside the bleed, so the outermost plants still have somewhere
       // to lean when a gust hits
@@ -2099,24 +2148,109 @@
     const GROW_RATE = 1.25;
     let lastNow = 0;
 
+    // Somewhere else along the sky, far enough that the move is worth making,
+    // with a little vertical drift so it does not slide along a rail.
+    function moonFlee() {
+      moonFromX = moonX;
+      moonFromY = moonY;
+      const span = moonHi - moonLo;
+      let x = moonX;
+      for (let i = 0; i < 16; i++) {
+        x = moonLo + Math.random() * span;
+        if (Math.abs(x - moonX) > span * 0.3) break;
+      }
+      moonToX = x;
+      moonToY = Math.min(Math.max(moonYHome + (Math.random() - 0.5) * moonYSpan, moonYLo), moonYHi);
+      moonT = 0;
+    }
+
     function render(now) {
       ctx.clearRect(0, 0, W, H);
-      if (moonR > 0) ctx.drawImage(moon, moonX - moonR, moonY - moonR, moonR * 2, moonR * 2);
 
-      // Ungrowing runs at a fixed rate rather than easing exponentially, so
-      // each level takes the same time to withdraw and the retreat reads as a
-      // steady march down the plant.
+      // Everything timed here steps on the frame delta rather than the clock,
+      // and it is clamped, so a long stall does not jump the grove forward.
+      // Ungrowing in particular runs at a fixed rate rather than easing, so
+      // each level takes the same time to withdraw.
       const dt = lastNow ? Math.min(0.05, (now - lastNow) / 1000) : 0;
       lastNow = now;
+
+      if (moonR > 0) {
+        if (moonT >= 0) {
+          // Bolting: slow off the mark, quickest at the end, then it rocks
+          // once and settles.
+          moonT += dt;
+          const p = moonT / MOON_TRAVEL;
+          let e;
+          if (p < 1) {
+            e = p * p;                                   // slow away, fast in
+          } else {
+            const q = moonT - MOON_TRAVEL;
+            e = 1 + MOON_BOUNCE * Math.sin(26 * q) * Math.exp(-8.5 * q);
+            if (q > 0.65) { e = 1; moonT = -1; }         // settled
+          }
+          moonX = moonFromX + (moonToX - moonFromX) * e;
+          moonY = moonFromY + (moonToY - moonFromY) * e;
+        } else {
+          let dx = moonX - pointer.tx, dy = moonY - pointer.ty;
+          const len = Math.hypot(dx, dy);
+          const bothered = pointer.target && len < moonR * MOON_DISC * MOON_GRAB;
+
+          moonFear = bothered
+            ? Math.min(1, moonFear + dt * MOON_FEAR_UP)
+            : Math.max(0, moonFear - dt * MOON_FEAR_DOWN);
+
+          // pointer dead centre: pick a way out rather than sitting there
+          if (len < 0.5) { dx = moonX < (moonLo + moonHi) / 2 ? -1 : 1; dy = 0; }
+          const nrm = Math.hypot(dx, dy) || 1;
+
+          if (bothered && moonFear >= MOON_BOLT) {
+            moonFear = 0;
+            moonFlee();
+          } else if (moonFear > 0) {
+            // cubed: the first half second is a creep of a pixel or two, and
+            // it only really runs if you keep chasing it
+            const step = MOON_CREEP * moonFear * moonFear * moonFear * dt;
+            const nx = moonX + (dx / nrm) * step;
+            // it edges up or down a little too, so it is not on a rail
+            moonY = Math.min(Math.max(moonY + (dy / nrm) * step * 0.35, moonYLo), moonYHi);
+            if ((nx <= moonLo || nx >= moonHi) && bothered) {
+              // backed into the corner, with the pointer still on it
+              moonX = Math.min(Math.max(nx, moonLo), moonHi);
+              moonFear = 0;
+              moonFlee();
+            } else {
+              moonX = Math.min(Math.max(nx, moonLo), moonHi);
+            }
+          }
+        }
+        ctx.drawImage(moon, moonX - moonR, moonY - moonR, moonR * 2, moonR * 2);
+      }
+
       for (const p of plants) {
         if (p.grow !== p.growTarget) {
           const step = GROW_RATE * dt;
-          p.grow = p.grow < p.growTarget
-            ? Math.min(p.growTarget, p.grow + step)
-            : Math.max(p.growTarget, p.grow - step);
+          if (p.grow < p.growTarget) {
+            const was = p.grow;
+            p.grow = Math.min(p.growTarget, p.grow + step);
+            // back at full height: let it carry past and ring down
+            if (p.grow >= 1 && was < 1) p.popT = 0;
+          } else {
+            p.grow = Math.max(p.growTarget, p.grow - step);
+            // how far it was drawn in sets how hard it springs out again,
+            // so a tap gives a nudge and a long press gives a real bounce
+            p.popAmp = POP_MAX * (1 - p.grow);
+          }
         }
-        if (p.grow >= 1) { p.front = Infinity; p.shrink = 1; }
-        else {
+
+        if (p.grow >= 1) {
+          let over = 0;
+          if (p.popT < POP_LIFE) {
+            p.popT += dt;
+            over = p.popAmp * Math.exp(-POP_DECAY * p.popT) * Math.sin(POP_FREQ * p.popT);
+          }
+          p.front = Infinity;
+          p.shrink = 1 + over;
+        } else {
           p.front = p.grow * (p.maxDepth + SOFT);
           p.shrink = 0.5 + 0.5 * p.grow;
         }
