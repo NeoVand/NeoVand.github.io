@@ -131,8 +131,8 @@
       --glass:     rgba(255,255,255,0.55);
       --glass-2:   rgba(255,255,255,0.85);
       --hairline:  rgba(22,36,47,0.10);
-      --cord:      #6b7f91;
-      --knob:      #c9a227;
+      --cord:      #2f4553;
+      --knob:      #f0c53f;
     }
 
     /* Only while the lamp is being switched, so the whole page changes colour
@@ -2666,61 +2666,80 @@
     // glow can reach well past the moon without enlarging the moon itself.
     const moon = document.createElement('canvas');
     moon.width = moon.height = 1024;
-    // Daylight's disc. A warm core with a wide corona, drawn the same size as
-    // the moon so one can dissolve into the other without anything moving.
-    // The disc is drawn small inside a big sprite so the corona has somewhere
-    // to go: the sprite is painted at SUN_SPREAD times the moon's box, which
-    // leaves the disc the same size on screen but lets the glow reach much
-    // further than the moon's ever did.
-    const SUN_SPREAD = 2.15;
+    // Daylight's disc, drawn the same size as the moon so one can dissolve
+    // into the other without anything moving. What the grove canvas can carry
+    // is limited: the canvas is inset only so far, and the layout keeps the
+    // disc at least 0.55 moon-radii — three disc radii — from any edge, so
+    // anything painted beyond that is cut off in a straight line across the
+    // sky. So the sprite holds the body and the corona only, and the wide
+    // atmospheric bloom is left to the sky shader behind, which has the whole
+    // viewport to spread over and no edge to run into.
+    const SUN_SPREAD = 1.2;
     const SUN_DISC = 94 / SUN_SPREAD;
+    const SUN_REACH = SUN_DISC * 3.0;    // the clip-safe radius, in sprite units
     const sun = document.createElement('canvas');
     sun.width = sun.height = 1024;
     {
-      const C = 512, D = SUN_DISC, g = sun.getContext('2d');
-      // corona, in two overlaid falloffs: a tight hot one and a wide soft one
-      let gr = g.createRadialGradient(C, C, D * 0.55, C, C, C);
-      gr.addColorStop(0.00, 'rgba(255,246,206,0.95)');
-      gr.addColorStop(0.04, 'rgba(255,236,164,0.62)');
-      gr.addColorStop(0.09, 'rgba(255,226,132,0.36)');
-      gr.addColorStop(0.16, 'rgba(255,216,110,0.185)');
-      gr.addColorStop(0.25, 'rgba(255,209,96,0.092)');
-      gr.addColorStop(0.36, 'rgba(255,205,90,0.042)');
-      gr.addColorStop(0.50, 'rgba(255,203,88,0.016)');
-      gr.addColorStop(0.68, 'rgba(255,203,88,0.004)');
-      gr.addColorStop(0.86, 'rgba(255,203,88,0)');
-      gr.addColorStop(1.00, 'rgba(255,203,88,0)');
-      g.fillStyle = gr;
-      g.fillRect(0, 0, 1024, 1024);
+      const C = 512, D = SUN_DISC, R = SUN_REACH, g = sun.getContext('2d');
+      // The sun is not a disc with a glow around it. A disc has a rim, and a
+      // rim is the one thing the real sun does not have — it is simply the
+      // brightest thing in the sky, blown out in the middle and falling away
+      // with no edge anywhere. So no arc is drawn here at all: falloffs,
+      // summed, the innermost opaque enough that it clips to white once it
+      // lands on the sky.
+      g.globalCompositeOperation = 'lighter';
 
-      // a few soft shafts, so it reads as light rather than a sticker
+      const paint = (r0, r1, stops) => {
+        const gr = g.createRadialGradient(C, C, r0, C, C, r1);
+        for (const [t, col] of stops) gr.addColorStop(t, col);
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 1024, 1024);
+      };
+
+      // the corona, dead by the clip radius
+      paint(D * 0.8, R, [
+        [0.00, 'rgba(255,244,196,0.52)'],
+        [0.11, 'rgba(255,237,172,0.31)'],
+        [0.24, 'rgba(255,229,148,0.165)'],
+        [0.39, 'rgba(255,221,128,0.078)'],
+        [0.56, 'rgba(255,214,112,0.030)'],
+        [0.74, 'rgba(255,209,102,0.008)'],
+        [0.89, 'rgba(255,207,98,0.001)'],
+        [1.00, 'rgba(255,207,98,0)'],
+      ]);
+
+      // shafts, long and very faint: light in air, not spokes
       g.save();
       g.translate(C, C);
-      for (let i = 0; i < 40; i++) {
-        const a = (i / 40) * Math.PI * 2;
-        const len = C * (0.40 + (i % 5) * 0.055);
+      for (let i = 0; i < 48; i++) {
+        const a = (i / 48) * Math.PI * 2;
+        const len = R * (0.72 + (i % 7) * 0.04);
         const rg = g.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-        rg.addColorStop(0, 'rgba(255,240,182,0.052)');
-        rg.addColorStop(1, 'rgba(255,240,182,0)');
+        rg.addColorStop(0.00, 'rgba(255,242,188,0)');
+        rg.addColorStop(0.16, 'rgba(255,242,188,0.040)');
+        rg.addColorStop(1.00, 'rgba(255,242,188,0)');
         g.fillStyle = rg;
         g.beginPath();
         g.moveTo(0, 0);
-        g.arc(0, 0, len, a - 0.055, a + 0.055);
+        g.arc(0, 0, len, a - 0.046, a + 0.046);
         g.closePath();
         g.fill();
       }
       g.restore();
 
-      // the disc: a hot near-white centre falling to a saturated gold rim
-      gr = g.createRadialGradient(C - D * 0.18, C - D * 0.22, D * 0.05, C, C, D);
-      gr.addColorStop(0.00, '#ffffff');
-      gr.addColorStop(0.40, '#fff8d8');
-      gr.addColorStop(0.74, '#ffe58a');
-      gr.addColorStop(0.90, '#ffd668');
-      gr.addColorStop(0.97, 'rgba(255,206,80,0.72)');
-      gr.addColorStop(1.00, 'rgba(255,201,70,0)');
-      g.fillStyle = gr;
-      g.beginPath(); g.arc(C, C, D, 0, Math.PI * 2); g.fill();
+      // the body: opaque in the middle, gone by a couple of disc radii, and
+      // never a hard boundary in between
+      paint(0, D * 2.1, [
+        [0.00, 'rgba(255,255,252,1)'],
+        [0.28, 'rgba(255,254,242,1)'],
+        [0.42, 'rgba(255,249,218,0.94)'],
+        [0.54, 'rgba(255,241,186,0.68)'],
+        [0.66, 'rgba(255,231,152,0.38)'],
+        [0.78, 'rgba(255,221,126,0.170)'],
+        [0.89, 'rgba(255,214,108,0.052)'],
+        [0.96, 'rgba(255,211,100,0.011)'],
+        [1.00, 'rgba(255,210,98,0)'],
+      ]);
     }
 
     let moonReady = false;
@@ -2843,10 +2862,10 @@
         rgb: [ 58, 102,  44], size: 2.55, dens: 0.80, jit: 0.32 },
       // dense and twiggy, so its leaves are small and narrow
       { shape: 'blade',  n: 5, fan: 0.66, len: [0.74, 0.24], wide: 0.22,
-        rgb: [ 96, 138,  56], size: 2.85, dens: 0.42, jit: 0.34 },
+        rgb: [ 96, 138,  56], size: 2.85, dens: 0.34, jit: 0.34 },
       // open and airy: a few long leaves, thrown wide
       { shape: 'blade',  n: 4, fan: 0.86, len: [0.86, 0.24], wide: 0.26,
-        rgb: [ 68, 118,  62], size: 2.80, dens: 0.45, jit: 0.34 },
+        rgb: [ 68, 118,  62], size: 2.80, dens: 0.36, jit: 0.34 },
     ];
 
     // A cluster drawn around the origin, oriented along +x. The caller has
@@ -2902,7 +2921,11 @@
     // counts the segments level by level, takes levels from the outside in
     // until there are enough, and thins the result down to about the same
     // number of leaves for every tree.
-    const LEAF_TARGET = 240, LEAF_POOL = 700;
+    // Leaves belong on twigs. Anything in the inner branching levels is trunk
+    // or limb, and hanging foliage there buries the very shape that tells one
+    // species from the next — so the canopy starts at a fraction of the way
+    // out and the wood below it is left to show.
+    const LEAF_TARGET = 240, LEAF_POOL = 700, LEAF_FROM = 0.62;
 
     // Leaves landing exactly on their branch ends, evenly along a long straight
     // limb, turn the limb into a fuzzy green tube. A fixed scatter table breaks
@@ -2915,11 +2938,13 @@
     function planFoliage(t) {
       const buckets = [], tip = [];
       walk(t, t.sx, t.sy, 0, 0, null, buckets, tip);
-      let from = buckets.length, pool = tip.length / 4, sum = 0;
+      let from = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
+      let pool = tip.length / 4, sum = 0;
       for (let k = 0; k < tip.length; k += 4) {
         sum += Math.hypot(tip[k + 2] - tip[k], tip[k + 3] - tip[k + 1]);
       }
-      for (let d = buckets.length - 1; d >= 1; d--) {
+      const floorD = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
+      for (let d = buckets.length - 1; d >= floorD; d--) {
         const seg = buckets[d];
         const n = seg ? seg.length / 4 : 0;
         if (pool + n > LEAF_POOL && pool > 40) break;
@@ -3865,7 +3890,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = cord;
-      ctx.lineWidth = 1.6;
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.moveTo(px[0], py[0]);
       for (let i = 1; i < N - 1; i++) {
@@ -3897,6 +3922,11 @@
       ctx.bezierCurveTo(KNOB * 0.95, -KNOB * 0.8, KNOB * 0.8, KNOB * 0.75, 0, KNOB * 1.25);
       ctx.bezierCurveTo(-KNOB * 0.8, KNOB * 0.75, -KNOB * 0.95, -KNOB * 0.8, 0, -KNOB * 1.15);
       ctx.fill();
+      // a rim in the cord's own colour, so a brass bead still has an outline
+      // against a bright sky
+      ctx.strokeStyle = cord;
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -4592,8 +4622,13 @@
                          smoothstep(-0.15, 0.95, uv.y));
           vec3 cloud = mix(vec3(0.780, 0.845, 0.910), vec3(1.0), smoothstep(0.02, 0.34, c));
           vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
-          // the sun warms whatever it is standing behind
-          day += vec3(1.0, 0.90, 0.70) * exp(-length(p - uSun) * 2.1) * 0.26;
+          // The bloom around the sun lives here rather than on the grove
+          // canvas: the sky has the whole viewport to spread over and no edge
+          // to be cut off at. Two falloffs — a tight halo just off the disc,
+          // and a wide wash the rest of the sky picks up.
+          float sd = length(p - uSun);
+          day += vec3(1.0, 0.94, 0.78) * exp(-sd * 5.2) * 0.62
+               + vec3(1.0, 0.92, 0.74) * exp(-sd * 1.55) * 0.20;
           col += day * uMix;
         }
 
