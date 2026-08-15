@@ -37,6 +37,27 @@
     window.__intro = { dur: 2800, t0: 0, done: false };
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('has-intro');
+
+    // The lights. Applied here rather than after load, or a remembered choice
+    // would show the wrong palette for a frame first.
+    (() => {
+      const root = document.documentElement;
+      let day = false;
+      try { day = localStorage.getItem('lights') === 'day'; } catch (e) {}
+      if (day) root.classList.add('day');
+      window.__theme = {
+        get day() { return root.classList.contains('day'); },
+        toggle() {
+          const on = !root.classList.contains('day');
+          root.classList.add('theming');
+          root.classList.toggle('day', on);
+          try { localStorage.setItem('lights', on ? 'day' : 'night'); } catch (e) {}
+          document.dispatchEvent(new CustomEvent('lights', { detail: { day: on } }));
+          clearTimeout(window.__themeT);
+          window.__themeT = setTimeout(() => root.classList.remove('theming'), 560);
+        }
+      };
+    })();
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -83,8 +104,44 @@
       --text:      #e2e2e2;
       --muted:     #555;
       --muted-2:   #777;
+      --title:     #ffffff;   /* headings, which sit above --text */
+      --ink:       #6e6e6e;   /* the flourish, and anything drawn rather than set */
+      --glass:     rgba(255,255,255,0.04);
+      --glass-2:   rgba(255,255,255,0.09);
+      --hairline:  rgba(255,255,255,0.06);
+      --cord:      #4a4a4a;
+      --knob:      #9a9a9a;
       --radius:    12px;
       --ease:      cubic-bezier(0.25, 0, 0, 1);
+    }
+
+    /* Daylight. The background is the grove's sky, so the page and the canvas
+       share one colour and the trees stand in the same air as the text. */
+    :root.day {
+      --bg:        #cddeed;
+      --surface:   #fbfdff;
+      --surface-2: #f0f6fb;
+      --border:    #b9cee0;
+      --border-2:  #9db8ce;
+      --text:      #16242f;
+      --muted:     #6a8296;
+      --muted-2:   #47606f;
+      --title:     #0d1a24;
+      --ink:       #5f7488;
+      --glass:     rgba(255,255,255,0.55);
+      --glass-2:   rgba(255,255,255,0.85);
+      --hairline:  rgba(22,36,47,0.10);
+      --cord:      #6b7f91;
+      --knob:      #c9a227;
+    }
+
+    /* Only while the lamp is being switched, so the whole page changes colour
+       together instead of each element snapping on its own. */
+    html.theming, html.theming *, html.theming *::before, html.theming *::after {
+      transition: background-color 480ms var(--ease),
+                  border-color 480ms var(--ease),
+                  color 480ms var(--ease),
+                  fill 480ms var(--ease) !important;
     }
 
     html { scroll-behavior: smooth; }
@@ -191,7 +248,7 @@
 
     .filter-btn.active {
       background: var(--text);
-      color: #000;
+      color: var(--bg);
       border-color: var(--text);
     }
 
@@ -307,7 +364,7 @@
     .card-title {
       font-size: 14.5px;
       font-weight: 600;
-      color: #fff;
+      color: var(--title);
       letter-spacing: -0.01em;
       line-height: 1.3;
     }
@@ -343,7 +400,7 @@
       margin-top: 2px;
     }
 
-    .card-repo:hover { color: #fff; }
+    .card-repo:hover { color: var(--title); }
     .card-repo svg { display: block; }
 
     .card-desc {
@@ -375,13 +432,13 @@
       width: 24px;
       height: 24px;
       border-radius: 99px;
-      background: rgba(255,255,255,0.04);
+      background: var(--glass);
       color: var(--muted);
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid var(--hairline);
       transition: color 200ms var(--ease), border-color 200ms var(--ease);
     }
 
-    .card:hover .tag { color: var(--muted-2); border-color: rgba(255,255,255,0.11); }
+    .card:hover .tag { color: var(--muted-2); border-color: var(--border-2); }
 
     .ti { width: 13px; height: 13px; display: block; }
 
@@ -477,6 +534,27 @@
       .reveal { opacity: 1; transform: none; transition: none; }
     }
 
+    /* ─── LAMP PULL ─── */
+    /* A cord hanging off the top of the page. Drag the knob down far enough
+       and it clicks the lights over, then swings itself out. */
+    #pull {
+      position: fixed;
+      top: 0;
+      right: 26px;
+      width: 108px;
+      height: 264px;
+      z-index: 60;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #pull.tugging { cursor: grabbing; }
+    #pull canvas { width: 100%; height: 100%; display: block; }
+
+    @media (max-width: 600px) {
+      #pull { right: 8px; width: 84px; height: 210px; }
+    }
+
     /* ─── SECTION FLOURISH ─── */
     /* A calligraphic divider that draws itself outward from the middle when it
        comes into view: each piece of the flourish swings open from the end
@@ -493,7 +571,7 @@
       height: auto;
       display: block;
       overflow: visible;
-      fill: #6e6e6e;
+      fill: var(--ink);
     }
 
     .fl .st1 { fill-rule: evenodd; clip-rule: evenodd; }
@@ -584,6 +662,7 @@
          dimmed on top of that, so the deck keeps its thickness. */
       filter: invert(0.87) hue-rotate(180deg) contrast(0.88)
               brightness(calc(1 - var(--i) * 0.06)) var(--sh);
+      transition: transform 420ms var(--ease), filter 480ms var(--ease);
     }
 
     .deck:hover .deck-fan,
@@ -603,13 +682,13 @@
     .deck-title {
       font-size: 13.5px;
       font-weight: 600;
-      color: #ddd;
+      color: var(--title);
       line-height: 1.4;
       letter-spacing: -0.01em;
       transition: color 200ms var(--ease);
     }
 
-    .deck:hover .deck-title { color: #fff; }
+    .deck:hover .deck-title { color: var(--title); }
 
 
 
@@ -724,7 +803,7 @@
     .rcard-title {
       font-size: 13px;
       font-weight: 600;
-      color: #ddd;
+      color: var(--title);
       line-height: 1.35;
       letter-spacing: -0.01em;
     }
@@ -842,11 +921,11 @@
     .modal-body p {
       font-size: 14px;
       line-height: 1.7;
-      color: #b8b8b8;
+      color: var(--text);
       margin-bottom: 14px;
     }
 
-    .modal-body a { color: #ddd; text-decoration: underline; text-underline-offset: 2px; }
+    .modal-body a { color: var(--title); text-decoration: underline; text-underline-offset: 2px; }
 
     .modal-link {
       display: inline-flex;
@@ -856,15 +935,15 @@
       padding: 9px 15px;
       font-size: 12.5px;
       font-weight: 500;
-      color: #ddd;
+      color: var(--title);
       text-decoration: none;
-      background: rgba(255,255,255,0.04);
+      background: var(--glass);
       border: 1px solid var(--border-2);
       border-radius: 8px;
       transition: background 160ms, color 160ms;
     }
 
-    .modal-link:hover { background: rgba(255,255,255,0.09); color: #fff; }
+    .modal-link:hover { background: var(--glass-2); color: var(--text); }
     .modal-link[hidden] { display: none; }
 
     /* Every one of these figures is a diagram or plot drawn on white, so the
@@ -903,7 +982,7 @@
     .about-name {
       font-size: clamp(20px, 2.4vw, 24px);
       font-weight: 600;
-      color: #fff;
+      color: var(--title);
       letter-spacing: -0.02em;
       margin-bottom: 14px;
     }
@@ -921,13 +1000,13 @@
       transition: color 150ms;
     }
 
-    .about-bio a:hover strong { color: #fff; }
+    .about-bio a:hover strong { color: var(--title); }
 
     .about-bio a {
       color: inherit;
       text-decoration: underline;
       text-underline-offset: 3px;
-      text-decoration-color: #333;
+      text-decoration-color: var(--border-2);
       transition: color 150ms, text-decoration-color 150ms;
     }
 
@@ -972,12 +1051,44 @@
 
     footer p, footer a {
       font-size: 12px;
-      color: #2a2a2a;
+      color: var(--border-2);
       text-decoration: none;
       transition: color 150ms;
     }
 
     footer a:hover { color: var(--muted); }
+
+
+    /* Daylight puts the paper back to paper. The inversion is a night
+       treatment; against a light page it would be the dark slab problem in
+       reverse. */
+    .day .deck-page {
+      filter: brightness(calc(1 - var(--i) * 0.045)) var(--sh);
+    }
+
+    .day .deck-page,
+    .day .rcard-thumb img,
+    .day .card-thumb img,
+    .day .card-thumb video { filter: none; }
+
+    .day .deck-page { filter: brightness(calc(1 - var(--i) * 0.045)) var(--sh); }
+
+    /* the moon-lit shadows are far too heavy for a bright page */
+    .day .deck-page {
+      --sh: drop-shadow(0 1px 2px rgba(22,36,47,0.16)) drop-shadow(0 10px 18px rgba(22,36,47,0.14));
+    }
+
+    .day .deck:hover .deck-page,
+    .day .deck:focus-visible .deck-page {
+      --sh: drop-shadow(0 2px 4px rgba(22,36,47,0.2)) drop-shadow(0 16px 30px rgba(22,36,47,0.18));
+    }
+
+    .day .card:hover { box-shadow: 0 12px 28px rgba(22,36,47,0.14); }
+    .day .rcard:hover { box-shadow: 0 12px 30px rgba(22,36,47,0.14); }
+    .day .modal-backdrop { background: rgba(190,208,222,0.72); }
+    .day .modal-panel { box-shadow: 0 24px 60px rgba(22,36,47,0.22); }
+    .day .rcard-thumb { background: #e7eef5; }
+    .day .card-thumb { background: #e7eef5; }
 
     /* ─── RESPONSIVE ─── */
     /* On a wide window the container opens up and the gallery runs four
@@ -1078,6 +1189,11 @@
       <path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 0 1-.947-.947c0-.525.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.016-5.325 5.016h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 3.872-2.484 3.872-3.722 0-2.016-1.284-3.722-3.862-3.722h-2.307z"/>
     </symbol>
   </svg>
+
+  <div id="pull" role="button" tabindex="0"
+       aria-label="Pull the cord to change the lights" title="Pull to switch the lights">
+    <canvas></canvas>
+  </div>
 
   <!-- HERO + ABOUT -->
   <header class="hero">
@@ -2421,6 +2537,7 @@
 
     // undergrowth first, so the trees read in front of it
     const plants = undergrowth.concat(trees);
+    undergrowth.forEach(u => { u.under = true; });
     plants.forEach((p, i) => {
       p.box = walk(p, 1, 1, 0, 0, null, null);
       p.stiff = 0.78 + hash(i, 12) * 0.44;   // how hard it answers the wind
@@ -2476,6 +2593,32 @@
     // glow can reach well past the moon without enlarging the moon itself.
     const moon = document.createElement('canvas');
     moon.width = moon.height = 1024;
+    // Daylight's disc. A warm core with a wide corona, drawn the same size as
+    // the moon so one can dissolve into the other without anything moving.
+    const sun = document.createElement('canvas');
+    sun.width = sun.height = 1024;
+    {
+      const C = 512, DISC = 94, g = sun.getContext('2d');
+      let gr = g.createRadialGradient(C, C, DISC * 0.7, C, C, C);
+      gr.addColorStop(0.00, 'rgba(255,236,170,0.50)');
+      gr.addColorStop(0.05, 'rgba(255,231,150,0.30)');
+      gr.addColorStop(0.11, 'rgba(255,226,138,0.165)');
+      gr.addColorStop(0.18, 'rgba(255,222,130,0.085)');
+      gr.addColorStop(0.26, 'rgba(255,220,128,0.040)');
+      gr.addColorStop(0.34, 'rgba(255,220,128,0.014)');
+      gr.addColorStop(0.44, 'rgba(255,220,128,0)');
+      gr.addColorStop(1.00, 'rgba(255,220,128,0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 1024, 1024);
+      gr = g.createRadialGradient(C - DISC * 0.2, C - DISC * 0.25, DISC * 0.1, C, C, DISC);
+      gr.addColorStop(0.00, '#fffdf3');
+      gr.addColorStop(0.55, '#ffef9e');
+      gr.addColorStop(0.88, '#ffd964');
+      gr.addColorStop(1.00, 'rgba(255,214,90,0.35)');
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(C, C, DISC, 0, Math.PI * 2); g.fill();
+    }
+
     let moonReady = false;
     {
       const C = 512, DISC = 94;
@@ -2544,6 +2687,43 @@
       hold: 0,                 // stays lit this long after landing
       sx: 0, sy: 0, t: 0, dur: 1, delay: 0, bow: 0, lift: 0,
     }));
+
+    // ── night and day ──────────────────────────────────────────────────────
+    // Every plant keeps its greyscale tone pair from the grammar; the theme
+    // decides what those two numbers mean. At night they run dark grey to
+    // near-white. In daylight they run bark to leaf, so the same variation
+    // between plants survives the change.
+    // Night runs black to white, which reproduces the greyscale the grammars
+    // were tuned against exactly. Day runs bark to leaf, and holds the bark
+    // end longer, or every trunk comes out olive.
+    const PAL = {
+      night: { low: [0, 0, 0], high: [255, 255, 255], tip: [255, 255, 255],
+               uLow: [0, 0, 0], uHigh: [255, 255, 255], uTip: [255, 255, 255] },
+      day:   { low: [92, 62, 38], high: [104, 162, 64], tip: [186, 224, 122],
+               uLow: [72, 96, 46], uHigh: [128, 176, 84], uTip: [176, 212, 116] },
+    };
+    const BARK = 1.9;   // gamma on the day ramp: higher keeps trunks browner
+    let mix = window.__theme && window.__theme.day ? 1 : 0;   // 0 night, 1 day
+    let mixTo = mix;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const band = (lo, hi, t) => [Math.round(lerp(lo[0], hi[0], t)),
+                                 Math.round(lerp(lo[1], hi[1], t)),
+                                 Math.round(lerp(lo[2], hi[2], t))];
+    // colour for a plant's greyscale tone v, under the current mix
+    function shade(v, under) {
+      const t = Math.max(0, Math.min(1, v / 255));
+      const n = PAL.night, d = PAL.day;
+      const a = band(under ? n.uLow : n.low, under ? n.uHigh : n.high, t);
+      const b = band(under ? d.uLow : d.low, under ? d.uHigh : d.high,
+                     under ? Math.pow(t, 1.25) : Math.pow(t, BARK));
+      return `rgb(${Math.round(lerp(a[0], b[0], mix))},${Math.round(lerp(a[1], b[1], mix))},${Math.round(lerp(a[2], b[2], mix))})`;
+    }
+    function tipShade(v, under) {
+      const t = Math.max(0, Math.min(1, v / 255));
+      const n = under ? PAL.night.uTip : PAL.night.tip;
+      const d = under ? PAL.day.uTip : PAL.day.tip;
+      return `rgb(${Math.round(lerp(n[0] * t, d[0], mix))},${Math.round(lerp(n[1] * t, d[1], mix))},${Math.round(lerp(n[2] * t, d[2], mix))})`;
+    }
 
     let W = 0, H = 0, dpr = 1;
     let moonX = 0, moonY = 0, moonR = 0;
@@ -2711,6 +2891,11 @@
       const dt = lastNow ? Math.min(0.05, (now - lastNow) / 1000) : 0;
       lastNow = now;
 
+      if (mix !== mixTo) {
+        const step = dt / 0.52;
+        mix = mix < mixTo ? Math.min(mixTo, mix + step) : Math.max(mixTo, mix - step);
+      }
+
       if (moonR > 0) {
         if (moonT >= 0) {
           // Bolting: slow off the mark, quickest at the end, then it rocks
@@ -2760,7 +2945,10 @@
             }
           }
         }
-        ctx.drawImage(moon, moonX - moonR, moonY - moonR, moonR * 2, moonR * 2);
+        const dx0 = moonX - moonR, dy0 = moonY - moonR, dd = moonR * 2;
+        if (mix < 0.999) { ctx.globalAlpha = 1 - mix; ctx.drawImage(moon, dx0, dy0, dd, dd); }
+        if (mix > 0.001) { ctx.globalAlpha = mix; ctx.drawImage(sun, dx0, dy0, dd, dd); }
+        ctx.globalAlpha = 1;
       }
 
       // ── the opening ──────────────────────────────────────────────────────
@@ -2891,7 +3079,7 @@
           const seg = buckets[depth];
           if (!seg) continue;
           const g = Math.round(tone0 + (depth / p.maxDepth) * (tone1 - tone0));
-          ctx.strokeStyle = `rgb(${g},${g},${g})`;
+          ctx.strokeStyle = shade(g, p.under);
           ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, depth));
           ctx.beginPath();
           for (let k = 0; k < seg.length; k += 4) {
@@ -2903,7 +3091,7 @@
 
         // Twig ends drawn last, so the highlight sits over the branches.
         if (tipSegs.length) {
-          ctx.strokeStyle = p.tipTone;
+          ctx.strokeStyle = tipShade(p.tip, p.under);
           ctx.lineWidth = p.tipWidth;
           ctx.beginPath();
           for (let k = 0; k < tipSegs.length; k += 4) {
@@ -3039,12 +3227,38 @@
           // The halo stays the same size in flight — scaling it up just reads
           // as going out of focus — and a hard core keeps the centre white.
           const r = f.size * 3.0;
-          ctx.globalAlpha = Math.min(1, f.alpha);
-          ctx.drawImage(spark, f.x - r, f.y - r, r * 2, r * 2);
-          ctx.fillStyle = '#fff';
-          ctx.beginPath();
-          ctx.arc(f.x, f.y, Math.max(0.7, f.size * 0.44), 0, Math.PI * 2);
-          ctx.fill();
+          // By night a lit speck; by day the same creature drawn as a bird,
+          // wings beating while it crosses and folded once it settles.
+          if (mix < 0.995) {
+            ctx.globalAlpha = Math.min(1, f.alpha) * (1 - mix);
+            ctx.drawImage(spark, f.x - r, f.y - r, r * 2, r * 2);
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, Math.max(0.7, f.size * 0.44), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          if (mix > 0.005) {
+            const s = Math.max(2.6, f.size * 1.5);
+            const flying = f.state === 'flying';
+            // wings sweep while flying, and rest nearly closed when perched
+            const beat = flying ? Math.sin(now / 90 + f.phase) : -0.55;
+            const lift = 0.55 + beat * 0.5;
+            ctx.globalAlpha = mix * Math.min(1, 0.35 + f.alpha * 0.8);
+            ctx.strokeStyle = 'rgb(46,42,38)';
+            ctx.lineWidth = Math.max(0.9, s * 0.26);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(f.x - s, f.y + s * lift * 0.5);
+            ctx.quadraticCurveTo(f.x - s * 0.45, f.y - s * lift, f.x, f.y);
+            ctx.quadraticCurveTo(f.x + s * 0.45, f.y - s * lift, f.x + s, f.y + s * lift * 0.5);
+            ctx.stroke();
+            if (!flying) {                       // a body to sit on the twig
+              ctx.fillStyle = 'rgb(46,42,38)';
+              ctx.beginPath();
+              ctx.ellipse(f.x, f.y + s * 0.16, s * 0.4, s * 0.3, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
           ctx.globalAlpha = 1;
         }
       }
@@ -3092,6 +3306,13 @@
     // Resizing the backing store clears it, so redraw in the same frame.
     // Waiting for the next one showed a blank canvas for 16ms, which read as
     // the grove blinking out at the end of the opening.
+    // The lamp does not snap the grove over; the palette walks across so the
+    // trees change colour with the page rather than in front of it.
+    document.addEventListener('lights', e => {
+      mixTo = e.detail.day ? 1 : 0;
+      start();
+    });
+
     const relayout = () => { layout(); render(performance.now()); };
     const ro = new ResizeObserver(relayout);
     ro.observe(canvas);
@@ -3174,6 +3395,221 @@
         });
       });
     });
+  </script>
+
+  <script>
+  // ─── The lamp pull ───
+  // A verlet cord: a chain of beads with distance constraints, a heavy knob on
+  // the end, and enough slack in the solver that it stretches when you haul on
+  // it. Pull the knob past the trip line and the lights change over.
+  (() => {
+    const host = document.getElementById('pull');
+    if (!host) return;
+    const canvas = host.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const N = 16;              // beads, anchor included
+    const SEG = 9.2;           // rest length between beads
+    const GRAV = 1500;         // px/s²
+    const DAMP = 0.986;
+    const ITER = 12;           // constraint passes; fewer = stretchier
+    const STIFF = 0.82;
+    const TRIP = 58;           // how far past rest the knob must travel
+    const KNOB = 8.2;
+
+    let W = 0, H = 0, ax = 0, ay = 0;
+    const px = new Float64Array(N), py = new Float64Array(N);
+    const ox = new Float64Array(N), oy = new Float64Array(N);
+    let held = false, hx = 0, hy = 0, armed = true, glow = 0;
+
+    function layout() {
+      const r = host.getBoundingClientRect();
+      if (!r.width) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = r.width; H = r.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ax = W * 0.5; ay = -6;
+      for (let i = 0; i < N; i++) {
+        if (!px[i] && !py[i]) { px[i] = ox[i] = ax; py[i] = oy[i] = ay + i * SEG; }
+      }
+    }
+
+    function step(dt) {
+      // verlet
+      for (let i = 1; i < N; i++) {
+        const vx = (px[i] - ox[i]) * DAMP, vy = (py[i] - oy[i]) * DAMP;
+        ox[i] = px[i]; oy[i] = py[i];
+        px[i] += vx;
+        py[i] += vy + GRAV * dt * dt;
+      }
+      px[0] = ax; py[0] = ay;
+      if (held) { px[N - 1] = hx; py[N - 1] = hy; }
+
+      for (let k = 0; k < ITER; k++) {
+        for (let i = 0; i < N - 1; i++) {
+          let dx = px[i + 1] - px[i], dy = py[i + 1] - py[i];
+          const d = Math.hypot(dx, dy) || 1e-6;
+          const f = ((d - SEG) / d) * STIFF * 0.5;
+          dx *= f; dy *= f;
+          if (i > 0) { px[i] += dx; py[i] += dy; }
+          if (!(held && i + 1 === N - 1)) { px[i + 1] -= dx; py[i + 1] -= dy; }
+        }
+        px[0] = ax; py[0] = ay;
+        if (held) { px[N - 1] = hx; py[N - 1] = hy; }
+      }
+    }
+
+    // A dry tick, built rather than loaded: a short noise burst through a
+    // bandpass, which is most of what a lamp switch actually is.
+    let actx = null;
+    function click(down) {
+      try {
+        actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+        if (actx.state === 'suspended') actx.resume();
+        const t = actx.currentTime;
+        const n = Math.round(actx.sampleRate * 0.03);
+        const buf = actx.createBuffer(1, n, actx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 7);
+        const src = actx.createBufferSource(); src.buffer = buf;
+        const bp = actx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = down ? 2100 : 1500; bp.Q.value = 1.1;
+        const g = actx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(down ? 0.16 : 0.1, t + 0.002);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+        src.connect(bp).connect(g).connect(actx.destination);
+        src.start(t); src.stop(t + 0.06);
+      } catch (e) { /* no audio, no matter */ }
+    }
+
+    const restY = () => ay + (N - 1) * SEG;
+
+    function trip() {
+      armed = false;
+      glow = 1;
+      click(true);
+      window.__theme && window.__theme.toggle();
+      // let go of the cord: it flies back up and swings itself out
+      held = false;
+      oy[N - 1] = py[N - 1] + 6;
+      setTimeout(() => click(false), 90);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const styles = getComputedStyle(document.documentElement);
+      const cord = styles.getPropertyValue('--cord').trim() || '#4a4a4a';
+      const knobA = styles.getPropertyValue('--knob').trim() || '#8a8a8a';
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = cord;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(px[0], py[0]);
+      for (let i = 1; i < N - 1; i++) {
+        const mx = (px[i] + px[i + 1]) / 2, my = (py[i] + py[i + 1]) / 2;
+        ctx.quadraticCurveTo(px[i], py[i], mx, my);
+      }
+      ctx.lineTo(px[N - 1], py[N - 1]);
+      ctx.stroke();
+
+      // the knob: a little turned bead, lit from the upper left
+      const kx = px[N - 1], ky = py[N - 1];
+      const ang = Math.atan2(ky - py[N - 3], kx - px[N - 3]);
+      ctx.save();
+      ctx.translate(kx, ky);
+      ctx.rotate(ang - Math.PI / 2);
+      if (glow > 0.01) {
+        const halo = ctx.createRadialGradient(0, 0, KNOB * 0.4, 0, 0, KNOB * 3.4);
+        halo.addColorStop(0, `rgba(255,214,130,${0.34 * glow})`);
+        halo.addColorStop(1, 'rgba(255,214,130,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(0, 0, KNOB * 3.4, 0, Math.PI * 2); ctx.fill();
+      }
+      const g = ctx.createLinearGradient(-KNOB, -KNOB, KNOB, KNOB);
+      g.addColorStop(0, knobA);
+      g.addColorStop(1, cord);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, -KNOB * 1.15);
+      ctx.bezierCurveTo(KNOB * 0.95, -KNOB * 0.8, KNOB * 0.8, KNOB * 0.75, 0, KNOB * 1.25);
+      ctx.bezierCurveTo(-KNOB * 0.8, KNOB * 0.75, -KNOB * 0.95, -KNOB * 0.8, 0, -KNOB * 1.15);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    let last = 0, raf = 0;
+    function frame(now) {
+      const dt = last ? Math.min(0.032, (now - last) / 1000) : 0.016;
+      last = now;
+      step(dt);
+      glow *= 0.94;
+      // re-arm once it has come most of the way home
+      if (!armed && py[N - 1] < restY() + TRIP * 0.45) armed = true;
+      if (armed && held && py[N - 1] > restY() + TRIP) trip();
+      draw();
+      const moving = held || glow > 0.01 ||
+        Math.abs(py[N - 1] - oy[N - 1]) > 0.02 || Math.abs(px[N - 1] - ox[N - 1]) > 0.02;
+      raf = moving ? requestAnimationFrame(frame) : 0;
+      if (!raf) last = 0;
+    }
+    const wake = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
+
+    const local = e => {
+      const r = host.getBoundingClientRect();
+      return [e.clientX - r.left, e.clientY - r.top];
+    };
+    host.addEventListener('pointerdown', e => {
+      const [x, y] = local(e);
+      if (Math.hypot(x - px[N - 1], y - py[N - 1]) > 34) return;
+      held = true; hx = x; hy = y;
+      host.classList.add('tugging');
+      host.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      wake();
+    });
+    host.addEventListener('pointermove', e => {
+      if (!held) return;
+      const [x, y] = local(e);
+      // it can be hauled sideways as well as down, but not off its own string
+      const dx = x - ax, dy = Math.max(0, y - ay);
+      const len = Math.hypot(dx, dy), max = (N - 1) * SEG * 1.75;
+      const k = len > max ? max / len : 1;
+      hx = ax + dx * k; hy = ay + dy * k;
+      wake();
+    });
+    const letGo = e => {
+      if (!held) return;
+      held = false;
+      host.classList.remove('tugging');
+      try { host.releasePointerCapture(e.pointerId); } catch (_) {}
+      wake();
+    };
+    host.addEventListener('pointerup', letGo);
+    host.addEventListener('pointercancel', letGo);
+
+    // keyboard: a tug and a release
+    host.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      py[N - 1] = restY() + TRIP + 12;
+      oy[N - 1] = py[N - 1] - 26;
+      armed = true;
+      trip();
+      wake();
+    });
+
+    layout();
+    if (reduced) { for (let i = 0; i < N; i++) { px[i] = ax; py[i] = ay + i * SEG; ox[i] = px[i]; oy[i] = py[i]; } }
+    draw();
+    new ResizeObserver(() => { layout(); draw(); }).observe(host);
+    wake();
+  })();
   </script>
 
   <script>
