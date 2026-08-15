@@ -118,16 +118,16 @@
     /* Daylight. The background is the grove's sky, so the page and the canvas
        share one colour and the trees stand in the same air as the text. */
     :root.day {
-      --bg:        #cddeed;
+      --bg:        #a6c7e3;
       --surface:   #fbfdff;
-      --surface-2: #f0f6fb;
-      --border:    #b9cee0;
-      --border-2:  #9db8ce;
-      --text:      #16242f;
-      --muted:     #6a8296;
-      --muted-2:   #47606f;
-      --title:     #0d1a24;
-      --ink:       #5f7488;
+      --surface-2: #eef5fb;
+      --border:    #c4d8e7;
+      --border-2:  #9dbbd3;
+      --text:      #13202b;
+      --muted:     #5f7a8f;
+      --muted-2:   #3d5464;
+      --title:     #0b1620;
+      --ink:       #4f6b83;
       --glass:     rgba(255,255,255,0.55);
       --glass-2:   rgba(255,255,255,0.85);
       --hairline:  rgba(22,36,47,0.10);
@@ -283,7 +283,7 @@
 
     .card:hover {
       transform: translateY(-3px);
-      border-color: #282828;
+      border-color: var(--border-2);
       box-shadow: 0 12px 36px rgba(0,0,0,0.5);
     }
 
@@ -899,7 +899,7 @@
       transition: color 160ms, border-color 160ms;
     }
 
-    .modal-close:hover { color: var(--fg); border-color: var(--border-2); }
+    .modal-close:hover { color: var(--text); border-color: var(--border-2); }
 
     .modal-title {
       font-size: 21px;
@@ -2548,6 +2548,7 @@
       // each plant breaks ground at its own moment but they all finish
       // together, so the grove fills in rather than inflating as one piece
       p.introOff = hash(i, 71) * 0.42;
+      p.leafVary = hash(i, 83) * 2 - 1;   // -1..1, shifts this plant's green
       p.popAmp = 0;                          // spring left over from a press
       p.popT = POP_LIFE;                     // already settled
     });
@@ -2595,28 +2596,59 @@
     moon.width = moon.height = 1024;
     // Daylight's disc. A warm core with a wide corona, drawn the same size as
     // the moon so one can dissolve into the other without anything moving.
+    // The disc is drawn small inside a big sprite so the corona has somewhere
+    // to go: the sprite is painted at SUN_SPREAD times the moon's box, which
+    // leaves the disc the same size on screen but lets the glow reach much
+    // further than the moon's ever did.
+    const SUN_SPREAD = 2.15;
+    const SUN_DISC = 94 / SUN_SPREAD;
     const sun = document.createElement('canvas');
     sun.width = sun.height = 1024;
     {
-      const C = 512, DISC = 94, g = sun.getContext('2d');
-      let gr = g.createRadialGradient(C, C, DISC * 0.7, C, C, C);
-      gr.addColorStop(0.00, 'rgba(255,236,170,0.50)');
-      gr.addColorStop(0.05, 'rgba(255,231,150,0.30)');
-      gr.addColorStop(0.11, 'rgba(255,226,138,0.165)');
-      gr.addColorStop(0.18, 'rgba(255,222,130,0.085)');
-      gr.addColorStop(0.26, 'rgba(255,220,128,0.040)');
-      gr.addColorStop(0.34, 'rgba(255,220,128,0.014)');
-      gr.addColorStop(0.44, 'rgba(255,220,128,0)');
-      gr.addColorStop(1.00, 'rgba(255,220,128,0)');
+      const C = 512, D = SUN_DISC, g = sun.getContext('2d');
+      // corona, in two overlaid falloffs: a tight hot one and a wide soft one
+      let gr = g.createRadialGradient(C, C, D * 0.55, C, C, C);
+      gr.addColorStop(0.00, 'rgba(255,246,206,0.95)');
+      gr.addColorStop(0.04, 'rgba(255,236,164,0.62)');
+      gr.addColorStop(0.09, 'rgba(255,226,132,0.36)');
+      gr.addColorStop(0.16, 'rgba(255,216,110,0.185)');
+      gr.addColorStop(0.25, 'rgba(255,209,96,0.092)');
+      gr.addColorStop(0.36, 'rgba(255,205,90,0.042)');
+      gr.addColorStop(0.50, 'rgba(255,203,88,0.016)');
+      gr.addColorStop(0.68, 'rgba(255,203,88,0.004)');
+      gr.addColorStop(0.86, 'rgba(255,203,88,0)');
+      gr.addColorStop(1.00, 'rgba(255,203,88,0)');
       g.fillStyle = gr;
       g.fillRect(0, 0, 1024, 1024);
-      gr = g.createRadialGradient(C - DISC * 0.2, C - DISC * 0.25, DISC * 0.1, C, C, DISC);
-      gr.addColorStop(0.00, '#fffdf3');
-      gr.addColorStop(0.55, '#ffef9e');
-      gr.addColorStop(0.88, '#ffd964');
-      gr.addColorStop(1.00, 'rgba(255,214,90,0.35)');
+
+      // a few soft shafts, so it reads as light rather than a sticker
+      g.save();
+      g.translate(C, C);
+      for (let i = 0; i < 40; i++) {
+        const a = (i / 40) * Math.PI * 2;
+        const len = C * (0.40 + (i % 5) * 0.055);
+        const rg = g.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+        rg.addColorStop(0, 'rgba(255,240,182,0.052)');
+        rg.addColorStop(1, 'rgba(255,240,182,0)');
+        g.fillStyle = rg;
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.arc(0, 0, len, a - 0.055, a + 0.055);
+        g.closePath();
+        g.fill();
+      }
+      g.restore();
+
+      // the disc: a hot near-white centre falling to a saturated gold rim
+      gr = g.createRadialGradient(C - D * 0.18, C - D * 0.22, D * 0.05, C, C, D);
+      gr.addColorStop(0.00, '#ffffff');
+      gr.addColorStop(0.40, '#fff8d8');
+      gr.addColorStop(0.74, '#ffe58a');
+      gr.addColorStop(0.90, '#ffd668');
+      gr.addColorStop(0.97, 'rgba(255,206,80,0.72)');
+      gr.addColorStop(1.00, 'rgba(255,201,70,0)');
       g.fillStyle = gr;
-      g.beginPath(); g.arc(C, C, DISC, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(C, C, D, 0, Math.PI * 2); g.fill();
     }
 
     let moonReady = false;
@@ -2703,6 +2735,16 @@
                uLow: [72, 96, 46], uHigh: [128, 176, 84], uTip: [176, 212, 116] },
     };
     const BARK = 1.9;   // gamma on the day ramp: higher keeps trunks browner
+
+    // Foliage colour for a plant, varied a little either side of the leaf
+    // green so no two canopies are the same wash.
+    function leaf(p, k, shadeDown) {
+      const v = (p.leafVary || 0), m = shadeDown ? 0.78 : 1;
+      const c = [Math.round((78 + v * 26) * m),
+                 Math.round((136 + v * 34) * m),
+                 Math.round((54 + v * 22) * m)];
+      return `rgba(${c[0]},${c[1]},${c[2]},${k})`;
+    }
     let mix = window.__theme && window.__theme.day ? 1 : 0;   // 0 night, 1 day
     let mixTo = mix;
     const lerp = (a, b, t) => a + (b - a) * t;
@@ -2945,9 +2987,20 @@
             }
           }
         }
-        const dx0 = moonX - moonR, dy0 = moonY - moonR, dd = moonR * 2;
-        if (mix < 0.999) { ctx.globalAlpha = 1 - mix; ctx.drawImage(moon, dx0, dy0, dd, dd); }
-        if (mix > 0.001) { ctx.globalAlpha = mix; ctx.drawImage(sun, dx0, dy0, dd, dd); }
+        const dd = moonR * 2;
+        if (mix < 0.999) {
+          ctx.globalAlpha = 1 - mix;
+          ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
+        }
+        if (mix > 0.001) {
+          // a slow breath on the corona, so the light is never quite still
+          const beat = 1 + Math.sin(now / 2600) * 0.035;
+          const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
+          ctx.globalAlpha = mix;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
+          ctx.globalCompositeOperation = 'source-over';
+        }
         ctx.globalAlpha = 1;
       }
 
@@ -3087,6 +3140,27 @@
             ctx.lineTo(seg[k + 2], seg[k + 3]);
           }
           ctx.stroke();
+        }
+
+        // In daylight the twig ends carry foliage: two wide, soft passes over
+        // the same segments, which gives the canopy bulk without drawing a
+        // leaf per twig. Without it the trees read as green wire.
+        if (mix > 0.01 && tipSegs.length) {
+          ctx.lineCap = 'round';
+          // the wider pass is the shaded underside of the clump, the tighter one
+          // the lit top; keeping them close in width stops each twig reading
+          // as an outlined pill
+          for (const [w, k, dark] of [[2.9, 0.40, true], [1.9, 0.52, false]]) {
+            ctx.strokeStyle = leaf(p, k * mix, dark);
+            ctx.lineWidth = Math.max(2, p.width * w);
+            ctx.beginPath();
+            for (let k2 = 0; k2 < tipSegs.length; k2 += 4) {
+              ctx.moveTo(tipSegs[k2], tipSegs[k2 + 1]);
+              ctx.lineTo(tipSegs[k2 + 2], tipSegs[k2 + 3]);
+            }
+            ctx.stroke();
+          }
+          ctx.lineCap = 'butt';
         }
 
         // Twig ends drawn last, so the highlight sits over the branches.
