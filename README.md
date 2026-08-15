@@ -22,6 +22,22 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 Every image the page loads is served from this repo. Nothing hotlinks, and
 nothing on the critical path comes from a third-party origin.
 
+## The sky
+
+The page does not have a background colour so much as weather. One full-screen
+fragment shader sits behind the whole document: by day a cloudscape built from
+a gyroid FBM — the same family of noise as Leon Denise's [Cloudy Blue
+Sky](https://www.shadertoy.com/view/DlKXWm), with its scrolling blue-noise
+texture dropped in favour of a wider threshold, so cloud edges dissolve rather
+than fizz and nothing has to be downloaded — and by night a thin star field
+crossed by the Milky Way, which arrives as a crowding of stars rather than a
+grey smear, with a meteor every half-minute or so.
+
+It runs at half the display's rate on a buffer capped well under a retina
+viewport's worth of pixels, stops entirely when the tab is hidden, and draws a
+single still frame under `prefers-reduced-motion`. If WebGL is unavailable the
+flat `--bg` underneath is all you get, and nothing else changes.
+
 ## The grove
 
 The header is a canvas of five L-system trees over a thicket of smaller ones,
@@ -31,6 +47,14 @@ so a gust travels up the plant instead of swinging every part at once. Moving
 the pointer pushes them aside; pressing a tree makes it withdraw into itself,
 twigs first, and releasing grows it back. Fireflies perch on one tree's twig
 ends and cross to another when their tree is disturbed.
+
+In daylight each species carries its own foliage: a leaf shape and a green,
+baked into small sprites at twelve angles and three variants, so a branch end
+costs one blit rather than a path. How far in the canopy reaches is measured
+per species from its own twig spacing — the five grammars differ enough that a
+fixed depth leaves one bald and turns another into a solid lump — and the inner
+levels are drawn from a shaded copy of the same leaves, which is what stops a
+dense tree reading as a green tube.
 
 The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
 Commons), which requires no attribution. It is also the favicon, rendered over

@@ -146,6 +146,25 @@
 
     html { scroll-behavior: smooth; }
 
+    /* The sky is painted rather than set: a fixed canvas behind the whole
+       document, so scrolling moves the page through the air instead of
+       dragging the air with it. --bg stays underneath as the fallback, and is
+       what shows if WebGL is unavailable. */
+    #sky {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: -1;
+      pointer-events: none;
+      /* it fades in once the first frame is up, so a slow context creation
+         never shows as a flash of flat colour */
+      opacity: 0;
+      transition: opacity 700ms var(--ease);
+    }
+    #sky.lit { opacity: 1; }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -224,33 +243,53 @@
       flex-wrap: wrap;
     }
 
+    /* Same frosted pane as the profile links, at chip scale. */
     .filter-btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--muted);
+      background: var(--glass);
+      border: 1px solid var(--hairline);
+      color: var(--muted-2);
       font-family: inherit;
       font-size: 12.5px;
       font-weight: 500;
-      padding: 6px 13px 6px 11px;
+      padding: 6px 14px 6px 12px;
       border-radius: 99px;
       cursor: pointer;
-      transition: color 150ms, border-color 150ms, background 150ms;
+      -webkit-backdrop-filter: blur(9px) saturate(1.25);
+      backdrop-filter: blur(9px) saturate(1.25);
+      transition: color 200ms var(--ease), border-color 200ms var(--ease),
+                  background 200ms var(--ease), transform 200ms var(--ease),
+                  box-shadow 200ms var(--ease);
       letter-spacing: 0.01em;
     }
 
     .filter-btn:hover {
-      color: var(--text);
+      color: var(--title);
+      background: var(--glass-2);
       border-color: var(--border-2);
+      transform: translateY(-2px);
     }
 
-    .filter-btn.active {
-      background: var(--text);
-      color: var(--bg);
-      border-color: var(--text);
+    .filter-btn:active { transform: translateY(0); }
+
+    .filter-btn:focus-visible {
+      outline: 2px solid var(--border-2);
+      outline-offset: 3px;
     }
+
+    /* The selected one stops being glass and becomes solid, so which filter is
+       on reads at a glance rather than as a slightly brighter pane. */
+    .filter-btn.active {
+      background: var(--title);
+      color: var(--bg);
+      border-color: var(--title);
+      transform: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.30);
+    }
+
+    .day .filter-btn.active { box-shadow: 0 4px 14px rgba(22,36,47,0.20); }
 
     /* ─── GRID ─── */
     .grid {
@@ -1021,24 +1060,52 @@
       gap: 10px;
     }
 
+    /* These sit directly on the sky, so an outline alone disappears into
+       whatever cloud or star happens to be behind it. Each is its own small
+       pane of frosted glass instead: enough substance to hold the label, and
+       it still shows the weather through. */
     .about-link {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
+      gap: 8px;
       font-size: 13px;
-      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      color: var(--muted-2);
       text-decoration: none;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 14px;
-      transition: color 150ms, border-color 150ms, background 150ms;
+      background: var(--glass);
+      border: 1px solid var(--hairline);
+      border-radius: 99px;
+      padding: 8px 16px;
+      -webkit-backdrop-filter: blur(9px) saturate(1.25);
+      backdrop-filter: blur(9px) saturate(1.25);
+      transition: color 200ms var(--ease), border-color 200ms var(--ease),
+                  background 200ms var(--ease), transform 200ms var(--ease),
+                  box-shadow 200ms var(--ease);
+    }
+
+    .about-link svg {
+      opacity: 0.72;
+      transition: opacity 200ms var(--ease);
     }
 
     .about-link:hover {
-      color: var(--text);
+      color: var(--title);
+      background: var(--glass-2);
       border-color: var(--border-2);
-      background: var(--surface);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     }
+
+    .about-link:hover svg { opacity: 1; }
+    .about-link:active { transform: translateY(0); }
+
+    .about-link:focus-visible {
+      outline: 2px solid var(--border-2);
+      outline-offset: 3px;
+    }
+
+    .day .about-link:hover { box-shadow: 0 8px 20px rgba(22,36,47,0.18); }
 
     /* ─── FOOTER ─── */
     footer {
@@ -1122,6 +1189,10 @@
   </style>
 </head>
 <body>
+
+  <!-- The sky the whole page sits in: drifting cloud by day, stars and the
+       occasional meteor by night. Behind everything, and inert. -->
+  <canvas id="sky" aria-hidden="true"></canvas>
 
   <!-- Shared icon sprite -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -2509,7 +2580,8 @@
       return { minX, maxX, minY, maxY };
     }
 
-    const trees = TREES.map(s => ({ ...s, kind: 'tree', ...expand(s) }));
+    // leafSpec keys into FOLIAGE, so each species keeps its own leaf and green
+    const trees = TREES.map((s, i) => ({ ...s, kind: 'tree', leafSpec: i, ...expand(s) }));
 
     // one expansion, reused by every instance — only the transform differs
     const underShape = expand(UNDER_SPEC);
@@ -2736,14 +2808,181 @@
     };
     const BARK = 1.9;   // gamma on the day ramp: higher keeps trunks browner
 
-    // Foliage colour for a plant, varied a little either side of the leaf
-    // green so no two canopies are the same wash.
+    // Foliage colour for the scrub, varied a little either side of the leaf
+    // green so no two clumps are the same wash.
     function leaf(p, k, shadeDown) {
       const v = (p.leafVary || 0), m = shadeDown ? 0.78 : 1;
-      const c = [Math.round((78 + v * 26) * m),
-                 Math.round((136 + v * 34) * m),
-                 Math.round((54 + v * 22) * m)];
+      const c = [Math.round((62 + v * 22) * m),
+                 Math.round((112 + v * 30) * m),
+                 Math.round((48 + v * 18) * m)];
       return `rgba(${c[0]},${c[1]},${c[2]},${k})`;
+    }
+
+    // ── Leaves ────────────────────────────────────────────────────────────
+    // One look per species: the shape of the leaf and the green it is cut
+    // from both change, so no two canopies read as the same tree. Each is
+    // baked into a small sprite at a fixed set of angles and a few random
+    // variants, and a twig end just blits the nearest one — no path, no
+    // transform, nothing per leaf at draw time but a single scaled blit.
+    // `size` is a multiple of the species' own mean twig length, not of its
+    // trunk width: a grammar that ends in hundreds of short twigs needs small
+    // leaves, one that ends in fifty long ones needs large, and only the twig
+    // spacing knows which is which.
+    const LEAF_ROT = 12, LEAF_VAR = 3;
+    const FOLIAGE = [
+      // Four of the five carry ordinary leaves and differ in how many, how far
+      // they fan, how long and how broad — which is enough to tell the species
+      // apart without any of them turning into a shape that is not a leaf.
+      // `len` is [base, spread] as a fraction of the cluster radius.
+      { shape: 'blade',  n: 4, fan: 0.78, len: [0.80, 0.24], wide: 0.24,
+        rgb: [ 52,  94,  42], size: 2.95, dens: 1.00, jit: 0.26 },
+      // fine and drooping: a tuft of needles rather than a leaf
+      { shape: 'needle', rgb: [ 74, 114,  98], size: 2.60, dens: 1.00, jit: 0.14 },
+      // the big one in the middle: broad, round-ended, deep green
+      { shape: 'blade',  n: 5, fan: 0.62, len: [0.84, 0.22], wide: 0.31,
+        rgb: [ 58, 102,  44], size: 2.55, dens: 0.80, jit: 0.32 },
+      // dense and twiggy, so its leaves are small and narrow
+      { shape: 'blade',  n: 5, fan: 0.66, len: [0.74, 0.24], wide: 0.22,
+        rgb: [ 96, 138,  56], size: 2.85, dens: 0.42, jit: 0.34 },
+      // open and airy: a few long leaves, thrown wide
+      { shape: 'blade',  n: 4, fan: 0.86, len: [0.86, 0.24], wide: 0.26,
+        rgb: [ 68, 118,  62], size: 2.80, dens: 0.45, jit: 0.34 },
+    ];
+
+    // A cluster drawn around the origin, oriented along +x. The caller has
+    // already rotated and pushed it out past the twig end.
+    function drawCluster(g, spec, r, rnd) {
+      const [cr, cg, cb] = spec.rgb;
+      const lit = `rgb(${Math.min(255, cr + 30)},${Math.min(255, cg + 32)},${Math.min(255, cb + 24)})`;
+      const dim = `rgb(${Math.round(cr * 0.62)},${Math.round(cg * 0.62)},${Math.round(cb * 0.62)})`;
+      const grad = () => {
+        const gr = g.createLinearGradient(0, -r * 0.5, 0, r * 0.5);
+        gr.addColorStop(0, lit);
+        gr.addColorStop(1, dim);
+        return gr;
+      };
+      const blade = (a, len, wide) => {
+        g.save();
+        g.rotate(a);
+        g.fillStyle = grad();
+        g.beginPath();
+        g.ellipse(len * 0.45, 0, len * 0.5, wide, 0, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      };
+
+      if (spec.shape === 'needle') {
+        g.lineCap = 'round';
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 6 - 0.5) * 2.0 + (rnd() - 0.5) * 0.24;
+          const len = r * (0.62 + rnd() * 0.30);
+          g.strokeStyle = i % 2 ? dim : lit;
+          g.lineWidth = r * 0.15;
+          g.beginPath();
+          g.moveTo(-r * 0.34, 0);
+          g.quadraticCurveTo(len * 0.3, Math.sin(a) * len * 0.4,
+                             Math.cos(a) * len, Math.sin(a) * len);
+          g.stroke();
+        }
+        return;
+      }
+
+      const n = spec.n;
+      for (let i = 0; i < n; i++) {
+        const a = (i - (n - 1) / 2) * spec.fan + (rnd() - 0.5) * 0.28;
+        blade(a, r * (spec.len[0] + rnd() * spec.len[1]), r * spec.wide);
+      }
+    }
+
+    // Terminal twigs alone are nowhere near a canopy — one grammar ends in
+    // fifty of them. So leaves go on the outer levels of the tree as well, and
+    // how far in "outer" reaches has to be found per species: their depth
+    // profiles are wildly different, and a fixed level leaves one bald and
+    // turns another into a solid green lump. A dry walk at the current scale
+    // counts the segments level by level, takes levels from the outside in
+    // until there are enough, and thins the result down to about the same
+    // number of leaves for every tree.
+    const LEAF_TARGET = 240, LEAF_POOL = 700;
+
+    // Leaves landing exactly on their branch ends, evenly along a long straight
+    // limb, turn the limb into a fuzzy green tube. A fixed scatter table breaks
+    // the line up; it is a table rather than a hash so a leaf keeps its own
+    // offset from frame to frame and the canopy does not crawl.
+    const JIT = Array.from({ length: 64 }, (_, i) => [
+      hash(i, 51) * 2 - 1, hash(i, 52) * 2 - 1,
+    ]);
+
+    function planFoliage(t) {
+      const buckets = [], tip = [];
+      walk(t, t.sx, t.sy, 0, 0, null, buckets, tip);
+      let from = buckets.length, pool = tip.length / 4, sum = 0;
+      for (let k = 0; k < tip.length; k += 4) {
+        sum += Math.hypot(tip[k + 2] - tip[k], tip[k + 3] - tip[k + 1]);
+      }
+      for (let d = buckets.length - 1; d >= 1; d--) {
+        const seg = buckets[d];
+        const n = seg ? seg.length / 4 : 0;
+        if (pool + n > LEAF_POOL && pool > 40) break;
+        from = d;
+        pool += n;
+        for (let k = 0; seg && k < seg.length; k += 4) {
+          sum += Math.hypot(seg[k + 2] - seg[k], seg[k + 3] - seg[k + 1]);
+        }
+      }
+      t.leafFrom = from;
+      const spec = FOLIAGE[t.leafSpec];
+      t.leafKeep = Math.min(1, LEAF_TARGET * (spec ? spec.dens : 1) / Math.max(1, pool));
+      t.leafJit = (spec ? spec.jit : 0.25);
+      buildFoliage(t, pool ? sum / pool : 6);
+    }
+
+    // Builds every rotation and variant for one species at the current size.
+    function buildFoliage(p, twig) {
+      const spec = FOLIAGE[p.leafSpec];
+      if (!spec) return;
+      const S = Math.max(8, Math.min(34, twig * spec.size));
+      if (p.folS === S && p.folDpr === dpr && p.fol) return;   // nothing changed
+      p.folS = S; p.folDpr = dpr;
+      const px = Math.round(S * dpr);
+      // A flat wash of one green reads as a green sausage however the leaves
+      // are shaped. So each species is baked twice, once as it sits in the sun
+      // and once in the shade of the leaves above it, and the canopy is drawn
+      // dark on the inside and lit on the outside.
+      const shaded = { ...spec, rgb: spec.rgb.map(c => Math.round(c * 0.56)) };
+      const out = [], dark = [];
+      for (let r = 0; r < LEAF_ROT; r++) {
+        for (let v = 0; v < LEAF_VAR; v++) {
+          const c = document.createElement('canvas');
+          c.width = c.height = px;
+          const g = c.getContext('2d');
+          g.scale(px / S, px / S);
+          g.translate(S / 2, S / 2);
+          g.rotate(r / LEAF_ROT * Math.PI * 2 - Math.PI);
+          g.translate(S * 0.10, 0);
+          // deterministic per (species, rotation, variant), so a resize
+          // rebuilds exactly the same leaves
+          let seed = p.leafSpec * 977 + r * 31 + v * 7 + 1;
+          const rnd = () => {
+            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+            return seed / 0x7fffffff;
+          };
+          g.globalAlpha = 0.92;
+          const seed0 = seed;
+          drawCluster(g, spec, S * 0.34, rnd);
+          out.push(c);
+
+          const c2 = document.createElement('canvas');
+          c2.width = c2.height = px;
+          const g2 = c2.getContext('2d');
+          g2.setTransform(g.getTransform());
+          seed = seed0;                      // the same leaves, in shade
+          g2.globalAlpha = 0.92;
+          drawCluster(g2, shaded, S * 0.34, rnd);
+          dark.push(c2);
+        }
+      }
+      p.fol = out;
+      p.folDark = dark;
     }
     let mix = window.__theme && window.__theme.day ? 1 : 0;   // 0 night, 1 day
     let mixTo = mix;
@@ -2790,9 +3029,16 @@
     let moonPlaced = false;
     const pointer = { x: -1e4, y: -1e4, tx: -1e4, ty: -1e4, amp: 0, target: 0 };
 
+    // Where the canvas sits in the document, so the sky behind it can put the
+    // sun's glow in the cloud at the right place without measuring anything
+    // itself — and can keep doing so once the grove has scrolled away.
+    let groveOX = 0, groveOY = 0;
+
     function layout() {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
+      groveOX = rect.left + window.scrollX;
+      groveOY = rect.top + window.scrollY;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = rect.width; H = rect.height;
       canvas.width = Math.round(W * dpr);
@@ -2870,6 +3116,7 @@
         t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
         t.tipWidth = Math.max(0.6, t.width * 0.24);
         t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
+        planFoliage(t);
         x += slot + gap;
       });
 
@@ -3002,6 +3249,7 @@
           ctx.globalCompositeOperation = 'source-over';
         }
         ctx.globalAlpha = 1;
+        window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
       }
 
       // ── the opening ──────────────────────────────────────────────────────
@@ -3142,29 +3390,13 @@
           ctx.stroke();
         }
 
-        // In daylight the twig ends carry foliage: two wide, soft passes over
-        // the same segments, which gives the canopy bulk without drawing a
-        // leaf per twig. Without it the trees read as green wire.
-        if (mix > 0.01 && tipSegs.length) {
-          ctx.lineCap = 'round';
-          // the wider pass is the shaded underside of the clump, the tighter one
-          // the lit top; keeping them close in width stops each twig reading
-          // as an outlined pill
-          for (const [w, k, dark] of [[2.9, 0.40, true], [1.9, 0.52, false]]) {
-            ctx.strokeStyle = leaf(p, k * mix, dark);
-            ctx.lineWidth = Math.max(2, p.width * w);
-            ctx.beginPath();
-            for (let k2 = 0; k2 < tipSegs.length; k2 += 4) {
-              ctx.moveTo(tipSegs[k2], tipSegs[k2 + 1]);
-              ctx.lineTo(tipSegs[k2 + 2], tipSegs[k2 + 3]);
-            }
-            ctx.stroke();
-          }
-          ctx.lineCap = 'butt';
-        }
-
-        // Twig ends drawn last, so the highlight sits over the branches.
-        if (tipSegs.length) {
+        // Twig ends, so the highlight sits over the branches. In daylight the
+        // foliage goes over the top of it, which is why it is drawn first now.
+        // Under leaves the highlight would only show as bright wire poking
+        // through the canopy, so it fades out as the foliage arrives.
+        const tipA = p.fol ? 1 - mix * 0.9 : 1;
+        if (tipSegs.length && tipA > 0.02) {
+          ctx.globalAlpha = tipA;
           ctx.strokeStyle = tipShade(p.tip, p.under);
           ctx.lineWidth = p.tipWidth;
           ctx.beginPath();
@@ -3173,6 +3405,57 @@
             ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
           }
           ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+
+        if (mix > 0.01 && tipSegs.length) {
+          if (p.fol) {
+            // A leaf cluster per site, blitted from the pre-baked sprite whose
+            // baked angle is closest to that branch's own.
+            const S = p.folS, hs = S / 2, sprites = p.fol;
+            const K = LEAF_ROT / (Math.PI * 2), keep = p.leafKeep;
+            const jit = S * p.leafJit;
+            let li = 0;
+            ctx.globalAlpha = mix;
+            const put = (seg, set) => {
+              for (let k = 0; k < seg.length; k += 4) {
+                li++;
+                // stratified, and a function of position in the walk, so the
+                // same twigs carry leaves from frame to frame
+                if (keep < 1 && (li * 145) % 1024 >= keep * 1024) continue;
+                const x1 = seg[k + 2], y1 = seg[k + 3];
+                const a = Math.atan2(y1 - seg[k + 1], x1 - seg[k]);
+                let r = Math.round((a + Math.PI) * K);
+                if (r >= LEAF_ROT) r -= LEAF_ROT; else if (r < 0) r += LEAF_ROT;
+                const j = JIT[li & 63];
+                ctx.drawImage(set[r * LEAF_VAR + li % LEAF_VAR],
+                              x1 - hs + j[0] * jit, y1 - hs + j[1] * jit, S, S);
+              }
+            };
+            const half = p.leafFrom + Math.max(1, Math.round((buckets.length - p.leafFrom) * 0.55));
+            for (let d = p.leafFrom; d < buckets.length; d++) {
+              if (buckets[d]) put(buckets[d], d < half ? p.folDark : sprites);
+            }
+            put(tipSegs, sprites);   // last, so the outermost leaves sit on top
+            ctx.globalAlpha = 1;
+          } else {
+            // The scrub is tens of pixels tall, where a drawn leaf would be a
+            // smudge. It gets mass instead: two wide, soft passes over the
+            // twigs — the wider one the shaded underside, the tighter the lit
+            // top, kept close in width so no twig reads as an outlined pill.
+            ctx.lineCap = 'round';
+            for (const [w, k, dark] of [[2.9, 0.40, true], [1.9, 0.52, false]]) {
+              ctx.strokeStyle = leaf(p, k * mix, dark);
+              ctx.lineWidth = Math.max(2, p.width * w);
+              ctx.beginPath();
+              for (let k2 = 0; k2 < tipSegs.length; k2 += 4) {
+                ctx.moveTo(tipSegs[k2], tipSegs[k2 + 1]);
+                ctx.lineTo(tipSegs[k2 + 2], tipSegs[k2 + 3]);
+              }
+              ctx.stroke();
+            }
+            ctx.lineCap = 'butt';
+          }
         }
 
         if (p === host) hostTips = tipSegs;
@@ -4159,6 +4442,279 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !modal.hidden) close();
     });
+  })();
+  </script>
+
+  <script>
+  // ─── The sky ──────────────────────────────────────────────────────────────
+  // One full-screen fragment shader behind the whole document. By day it is a
+  // drifting cloudscape built from a gyroid FBM — the same family of noise as
+  // Leon Denise's "Cloudy Blue Sky", but with the scrolling blue-noise texture
+  // replaced by a third smooth octave, so the cloud edges dissolve instead of
+  // fizzing, and with no texture to download. By night the same canvas carries
+  // a star field, a faint band of galaxy, and a meteor every so often.
+  (() => {
+    const cv = document.getElementById('sky');
+    if (!cv) return;
+
+    let gl = null;
+    try {
+      gl = cv.getContext('webgl', {
+        alpha: false, antialias: false, depth: false, stencil: false,
+        powerPreference: 'low-power', preserveDrawingBuffer: false,
+      });
+    } catch (e) { /* falls back to the flat --bg underneath */ }
+    if (!gl) return;
+
+    const VERT = `
+      attribute vec2 a;
+      void main(){ gl_Position = vec4(a, 0.0, 1.0); }
+    `;
+
+    const FRAG = `
+      precision highp float;
+      uniform vec2  uRes;
+      uniform float uTime;
+      uniform float uMix;    // 0 night .. 1 day
+      uniform vec2  uSun;    // where the sun is, in p-units, so the cloud lights up under it
+
+      // Gyroid, as explained by Martijn Steinrucken. Two trig calls buy a
+      // pattern with far more structure than value noise of the same cost.
+      float gyroid(vec3 p){ return dot(sin(p), cos(p.yzx)); }
+
+      // Four octaves, each displaced along z by the sum so far, which is what
+      // bends the layers into something cloud-shaped rather than blobby.
+      float fbmG(vec3 p, float t, float w, float aa){
+        float r = 0.0, a = 0.5;
+        for (int i = 0; i < 4; i++){
+          p.z += t + r * w;
+          r += abs(gyroid(p / a)) * a;
+          a /= aa;
+        }
+        return r;
+      }
+
+      float h21(vec2 p){
+        vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+        q += dot(q, q.yzx + 33.33);
+        return fract((q.x + q.y) * q.z);
+      }
+
+      // ── stars ──
+      // Three sheets of cells; each cell may hold one star, jittered off centre
+      // so the grid never shows. Radii are measured in p-units, so a star is
+      // the same size on screen whatever the device pixel ratio.
+      // band is how deep into the galaxy this pixel sits: it lowers the bar
+      // for a cell holding a star, so the Milky Way arrives as a crowd of
+      // stars rather than a grey smear painted over them.
+      vec3 starField(vec2 p, float t, float band){
+        vec3 acc = vec3(0.0);
+        for (int i = 0; i < 3; i++){
+          float fi = float(i);
+          float dens = 10.0 + fi * 12.0;
+          vec2 g = p * dens;
+          vec2 id = floor(g);
+          vec2 f  = fract(g) - 0.5;
+          float h  = h21(id + fi * 31.7);
+          float on = step(0.855 + fi * 0.045 - band * 0.09, h);
+          vec2 off = vec2(h21(id + fi * 7.1 + 2.3), h21(id + fi * 7.1 + 5.9)) - 0.5;
+          float d  = length(f - off * 0.72) / dens;
+          float core = exp(-d * (760.0 - fi * 90.0));
+          float halo = exp(-d * 190.0) * 0.07;
+          float tw   = 0.45 + 0.55 * sin(t * (0.5 + h * 1.7) + h * 63.0);
+          float lum  = (0.18 + 0.62 * h21(id + fi * 13.3)) * (1.0 - fi * 0.32);
+          vec3 tint  = mix(vec3(0.74, 0.83, 1.0), vec3(1.0, 0.91, 0.76), h21(id + fi * 3.7));
+          acc += tint * (core + halo) * on * tw * lum;
+        }
+        return acc;
+      }
+
+      // ── a meteor ──
+      // Time is cut into slots; most slots stay empty, and the ones that fire
+      // draw a tapered streak that brightens in and dies out.
+      vec3 meteor(vec2 p, float t, float seed){
+        float ts   = t / 26.0 + seed;
+        float slot = floor(ts), lt = fract(ts);
+        float h    = h21(vec2(slot, seed + 1.0));
+        float live = step(0.62, h) * step(lt, 0.045);
+        float u    = lt / 0.045;                      // 0..1 across ~1.2s of flight
+        vec2  a    = vec2(mix(-1.9, 1.5, h21(vec2(slot, seed + 3.0))),
+                          mix( 0.35, 1.05, h21(vec2(slot, seed + 5.0))));
+        float ang  = mix(-1.05, -0.45, h21(vec2(slot, seed + 8.0)));
+        vec2  dir  = vec2(cos(ang), sin(ang));
+        vec2  head = a + dir * (u * 2.2);
+        vec2  tail = head - dir * (0.20 + 0.12 * h);
+        vec2  pa = p - tail, ba = head - tail;
+        float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
+        float d  = length(pa - ba * hh);
+        float streak = exp(-d * 1100.0) + exp(-d * 320.0) * 0.10;
+        return streak * pow(hh, 2.6) * sin(u * 3.14159) * live * vec3(0.86, 0.92, 1.0) * 0.65;
+      }
+
+      void main(){
+        vec2 uv = gl_FragCoord.xy / uRes;                       // 0 at the bottom
+        vec2 p  = (gl_FragCoord.xy - uRes * 0.5) * 2.0 / uRes.y;
+
+        vec3 col = vec3(0.0);
+
+        if (uMix < 0.999) {
+          // ── night ──
+          vec3 sky = mix(vec3(0.043, 0.055, 0.086), vec3(0.016, 0.020, 0.039),
+                         smoothstep(-0.10, 1.05, uv.y));
+          // a band of galaxy, laid across the diagonal: mottled where it is
+          // thick, and mostly made of the stars it crowds together
+          vec2 mp = vec2(p.x * 0.90 + p.y * 0.44, -p.x * 0.44 + p.y * 0.90);
+          float band = exp(-pow((mp.y + 0.22) * 2.6, 2.0));
+          float neb  = smoothstep(0.34, 1.00, fbmG(vec3(mp * 4.2, 0.0), uTime * 0.004, 0.25, 1.9));
+          band *= 0.30 + 0.70 * neb;
+          sky += band * vec3(0.016, 0.018, 0.030);
+          sky += starField(p, uTime, band);
+          sky += meteor(p, uTime, 0.0);
+          col += sky * (1.0 - uMix);
+        }
+
+        if (uMix > 0.001) {
+          // ── day ──
+          // the 1/uv.y term is the perspective: cloud detail compresses and
+          // runs faster the closer it gets to the horizon
+          float t = uTime * 0.016 - 0.2 / max(uv.y, 0.05);
+          vec3 q = vec3(p * 1.15, 0.0);                         // smaller, more of them
+          q.y += fbmG(q * 10.0, -t * 3.0, 0.0, 1.9) * 0.07;     // fine relief
+          float c = fbmG(q, t, 0.3, 1.7) * 0.5 - 0.5;           // the shapes
+          // The reference dissolves the cloud edge with scrolling blue noise,
+          // which is lovely at 60fps and pure static at anything less. Its mean
+          // is all that is kept; the edge is softened with a wider threshold
+          // instead, which is the same picture without the fizz.
+          c += 0.00;
+          c *= smoothstep(0.02, 0.46, uv.y);                    // clear toward the horizon
+
+          vec3 sky = mix(vec3(0.690, 0.805, 0.905), vec3(0.350, 0.565, 0.780),
+                         smoothstep(-0.15, 0.95, uv.y));
+          vec3 cloud = mix(vec3(0.780, 0.845, 0.910), vec3(1.0), smoothstep(0.02, 0.34, c));
+          vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
+          // the sun warms whatever it is standing behind
+          day += vec3(1.0, 0.90, 0.70) * exp(-length(p - uSun) * 2.1) * 0.26;
+          col += day * uMix;
+        }
+
+        // an eighth of a level of noise, purely to break up the gradient banding
+        col += (h21(gl_FragCoord.xy + fract(uTime)) - 0.5) / 255.0;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    function build(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.warn('sky:', gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    }
+
+    const vs = build(gl.VERTEX_SHADER, VERT), fs = build(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) return;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.warn('sky:', gl.getProgramInfoLog(prog));
+      return;
+    }
+    gl.useProgram(prog);
+
+    // one triangle large enough to cover the clip square; cheaper than a quad
+    // and it avoids the seam two triangles leave down the diagonal
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'a');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+    const uRes = gl.getUniformLocation(prog, 'uRes');
+    const uTime = gl.getUniformLocation(prog, 'uTime');
+    const uMix = gl.getUniformLocation(prog, 'uMix');
+    const uSun = gl.getUniformLocation(prog, 'uSun');
+
+    // A full-screen shader is billed per pixel, so the buffer is capped well
+    // under a retina viewport's worth. Cloud is soft and stars are drawn with
+    // a smooth falloff, so neither shows the difference.
+    const MAXPX = matchMedia('(max-width: 700px)').matches ? 1.3e6 : 2.4e6;
+    let W = 0, H = 0;
+
+    function resize() {
+      const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
+      let s = Math.min(devicePixelRatio || 1, 2);
+      if (w * h * s * s > MAXPX) s = Math.sqrt(MAXPX / (w * h));
+      const nw = Math.max(1, Math.round(w * s)), nh = Math.max(1, Math.round(h * s));
+      if (nw === W && nh === H) return;
+      W = cv.width = nw; H = cv.height = nh;
+      gl.viewport(0, 0, W, H);
+      gl.uniform2f(uRes, W, H);
+    }
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let mix = window.__theme && window.__theme.day ? 1 : 0;
+    let mixTo = mix;
+    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; });
+
+    // The sky runs at half the display's rate. Cloud drifts over tens of
+    // seconds and stars twinkle slowly, so the only thing fast enough to care
+    // is a meteor, and a 0.9-second flight still gets some thirty frames.
+    const FRAME = 1000 / 30;
+    let prev = 0, lit = false, raf = 0;
+
+    function draw(now) {
+      const dt = prev ? Math.min(0.05, (now - prev) / 1000) : 0;
+      prev = now;
+      if (mix !== mixTo) {
+        const step = dt / 0.48;   // matches the CSS cross-fade
+        mix = mix < mixTo ? Math.min(mixTo, mix + step) : Math.max(mixTo, mix - step);
+      }
+      gl.uniform1f(uMix, mix);
+      gl.uniform1f(uTime, reduced ? 12.0 : now / 1000);
+
+      // The sun is drawn by the grove, and it wanders when it is bothered, so
+      // its glow in the cloud has to follow it rather than sit at a fixed spot.
+      const s = window.__sun;
+      if (s && H) {
+        // published in document coordinates, so it keeps scrolling away
+        // correctly even after the grove has stopped drawing itself
+        const px = (s.x - window.scrollX - innerWidth / 2) * 2 / innerHeight;
+        const py = (innerHeight / 2 - (s.y - window.scrollY)) * 2 / innerHeight;
+        gl.uniform2f(uSun, px, py);
+      } else {
+        gl.uniform2f(uSun, -0.75, 0.62);
+      }
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (!lit) { lit = true; cv.classList.add('lit'); }
+    }
+
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
+      if (now - prev < FRAME - 1) return;
+      resize();
+      draw(now);
+      // Nothing moves under reduced motion, and nothing needs to: one frame,
+      // then the loop stops until the lights change or the window resizes.
+      if (reduced && mix === mixTo) { cancelAnimationFrame(raf); raf = 0; }
+    }
+
+    function start() { if (!raf && !document.hidden) raf = requestAnimationFrame(loop); }
+    function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; prev = 0; } }
+
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    addEventListener('resize', () => { if (reduced) { resize(); draw(performance.now()); } });
+    document.addEventListener('lights', start);
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
+
+    resize();
+    start();
   })();
   </script>
 
