@@ -111,6 +111,14 @@
       --hairline:  rgba(255,255,255,0.06);
       --cord:      #4a4a4a;
       --knob:      #9a9a9a;
+      /* The grove's green, borrowed by everything that wants an accent. On the
+         night page it has to be light enough to read, so it is the leaf colour
+         lifted rather than the leaf colour itself. */
+      --leaf:      #8fb877;
+      --leaf-deep: #b6d6a0;
+      --leaf-fill: #46743a;
+      --leaf-ink:  #f1f7ed;
+      --bark:      #6b5942;
       --radius:    12px;
       --ease:      cubic-bezier(0.25, 0, 0, 1);
     }
@@ -133,6 +141,11 @@
       --hairline:  rgba(22,36,47,0.10);
       --cord:      #2f4553;
       --knob:      #f0c53f;
+      --leaf:      #2f5a2a;
+      --leaf-deep: #1c3d19;
+      --leaf-fill: #2f5a2a;
+      --leaf-ink:  #f1f7ed;
+      --bark:      #5b4326;
     }
 
     /* Only while the lamp is being switched, so the whole page changes colour
@@ -281,15 +294,18 @@
 
     /* The selected one stops being glass and becomes solid, so which filter is
        on reads at a glance rather than as a slightly brighter pane. */
-    .filter-btn.active {
-      background: var(--title);
-      color: var(--bg);
-      border-color: var(--title);
+    .filter-btn.active,
+    .day .filter-btn.active {
+      background: var(--leaf-fill);
+      color: var(--leaf-ink);
+      border-color: var(--leaf-fill);
       transform: none;
       box-shadow: 0 4px 14px rgba(0,0,0,0.30);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
     }
 
-    .day .filter-btn.active { box-shadow: 0 4px 14px rgba(22,36,47,0.20); }
+    .day .filter-btn.active { box-shadow: 0 4px 14px rgba(30,63,25,0.28); }
 
     /* ─── GRID ─── */
     .grid {
@@ -424,7 +440,7 @@
     }
 
     .card:hover .card-arrow {
-      color: var(--accent, #6366f1);
+      color: var(--leaf);
       transform: translate(2px, -2px);
     }
 
@@ -440,6 +456,10 @@
     }
 
     .card-repo:hover { color: var(--title); }
+
+    /* Daylight puts the grove's green on the source links too. */
+    .day .card-repo { color: var(--leaf); }
+    .day .card-repo:hover { color: var(--leaf-deep); }
     .card-repo svg { display: block; }
 
     .card-desc {
@@ -614,6 +634,21 @@
     }
 
     .fl .st1 { fill-rule: evenodd; clip-rule: evenodd; }
+
+    /* In daylight the ornament stops being ink and becomes a branch: brown
+       where it leaves the middle, green out at the curls. --far is how far
+       from the centre each stroke sits, set on the element by the script. */
+    .day .fl > * {
+      fill: var(--bark);
+      fill: color-mix(in oklab, var(--bark), var(--leaf) calc(var(--far, 0.5) * 100%));
+    }
+
+    /* The leaves are in the markup at night too — they have to be, or their
+       boxes would measure as nothing and throw off the layout that decides
+       how the whole flourish unrolls — but they are painted with nothing. */
+    .fl > .lf { fill: transparent; }
+    .day .fl > .lf { fill: var(--leaf); }
+    .day .fl > .lf.pale { fill: color-mix(in oklab, var(--leaf), white 26%); }
 
     /* The closed state carries its own, shorter delays, so folding away runs
        tails-first and quicker than opening rather than replaying it backwards. */
@@ -1105,7 +1140,26 @@
       outline-offset: 3px;
     }
 
-    .day .about-link:hover { box-shadow: 0 8px 20px rgba(22,36,47,0.18); }
+    /* Daylight wants these to feel like glass rather than like paint: less
+       white, more blur, and a lit top edge so each pane has a thickness. */
+    .day .about-link,
+    .day .filter-btn {
+      background: linear-gradient(rgba(255,255,255,0.44), rgba(255,255,255,0.24));
+      border-color: rgba(255,255,255,0.62);
+      -webkit-backdrop-filter: blur(15px) saturate(1.6);
+      backdrop-filter: blur(15px) saturate(1.6);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8),
+                  inset 0 -1px 0 rgba(22,36,47,0.05),
+                  0 1px 3px rgba(22,36,47,0.10);
+    }
+
+    .day .about-link:hover,
+    .day .filter-btn:not(.active):hover {
+      background: linear-gradient(rgba(255,255,255,0.66), rgba(255,255,255,0.44));
+      border-color: rgba(255,255,255,0.9);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),
+                  0 8px 20px rgba(22,36,47,0.16);
+    }
 
     /* ─── FOOTER ─── */
     footer {
@@ -4187,9 +4241,79 @@
     const strips = document.querySelectorAll('.rule');
     if (!tpl || !strips.length) return;
 
+    // Daylight hangs leaves on the ornament. They are grown along the left
+    // half only and mirrored across the middle, so the two sides are exact
+    // rather than nearly so — a figure this symmetrical shows any drift at
+    // once. Anchors are taken from the outlines of the strokes themselves, so
+    // a leaf always sits on the ink rather than floating beside it.
+    const SPRIGS = 7;
+
+    function leafD(x, y, a, len, w) {
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const P = (u, v) =>
+        `${(x + u * ca - v * sa).toFixed(1)},${(y + u * sa + v * ca).toFixed(1)}`;
+      return `M${P(0, 0)}C${P(len * 0.26, -w)} ${P(len * 0.74, -w * 0.78)} ${P(len, 0)}` +
+             `C${P(len * 0.74, w * 0.78)} ${P(len * 0.26, w)} ${P(0, 0)}Z`;
+    }
+
+    function sprig(svg, mid, cy) {
+      const strokes = [...svg.children];
+      const cand = [];
+      for (const p of strokes) {
+        if (!p.getTotalLength) continue;
+        const L = p.getTotalLength();
+        if (!L) continue;
+        const n = Math.max(10, Math.min(120, Math.round(L / 12)));
+        for (let i = 0; i < n; i++) {
+          const q = p.getPointAtLength((i / n) * L);
+          if (q.x > mid - 34) continue;              // left half only
+          // weighted toward the curls above and below the axis, which is
+          // where a leaf reads as growing rather than as a blot
+          cand.push({ x: q.x, y: q.y,
+                      d: Math.hypot(q.x - mid, (q.y - cy) * 2.1) });
+        }
+      }
+      if (cand.length < SPRIGS) return;
+      cand.sort((a, b) => b.d - a.d);
+
+      const picked = [];
+      for (const c of cand) {
+        if (picked.length >= SPRIGS) break;
+        if (picked.some(p => Math.hypot(p.x - c.x, p.y - c.y) < 62)) continue;
+        picked.push(c);
+      }
+
+      const NS = 'http://www.w3.org/2000/svg';
+      picked.forEach((c, i) => {
+        const len = 30 + (i % 3) * 8;
+        const w = len * 0.30;
+        // outward from the middle of the figure, with the vertical stretched
+        // so leaves off the axis stand up rather than lying along it
+        const a = Math.atan2((c.y - cy) * 1.7, c.x - mid) + (i % 2 ? 0.22 : -0.22);
+        for (const flip of [false, true]) {
+          const el = document.createElementNS(NS, 'path');
+          el.setAttribute('class', i % 3 === 1 ? 'lf pale' : 'lf');
+          el.setAttribute('d', flip
+            ? leafD(2 * mid - c.x, c.y, Math.PI - a, len, w)
+            : leafD(c.x, c.y, a, len, w));
+          svg.appendChild(el);
+        }
+      });
+    }
+
     strips.forEach(strip => {
       strip.appendChild(tpl.content.cloneNode(true));
       const svg = strip.querySelector('.fl');
+      {
+        // the ornament's own extent, measured before the leaves widen it
+        let lo = Infinity, hi = -Infinity, t = Infinity, b2 = -Infinity;
+        for (const p of svg.children) {
+          const b = p.getBBox();
+          lo = Math.min(lo, b.x); hi = Math.max(hi, b.x + b.width);
+          t = Math.min(t, b.y); b2 = Math.max(b2, b.y + b.height);
+        }
+        sprig(svg, (lo + hi) / 2, (t + b2) / 2);
+      }
       const parts = [...svg.children];
       const boxes = parts.map(p => p.getBBox());
 
@@ -4211,6 +4335,8 @@
           p.style.transformOrigin = dx > 0 ? '0% 50%' : '100% 50%';
           p.style.setProperty('--r', (dx > 0 ? -14 : 14) + 'deg');
         }
+        // how far out this stroke sits, which daylight colours it by
+        p.style.setProperty('--far', Math.pow(t, 0.7).toFixed(3));
         p.style.setProperty('--d', Math.round(Math.pow(t, 0.8) * 620) + 'ms');
         p.style.setProperty('--dc', Math.round(Math.pow(1 - t, 1.2) * 300) + 'ms');
       });

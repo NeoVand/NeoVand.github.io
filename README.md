@@ -67,6 +67,14 @@ seventeen component strokes. Each is pivoted on the end that joins the middle
 and delayed by how far out it sits, so when the divider scrolls into view the
 flourish unrolls from the centre and the terminal spirals arrive last.
 
+In daylight it stops being ink and becomes a branch: brown where it leaves the
+middle, green out at the curls, with leaves hung along it. The leaves are grown
+on the left half only — anchored on points sampled from the strokes' own
+outlines, so each one sits on the ink rather than beside it — and mirrored
+across the centre, because a figure this symmetrical shows any drift at once.
+They are in the markup at night too, painted with nothing: removing them would
+throw off the measurement that decides how the flourish unrolls.
+
 The ornament is from a text-divider set by Vecteezy. **Free Vecteezy downloads
 require attribution** — check the licence on the original download and add the
 credit it asks for, or swap in an asset that does not need one.
