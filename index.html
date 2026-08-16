@@ -127,8 +127,28 @@
       --pane-2:      rgba(255,255,255,0.155);
       --pane-edge:   rgba(255,255,255,0.17);
       --pane-edge-2: rgba(255,255,255,0.32);
+      /* the lit edge of a pane: bright where the light lands, again where it
+         leaves, dim along the sides between */
+      --rim:   linear-gradient(148deg, rgba(255,255,255,0.62) 0%,
+                                       rgba(255,255,255,0.10) 33%,
+                                       rgba(255,255,255,0.05) 58%,
+                                       rgba(255,255,255,0.44) 100%);
+      --rim-2: linear-gradient(148deg, rgba(255,255,255,0.85) 0%,
+                                       rgba(255,255,255,0.20) 33%,
+                                       rgba(255,255,255,0.12) 58%,
+                                       rgba(255,255,255,0.66) 100%);
+      --lit-top: rgba(255,255,255,0.13);
+      --lit-bot: rgba(255,255,255,0.045);
+      --cast:    rgba(0,0,0,0.28);
+      --pane-thin:   rgba(255,255,255,0.045);
+      --pane-thin-2: rgba(255,255,255,0.10);
       --radius:    12px;
       --ease:      cubic-bezier(0.25, 0, 0, 1);
+      /* Deliberately empty. --lg carries the refraction filter, and only
+         Chromium gets one; without a declared empty default, var(--lg) in a
+         browser that never receives one is invalid at computed-value time and
+         takes the whole backdrop-filter with it, blur and all. */
+      --lg: ;
     }
 
     /* Daylight. The background is the grove's sky, so the page and the canvas
@@ -140,8 +160,8 @@
       --border:    #c4d8e7;
       --border-2:  #9dbbd3;
       --text:      #13202b;
-      --muted:     #5f7a8f;
-      --muted-2:   #3d5464;
+      --muted:     #384d5e;
+      --muted-2:   #33485a;
       --title:     #0b1620;
       --ink:       #4f6b83;
       --glass:     rgba(255,255,255,0.55);
@@ -158,6 +178,19 @@
       --pane-2:      rgba(255,255,255,0.68);
       --pane-edge:   rgba(255,255,255,0.66);
       --pane-edge-2: rgba(255,255,255,0.92);
+      --rim:   linear-gradient(148deg, rgba(255,255,255,0.98) 0%,
+                                       rgba(255,255,255,0.34) 33%,
+                                       rgba(255,255,255,0.26) 58%,
+                                       rgba(255,255,255,0.86) 100%);
+      --rim-2: linear-gradient(148deg, rgba(255,255,255,1) 0%,
+                                       rgba(255,255,255,0.55) 33%,
+                                       rgba(255,255,255,0.44) 58%,
+                                       rgba(255,255,255,1) 100%);
+      --lit-top: rgba(255,255,255,0.80);
+      --lit-bot: rgba(255,255,255,0.30);
+      --cast:    rgba(22,36,47,0.14);
+      --pane-thin:   rgba(255,255,255,0.26);
+      --pane-thin-2: rgba(255,255,255,0.50);
     }
 
     /* Only while the lamp is being switched, so the whole page changes colour
@@ -253,6 +286,52 @@
        the two having different font sizes and line-heights */
     .hero-about { padding-top: 3px; }
 
+    /* ── Glass ──────────────────────────────────────────────────────────
+       A pane of glass is not a translucent rectangle. It has thickness, so it
+       bends what is behind it near the rim, catches the light along two edges
+       and loses it along the other two, and carries a little of its own.
+
+       The rim is a gradient painted into a one-pixel ring by masking a box
+       against its own content box — a border cannot hold a gradient. The bend
+       is an SVG displacement map built per element from its own rounded-rect
+       distance field; only Chromium will run one of those inside a
+       backdrop-filter, so it arrives through --lg, which is set on the element
+       by script and is simply absent everywhere else. What is left without it
+       is the same pane minus the refraction, which is most of it. */
+    .about-link,
+    .filter-btn {
+      position: relative;
+      isolation: isolate;
+      background: var(--pane);
+      border: 1px solid transparent;
+      -webkit-backdrop-filter: var(--lg) blur(var(--gb, 14px)) saturate(1.7) brightness(1.03);
+      backdrop-filter: var(--lg) blur(var(--gb, 14px)) saturate(1.7) brightness(1.03);
+      box-shadow: inset 0 1px 0 var(--lit-top),
+                  inset 0 -1px 0 var(--lit-bot),
+                  0 1px 2px var(--cast);
+      transition: color 200ms var(--ease), background 200ms var(--ease),
+                  transform 200ms var(--ease), box-shadow 200ms var(--ease);
+    }
+
+    .about-link::after,
+    .filter-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: var(--rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      transition: background 200ms var(--ease);
+    }
+
+    .about-link:hover::after,
+    .filter-btn:hover::after { background: var(--rim-2); }
+
     /* ─── FILTER TABS ─── */
     .gallery-wrap {
       --pad: 24px;
@@ -269,13 +348,12 @@
       flex-wrap: wrap;
     }
 
-    /* Same frosted pane as the profile links, at chip scale. */
+    /* The same glass as the profile links, thinner: a control rather than a
+       destination. --pane-thin keeps it from competing with them. */
     .filter-btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: var(--glass);
-      border: 1px solid var(--hairline);
       color: var(--muted-2);
       font-family: inherit;
       font-size: 12.5px;
@@ -283,18 +361,14 @@
       padding: 5px 13px 5px 11px;
       border-radius: 99px;
       cursor: pointer;
-      -webkit-backdrop-filter: blur(9px) saturate(1.2);
-      backdrop-filter: blur(9px) saturate(1.2);
-      transition: color 200ms var(--ease), border-color 200ms var(--ease),
-                  background 200ms var(--ease), transform 200ms var(--ease),
-                  box-shadow 200ms var(--ease);
       letter-spacing: 0.01em;
+      --gb: 10px;
+      background: var(--pane-thin);
     }
 
     .filter-btn:hover {
       color: var(--title);
-      background: var(--glass-2);
-      border-color: var(--border-2);
+      background: var(--pane-thin-2);
       transform: translateY(-2px);
     }
 
@@ -311,11 +385,17 @@
     .day .filter-btn.active {
       background: var(--pick);
       color: var(--pick-ink);
-      border-color: var(--pick);
+      border-color: transparent;
       transform: none;
       box-shadow: 0 4px 14px rgba(0,0,0,0.30);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
+    }
+
+    /* nothing behind it to bend or light, so the rim goes quiet */
+    .filter-btn.active::after {
+      background: linear-gradient(148deg, rgba(255,255,255,0.30),
+                                          rgba(255,255,255,0) 45%);
     }
 
     .day .filter-btn.active { box-shadow: 0 4px 14px rgba(30,63,25,0.28); }
@@ -1121,15 +1201,9 @@
       letter-spacing: 0.01em;
       color: var(--text);
       text-decoration: none;
-      background: var(--pane);
-      border: 1px solid var(--pane-edge);
       border-radius: 99px;
       padding: 9px 17px;
-      -webkit-backdrop-filter: blur(13px) saturate(1.4);
-      backdrop-filter: blur(13px) saturate(1.4);
-      transition: color 200ms var(--ease), border-color 200ms var(--ease),
-                  background 200ms var(--ease), transform 200ms var(--ease),
-                  box-shadow 200ms var(--ease);
+      --gb: 15px;
     }
 
     .about-link svg {
@@ -1139,10 +1213,10 @@
 
     .about-link:hover {
       color: var(--title);
-      background: var(--pane-2);
-      border-color: var(--pane-edge-2);
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+      box-shadow: inset 0 1px 0 var(--lit-top),
+                  inset 0 -1px 0 var(--lit-bot),
+                  0 10px 24px var(--cast);
     }
 
     .about-link:hover svg { opacity: 1; }
@@ -1153,34 +1227,7 @@
       outline-offset: 3px;
     }
 
-    /* Daylight wants these to feel like glass rather than like paint: less
-       white, more blur, and a lit top edge so each pane has a thickness. */
-    .day .about-link {
-      background: linear-gradient(rgba(255,255,255,0.52), rgba(255,255,255,0.30));
-      -webkit-backdrop-filter: blur(16px) saturate(1.6);
-      backdrop-filter: blur(16px) saturate(1.6);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85),
-                  inset 0 -1px 0 rgba(22,36,47,0.06),
-                  0 1px 3px rgba(22,36,47,0.12);
-    }
 
-    .day .about-link:hover {
-      background: linear-gradient(rgba(255,255,255,0.74), rgba(255,255,255,0.52));
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95),
-                  0 8px 20px rgba(22,36,47,0.16);
-    }
-
-    /* the chips are thinner glass than the links, on purpose */
-    .day .filter-btn {
-      background: rgba(255,255,255,0.30);
-      border-color: rgba(255,255,255,0.46);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-
-    .day .filter-btn:not(.active):hover {
-      background: rgba(255,255,255,0.55);
-      border-color: rgba(255,255,255,0.8);
-    }
 
     /* ─── FOOTER ─── */
     footer {
@@ -1225,12 +1272,30 @@
       --sh: drop-shadow(0 2px 4px rgba(22,36,47,0.2)) drop-shadow(0 16px 30px rgba(22,36,47,0.18));
     }
 
-    .day .card:hover { box-shadow: 0 12px 28px rgba(22,36,47,0.14); }
-    .day .rcard:hover { box-shadow: 0 12px 30px rgba(22,36,47,0.14); }
+    .day .card:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 12px 28px rgba(22,36,47,0.16); }
+    .day .rcard:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 12px 30px rgba(22,36,47,0.16); }
     .day .modal-backdrop { background: rgba(190,208,222,0.72); }
     .day .modal-panel { box-shadow: 0 24px 60px rgba(22,36,47,0.22); }
-    .day .rcard-thumb { background: #e7eef5; }
-    .day .card-thumb { background: #e7eef5; }
+    /* A solid white card on a sky is a hole cut in the weather. They become
+       panes too — enough tint to hold the text, enough blur that the cloud
+       behind them is a suggestion rather than a distraction. */
+    .day .card,
+    .day .rcard {
+      background: rgba(255,255,255,0.58);
+      border-color: rgba(255,255,255,0.66);
+      -webkit-backdrop-filter: blur(24px) saturate(1.5);
+      backdrop-filter: blur(24px) saturate(1.5);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+
+    .day .card:hover,
+    .day .rcard:hover {
+      background: rgba(255,255,255,0.74);
+      border-color: rgba(255,255,255,0.9);
+    }
+
+    .day .rcard-thumb { background: rgba(255,255,255,0.34); }
+    .day .card-thumb { background: rgba(255,255,255,0.34); }
 
     /* ─── RESPONSIVE ─── */
     /* On a wide window the container opens up and the gallery runs four
@@ -3964,7 +4029,7 @@
     const N = 16;              // beads, anchor included
     const SEG = 9.2;           // rest length between beads
     const GRAV = 1500;         // px/s²
-    const DAMP = 0.986;
+    const DAMP = 0.78;         // share of velocity kept per second; light, so it swings itself out slowly
     const ITER = 12;           // constraint passes; fewer = stretchier
     const STIFF = 0.82;
     const TRIP = 58;           // how far past rest the knob must travel
@@ -3990,9 +4055,11 @@
     }
 
     function step(dt) {
-      // verlet
+      // verlet; the drag is taken per second, so a fast screen does not
+      // stop the cord any sooner than a slow one
+      const damp = Math.pow(DAMP, dt);
       for (let i = 1; i < N; i++) {
-        const vx = (px[i] - ox[i]) * DAMP, vy = (py[i] - oy[i]) * DAMP;
+        const vx = (px[i] - ox[i]) * damp, vy = (py[i] - oy[i]) * damp;
         ox[i] = px[i]; oy[i] = py[i];
         px[i] += vx;
         py[i] += vy + GRAV * dt * dt;
@@ -4100,7 +4167,7 @@
       ctx.restore();
     }
 
-    let last = 0, raf = 0;
+    let last = 0, raf = 0, still = 0;
     function frame(now) {
       const dt = last ? Math.min(0.032, (now - last) / 1000) : 0.016;
       last = now;
@@ -4110,12 +4177,19 @@
       if (!armed && py[N - 1] < restY() + TRIP * 0.45) armed = true;
       if (armed && held && py[N - 1] > restY() + TRIP) trip();
       draw();
-      const moving = held || glow > 0.01 ||
-        Math.abs(py[N - 1] - oy[N - 1]) > 0.02 || Math.abs(px[N - 1] - ox[N - 1]) > 0.02;
-      raf = moving ? requestAnimationFrame(frame) : 0;
+      // A swinging cord is briefly motionless at the top of every swing, so
+      // one slow frame proves nothing. It is only asleep once every bead has
+      // been quiet, and the knob has hung straight under the anchor, for a
+      // good half second together.
+      let quiet = !held && glow <= 0.01 && Math.abs(px[N - 1] - ax) < 0.4;
+      for (let i = 1; quiet && i < N; i++) {
+        if (Math.abs(px[i] - ox[i]) > 0.02 || Math.abs(py[i] - oy[i]) > 0.02) quiet = false;
+      }
+      still = quiet ? still + 1 : 0;
+      raf = still < 30 ? requestAnimationFrame(frame) : 0;
       if (!raf) last = 0;
     }
-    const wake = () => { if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
+    const wake = () => { still = 0; if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
 
     const local = e => {
       const r = host.getBoundingClientRect();
@@ -4714,6 +4788,120 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !modal.hidden) close();
     });
+  })();
+  </script>
+
+  <script>
+  // ─── Refraction ───────────────────────────────────────────────────────────
+  // The bend at the rim of a glass pane. A displacement map is built per
+  // element from its own rounded-rect signed distance field: neutral grey
+  // through the middle, ramping toward the outward normal inside a band at the
+  // edge, so the backdrop is sampled from a little further out the closer it
+  // gets to the rim and piles up there the way it does under real glass.
+  //
+  // Only Chromium runs an SVG filter inside a backdrop-filter. Elsewhere the
+  // whole declaration would be dropped, taking the blur with it, so this is
+  // gated rather than merely attempted: --lg stays unset and the panes keep
+  // everything but the bend.
+  (() => {
+    const CHROMIUM = !!window.chrome &&
+      CSS.supports('backdrop-filter', 'url(#a) blur(1px)');
+    if (!CHROMIUM) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const holder = document.createElementNS(NS, 'svg');
+    holder.setAttribute('aria-hidden', 'true');
+    holder.setAttribute('width', '0');
+    holder.setAttribute('height', '0');
+    holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    const defs = document.createElementNS(NS, 'defs');
+    holder.appendChild(defs);
+
+    // How thick the refracting band is, in px, and how far it pushes at the
+    // rim. Both want to stay small: a control is only a few tens of pixels
+    // tall, and a band you can measure reads as a bug rather than as glass.
+    const BAND = 12, PUSH = 10;
+
+    function mapURL(w, h, r) {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const g = c.getContext('2d');
+      const img = g.createImageData(w, h), D = img.data;
+      const ax = w / 2 - r, ay = h / 2 - r;
+      // negative inside the rounded rectangle, zero on it, positive outside
+      const sdf = (x, y) => {
+        const qx = Math.abs(x - w / 2) - ax, qy = Math.abs(y - h / 2) - ay;
+        return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) +
+               Math.min(Math.max(qx, qy), 0) - r;
+      };
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const px = x + 0.5, py = y + 0.5;
+          const d = sdf(px, py);
+          // 0 at band depth and deeper, 1 at the rim, smoothed so the inner
+          // edge of the band is not a visible ring
+          let t = 1 - Math.min(1, Math.max(0, -d / BAND));
+          t = t * t * (3 - 2 * t);
+          const nx = sdf(px + 1, py) - sdf(px - 1, py);
+          const ny = sdf(px, py + 1) - sdf(px, py - 1);
+          const L = Math.hypot(nx, ny) || 1;
+          const i = (y * w + x) * 4;
+          D[i]     = 128 + (nx / L) * t * 127;
+          D[i + 1] = 128 + (ny / L) * t * 127;
+          D[i + 2] = 128;
+          D[i + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      return c.toDataURL();
+    }
+
+    let n = 0;
+
+    function glaze(el) {
+      const id = 'lg' + (n++);
+      const f = document.createElementNS(NS, 'filter');
+      f.setAttribute('id', id);
+      f.setAttribute('filterUnits', 'userSpaceOnUse');
+      f.setAttribute('color-interpolation-filters', 'sRGB');
+      const im = document.createElementNS(NS, 'feImage');
+      im.setAttribute('preserveAspectRatio', 'none');
+      im.setAttribute('result', 'm');
+      const dm = document.createElementNS(NS, 'feDisplacementMap');
+      dm.setAttribute('in', 'SourceGraphic');
+      dm.setAttribute('in2', 'm');
+      dm.setAttribute('xChannelSelector', 'R');
+      dm.setAttribute('yChannelSelector', 'G');
+      dm.setAttribute('scale', PUSH * 2);
+      f.appendChild(im);
+      f.appendChild(dm);
+      defs.appendChild(f);
+
+      let lastW = 0, lastH = 0;
+      const fit = () => {
+        const b = el.getBoundingClientRect();
+        const w = Math.round(b.width), h = Math.round(b.height);
+        if (!w || !h || (w === lastW && h === lastH)) return;
+        lastW = w; lastH = h;
+        const r = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || h / 2,
+                           w / 2, h / 2);
+        for (const [k, v] of [['x', 0], ['y', 0], ['width', w], ['height', h]]) {
+          f.setAttribute(k, v);
+          im.setAttribute(k, v);
+        }
+        im.setAttribute('href', mapURL(w, h, r));
+        el.style.setProperty('--lg', 'url(#' + id + ')');
+      };
+      fit();
+      new ResizeObserver(fit).observe(el);
+    }
+
+    const start = () => {
+      document.body.appendChild(holder);
+      document.querySelectorAll('.about-link, .filter-btn').forEach(glaze);
+    };
+    if (document.readyState === 'complete') start();
+    else addEventListener('load', start, { once: true });
   })();
   </script>
 

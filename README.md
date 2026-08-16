@@ -62,6 +62,28 @@ The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
 Commons), which requires no attribution. It is also the favicon, rendered over
 a night ground with the same glow it has on the page.
 
+## The glass
+
+The profile links and the filter chips are panes of glass rather than tinted
+rectangles. Three things make the difference: a rim gradient painted into a
+one-pixel ring by masking a box against its own content box (a border cannot
+hold a gradient), two inner lights along the top and bottom edges, and a
+refraction at the rim.
+
+The refraction is an SVG displacement map built per element, at load and on
+resize, from that element's own rounded-rect signed distance field — neutral
+grey through the middle, ramping toward the outward normal inside a band at
+the edge, so the backdrop is sampled from further out the nearer the rim and
+piles up there the way it does under real glass. Only Chromium will run an SVG
+filter inside a `backdrop-filter`, so it arrives through a custom property that
+script sets and no other engine ever receives. That property is declared empty
+in `:root` on purpose: without a declared default, `var()` on an undefined
+property is invalid at computed-value time and would take the whole
+`backdrop-filter` with it, blur included.
+
+In daylight the gallery cards are panes too. A solid white card on a sky is a
+hole cut in the weather.
+
 ## The section flourishes
 
 The dividers between sections are one calligraphic ornament, split into its
