@@ -116,9 +116,17 @@
          lifted rather than the leaf colour itself. */
       --leaf:      #8fb877;
       --leaf-deep: #b6d6a0;
-      --leaf-fill: #46743a;
-      --leaf-ink:  #f1f7ed;
       --bark:      #6b5942;
+      /* the selected filter. Green belongs to daylight; at night it is a
+         quiet white, well short of the full-strength one it used to be */
+      --pick:      #c2c2c2;
+      --pick-ink:  #0b0b0b;
+      /* the profile links are panes in their own right, and heavier than a
+         filter chip: they are the way off this page */
+      --pane:        rgba(255,255,255,0.085);
+      --pane-2:      rgba(255,255,255,0.155);
+      --pane-edge:   rgba(255,255,255,0.17);
+      --pane-edge-2: rgba(255,255,255,0.32);
       --radius:    12px;
       --ease:      cubic-bezier(0.25, 0, 0, 1);
     }
@@ -143,9 +151,13 @@
       --knob:      #f0c53f;
       --leaf:      #2f5a2a;
       --leaf-deep: #1c3d19;
-      --leaf-fill: #2f5a2a;
-      --leaf-ink:  #f1f7ed;
       --bark:      #5b4326;
+      --pick:      #2f5a2a;
+      --pick-ink:  #f1f7ed;
+      --pane:        rgba(255,255,255,0.46);
+      --pane-2:      rgba(255,255,255,0.68);
+      --pane-edge:   rgba(255,255,255,0.66);
+      --pane-edge-2: rgba(255,255,255,0.92);
     }
 
     /* Only while the lamp is being switched, so the whole page changes colour
@@ -243,9 +255,10 @@
 
     /* ─── FILTER TABS ─── */
     .gallery-wrap {
+      --pad: 24px;
       max-width: 1140px;
       margin: 0 auto;
-      padding: 0 24px 34px;
+      padding: 0 var(--pad) 34px;
     }
 
     .filters {
@@ -267,11 +280,11 @@
       font-family: inherit;
       font-size: 12.5px;
       font-weight: 500;
-      padding: 6px 14px 6px 12px;
+      padding: 5px 13px 5px 11px;
       border-radius: 99px;
       cursor: pointer;
-      -webkit-backdrop-filter: blur(9px) saturate(1.25);
-      backdrop-filter: blur(9px) saturate(1.25);
+      -webkit-backdrop-filter: blur(9px) saturate(1.2);
+      backdrop-filter: blur(9px) saturate(1.2);
       transition: color 200ms var(--ease), border-color 200ms var(--ease),
                   background 200ms var(--ease), transform 200ms var(--ease),
                   box-shadow 200ms var(--ease);
@@ -296,9 +309,9 @@
        on reads at a glance rather than as a slightly brighter pane. */
     .filter-btn.active,
     .day .filter-btn.active {
-      background: var(--leaf-fill);
-      color: var(--leaf-ink);
-      border-color: var(--leaf-fill);
+      background: var(--pick);
+      color: var(--pick-ink);
+      border-color: var(--pick);
       transform: none;
       box-shadow: 0 4px 14px rgba(0,0,0,0.30);
       -webkit-backdrop-filter: none;
@@ -1106,28 +1119,28 @@
       font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.01em;
-      color: var(--muted-2);
+      color: var(--text);
       text-decoration: none;
-      background: var(--glass);
-      border: 1px solid var(--hairline);
+      background: var(--pane);
+      border: 1px solid var(--pane-edge);
       border-radius: 99px;
-      padding: 8px 16px;
-      -webkit-backdrop-filter: blur(9px) saturate(1.25);
-      backdrop-filter: blur(9px) saturate(1.25);
+      padding: 9px 17px;
+      -webkit-backdrop-filter: blur(13px) saturate(1.4);
+      backdrop-filter: blur(13px) saturate(1.4);
       transition: color 200ms var(--ease), border-color 200ms var(--ease),
                   background 200ms var(--ease), transform 200ms var(--ease),
                   box-shadow 200ms var(--ease);
     }
 
     .about-link svg {
-      opacity: 0.72;
+      opacity: 0.85;
       transition: opacity 200ms var(--ease);
     }
 
     .about-link:hover {
       color: var(--title);
-      background: var(--glass-2);
-      border-color: var(--border-2);
+      background: var(--pane-2);
+      border-color: var(--pane-edge-2);
       transform: translateY(-2px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     }
@@ -1142,23 +1155,31 @@
 
     /* Daylight wants these to feel like glass rather than like paint: less
        white, more blur, and a lit top edge so each pane has a thickness. */
-    .day .about-link,
-    .day .filter-btn {
-      background: linear-gradient(rgba(255,255,255,0.44), rgba(255,255,255,0.24));
-      border-color: rgba(255,255,255,0.62);
-      -webkit-backdrop-filter: blur(15px) saturate(1.6);
-      backdrop-filter: blur(15px) saturate(1.6);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8),
-                  inset 0 -1px 0 rgba(22,36,47,0.05),
-                  0 1px 3px rgba(22,36,47,0.10);
+    .day .about-link {
+      background: linear-gradient(rgba(255,255,255,0.52), rgba(255,255,255,0.30));
+      -webkit-backdrop-filter: blur(16px) saturate(1.6);
+      backdrop-filter: blur(16px) saturate(1.6);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85),
+                  inset 0 -1px 0 rgba(22,36,47,0.06),
+                  0 1px 3px rgba(22,36,47,0.12);
     }
 
-    .day .about-link:hover,
-    .day .filter-btn:not(.active):hover {
-      background: linear-gradient(rgba(255,255,255,0.66), rgba(255,255,255,0.44));
-      border-color: rgba(255,255,255,0.9);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9),
+    .day .about-link:hover {
+      background: linear-gradient(rgba(255,255,255,0.74), rgba(255,255,255,0.52));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95),
                   0 8px 20px rgba(22,36,47,0.16);
+    }
+
+    /* the chips are thinner glass than the links, on purpose */
+    .day .filter-btn {
+      background: rgba(255,255,255,0.30);
+      border-color: rgba(255,255,255,0.46);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+
+    .day .filter-btn:not(.active):hover {
+      background: rgba(255,255,255,0.55);
+      border-color: rgba(255,255,255,0.8);
     }
 
     /* ─── FOOTER ─── */
@@ -1221,6 +1242,38 @@
          always land as seven complete rows */
     }
 
+    /* On a narrow screen ten chips wrap to three ragged lines and eat the top
+       of the gallery. They become one line that scrolls instead, bled out to
+       both edges so it is obvious there is more of it, with the ends faded and
+       a snap so a flick lands on a chip rather than between two. */
+    @media (max-width: 760px) {
+      .filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        margin: 0 calc(var(--pad, 24px) * -1) 24px;
+        padding: 2px var(--pad, 24px) 4px;
+        -webkit-mask-image: linear-gradient(90deg, transparent 0,
+          #000 var(--pad, 24px), #000 calc(100% - var(--pad, 24px)), transparent 100%);
+        mask-image: linear-gradient(90deg, transparent 0,
+          #000 var(--pad, 24px), #000 calc(100% - var(--pad, 24px)), transparent 100%);
+      }
+
+      .filters::-webkit-scrollbar { display: none; }
+
+      .filter-btn {
+        flex: 0 0 auto;
+        scroll-snap-align: center;
+        /* the lift would be clipped by the scroller's own overflow */
+        transform: none;
+      }
+
+      .filter-btn:hover { transform: none; }
+    }
+
     @media (max-width: 900px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
       .hero {
@@ -1235,7 +1288,20 @@
     @media (max-width: 600px) {
       .hero { padding: 52px 20px 44px; gap: 32px; }
       .hero-lead { min-height: 240px; }
-      .gallery-wrap { padding: 0 16px 72px; }
+      .gallery-wrap { --pad: 16px; padding: 0 var(--pad) 72px; }
+
+      /* Four links across a phone is four cramped pills; two rows of two fills
+         the width exactly and keeps the labels, which is the point of them. */
+      .about-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .about-link {
+        justify-content: center;
+        padding: 11px 10px;
+      }
       .research-inner { padding: 0 16px; }
       .grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; gap: 8px; padding: 20px; }
@@ -2621,8 +2687,11 @@
             // scatters it across a fraction of them.
             let terminal = (j >= s.length || s[j] === ']') && depth >= (p.tipMin || 0);
             if (terminal && share < 1 && hash(tipN++, p.tipSalt) > share) terminal = false;
-            if (terminal && tipSegs) tipSegs.push(px, py, x, y);
-            else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y);
+            // the fifth number is how far out this segment has grown; the
+            // leaves ride on it, so they shrink away with the twig instead of
+            // vanishing whole the moment it goes
+            if (terminal && tipSegs) tipSegs.push(px, py, x, y, reach);
+            else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y, reach);
           }
           if (x < minX) minX = x; else if (x > maxX) maxX = x;
           if (y < minY) minY = y; else if (y > maxY) maxY = y;
@@ -3013,21 +3082,27 @@
     ]);
 
     function planFoliage(t) {
+      // measured on the whole plant, never on however much of it happens to be
+      // standing: a resize while a tree is pressed would otherwise plan the
+      // canopy of a stump
+      const front = t.front, shrink = t.shrink;
+      t.front = undefined; t.shrink = undefined;
       const buckets = [], tip = [];
       walk(t, t.sx, t.sy, 0, 0, null, buckets, tip);
+      t.front = front; t.shrink = shrink;
       let from = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
-      let pool = tip.length / 4, sum = 0;
-      for (let k = 0; k < tip.length; k += 4) {
+      let pool = tip.length / 5, sum = 0;
+      for (let k = 0; k < tip.length; k += 5) {
         sum += Math.hypot(tip[k + 2] - tip[k], tip[k + 3] - tip[k + 1]);
       }
       const floorD = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
       for (let d = buckets.length - 1; d >= floorD; d--) {
         const seg = buckets[d];
-        const n = seg ? seg.length / 4 : 0;
+        const n = seg ? seg.length / 5 : 0;
         if (pool + n > LEAF_POOL && pool > 40) break;
         from = d;
         pool += n;
-        for (let k = 0; seg && k < seg.length; k += 4) {
+        for (let k = 0; seg && k < seg.length; k += 5) {
           sum += Math.hypot(seg[k + 2] - seg[k], seg[k + 3] - seg[k + 1]);
         }
       }
@@ -3494,7 +3569,7 @@
           ctx.strokeStyle = shade(g, p.under);
           ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, depth));
           ctx.beginPath();
-          for (let k = 0; k < seg.length; k += 4) {
+          for (let k = 0; k < seg.length; k += 5) {
             ctx.moveTo(seg[k], seg[k + 1]);
             ctx.lineTo(seg[k + 2], seg[k + 3]);
           }
@@ -3511,7 +3586,7 @@
           ctx.strokeStyle = tipShade(p.tip, p.under);
           ctx.lineWidth = p.tipWidth;
           ctx.beginPath();
-          for (let k = 0; k < tipSegs.length; k += 4) {
+          for (let k = 0; k < tipSegs.length; k += 5) {
             ctx.moveTo(tipSegs[k], tipSegs[k + 1]);
             ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
           }
@@ -3523,17 +3598,23 @@
           if (p.fol) {
             // A leaf cluster per site, blitted from the pre-baked sprite whose
             // baked angle is closest to that branch's own.
-            const S = p.folS, hs = S / 2, sprites = p.fol;
+            const S = p.folS, sprites = p.fol;
             const K = LEAF_ROT / (Math.PI * 2), keep = p.leafKeep;
             const jit = S * p.leafJit;
             let li = 0;
             ctx.globalAlpha = mix;
             const put = (seg, set, salt) => {
-              for (let k = 0; k < seg.length; k += 4) {
+              for (let k = 0; k < seg.length; k += 5) {
                 li++;
                 // stratified, and a function of position in the walk, so the
                 // same twigs carry leaves from frame to frame
                 if (keep < 1 && (li * 145) % 1024 >= keep * 1024) continue;
+                // A leaf follows its twig down. Cubed, so it holds its size
+                // most of the way and then goes quickly, and dropped only once
+                // it is small enough that losing it is not a visible step.
+                const g0 = seg[k + 4];
+                if (g0 < 0.18) continue;
+                const z = S * g0 * g0 * g0, hz = z / 2;
                 const x1 = seg[k + 2], y1 = seg[k + 3];
                 const a = Math.atan2(y1 - seg[k + 1], x1 - seg[k]);
                 let r = Math.round((a + Math.PI) * K);
@@ -3541,7 +3622,7 @@
                 const j = JIT[li & 63];
                 const use = salt && ((li * 37) & 7) < 2 ? p.folDark : set;
                 ctx.drawImage(use[r * LEAF_VAR + li % LEAF_VAR],
-                              x1 - hs + j[0] * jit, y1 - hs + j[1] * jit, S, S);
+                              x1 - hz + j[0] * jit, y1 - hz + j[1] * jit, z, z);
               }
             };
             const half = p.leafFrom + Math.max(1, Math.round((buckets.length - p.leafFrom) * 0.55));
@@ -3562,7 +3643,7 @@
               ctx.strokeStyle = leaf(p, k * mix, dark);
               ctx.lineWidth = Math.max(2, p.width * w);
               ctx.beginPath();
-              for (let k2 = 0; k2 < tipSegs.length; k2 += 4) {
+              for (let k2 = 0; k2 < tipSegs.length; k2 += 5) {
                 ctx.moveTo(tipSegs[k2], tipSegs[k2 + 1]);
                 ctx.lineTo(tipSegs[k2 + 2], tipSegs[k2 + 3]);
               }
@@ -3640,7 +3721,7 @@
     }
 
     function drawFireflies(now, dt, tips) {
-      const n = tips ? tips.length / 4 : 0;
+      const n = tips ? tips.length / 5 : 0;
 
       for (let i = 0; i < fireflies.length; i++) {
         const f = fireflies[i];
@@ -3649,7 +3730,7 @@
         // so the target tracks the branch as the wind moves it
         let px = f.x, py = f.y;
         if (n) {
-          const k = Math.min(n - 1, Math.floor(f.pick * n)) * 4;
+          const k = Math.min(n - 1, Math.floor(f.pick * n)) * 5;
           px = tips[k + 2];
           py = tips[k + 3];
         }

@@ -54,7 +54,9 @@ costs one blit rather than a path. How far in the canopy reaches is measured
 per species from its own twig spacing — the five grammars differ enough that a
 fixed depth leaves one bald and turns another into a solid lump — and the inner
 levels are drawn from a shaded copy of the same leaves, which is what stops a
-dense tree reading as a green tube.
+dense tree reading as a green tube. Each segment records how far out it has
+grown, and its leaf is scaled by the cube of that, so pressing a tree shrinks
+the foliage away with the twigs instead of switching it off leaf by leaf.
 
 The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
 Commons), which requires no attribution. It is also the favicon, rendered over
