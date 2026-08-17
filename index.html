@@ -1316,6 +1316,11 @@
     }
     .room.is-in .room-close { opacity: 1; }
     .room-close:hover { color: var(--title); border-color: var(--muted); }
+    /* no browser ring: focus lands on the room itself when it opens, and a
+       keyboard user tabbing to the button gets a quiet ring of its own */
+    .room:focus, .room-close:focus, .room-stream:focus { outline: none; }
+    .room-close:focus-visible { border-color: var(--muted); box-shadow: 0 0 0 3px var(--hair); }
+    .room-stream:focus-visible { box-shadow: inset 0 0 0 1px var(--border-2); }
 
     .room-head {
       position: relative;
@@ -2993,7 +2998,7 @@
 
   <!-- Detail view for the older projects, which have no page of their own -->
   <!-- The reading room: a paper's pages laid out across the screen -->
-  <div class="room" id="room" hidden role="dialog" aria-modal="true" aria-labelledby="room-title">
+  <div class="room" id="room" hidden role="dialog" aria-modal="true" aria-labelledby="room-title" tabindex="-1">
     <div class="room-backdrop"></div>
     <button class="room-close" type="button" aria-label="Close">×</button>
     <div class="room-head">
@@ -6203,7 +6208,7 @@
       // is the abstract clipped?
       more.hidden = abstract.scrollHeight <= abstract.clientHeight + 2;
       more.textContent = 'Read the whole abstract';
-      closeBtn.focus({ preventScroll: true });
+      room.focus({ preventScroll: true });
     }
 
     function close() {
