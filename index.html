@@ -2755,6 +2755,7 @@
     // height beside it, so the stack is drawn in from the button's top and
     // bottom by a few pixels, centred on it, and only then looks a match.
     const LEDGE_N = 3, LEDGE_INSET = 12, LEDGE_PAD = 8, LEDGE_TRIM = 3;
+    const LEDGE_LIFT = 3;   // and then the whole stack sits this much higher
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
     const ledgeLayers = rowH => {
@@ -3734,7 +3735,7 @@
         // the whole stack is one button's height less the optical trim,
         // centred on the row
         LEDGE_H = Math.max(LEDGE_N * 4, Math.round(bh) - LEDGE_TRIM * 2);
-        treeBase = lr.top - rect.top + LEDGE_TRIM;
+        treeBase = lr.top - rect.top + LEDGE_TRIM - LEDGE_LIFT;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
       const layers = ledgeLayers(LEDGE_H);
