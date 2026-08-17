@@ -3449,12 +3449,18 @@
       const { x, y, w, h } = b, r = 4;
       if (night > 0.001) {
         g.globalAlpha = night;
-        g.fillStyle = 'rgba(255,255,255,0.075)';
+        // a touch more body than the buttons' glass, lit a little toward the
+        // top, so the shelf reads as a shelf against the night and not as a
+        // rumour of one
+        const fill = g.createLinearGradient(0, y, 0, y + h);
+        fill.addColorStop(0, 'rgba(255,255,255,0.135)');
+        fill.addColorStop(1, 'rgba(255,255,255,0.10)');
+        g.fillStyle = fill;
         g.beginPath(); RR(g, x, y, w, h, r); g.fill();
-        g.strokeStyle = 'rgba(0,0,0,0.28)';
+        g.strokeStyle = 'rgba(0,0,0,0.32)';
         g.lineWidth = 0.75;
         g.beginPath(); RR(g, x - 0.4, y - 0.4, w + 0.8, h + 0.8, r + 0.4); g.stroke();
-        g.strokeStyle = 'rgba(255,255,255,0.13)';
+        g.strokeStyle = 'rgba(255,255,255,0.20)';
         g.lineWidth = 1;
         g.beginPath(); RR(g, x + 0.5, y + 0.5, w - 1, h - 1, r - 0.5); g.stroke();
       }
