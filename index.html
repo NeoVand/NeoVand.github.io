@@ -3548,9 +3548,12 @@
       // an unbalanced rule: the trailing branch has no straight continuation,
       // so it grows open and lopsided rather than fractal-neat
       { axiom: 'F', rules: { F: 'F[+F]F[-F][F]' },               angle: 21.0, iters: 4, rise: 0.91, tone: [ 40, 138], tip: 236, girth: 1.00, tipMin: 3, tipShare: 0.34 },
-      { axiom: 'X', rules: { X: 'F[+X][-X]FX', F: 'FF' },        angle: 25.7, iters: 5, rise: 1.00, tone: [ 60, 156], tip: 255, girth: 1.45 },
+      { axiom: 'X', rules: { X: 'F[+X][-X]FX', F: 'FF' },        angle: 25.7, iters: 5, rise: 1.00, tone: [ 60, 156], tip: 255, girth: 1.45, vary: 1.4 },
       { axiom: 'X', rules: { X: 'F+[[X]-X]-F[-FX]+X', F: 'FF' }, angle: 23.5, iters: 5, rise: 0.94, tone: [ 72, 168], tip: 248, girth: 1.55 },
-      { axiom: 'F', rules: { F: 'F[+F]F[-F]F' },                 angle: 25.7, iters: 4, rise: 0.96, tone: [ 78, 172], tip: 255, girth: 1.20 },
+      // `vary` scales how far a reading may lean and stretch its limbs: the
+      // even, self-similar grammars need more of it before two readings look
+      // like two trees, since fitting to the slot takes the outline back
+      { axiom: 'F', rules: { F: 'F[+F]F[-F]F' },                 angle: 25.7, iters: 4, rise: 0.96, tone: [ 78, 172], tip: 255, girth: 1.20, vary: 2.0 },
     ];
 
     // Undergrowth: many small copies of the fourth species, standing on the
@@ -3617,7 +3620,12 @@
       // little longer or shorter, a branch that leans off its parent — drawn
       // from the plant's seed (see reseed). So the same tree is never quite
       // the same tree twice, and it is still, frame to frame, one tree.
-      const jA = p.jA, jL = p.jL, jB = p.jB;
+      const jA = p.jA, jL = p.jL, jB = p.jB, jS = p.jS;
+      // the limb scale: every branch is a little longer or shorter than the
+      // letter says, and carries that down to everything it bears, so whole
+      // limbs stand out or fall short and the silhouette changes — the
+      // dense, even grammars average per-segment jitter away to nothing
+      let limb = 1;
 
       for (let i = 0; i < s.length; i++) {
         const c = s[i];
@@ -3630,7 +3638,7 @@
           if (reach <= 0.001) continue;          // this level has receded away
           if (bend) a += bend(depth, x, y);
           const px = x, py = y;
-          const len = jL ? reach * jL[i] : reach;
+          const len = jL ? reach * jL[i] * limb : reach;
           x += Math.cos(a) * sx * len;
           y += Math.sin(a) * sy * len;
           if (buckets) {
@@ -3665,8 +3673,11 @@
           if (y < minY) minY = y; else if (y > maxY) maxY = y;
         } else if (c === '+') a += jA ? turn * jA[i] : turn;
         else if (c === '-') a -= jA ? turn * jA[i] : turn;
-        else if (c === '[') { stack.push(x, y, a, depth); depth++; if (jB) a += turn * jB[i]; }
-        else if (c === ']') { depth = stack.pop(); a = stack.pop(); y = stack.pop(); x = stack.pop(); }
+        else if (c === '[') {
+          stack.push(x, y, a, depth, limb); depth++;
+          if (jB) { a += turn * jB[i]; limb = Math.min(1.4, Math.max(0.62, limb * jS[i])); }
+        }
+        else if (c === ']') { limb = stack.pop(); depth = stack.pop(); a = stack.pop(); y = stack.pop(); x = stack.pop(); }
       }
       return { minX, maxX, minY, maxY };
     }
@@ -3675,10 +3686,12 @@
     const trees = TREES.map((s, i) => ({ ...s, kind: 'tree', leafSpec: i, ...expand(s) }));
 
     // How far a reading may stray from the letter of the grammar: turns by a
-    // fifth either way, segments by an eighth, and each branch leaning off
-    // its parent by up to a sixth of a turn. Enough that two growths of a
-    // tree are visibly two trees; not so much that a species loses its shape.
-    const VARY_TURN = 0.20, VARY_LEN = 0.125, VARY_LEAN = 0.16;
+    // fifth either way, segments by an eighth, each branch leaning off its
+    // parent by up to a fifth of a turn, and each limb a fifth longer or
+    // shorter than written, compounding down the tree within limits. Enough
+    // that two growths of a tree are visibly two trees; not so much that a
+    // species loses its shape.
+    const VARY_TURN = 0.20, VARY_LEN = 0.125, VARY_LEAN = 0.20, VARY_LIMB = 0.20;
 
     // Deal a tree a new reading of its grammar. Called once at load, and
     // again whenever a tree has been drawn all the way back into the ground,
@@ -3687,15 +3700,18 @@
     // keeps its state, so nothing else about the tree needs to know.
     function reseed(p) {
       const seed = Math.floor(Math.random() * 1e6);
-      const n = p.str.length;
-      const jA = new Float32Array(n), jL = new Float32Array(n), jB = new Float32Array(n);
+      const n = p.str.length, v = p.vary || 1;
+      const jA = new Float32Array(n), jL = new Float32Array(n), jB = new Float32Array(n), jS = new Float32Array(n);
       for (let i = 0; i < n; i++) {
         const c = p.str[i];
         if (c === '+' || c === '-') jA[i] = 1 + (hash(i, seed) * 2 - 1) * VARY_TURN;
         else if (c === 'F') jL[i] = 1 + (hash(i, seed + 1) * 2 - 1) * VARY_LEN;
-        else if (c === '[') jB[i] = (hash(i, seed + 2) * 2 - 1) * VARY_LEAN;
+        else if (c === '[') {
+          jB[i] = (hash(i, seed + 2) * 2 - 1) * VARY_LEAN * v;
+          jS[i] = 1 + (hash(i, seed + 3) * 2 - 1) * VARY_LIMB * v;
+        }
       }
-      p.seed = seed; p.jA = jA; p.jL = jL; p.jB = jB;
+      p.seed = seed; p.jA = jA; p.jL = jL; p.jB = jB; p.jS = jS;
       // measured whole, however much of it is standing
       const front = p.front, shrink = p.shrink;
       p.front = undefined; p.shrink = undefined;
