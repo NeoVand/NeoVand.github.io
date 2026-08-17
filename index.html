@@ -3621,6 +3621,8 @@
       // from the plant's seed (see reseed). So the same tree is never quite
       // the same tree twice, and it is still, frame to frame, one tree.
       const jA = p.jA, jL = p.jL, jB = p.jB, jS = p.jS;
+      // a mirrored plant (sx < 0) still bows away from the wind, not into it
+      const bendDir = sx < 0 ? -1 : 1;
       // the limb scale: every branch is a little longer or shorter than the
       // letter says, and carries that down to everything it bears, so whole
       // limbs stand out or fall short and the silhouette changes — the
@@ -3636,7 +3638,7 @@
             ? shrink
             : Math.max(0, Math.min(1, (front - depth) / SOFT)) * shrink;
           if (reach <= 0.001) continue;          // this level has receded away
-          if (bend) a += bend(depth, x, y);
+          if (bend) a += bend(depth, x, y) * bendDir;
           const px = x, py = y;
           const len = jL ? reach * jL[i] * limb : reach;
           x += Math.cos(a) * sx * len;
@@ -3712,6 +3714,7 @@
         }
       }
       p.seed = seed; p.jA = jA; p.jL = jL; p.jB = jB; p.jS = jS;
+      p.flip = hash(seed, 41) < 0.5;   // and which way round it stands
       // measured whole, however much of it is standing
       const front = p.front, shrink = p.shrink;
       p.front = undefined; p.shrink = undefined;
@@ -4581,8 +4584,11 @@
           // Rather than let a broad species overlap its neighbour, narrow it.
           if (sx < sy * ratio) sy = sx / ratio;
 
-          t.sx = sx; t.sy = sy;
-          t.ox = x + (slot - spanX * sx) / 2 - b.minX * sx;
+          // mirrored or not: the box is fitted the same, from whichever
+          // edge of it lands on the left
+          const dir = t.flip ? -1 : 1;
+          t.sx = sx * dir; t.sy = sy;
+          t.ox = x + (slot - spanX * sx) / 2 - (dir > 0 ? b.minX : -b.maxX) * sx;
           t.oy = treeBase;
           t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
           t.tipWidth = Math.max(0.6, t.width * 0.24);
