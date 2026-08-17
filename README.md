@@ -81,8 +81,19 @@ in `:root` on purpose: without a declared default, `var()` on an undefined
 property is invalid at computed-value time and would take the whole
 `backdrop-filter` with it, blur included.
 
-In daylight the gallery cards are panes too. A solid white card on a sky is a
-hole cut in the weather.
+Two things kept daylight from looking like glass. The ring sat one pixel inside
+the pane, because an absolutely positioned box is offset from its container's
+*padding* box and these carried a transparent border — so the edge was a pixel
+of plain tint next to a pixel of ring, twice as thick as it should be. And the
+ring was white at both ends, which against a white pane is not an edge but an
+outline. On a bright ground the sides of real glass show the darker, compressed
+view through the bevel and only two short arcs catch the light, so that is what
+the daylight rim does now.
+
+The gallery cards are panes in both themes. A solid card on a sky is a hole cut
+in the weather. At night the blur on them is deliberately short: at any real
+radius a star is spread over so many pixels that nothing of it survives, and a
+few are meant to.
 
 ## The section flourishes
 
