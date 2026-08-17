@@ -1405,7 +1405,10 @@
       position: relative;
       flex: 0 0 auto;
       height: calc(100% - 26px);
-      aspect-ratio: 720 / 932;
+      /* the deck's own proportion, not the page's, so a page in flight
+         changes nothing but its place and its light; it costs the bottom
+         margin of the page and nothing else */
+      aspect-ratio: 1 / 1.35;
       scroll-snap-align: start;
       scroll-margin-left: clamp(24px, 6vw, 96px);
     }
@@ -1414,6 +1417,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: top center;
       background: #fff;
       border-radius: 6px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45);
@@ -1435,7 +1439,28 @@
       opacity: 1; transform: none;
       transition: opacity 420ms var(--ease) var(--pd, 300ms), transform 520ms var(--ease) var(--pd, 300ms);
     }
-    .room-page img.flying { transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms; }
+    /* the pages in flight: doubles in a layer over the whole room, so they
+       are never clipped by the stream's box on their way in or out */
+    .room-fly { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+    .room-fly img {
+      position: absolute;
+      display: block;
+      object-fit: cover;
+      object-position: top center;
+      background: #fff;
+      border-radius: 6px;
+      transform-origin: 50% 50%;
+      /* it carries the deck's look — by night the inversion and its
+         drop-shadows — at the deck's end of the flight, and is plain paper
+         with a cast shadow at the room's end, and it moves between the two as
+         it flies, so a page turns from dark to light on its way out and back
+         again on its way home */
+      transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                  filter 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                  box-shadow 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .room-fly img.paper { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45); }
+    .day .room-fly img.paper { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
 
     @media (max-width: 700px) {
       .room-head { padding: 56px 20px 12px; }
@@ -1444,7 +1469,7 @@
       .room-page { scroll-margin-left: 20px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .room-backdrop, .room-head, .room-page img, .room-page.late img { transition: none !important; }
+      .room-backdrop, .room-head, .room-page img, .room-page.late img, .room-fly img { transition: none !important; }
       .room-page.late img { opacity: 1; transform: none; }
     }
 
@@ -2962,9 +2987,9 @@
       <p class="room-abstract"></p>
       <button class="room-more" type="button" hidden>Read the whole abstract</button>
       <div class="room-actions">
-        <a class="about-link room-pdf" href="#" target="_blank" rel="noopener">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
-          Open the PDF
+        <a class="about-link room-pdf" href="#" download>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 19h16"/></svg>
+          Download PDF
         </a>
         <span class="room-count"></span>
       </div>
@@ -2972,6 +2997,7 @@
     <div class="room-stream" tabindex="0" aria-label="Pages of the paper">
       <div class="room-pages"></div>
     </div>
+    <div class="room-fly" aria-hidden="true"></div>
   </div>
 
   <div class="modal" id="proj-modal" hidden>
@@ -6082,30 +6108,58 @@
       }
     }
 
-    // Fly the fan's five pages to their places in the row (or back).
-    function fly(deck, toRoom) {
+    // Fly the fan's five pages to their places in the row, or back. The
+    // flight is made by doubles in a layer over the whole room, because the
+    // stream clips whatever leaves its box, and the deck is well outside it:
+    // pages animated in place were cut off at the stream's edge on the way
+    // back, which read as a bug rather than a flight. The doubles carry the
+    // deck's own page images, which are already loaded, and the real pages
+    // are shown or hidden underneath as the doubles arrive or leave.
+    const flyLayer = $('.room-fly');
+    function fly(deck, toRoom, done) {
       const fan = fanRects(deck);
       const imgs = [...pagesEl.querySelectorAll('.room-page img')].slice(0, FAN);
-      imgs.forEach((img, i) => {
-        const f = fan[i];
-        if (!f) return;
+      const fanPages = [...deck.querySelectorAll('.deck-page')];
+      flyLayer.innerHTML = '';
+      const doubles = [];
+      // appended back to front — page five first, page one last — so they
+      // stack as the fan does, with the first page on top
+      for (let i = Math.min(FAN, imgs.length) - 1; i >= 0; i--) {
+        const img = imgs[i], f = fan[i];
+        if (!f) continue;
         const r = img.getBoundingClientRect();
-        // the transform that puts this page where its fan page is
-        const s = f.w / r.width;
-        const t = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${s.toFixed(4)})`;
-        img.classList.remove('flying');
-        if (toRoom) {
-          img.style.transform = t;            // start where the fan page is
-          img.getBoundingClientRect();        // and let that land
-          img.classList.add('flying');
-          img.style.transitionDelay = `${i * 40}ms`;
-          img.style.transform = '';
-        } else {
-          img.classList.add('flying');
-          img.style.transitionDelay = `${(FAN - 1 - i) * 30}ms`;
-          img.style.transform = t;
-        }
-      });
+        const d = document.createElement('img');
+        d.src = f.el.currentSrc || f.el.src;
+        d.alt = '';
+        d.style.left = r.left + 'px'; d.style.top = r.top + 'px';
+        d.style.width = r.width + 'px'; d.style.height = r.height + 'px';
+        // the transform that puts this double where its fan page is, and the
+        // look the fan page has right now (inverted and shadowed by night)
+        const pose = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${(f.w / r.width).toFixed(4)})`;
+        const look = getComputedStyle(f.el).filter;
+        d.style.transitionDelay = `${(toRoom ? i : FAN - 1 - i) * 36}ms`;
+        d.style.transform = toRoom ? pose : 'none';
+        d.style.filter = toRoom ? look : 'none';
+        d.classList.toggle('paper', !toRoom);
+        d.dataset.pose = pose; d.dataset.look = look;
+        flyLayer.appendChild(d);
+        doubles.push(d);
+      }
+      // the real pages, and the fan, go dark while the doubles are in the air
+      imgs.forEach(img => { img.style.visibility = 'hidden'; });
+      fanPages.forEach(p => { p.style.visibility = 'hidden'; });
+      flyLayer.getBoundingClientRect();          // let the start pose land
+      for (const d of doubles) {
+        d.style.transform = toRoom ? 'none' : d.dataset.pose;
+        d.style.filter = toRoom ? 'none' : d.dataset.look;
+        d.classList.toggle('paper', toRoom);
+      }
+      setTimeout(() => {
+        flyLayer.innerHTML = '';
+        if (toRoom) imgs.forEach(img => { img.style.visibility = ''; });
+        else fanPages.forEach(p => { p.style.visibility = ''; });
+        done && done();
+      }, 620 + FAN * 36 + 40);
     }
 
     function open(deck) {
@@ -6116,12 +6170,7 @@
       room.hidden = false;
       document.body.style.overflow = 'hidden';
       stream.scrollLeft = 0;
-      // the fan's pages go dark while their doubles are in the air
-      const fanPages = deck.querySelectorAll('.deck-page');
-      if (!reduced) {
-        fly(deck, true);
-        fanPages.forEach(p => { p.style.visibility = 'hidden'; });
-      }
+      if (!reduced) { flying = true; fly(deck, true, () => { flying = false; }); }
       requestAnimationFrame(() => room.classList.add('is-in'));
       // is the abstract clipped?
       more.hidden = abstract.scrollHeight <= abstract.clientHeight + 2;
@@ -6132,21 +6181,19 @@
     function close() {
       if (!current || flying) return;
       const deck = current;
-      const fanPages = deck.querySelectorAll('.deck-page');
       room.classList.remove('is-in');
       const finish = () => {
         room.hidden = true;
         document.body.style.overflow = '';
-        fanPages.forEach(p => { p.style.visibility = ''; });
-        pagesEl.querySelectorAll('img').forEach(i => { i.style.transform = ''; i.classList.remove('flying'); });
+        deck.querySelectorAll('.deck-page').forEach(p => { p.style.visibility = ''; });
+        pagesEl.querySelectorAll('img').forEach(i => { i.style.visibility = ''; });
         flying = false;
         current = null;
         if (opener) { opener.focus({ preventScroll: true }); opener = null; }
       };
       if (reduced) { finish(); return; }
       flying = true;
-      fly(deck, false);
-      setTimeout(finish, 680);
+      fly(deck, false, finish);
     }
 
     document.querySelectorAll('.deck[data-paper]').forEach(deck => {
