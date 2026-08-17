@@ -3684,8 +3684,25 @@
       return { minX, maxX, minY, maxY };
     }
 
-    // leafSpec keys into FOLIAGE, so each species keeps its own leaf and green
-    const trees = TREES.map((s, i) => ({ ...s, kind: 'tree', leafSpec: i, ...expand(s) }));
+    // A stand rather than a row: five to eight trees, each a species drawn
+    // at random, so no two loads plant the same grove. More than about ten
+    // and the frame budget goes — every tree is walked and leafed each
+    // frame — and a phone's column has room for fewer still. ?trees=N sets
+    // the count for a look. leafSpec keys into FOLIAGE, so each species
+    // keeps its own leaf and green.
+    let NTREES = 5 + Math.floor(Math.random() * (innerWidth < 600 ? 2 : 4));
+    try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
+    const shapes = TREES.map(expand);
+    const trees = Array.from({ length: NTREES }, () => {
+      const k = Math.floor(Math.random() * TREES.length);
+      // and stands a little taller or shorter than its kind, so the stand
+      // has a skyline rather than a hedge's flat top
+      return { ...TREES[k], kind: 'tree', leafSpec: k, ...shapes[k], rise: TREES[k].rise * (0.72 + Math.random() * 0.28) };
+    });
+    // In a stand the crowns may overlap their neighbours' slots by this much
+    // rather than being squeezed to fit — ?over= to try another
+    let OVERLAP = 1.9;
+    try { const q = parseFloat(new URLSearchParams(location.search).get('over')); if (q >= 1 && q <= 4) OVERLAP = q; } catch (e) {}
 
     // How far a reading may stray from the letter of the grammar: turns by a
     // fifth either way, segments by an eighth, each branch leaning off its
@@ -4118,7 +4135,10 @@
         }
       }
       const spec = FOLIAGE[t.leafSpec];
-      const want = LEAF_TARGET * (spec ? spec.dens : 1);
+      // the leaf budget is the grove's, not the tree's: a fuller stand
+      // shares it out, so eight trees cost the frame about what six do, and
+      // with the crowns overlapping the canopy reads no thinner for it
+      const want = LEAF_TARGET * (spec ? spec.dens : 1) * Math.min(1, 6 / trees.length);
       const floorD = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
       // take inner levels from the outside in until the tips and the inner
       // leaves together would meet the budget, then thin the last of them
@@ -4568,7 +4588,7 @@
       trees.forEach(t => {
         const spanX = Math.max(1e-6, t.box.maxX - t.box.minX);
         const spanY = Math.max(1e-6, -t.box.minY);
-        needed = Math.min(needed, (slot / spanX) / ((band * t.rise) / spanY));
+        needed = Math.min(needed, (slot * OVERLAP / spanX) / ((band * t.rise) / spanY));
       });
       const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
 
@@ -4580,7 +4600,7 @@
           const spanY = Math.max(1e-6, -b.minY);
 
           let sy = (band * t.rise) / spanY;
-          let sx = Math.min(sy, slot / spanX);
+          let sx = Math.min(sy, slot * OVERLAP / spanX);
           // Rather than let a broad species overlap its neighbour, narrow it.
           if (sx < sy * ratio) sy = sx / ratio;
 
@@ -5247,7 +5267,7 @@
 
     // Whichever tree currently carries them. Pressing that tree sends the
     // swarm off to a different one; there is no returning home.
-    let host = trees[2];
+    let host = trees[Math.floor(trees.length / 2)];
     let hostTips = null;
 
     // They also move on by themselves every 20 to 30 seconds. The countdown
@@ -5290,7 +5310,7 @@
       // fireflies rise from below and off to the side, landing on the middle
       // tree just before the rest of the opening lands
       const secs = window.__intro.dur / 1000;
-      host = trees[2];
+      host = trees[Math.floor(trees.length / 2)];
       for (const f of fireflies) {
         f.state = 'flying';
         f.pick = Math.random();
