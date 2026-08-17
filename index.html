@@ -38,13 +38,16 @@
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('has-intro');
 
-    // The clock. The page keeps the visitor's own hour: it decides whether
-    // the lights start on or off, where the sun or moon stands, and how warm
-    // the light is — low and amber near dawn and dusk, high and white at
-    // noon. Sunrise and sunset are fixed rather than fetched: this is a mood,
-    // not an almanac. ?hour=18.5 previews any hour.
+    // The clock. The page keeps the visitor's own hour only to decide whether
+    // the lights start on or off. The day itself is one fixed hour: a summer
+    // evening at 7:27, sun low on the right and the light gone amber. The sky
+    // used to follow the visitor's clock through the whole day, and most of
+    // that day was worse than this one hour, so this is the day now. Sunrise
+    // and sunset are fixed rather than fetched: this is a mood, not an
+    // almanac. ?hour=3 previews the other mode.
     (() => {
       const RISE = 6.5, SET = 19.5;
+      const DAY_HOUR = 19.45;
       let forced = NaN;
       try { forced = parseFloat(new URLSearchParams(location.search).get('hour')); } catch (e) {}
       const hour = () => {
@@ -53,19 +56,20 @@
         return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
       };
       const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+      // the sun's place in the sky: u 0 at sunrise, 1 at sunset; elev 0 at
+      // the horizon, 1 at noon; warm 1 at the horizon, gone once the sun is
+      // well up — all of it pinned to DAY_HOUR
+      const SUN = (() => {
+        const u = clamp((DAY_HOUR - RISE) / (SET - RISE), 0, 1);
+        const elev = Math.sin(u * Math.PI);
+        const warm = Math.pow(clamp(1 - elev * 2.1, 0, 1), 1.3);
+        return { u, elev, warm };
+      })();
       window.__clock = {
         get hour() { return hour(); },
         RISE, SET,
         get isDay() { const h = hour(); return h >= RISE && h < SET; },
-        // the sun's way across the sky: u 0 at sunrise, 1 at sunset; elev 0
-        // at the horizon, 1 at noon; warm 1 at the horizon, gone once the sun
-        // is well up
-        sun() {
-          const u = clamp((hour() - RISE) / (SET - RISE), 0, 1);
-          const elev = Math.sin(u * Math.PI);
-          const warm = Math.pow(clamp(1 - elev * 2.1, 0, 1), 1.3);
-          return { u, elev, warm };
-        },
+        sun() { return SUN; },
         // and the moon's, over the night hours, sunset to sunrise
         moon() {
           const night = 24 - (SET - RISE);
@@ -2035,10 +2039,10 @@
       }
       gl.uniform1f(uMix, mix);
       gl.uniform1f(uTime, reduced ? 12.0 : now / 1000);
-      // how low the sun is; by night the moon's arc is drawn as neutral, and
-      // a lit lamp at night is a lamp, not a sunset
+      // how low the sun is — one fixed evening, whatever the visitor's hour;
+      // it only counts in the day branch, so by night it is simply unused
       const clk = window.__clock;
-      gl.uniform1f(uWarm, clk ? (clk.isDay ? clk.sun().warm : 0) : 0);
+      gl.uniform1f(uWarm, clk ? clk.sun().warm : 0);
 
       // The sun is drawn by the grove, and it wanders when it is bothered, so
       // its glow in the cloud has to follow it rather than sit at a fixed spot.
@@ -4553,11 +4557,10 @@
     let moonLo = 0, moonHi = 0, moonYLo = 0, moonYHi = 0, moonXHome = 0, moonYHome = 0, moonYSpan = 0;
     let skyTop = 0, skyBand = 0, homeX = 0, homeY = 0;
 
-    // Where the sun or moon belongs at this hour: across the sky from left
-    // to right as the day (or night) goes on, high in the middle of it and
-    // down toward the canopy at either end. Whichever body is up is the one
-    // whose arc counts, so a lamp pulled on at night puts the sun where the
-    // night is — low, as at the end of a day — rather than jumping it to noon.
+    // Where the sun or moon belongs. The sun has one place — low on the
+    // right, where a summer evening puts it — since the day is one fixed
+    // hour. The moon still crosses the sky as the night goes on, high in the
+    // middle of it and down toward the canopy at either end.
     function homeFor() {
       const clk = window.__clock;
       const b = clk ? (window.__theme && window.__theme.day ? clk.sun() : clk.moon())
