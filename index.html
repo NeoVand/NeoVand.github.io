@@ -316,8 +316,9 @@
       transform: scaleX(0.55);
       transition: opacity 640ms var(--ease), transform 900ms var(--ease);
     }
-    .has-intro .ledge + .ledge { transition-delay: 90ms; }
-    .has-intro .ledge + .ledge + .ledge { transition-delay: 180ms; }
+    .has-intro .ledge + .ledge { transition-delay: 80ms; }
+    .has-intro .ledge + .ledge + .ledge { transition-delay: 160ms; }
+    .has-intro .ledge + .ledge + .ledge + .ledge { transition-delay: 240ms; }
     .is-lit .ledge { opacity: 1; transform: none; }
 
     .visually-hidden {
@@ -1534,6 +1535,7 @@
       <div class="ledge" aria-hidden="true"></div>
       <div class="ledge" aria-hidden="true"></div>
       <div class="ledge" aria-hidden="true"></div>
+      <div class="ledge" aria-hidden="true"></div>
       <canvas id="grove" aria-hidden="true"></canvas>
     </div>
 
@@ -2734,12 +2736,23 @@
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
-    // The shelf under the grove: three slabs, each [height, inset from the
-    // ends of the one above], top to bottom. The top slab runs a little past
-    // the outermost slots; LEDGE_H is the whole stack.
-    const LEDGE_LAYERS = [[10, 0], [9, 12], [8, 26]];
-    const LEDGE_H = LEDGE_LAYERS.reduce((a, l) => a + l[0], 0);
-    const LEDGE_PAD = 8;
+    // The shelf under the grove: four slabs, each set in a little from the
+    // ends of the one above, together exactly as thick as the row of buttons
+    // they line up with. The heights are dealt out from the row's measured
+    // height, so the stack stays flush with the buttons whatever size the
+    // page gives them. The top slab runs a little past the outermost slots.
+    const LEDGE_N = 4, LEDGE_INSET = 10, LEDGE_PAD = 8;
+    const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
+    let LEDGE_H = LEDGE_DEFAULT_H;
+    const ledgeLayers = rowH => {
+      // top to bottom: [height, inset]; the spare pixel goes to the top slab
+      const base = Math.floor(rowH / LEDGE_N);
+      const layers = [];
+      for (let i = 0; i < LEDGE_N; i++) {
+        layers.push([base + (i < rowH - base * LEDGE_N ? 1 : 0), i * LEDGE_INSET]);
+      }
+      return layers;
+    };
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const WIDE = window.matchMedia('(min-width: 901px)');   // matches the CSS breakpoint
@@ -3448,7 +3461,7 @@
       crowns.length = 0;
       const span = ledgeX1 - ledgeX0;
       if (span <= 0 || ivyDrop <= LEDGE_H + 4) return;
-      const inset = LEDGE_LAYERS[0][0] * 0.8;
+      const inset = 8;   // the clumps stop short of the top slab's rounded ends
       const roots = Math.max(1, Math.round((span - inset * 2) / IVY_TUFT));
       let id = 0;
       const vine = (x, len, lean, salt, parent, at, w) => {
@@ -3698,13 +3711,17 @@
       // up with — the slabs centred on the row, so trunks and buttons stand
       // on the same line. Below that the ivy takes over, and hangs into the
       // gap under the buttons, stopping short of the filters.
-      let top = BLEED_Y, treeBase = H - BLEED_BOTTOM - 62, ivyEnd = H - BLEED_BOTTOM;
+      LEDGE_H = LEDGE_DEFAULT_H;
+      let top = BLEED_Y, treeBase = H - BLEED_BOTTOM - LEDGE_H - 40, ivyEnd = H - BLEED_BOTTOM;
       if (WIDE.matches && nameEl && linksEl) {
         const lr = linksEl.getBoundingClientRect();
         top = nameEl.getBoundingClientRect().top - rect.top;
-        treeBase = lr.top - rect.top + Math.max(0, (lr.height - LEDGE_H) / 2);
+        // the whole stack is the row's height, top edge on the row's top
+        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(lr.height));
+        treeBase = lr.top - rect.top;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
+      const layers = ledgeLayers(LEDGE_H);
       const band = Math.max(40, treeBase - top);
       ground = treeBase;
       // the ivy grows on top of the shelf and spills over its front, so it
@@ -3782,7 +3799,7 @@
       ledgeX1 = W - edge + LEDGE_PAD;
       // the elements live in the column, which the canvas bleeds past
       let ly = treeBase - BLEED_Y;
-      LEDGE_LAYERS.forEach(([h, inset], i) => {
+      layers.forEach(([h, inset], i) => {
         const el = ledgeEls[i];
         if (!el) return;
         el.style.left = (ledgeX0 + inset - BLEED_X) + 'px';
