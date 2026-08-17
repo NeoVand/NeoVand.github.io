@@ -91,9 +91,12 @@ view through the bevel and only two short arcs catch the light, so that is what
 the daylight rim does now.
 
 The gallery cards are panes in both themes. A solid card on a sky is a hole cut
-in the weather. At night the blur on them is deliberately short: at any real
-radius a star is spread over so many pixels that nothing of it survives, and a
-few are meant to.
+in the weather. Their tint and blur were picked by measurement rather than by
+eye: a star in this sky is about one device pixel across, so blur destroys it
+quadratically while transparency only costs it linearly — at 3.5px barely a
+tenth survived, at 1.8px about half does. Daylight has far more room, since the
+description text still measures near 6:1 against the frost at half the tint it
+started with, so the cloud comes through much more than it did.
 
 ## The section flourishes
 

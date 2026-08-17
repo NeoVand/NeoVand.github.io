@@ -143,8 +143,14 @@
       --pane-thin:     rgba(255,255,255,0.04);
       --pane-thin-top: rgba(255,255,255,0.07);
       --pane-thin-2:   rgba(255,255,255,0.10);
-      --card-pane: rgba(15,15,20,0.60);
-      --card-blur: 3.5px;
+      /* Measured, not guessed. A star in this sky is about one device pixel
+         across, so blur destroys it quadratically while transparency only
+         costs it linearly — at 3.5px barely a tenth of the star survived, at
+         1.8px about half does. The tint is lighter than the old flat surface
+         to make up for the transparency, so a card still reads as a pane
+         against the sky rather than as a slightly different patch of it. */
+      --card-pane: rgba(30,30,38,0.55);
+      --card-blur: 1.8px;
       --radius:    12px;
       --ease:      cubic-bezier(0.25, 0, 0, 1);
       /* Deliberately empty. --lg carries the refraction filter, and only
@@ -163,7 +169,7 @@
       --border:    #c4d8e7;
       --border-2:  #9dbbd3;
       --text:      #13202b;
-      --muted:     #384d5e;
+      --muted:     #2c4053;
       --muted-2:   #33485a;
       --title:     #0b1620;
       --ink:       #4f6b83;
@@ -201,8 +207,11 @@
       --pane-thin:     rgba(255,255,255,0.16);
       --pane-thin-top: rgba(255,255,255,0.30);
       --pane-thin-2:   rgba(255,255,255,0.40);
-      --card-pane: rgba(255,255,255,0.58);
-      --card-blur: 24px;
+      /* Daylight has the room: the description text still measures near 6:1
+         against the frost at half this tint, so the cloud can come through
+         far more than it was. */
+      --card-pane: rgba(255,255,255,0.44);
+      --card-blur: 12px;
     }
 
     /* Only while the lamp is being switched, so the whole page changes colour
@@ -1329,7 +1338,7 @@
       border-color: rgba(255,255,255,0.9);
     }
 
-    .card:hover, .rcard:hover { background: rgba(20,20,26,0.80); }
+    .card:hover, .rcard:hover { background: rgba(38,38,48,0.66); }
 
     .day .rcard-thumb { background: rgba(255,255,255,0.34); }
     .day .card-thumb { background: rgba(255,255,255,0.34); }
@@ -2743,11 +2752,17 @@
     // One turtle walk. Collects segments per depth, and always returns the bbox.
     // sx/sy are separate so a plant can be gently narrowed to fit its slot
     // without losing height (and sx may be negative, to mirror it).
-    function walk(p, sx, sy, ox, oy, bend, buckets, tipSegs) {
+    // leafSegs, when given, collects every segment that may carry a leaf:
+    // all true twig ends, and everything from p.leafFrom outward. Each entry
+    // also carries the segment's index in the string, which is the one thing
+    // about a leaf that never changes from frame to frame, so a leaf can keep
+    // its own state under that key.
+    function walk(p, sx, sy, ox, oy, bend, buckets, tipSegs, leafSegs) {
       let x = ox, y = oy, a = -Math.PI / 2, depth = 0, tipN = 0;
       const stack = [];
       const turn = p.angle * Math.PI / 180;
       const share = p.tipShare ?? 1;
+      const leafFrom = p.leafFrom ?? 0;
       // How far growth currently extends, in branching levels. Beyond the
       // front there is nothing; SOFT levels straddle it part-grown, so several
       // generations are drawing back at once rather than one crisp edge
@@ -2786,13 +2801,19 @@
             // all sit at full depth, so highlighting the lot floods the canopy
             // white. tipMin keeps the highlight to the outer levels, tipShare
             // scatters it across a fraction of them.
-            let terminal = (j >= s.length || s[j] === ']') && depth >= (p.tipMin || 0);
+            const twigEnd = j >= s.length || s[j] === ']';
+            let terminal = twigEnd && depth >= (p.tipMin || 0);
             if (terminal && share < 1 && hash(tipN++, p.tipSalt) > share) terminal = false;
             // the fifth number is how far out this segment has grown; the
             // leaves ride on it, so they shrink away with the twig instead of
             // vanishing whole the moment it goes
             if (terminal && tipSegs) tipSegs.push(px, py, x, y, reach);
             else (buckets[depth] || (buckets[depth] = [])).push(px, py, x, y, reach);
+            // leaves go on every twig end, whether or not it carries the
+            // highlight, and on the outer levels besides
+            if (leafSegs && (twigEnd || depth >= leafFrom)) {
+              leafSegs.push(px, py, x, y, reach, i, twigEnd ? 1 : 0, depth);
+            }
           }
           if (x < minX) minX = x; else if (x > maxX) maxX = x;
           if (y < minY) minY = y; else if (y > maxY) maxY = y;
@@ -3063,32 +3084,36 @@
     // ── Leaves ────────────────────────────────────────────────────────────
     // One look per species: the shape of the leaf and the green it is cut
     // from both change, so no two canopies read as the same tree. Each is
-    // baked into a small sprite at a fixed set of angles and a few random
-    // variants, and a twig end just blits the nearest one — no path, no
-    // transform, nothing per leaf at draw time but a single scaled blit.
+    // baked into a few small sprites, all pointing the same way, and a leaf is
+    // stamped with its own rotation at draw time — one transform and one blit
+    // per leaf. (They used to be baked at a dozen fixed angles and the nearest
+    // one blitted, which is why a leaf hopped between two poses as its twig
+    // swung through the boundary instead of turning with it.)
     // `size` is a multiple of the species' own mean twig length, not of its
     // trunk width: a grammar that ends in hundreds of short twigs needs small
     // leaves, one that ends in fifty long ones needs large, and only the twig
     // spacing knows which is which.
-    const LEAF_ROT = 12, LEAF_VAR = 3;
+    const LEAF_VAR = 6;
     const FOLIAGE = [
       // Four of the five carry ordinary leaves and differ in how many, how far
       // they fan, how long and how broad — which is enough to tell the species
       // apart without any of them turning into a shape that is not a leaf.
-      // `len` is [base, spread] as a fraction of the cluster radius.
+      // `len` is [base, spread] as a fraction of the cluster radius. `dens`
+      // is how full a canopy this species wants, over and above one leaf on
+      // every twig end.
       { shape: 'blade',  n: 4, fan: 0.78, len: [0.80, 0.24], wide: 0.24,
-        rgb: [ 52,  94,  42], size: 2.95, dens: 1.00, jit: 0.26 },
+        rgb: [ 52,  94,  42], size: 2.95, dens: 1.00 },
       // fine and drooping: a tuft of needles rather than a leaf
-      { shape: 'needle', rgb: [ 74, 114,  98], size: 2.60, dens: 1.00, jit: 0.14 },
+      { shape: 'needle', rgb: [ 74, 114,  98], size: 2.35, dens: 1.00 },
       // the big one in the middle: broad, round-ended, deep green
       { shape: 'blade',  n: 5, fan: 0.62, len: [0.84, 0.22], wide: 0.31,
-        rgb: [ 48,  86,  40], size: 2.55, dens: 0.80, jit: 0.32 },
+        rgb: [ 48,  86,  40], size: 2.90, dens: 0.80 },
       // dense and twiggy, so its leaves are small and narrow
       { shape: 'blade',  n: 5, fan: 0.66, len: [0.74, 0.24], wide: 0.22,
-        rgb: [ 78, 104,  42], size: 2.85, dens: 0.34, jit: 0.34 },
+        rgb: [ 78, 104,  42], size: 2.90, dens: 0.34 },
       // open and airy: a few long leaves, thrown wide
       { shape: 'blade',  n: 4, fan: 0.86, len: [0.86, 0.24], wide: 0.26,
-        rgb: [ 52,  92,  56], size: 2.80, dens: 0.36, jit: 0.34 },
+        rgb: [ 52,  92,  56], size: 2.80, dens: 0.36 },
     ];
 
     // A cluster drawn around the origin, oriented along +x. The caller has
@@ -3160,61 +3185,99 @@
       }
     }
 
-    // Terminal twigs alone are nowhere near a canopy — one grammar ends in
-    // fifty of them. So leaves go on the outer levels of the tree as well, and
-    // how far in "outer" reaches has to be found per species: their depth
+    // Leaves belong on twig ends first: every one of them carries a cluster,
+    // because a bare tip beside a leafed one reads as a mistake. Twig ends
+    // alone are nowhere near a canopy on some grammars, though — one ends in
+    // eighty of them — so those get leaves along their outer levels as well,
+    // and how far in "outer" reaches has to be found per species: their depth
     // profiles are wildly different, and a fixed level leaves one bald and
     // turns another into a solid green lump. A dry walk at the current scale
     // counts the segments level by level, takes levels from the outside in
-    // until there are enough, and thins the result down to about the same
-    // number of leaves for every tree.
-    // Leaves belong on twigs. Anything in the inner branching levels is trunk
-    // or limb, and hanging foliage there buries the very shape that tells one
-    // species from the next — so the canopy starts at a fraction of the way
-    // out and the wood below it is left to show.
-    const LEAF_TARGET = 240, LEAF_POOL = 700, LEAF_FROM = 0.62;
-
-    // Leaves landing exactly on their branch ends, evenly along a long straight
-    // limb, turn the limb into a fuzzy green tube. A fixed scatter table breaks
-    // the line up; it is a table rather than a hash so a leaf keeps its own
-    // offset from frame to frame and the canopy does not crawl.
-    const JIT = Array.from({ length: 64 }, (_, i) => [
-      hash(i, 51) * 2 - 1, hash(i, 52) * 2 - 1,
-    ]);
+    // until the budget is met, and thins the result to fit.
+    // Anything in the inner branching levels is trunk or limb, and hanging
+    // foliage there buries the very shape that tells one species from the
+    // next — so the inner leaves start at a fraction of the way out and the
+    // wood below is left to show.
+    const LEAF_TARGET = 240, LEAF_FROM = 0.62;
 
     function planFoliage(t) {
       // measured on the whole plant, never on however much of it happens to be
       // standing: a resize while a tree is pressed would otherwise plan the
       // canopy of a stump
-      const front = t.front, shrink = t.shrink;
-      t.front = undefined; t.shrink = undefined;
-      const buckets = [], tip = [];
-      walk(t, t.sx, t.sy, 0, 0, null, buckets, tip);
-      t.front = front; t.shrink = shrink;
-      let from = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
-      let pool = tip.length / 5, sum = 0;
-      for (let k = 0; k < tip.length; k += 5) {
-        sum += Math.hypot(tip[k + 2] - tip[k], tip[k + 3] - tip[k + 1]);
-      }
-      const floorD = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
-      for (let d = buckets.length - 1; d >= floorD; d--) {
-        const seg = buckets[d];
-        const n = seg ? seg.length / 5 : 0;
-        if (pool + n > LEAF_POOL && pool > 40) break;
-        from = d;
-        pool += n;
-        for (let k = 0; seg && k < seg.length; k += 5) {
-          sum += Math.hypot(seg[k + 2] - seg[k], seg[k + 3] - seg[k + 1]);
+      const front = t.front, shrink = t.shrink, leafFrom = t.leafFrom;
+      t.front = undefined; t.shrink = undefined; t.leafFrom = 0;
+      const all = [];
+      walk(t, t.sx, t.sy, 0, 0, null, [], [], all);
+      t.front = front; t.shrink = shrink; t.leafFrom = leafFrom;
+
+      // every twig end, and the inner candidates by level
+      const inner = [];
+      let tips = 0, sum = 0, n = 0;
+      for (let k = 0; k < all.length; k += 8) {
+        if (all[k + 6]) {
+          tips++;
+          sum += Math.hypot(all[k + 2] - all[k], all[k + 3] - all[k + 1]);
+          n++;
+        } else {
+          inner[all[k + 7]] = (inner[all[k + 7]] || 0) + 1;
         }
       }
-      t.leafFrom = from;
       const spec = FOLIAGE[t.leafSpec];
-      t.leafKeep = Math.min(1, LEAF_TARGET * (spec ? spec.dens : 1) / Math.max(1, pool));
-      t.leafJit = (spec ? spec.jit : 0.25);
-      buildFoliage(t, pool ? sum / pool : 6);
+      const want = LEAF_TARGET * (spec ? spec.dens : 1);
+      const floorD = Math.max(1, Math.ceil(t.maxDepth * LEAF_FROM));
+      // take inner levels from the outside in until the tips and the inner
+      // leaves together would meet the budget, then thin the last of them
+      let from = t.maxDepth + 1, pool = 0;
+      for (let d = t.maxDepth; d >= floorD && tips + pool < want; d--) {
+        from = d;
+        pool += inner[d] || 0;
+      }
+      t.leafFrom = from;
+      const keep = pool ? Math.min(1, Math.max(0, want - tips) / pool) : 0;
+
+      // Everything fixed about a leaf, keyed by its segment's index in the
+      // string, worked out once here rather than hashed every frame: whether
+      // it exists at all, where along its twig it sits, how far off the twig
+      // it leans, how stiff its spring is and how it trembles. The angle and
+      // angular speed are the running state; NaN until the leaf is first seen.
+      const L = t.str.length;
+      if (!t.leafA || t.leafA.length !== L) {
+        t.leafA = new Float32Array(L).fill(NaN);
+        t.leafV = new Float32Array(L);
+        // where the leaf's twig end was last frame, and how fast it was going,
+        // so the leaf can feel the twig accelerate under it
+        t.leafPX = new Float32Array(L);
+        t.leafPY = new Float32Array(L);
+        t.leafVX = new Float32Array(L);
+        t.leafVY = new Float32Array(L);
+        t.leafSeen = new Uint32Array(L);   // the frame it was last drawn on
+        t.leafU = new Float32Array(L);
+        t.leafOff = new Float32Array(L);
+        t.leafK = new Float32Array(L);
+        t.leafFrq = new Float32Array(L);
+        t.leafPh = new Float32Array(L);
+      }
+      t.leafOn = new Uint8Array(L);
+      for (let k = 0; k < all.length; k += 8) {
+        const i = all[k + 5], term = all[k + 6], depth = all[k + 7];
+        const on = term ? 1 : (depth >= from && hash(i, 91) < keep ? 1 : 0);
+        t.leafOn[i] = on;
+        if (!on) continue;
+        // a twig-end leaf grows out of the very end; an inner one sits along
+        // the outer half of its segment, and leans further off the wood, so a
+        // straight limb reads as leaves along a twig and not a green tube
+        t.leafU[i] = term ? 1 : 0.45 + hash(i, 92) * 0.55;
+        t.leafOff[i] = (hash(i, 93) - 0.5) * (term ? LEAF_TIP_SPLAY : LEAF_SPLAY);
+        t.leafK[i] = LEAF_K[0] + hash(i, 94) * (LEAF_K[1] - LEAF_K[0]);
+        t.leafFrq[i] = 5 + hash(i, 95) * 7;
+        t.leafPh[i] = hash(i, 96) * Math.PI * 2;
+      }
+      buildFoliage(t, n ? sum / n : 6);
     }
 
-    // Builds every rotation and variant for one species at the current size.
+    // Builds the variants for one species at the current size, all pointing
+    // along +x with the base of the cluster at the sprite's centre — the twig
+    // end goes there, and the leaves grow out of it.
     function buildFoliage(p, twig) {
       const spec = FOLIAGE[p.leafSpec];
       if (!spec) return;
@@ -3235,42 +3298,67 @@
         rgb: spec.rgb.map((c, i) => Math.min(255, Math.round(c * TINT[v % TINT.length][i]))),
       });
       const out = [], dark = [];
-      for (let r = 0; r < LEAF_ROT; r++) {
-        for (let v = 0; v < LEAF_VAR; v++) {
-          const tint = tinted(v);
-          const shaded = { ...tint, rgb: tint.rgb.map(c => Math.round(c * 0.60)) };
-          const c = document.createElement('canvas');
-          c.width = c.height = px;
-          const g = c.getContext('2d');
-          g.scale(px / S, px / S);
-          g.translate(S / 2, S / 2);
-          g.rotate(r / LEAF_ROT * Math.PI * 2 - Math.PI);
-          g.translate(S * 0.10, 0);
-          // deterministic per (species, rotation, variant), so a resize
-          // rebuilds exactly the same leaves
-          let seed = p.leafSpec * 977 + r * 31 + v * 7 + 1;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            return seed / 0x7fffffff;
-          };
-          g.globalAlpha = 0.92;
-          const seed0 = seed;
-          drawCluster(g, tint, S * 0.34, rnd);
-          out.push(c);
+      for (let v = 0; v < LEAF_VAR; v++) {
+        const tint = tinted(v);
+        const shaded = { ...tint, rgb: tint.rgb.map(c => Math.round(c * 0.60)) };
+        const c = document.createElement('canvas');
+        c.width = c.height = px;
+        const g = c.getContext('2d');
+        g.scale(px / S, px / S);
+        g.translate(S / 2, S / 2);
+        g.translate(S * 0.03, 0);
+        // deterministic per (species, variant), so a resize rebuilds exactly
+        // the same leaves
+        let seed = p.leafSpec * 977 + v * 7 + 1;
+        const rnd = () => {
+          seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+          return seed / 0x7fffffff;
+        };
+        g.globalAlpha = 0.92;
+        const seed0 = seed;
+        drawCluster(g, tint, S * 0.34, rnd);
+        out.push(c);
 
-          const c2 = document.createElement('canvas');
-          c2.width = c2.height = px;
-          const g2 = c2.getContext('2d');
-          g2.setTransform(g.getTransform());
-          seed = seed0;                      // the same leaves, in shade
-          g2.globalAlpha = 0.92;
-          drawCluster(g2, shaded, S * 0.34, rnd);
-          dark.push(c2);
-        }
+        const c2 = document.createElement('canvas');
+        c2.width = c2.height = px;
+        const g2 = c2.getContext('2d');
+        g2.setTransform(g.getTransform());
+        seed = seed0;                      // the same leaves, in shade
+        g2.globalAlpha = 0.92;
+        drawCluster(g2, shaded, S * 0.34, rnd);
+        dark.push(c2);
       }
       p.fol = out;
       p.folDark = dark;
     }
+
+    // How a leaf follows its twig. It is hung on a spring rather than pinned
+    // to the twig's angle, a little under-damped, so when a gust or the
+    // pointer swings the branch the leaf comes round a moment later and
+    // overshoots by a hair — which is most of what makes foliage look like
+    // it has weight. Stiffness varies leaf to leaf so a canopy never moves as
+    // one piece. On top of that each leaf trembles at its own rate, more in a
+    // gust and hardly at all in a lull.
+    // The spring alone only answers a change of angle, and some of what a
+    // tree does never turns a twig at all: the spring-back when a pressed
+    // tree grows out again is a stretch of the whole plant, every twig end
+    // moving out and back along its own line. So each leaf is also a small
+    // pendulum: whenever its twig end accelerates across the leaf, the leaf
+    // is left behind by that much and swings, which is what makes the
+    // canopy shiver a beat after the wood does, and go on shivering after
+    // the wood has stopped.
+    const LEAF_K = [110, 240];       // spring stiffness range, 1/s²
+    const LEAF_ZETA = 0.42;          // damping ratio: under 1 overshoots
+    const LEAF_TREMBLE = 0.075;      // rad, at full gust
+    // The pendulum's arm is a fixed length rather than the leaf's own size,
+    // so a small-leaved tree and a broad-leaved one shake through about the
+    // same angle for the same bounce. On the regrow spring this comes to
+    // twenty or thirty degrees on the twigs that lie across the motion, and
+    // nothing at all on the ones that lie along it.
+    const LEAF_SWAY = 0.4 / 14;      // rad/s² of leaf per px/s² of twig end
+    const LEAF_KICK_MAX = 300;       // rad/s², so a stall or a resize cannot fling it
+    const LEAF_SPLAY = 0.9;          // rad, how far an inner leaf may sit off its twig
+    const LEAF_TIP_SPLAY = 0.36;     // and a twig-end leaf, which mostly follows it
     let mix = window.__theme && window.__theme.day ? 1 : 0;   // 0 night, 1 day
     let mixTo = mix;
     const lerp = (a, b, t) => a + (b - a) * t;
@@ -3439,7 +3527,7 @@
     // Fraction of full growth per second, so every plant takes the same time
     // to withdraw regardless of how many levels deep it branches.
     const GROW_RATE = 1.25;
-    let lastNow = 0;
+    let lastNow = 0, frameNo = 0;
 
     // Somewhere else along the sky, far enough that the move is worth making,
     // with a little vertical drift so it does not slide along a rail.
@@ -3465,7 +3553,11 @@
       // Ungrowing in particular runs at a fixed rate rather than easing, so
       // each level takes the same time to withdraw.
       const dt = lastNow ? Math.min(0.05, (now - lastNow) / 1000) : 0;
+      // after a long gap the wind has moved on and every twig end has jumped;
+      // the leaves must not read that jump as a blow
+      const stalled = !lastNow || now - lastNow > 100;
       lastNow = now;
+      frameNo++;
 
       if (mix !== mixTo) {
         const step = dt / 0.52;
@@ -3622,6 +3714,8 @@
       for (const p of plants) {
         if (!p.sx) continue;
         const buckets = [], tipSegs = [];
+        // leaves are only gathered when there is daylight to draw them by
+        const leafSegs = p.fol && mix > 0.01 ? [] : null;
         // The scrub is only tens of pixels tall, so the same bend per segment
         // barely shows on it. It needs a much larger multiplier to read as
         // moving at all next to the trees.
@@ -3660,7 +3754,7 @@
             }
           }
           return b;
-        }, buckets, tipSegs);
+        }, buckets, tipSegs, leafSegs);
 
         const [tone0, tone1] = p.tone;
         for (let depth = 0; depth < buckets.length; depth++) {
@@ -3680,60 +3774,117 @@
         // Twig ends, so the highlight sits over the branches. In daylight the
         // foliage goes over the top of it, which is why it is drawn first now.
         // Under leaves the highlight would only show as bright wire poking
-        // through the canopy, so it fades out as the foliage arrives.
-        const tipA = p.fol ? 1 - mix * 0.9 : 1;
-        if (tipSegs.length && tipA > 0.02) {
-          ctx.globalAlpha = tipA;
-          ctx.strokeStyle = tipShade(p.tip, p.under);
-          ctx.lineWidth = p.tipWidth;
-          ctx.beginPath();
-          for (let k = 0; k < tipSegs.length; k += 5) {
-            ctx.moveTo(tipSegs[k], tipSegs[k + 1]);
-            ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
+        // through the canopy, so it fades out as the foliage arrives — but the
+        // twig itself must not go with it, or the leaf at its end is left
+        // hanging in the air a twig's length off the branch. So by day the
+        // twig ends are drawn as wood first, in the outermost tone, and the
+        // highlight is laid over that at whatever strength is left to it.
+        if (tipSegs.length) {
+          const tipA = p.fol ? 1 - mix * 0.9 : 1;
+          const path = () => {
+            ctx.beginPath();
+            for (let k = 0; k < tipSegs.length; k += 5) {
+              ctx.moveTo(tipSegs[k], tipSegs[k + 1]);
+              ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
+            }
+          };
+          if (p.fol && mix > 0.01) {
+            ctx.globalAlpha = mix;
+            ctx.strokeStyle = shade(tone1, p.under);
+            ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, p.maxDepth));
+            path();
+            ctx.stroke();
           }
-          ctx.stroke();
+          if (tipA > 0.02) {
+            ctx.globalAlpha = tipA;
+            ctx.strokeStyle = tipShade(p.tip, p.under);
+            ctx.lineWidth = p.tipWidth;
+            path();
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+        }
+
+        if (leafSegs && leafSegs.length) {
+          // A leaf cluster per site, each stamped at its own angle. Every
+          // leaf sits on its twig — a twig-end leaf grows out of the very
+          // end, an inner leaf sits partway along its segment — and nothing
+          // is scattered off the wood, so nothing hangs in the air.
+          const S = p.folS, lit = p.fol, dark = p.folDark;
+          const A = p.leafA, V = p.leafV, on = p.leafOn;
+          const PX = p.leafPX, PY = p.leafPY, VX = p.leafVX, VY = p.leafVY, SEEN = p.leafSeen;
+          const U = p.leafU, OFF = p.leafOff, KK = p.leafK, FR = p.leafFrq, PH = p.leafPh;
+          const half = p.leafFrom + Math.max(1, Math.round((p.maxDepth + 1 - p.leafFrom) * 0.55));
+          // the tremble follows the gust reaching the top of this plant
+          const gust = Math.min(1, 0.15 + Math.abs(levels[p.maxDepth]) * 0.8);
+          const tremble = LEAF_TREMBLE * gust * breeze;
+          const tt = now * 0.001;
+          ctx.globalAlpha = mix;
+          // inner leaves first, so the twig-end leaves sit over them
+          for (let pass = 0; pass < 2; pass++) {
+            for (let k = 0; k < leafSegs.length; k += 8) {
+              const term = leafSegs[k + 6];
+              if ((pass === 1) !== (term === 1)) continue;
+              const i = leafSegs[k + 5];
+              if (!on[i]) continue;
+              // A leaf follows its twig down. Cubed, so it holds its size
+              // most of the way and then goes quickly, and dropped only once
+              // it is small enough that losing it is not a visible step.
+              const g0 = leafSegs[k + 4];
+              if (g0 < 0.18) continue;
+              const x0 = leafSegs[k], y0 = leafSegs[k + 1];
+              const x1 = leafSegs[k + 2], y1 = leafSegs[k + 3];
+              const u = U[i];
+              const x = x0 + (x1 - x0) * u, y = y0 + (y1 - y0) * u;
+              const target = Math.atan2(y1 - y0, x1 - x0) + OFF[i];
+              let a = A[i];
+              const fresh = SEEN[i] !== frameNo - 1;   // hidden last frame
+              SEEN[i] = frameNo;
+              if (a !== a || stalled || fresh) {
+                // first sight of it, or the world jumped: take up the twig's
+                // pose and remember where it is, and start moving from here
+                if (a !== a) { a = target; V[i] = 0; }
+                PX[i] = x; PY[i] = y; VX[i] = NaN; VY[i] = 0;   // speed unknown yet
+              } else if (dt > 0) {
+                let d = target - a;
+                if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
+                // how hard the twig end is accelerating across the leaf: the
+                // leaf, having mass, is left behind by that
+                const vx = (x - PX[i]) / dt, vy = (y - PY[i]) / dt;
+                let kick = 0;
+                if (VX[i] === VX[i]) {          // a speed from last frame to compare with
+                  const ax = (vx - VX[i]) / dt, ay = (vy - VY[i]) / dt;
+                  kick = (ax * Math.sin(a) - ay * Math.cos(a)) * LEAF_SWAY;
+                  if (kick > LEAF_KICK_MAX) kick = LEAF_KICK_MAX;
+                  else if (kick < -LEAF_KICK_MAX) kick = -LEAF_KICK_MAX;
+                }
+                PX[i] = x; PY[i] = y; VX[i] = vx; VY[i] = vy;
+                const kk = KK[i];
+                let v = V[i];
+                v += (d * kk - v * 2 * Math.sqrt(kk) * LEAF_ZETA + kick) * dt;
+                a += v * dt;
+                if (a > Math.PI) a -= Math.PI * 2; else if (a < -Math.PI) a += Math.PI * 2;
+                V[i] = v;
+              }
+              A[i] = a;
+              const th = a + Math.sin(tt * FR[i] + PH[i]) * tremble;
+              const z = S * g0 * g0 * g0, hz = z / 2;
+              // dark inside, lit outside, with a few shaded leaves salted
+              // through the twig ends so it is not two flat bands
+              const set = term ? (((i * 37) & 7) < 2 ? dark : lit)
+                               : (leafSegs[k + 7] < half ? dark : lit);
+              const c = Math.cos(th), s = Math.sin(th);
+              ctx.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, dpr * x, dpr * y);
+              ctx.drawImage(set[i % LEAF_VAR], -hz, -hz, z, z);
+            }
+          }
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.globalAlpha = 1;
         }
 
         if (mix > 0.01 && tipSegs.length) {
           if (p.fol) {
-            // A leaf cluster per site, blitted from the pre-baked sprite whose
-            // baked angle is closest to that branch's own.
-            const S = p.folS, sprites = p.fol;
-            const K = LEAF_ROT / (Math.PI * 2), keep = p.leafKeep;
-            const jit = S * p.leafJit;
-            let li = 0;
-            ctx.globalAlpha = mix;
-            const put = (seg, set, salt) => {
-              for (let k = 0; k < seg.length; k += 5) {
-                li++;
-                // stratified, and a function of position in the walk, so the
-                // same twigs carry leaves from frame to frame
-                if (keep < 1 && (li * 145) % 1024 >= keep * 1024) continue;
-                // A leaf follows its twig down. Cubed, so it holds its size
-                // most of the way and then goes quickly, and dropped only once
-                // it is small enough that losing it is not a visible step.
-                const g0 = seg[k + 4];
-                if (g0 < 0.18) continue;
-                const z = S * g0 * g0 * g0, hz = z / 2;
-                const x1 = seg[k + 2], y1 = seg[k + 3];
-                const a = Math.atan2(y1 - seg[k + 1], x1 - seg[k]);
-                let r = Math.round((a + Math.PI) * K);
-                if (r >= LEAF_ROT) r -= LEAF_ROT; else if (r < 0) r += LEAF_ROT;
-                const j = JIT[li & 63];
-                const use = salt && ((li * 37) & 7) < 2 ? p.folDark : set;
-                ctx.drawImage(use[r * LEAF_VAR + li % LEAF_VAR],
-                              x1 - hz + j[0] * jit, y1 - hz + j[1] * jit, z, z);
-              }
-            };
-            const half = p.leafFrom + Math.max(1, Math.round((buckets.length - p.leafFrom) * 0.55));
-            for (let d = p.leafFrom; d < buckets.length; d++) {
-              // strictly dark inside, strictly lit outside gave two flat
-              // bands; a few shaded leaves are salted through the outer levels
-              if (buckets[d]) put(buckets[d], d < half ? p.folDark : sprites, d >= half);
-            }
-            put(tipSegs, sprites, true);   // last, so the outermost leaves sit on top
-            ctx.globalAlpha = 1;
+            // the trees have had their leaves drawn above
           } else {
             // The scrub is tens of pixels tall, where a drawn leaf would be a
             // smudge. It gets mass instead: two wide, soft passes over the
