@@ -1257,6 +1257,197 @@
       .modal-panel { border-radius: 0; border: none; min-height: 100%; padding: 28px 20px 32px; }
     }
 
+    /* ─── READING ROOM ─── */
+    /* Click a paper and its deck lifts off the shelf: the pages fly out and
+       lay themselves in a row across the screen, every page of the paper,
+       with the abstract set beside them. Not a modal card — a room. The
+       pages are paper here, white in either light, since this is where you
+       read them; the deck's night inversion is for the shelf. */
+    .room[hidden] { display: none; }
+    .room {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      overscroll-behavior: contain;
+    }
+    .room-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(6,8,12,0.80);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      transition: opacity 320ms var(--ease);
+    }
+    .room.is-in .room-backdrop { opacity: 1; }
+    .day .room-backdrop { background: rgba(196,212,226,0.82); }
+
+    .room-close {
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      z-index: 2;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      background: transparent;
+      border: 1px solid var(--border-2);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 160ms, border-color 160ms, opacity 240ms var(--ease);
+      opacity: 0;
+    }
+    .room.is-in .room-close { opacity: 1; }
+    .room-close:hover { color: var(--title); border-color: var(--muted); }
+
+    .room-head {
+      position: relative;
+      z-index: 1;
+      flex: 0 0 auto;
+      max-width: 720px;
+      padding: 44px 24px 18px clamp(24px, 6vw, 96px);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 360ms var(--ease) 120ms, transform 420ms var(--ease) 120ms;
+    }
+    .room.is-in .room-head { opacity: 1; transform: none; }
+    .room-kicker {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .room-title {
+      font-size: clamp(18px, 2vw, 23px);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      color: var(--title);
+      margin: 0 44px 8px 0;
+    }
+    .room-authors {
+      font-size: 13px;
+      color: var(--muted-2);
+      margin-bottom: 12px;
+    }
+    .room-authors strong { color: var(--text); font-weight: 500; }
+    .room-abstract {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--muted-2);
+      max-height: 7.5em;
+      overflow: hidden;
+      /* clipped, it fades out at the foot rather than stopping on a line */
+      -webkit-mask-image: linear-gradient(#000 calc(100% - 2.4em), transparent);
+      mask-image: linear-gradient(#000 calc(100% - 2.4em), transparent);
+      transition: max-height 320ms var(--ease);
+    }
+    .room-abstract.is-open {
+      max-height: 40em;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .room-more {
+      background: none;
+      border: 0;
+      padding: 0;
+      margin-top: 6px;
+      color: var(--text);
+      font: inherit;
+      font-size: 12.5px;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-color: var(--border-2);
+    }
+    .room-more:hover { color: var(--title); }
+    .room-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .room-count { font-size: 12px; color: var(--muted); }
+
+    /* The stream: every page of the paper in a row, scrolling sideways, each
+       page a snap point. Tall enough to read a figure, short enough that
+       the abstract stays on screen above it. */
+    .room-stream {
+      position: relative;
+      z-index: 1;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x proximity;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-2) transparent;
+      padding: 12px 0 18px;
+      outline: none;
+    }
+    .room-pages {
+      display: flex;
+      align-items: flex-start;
+      gap: 22px;
+      height: 100%;
+      padding: 0 clamp(24px, 6vw, 96px);
+      width: max-content;
+    }
+    .room-page {
+      position: relative;
+      flex: 0 0 auto;
+      height: calc(100% - 26px);
+      aspect-ratio: 720 / 932;
+      scroll-snap-align: start;
+      scroll-margin-left: clamp(24px, 6vw, 96px);
+    }
+    .room-page img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45);
+      transform-origin: 50% 50%;
+    }
+    .day .room-page img { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
+    .room-page .room-num {
+      position: absolute;
+      left: 0; right: 0;
+      bottom: -22px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    /* pages beyond the deck's five arrive after them, from a little below */
+    .room-page.late img { opacity: 0; transform: translateY(14px); }
+    .room.is-in .room-page.late img {
+      opacity: 1; transform: none;
+      transition: opacity 420ms var(--ease) var(--pd, 300ms), transform 520ms var(--ease) var(--pd, 300ms);
+    }
+    .room-page img.flying { transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms; }
+
+    @media (max-width: 700px) {
+      .room-head { padding: 56px 20px 12px; }
+      .room-abstract { max-height: 5.2em; }
+      .room-pages { padding: 0 20px; gap: 14px; }
+      .room-page { scroll-margin-left: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .room-backdrop, .room-head, .room-page img, .room-page.late img { transition: none !important; }
+      .room-page.late img { opacity: 1; transform: none; }
+    }
+
     /* ─── ABOUT ─── */
     .section-label {
       font-size: 11px;
@@ -2308,7 +2499,7 @@
       </div>
       <div class="papers-grid">
 
-        <a class="deck" href="papers/bone-conduction.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/bone-conduction.pdf" target="_blank" rel="noopener" data-paper="bone-conduction">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/bone-conduction-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/bone-conduction-4.jpg" alt="" loading="lazy" />
@@ -2322,7 +2513,7 @@
           </div>
         </a>
 
-        <a class="deck" href="papers/breathing.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/breathing.pdf" target="_blank" rel="noopener" data-paper="breathing">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/breathing-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/breathing-4.jpg" alt="" loading="lazy" />
@@ -2336,7 +2527,7 @@
           </div>
         </a>
 
-        <a class="deck" href="papers/seqclr.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/seqclr.pdf" target="_blank" rel="noopener" data-paper="seqclr">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/seqclr-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/seqclr-4.jpg" alt="" loading="lazy" />
@@ -2350,7 +2541,7 @@
           </div>
         </a>
 
-        <a class="deck" href="papers/optical-flow.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/optical-flow.pdf" target="_blank" rel="noopener" data-paper="optical-flow">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/optical-flow-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/optical-flow-4.jpg" alt="" loading="lazy" />
@@ -2364,7 +2555,7 @@
           </div>
         </a>
 
-        <a class="deck" href="papers/rumor-gauge.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/rumor-gauge.pdf" target="_blank" rel="noopener" data-paper="rumor-gauge">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/rumor-gauge-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/rumor-gauge-4.jpg" alt="" loading="lazy" />
@@ -2378,7 +2569,7 @@
           </div>
         </a>
 
-        <a class="deck" href="papers/motifs.pdf" target="_blank" rel="noopener">
+        <a class="deck" href="papers/motifs.pdf" target="_blank" rel="noopener" data-paper="motifs">
           <div class="deck-fan">
             <img class="deck-page" style="--i:4" src="media/papers/motifs-5.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:3" src="media/papers/motifs-4.jpg" alt="" loading="lazy" />
@@ -2760,6 +2951,29 @@
   </section>
 
   <!-- Detail view for the older projects, which have no page of their own -->
+  <!-- The reading room: a paper's pages laid out across the screen -->
+  <div class="room" id="room" hidden role="dialog" aria-modal="true" aria-labelledby="room-title">
+    <div class="room-backdrop"></div>
+    <button class="room-close" type="button" aria-label="Close">×</button>
+    <div class="room-head">
+      <p class="room-kicker"></p>
+      <h2 class="room-title" id="room-title"></h2>
+      <p class="room-authors"></p>
+      <p class="room-abstract"></p>
+      <button class="room-more" type="button" hidden>Read the whole abstract</button>
+      <div class="room-actions">
+        <a class="about-link room-pdf" href="#" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>
+          Open the PDF
+        </a>
+        <span class="room-count"></span>
+      </div>
+    </div>
+    <div class="room-stream" tabindex="0" aria-label="Pages of the paper">
+      <div class="room-pages"></div>
+    </div>
+  </div>
+
   <div class="modal" id="proj-modal" hidden>
     <div class="modal-backdrop" data-close></div>
     <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -5757,6 +5971,217 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && !modal.hidden) close();
     });
+  })();
+  </script>
+
+  <script>
+  // ─── The reading room: a paper opens into all its pages ───
+  // Clicking a deck no longer leaves the page. The five pages of the fan fly
+  // out of the deck and lay themselves down as the first five of a row that
+  // holds every page of the paper, with the abstract set above; the rest of
+  // the pages follow them in. Closing sends the five back into the fan.
+  // Cmd/ctrl-click, or no JS, still opens the PDF as the link says.
+  (() => {
+    const room = document.getElementById('room');
+    if (!room) return;
+    const NEO = /Mostafa (‘|')?Neo(’|')? Mohsenvand|Mostafa Mohsenvand/;
+    const PAPERS = {
+      'bone-conduction': {
+        pages: 5,
+        authors: 'Chanel Manzanillo, Ralfy Chettiar, Rahil Soroushmojdehi, Leou Ying, Juewei Dong, Mostafa ‘Neo’ Mohsenvand',
+        abstract: 'As the utilization of voice assistants becomes more widespread in daily activities, the demand for an interface capable of accurately recognizing speech at low volume levels within noisy environments is becoming increasingly important. In this study, we developed a custom device that incorporates a bone conduction microphone (BCM) by integrating a piezoelectric transducer with a noise-isolating impedance matching layer, alongside a MEMS air conduction microphone (ACM). Our study aims to assess the BCM’s effectiveness in facilitating soft speech communication with voice assistants in diverse noise environments and to validate its advantage over the ACM in noise reduction. We conducted experiments with participants using both the ACM and BCM to record audio samples for normal speech, soft speech, and whisper in three different noise level environments: ambient (quiet office setting), music, and loud noise. Spectrogram and signal-to-noise ratio (SNR) analysis assessed each audio file’s signal quality, and an automatic speech recognition model estimated word error rate (WER) as a benchmark. In all tested scenarios, the BCM consistently demonstrated a significantly higher SNR than the ACM. While the ACM’s WER scores in the ambient environment were lower in all speech modes, the BCM outperformed the ACM in noisy conditions. Our findings confirm the custom BCM’s ability to reduce background noise without requiring pre-processing or complex hardware while effectively capturing soft speech, emphasizing the potential benefits of integrating BCMs into interfaces designed for communication with voice assistants.',
+      },
+      'breathing': {
+        pages: 20,
+        authors: 'Ian Karman, Yue Sun, Rahil Soroushmojdehi, Jose A. Silva, Mostafa ‘Neo’ Mohsenvand',
+        abstract: 'This study presents a low-latency, real-time breathing cycle tracking system utilizing a conditional Generative Adversarial Network (GAN) with Wasserstein loss, with a low-powered, low sample rate photoplethysmography (PPG) sensor. The aim is to provide a clinically accurate respiratory tool capable of tracking and visualizing the breathing cycle and rate in real time for at-home and general ambulatory applications. To detect breathing activity in real time, we used a wearable headband with a 25 Hz PPG sensor and an inductive respiratory sensor as ground truth, processing the inputs in one-second windows to meet the latency constraints. Signal processing and machine learning techniques were explored, and the proposed GAN-based method with Wasserstein loss and gradient penalty outperformed the others in accurately tracking the ground-truth breathing curve. Leveraging the GAN-generated breathing curve, a peak-detection algorithm calculated the respiratory rate with an average mean absolute error of 1.47 breaths per minute across ten test subjects — comparable to the high-sampling-rate PPG literature (1 bpm), but five times faster in real-time monitoring. The GAN-generated respiratory signal from a low-sampling-rate wearable PPG sensor demonstrates potential as a viable alternative to traditional respiratory monitoring, useful in applications such as pain management.',
+      },
+      'seqclr': {
+        pages: 16,
+        authors: 'Mostafa ‘Neo’ Mohsenvand, Mohammad Rasool Izadi, Pattie Maes',
+        abstract: 'Interpreting and labeling human electroencephalogram (EEG) is a challenging task requiring years of medical training. We present a framework for learning representations from EEG signals via contrastive learning. By recombining channels from multi-channel recordings, we increase the number of samples quadratically per recording. We train a channel-wise feature extractor by extending the SimCLR framework to time-series data. We introduce a set of augmentations for EEG and study their efficacy on different classification tasks. We demonstrate that the learned features improve EEG classification and significantly reduce the amount of labeled data needed on three separate tasks: emotion recognition (SEED), normal/abnormal EEG classification (TUH), and sleep-stage scoring (SleepEDF). Our models show improved performance over previously reported supervised models on SEED and SleepEDF and self-supervised models on all three tasks.',
+      },
+      'optical-flow': {
+        pages: 17,
+        authors: 'Navvab Afrashteh, Samsoon Inayat, Mostafa Mohsenvand, Majid H. Mohajerani',
+        abstract: 'Wide-field optical imaging techniques constitute powerful tools to investigate mesoscale neuronal activity. The sampled data is a sequence of image frames in which one can investigate the flow of brain activity starting and terminating at source and sink locations. Approaches to the analysis of information flow include qualitative assessment to identify sources and sinks of activity as well as their trajectories, and quantitative measurements based on the temporal variation of pixel intensity; a few studies have estimated wave motion using optical-flow techniques from computer vision, but a comprehensive toolbox for the quantitative analysis of mesoscale brain activity data has been lacking. We present a graphical-user-interface toolbox in Matlab for investigating the spatiotemporal dynamics of mesoscale brain activity using optical-flow analyses. It implements three optical-flow methods — Horn–Schunck, Combined Local-Global, and Temporospatial — for estimating velocity vector fields of the flow of activity, from which we determine the locations of sources and sinks as well as the trajectories and velocities of flow. Using simulated data as well as sensory-evoked voltage and calcium imaging data from mice, we compared the efficacy of the three methods; the combined local-global method yields the best estimates of wave motion. The automated approach permits rapid and effective quantification of mesoscale brain dynamics and may facilitate the study of brain function in response to new experiences or pathology.',
+      },
+      'rumor-gauge': {
+        pages: 36,
+        authors: 'Soroush Vosoughi, Mostafa ‘Neo’ Mohsenvand, Deb Roy',
+        abstract: 'The spread of malicious or accidental misinformation in social media, especially in time-sensitive situations such as real-world emergencies, can have harmful effects on individuals and society. In this work, we developed models for automated verification of rumors — unverified information — that propagate through Twitter. To predict the veracity of rumors, we identified salient features of rumors by examining three aspects of information spread: the linguistic style used to express rumors, the characteristics of the people involved in propagating information, and network propagation dynamics. The predicted veracity of a time series of these features extracted from a rumor (a collection of tweets) is generated using Hidden Markov Models. The verification algorithm was trained and tested on 209 rumors representing 938,806 tweets collected from real-world events, including the 2013 Boston Marathon bombings, the 2014 Ferguson unrest and the 2014 Ebola epidemic, and many other rumors reported on popular websites that document public rumors. The algorithm correctly predicted the veracity of 75% of the rumors faster than any other public source, including journalists and law enforcement officials. The ability to track rumors and predict their outcomes may have practical applications for news consumers, financial markets, journalists and emergency services, and more generally may help minimize the impact of false information on Twitter.',
+      },
+      'motifs': {
+        pages: 13,
+        authors: 'Majid H. Mohajerani, Allen W. Chan, Mostafa Mohsenvand, Jeffrey LeDue, Rui Liu, David A. McVea, Jamie D. Boyd, Yu Tian Wang, Mark Reimers, Timothy H. Murphy',
+        abstract: 'Using millisecond-timescale voltage-sensitive dye imaging in lightly anesthetized or awake adult mice, we show that a palette of sensory-evoked and hemisphere-wide activity motifs are represented in spontaneous activity. These motifs can reflect multiple modes of sensory processing, including vision, audition and touch. We found similar cortical networks with direct cortical activation using channelrhodopsin-2. Regional analysis of activity spread indicated modality-specific sources, such as primary sensory areas, a common posterior-medial cortical sink where sensory activity was extinguished within the parietal association area, and a secondary anterior medial sink within the cingulate and secondary motor cortices for visual stimuli. Correlation analysis between functional circuits and intracortical axonal projections indicated a common framework corresponding to long-range monosynaptic connections between cortical regions. Maps of intracortical monosynaptic structural connections predicted hemisphere-wide patterns of spontaneous and sensory-evoked depolarization. We suggest that an intracortical monosynaptic connectome shapes the ebb and flow of spontaneous cortical activity.',
+      },
+    };
+
+    const $ = sel => room.querySelector(sel);
+    const backdrop = $('.room-backdrop'), closeBtn = $('.room-close');
+    const kicker = $('.room-kicker'), title = $('.room-title'), authors = $('.room-authors');
+    const abstract = $('.room-abstract'), more = $('.room-more');
+    const pdf = $('.room-pdf'), count = $('.room-count');
+    const stream = $('.room-stream'), pagesEl = $('.room-pages');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const FAN = 5;                     // pages in a deck
+    let opener = null, current = null, flying = false;
+
+    // Pages load only as they come into the stream's view: a paper can be
+    // thirty-six pages, and most visits look at three.
+    const lazy = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const img = e.target;
+        if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
+        lazy.unobserve(img);
+      }
+    }, { root: stream, rootMargin: '0px 600px 0px 600px' });
+
+    // Where each of the fan's pages sits on screen: centre, size and angle.
+    // The angle is read back from the transform rather than the fan variable,
+    // so a deck caught mid-hover flies from where it actually is.
+    function fanRects(deck) {
+      const pages = [...deck.querySelectorAll('.deck-page')].sort((a, b) => (+a.style.getPropertyValue('--i')) - (+b.style.getPropertyValue('--i')));
+      return pages.map(img => {
+        const r = img.getBoundingClientRect();
+        const m = new DOMMatrixReadOnly(getComputedStyle(img).transform);
+        return { el: img, cx: r.left + r.width / 2, cy: r.top + r.height / 2,
+                 w: img.offsetWidth, h: img.offsetHeight, a: Math.atan2(m.b, m.a) };
+      });
+    }
+
+    function build(slug, deck) {
+      const meta = PAPERS[slug];
+      const n = meta.pages;
+      kicker.textContent = deck.querySelector('.deck-venue').textContent;
+      title.textContent = deck.querySelector('.deck-title').textContent;
+      authors.innerHTML = meta.authors.split(', ').map(a =>
+        NEO.test(a) ? `<strong>${a}</strong>` : a).join(', ');
+      abstract.textContent = meta.abstract;
+      abstract.classList.remove('is-open');
+      pdf.href = deck.href;
+      count.textContent = `${n} page${n === 1 ? '' : 's'}`;
+      pagesEl.innerHTML = '';
+      for (let i = 1; i <= n; i++) {
+        const fig = document.createElement('figure');
+        fig.className = 'room-page' + (i > FAN ? ' late' : '');
+        if (i > FAN) fig.style.setProperty('--pd', `${300 + Math.min(6, i - FAN) * 55}ms`);
+        const img = document.createElement('img');
+        img.alt = `Page ${i}`;
+        img.decoding = 'async';
+        const src = `media/papers/pages/${slug}-${i}.jpg`;
+        if (i <= FAN + 2) img.src = src; else img.dataset.src = src;
+        const num = document.createElement('figcaption');
+        num.className = 'room-num';
+        num.textContent = `${i} / ${n}`;
+        fig.append(img, num);
+        pagesEl.appendChild(fig);
+        if (i > FAN + 2) lazy.observe(img);
+      }
+    }
+
+    // Fly the fan's five pages to their places in the row (or back).
+    function fly(deck, toRoom) {
+      const fan = fanRects(deck);
+      const imgs = [...pagesEl.querySelectorAll('.room-page img')].slice(0, FAN);
+      imgs.forEach((img, i) => {
+        const f = fan[i];
+        if (!f) return;
+        const r = img.getBoundingClientRect();
+        // the transform that puts this page where its fan page is
+        const s = f.w / r.width;
+        const t = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${s.toFixed(4)})`;
+        img.classList.remove('flying');
+        if (toRoom) {
+          img.style.transform = t;            // start where the fan page is
+          img.getBoundingClientRect();        // and let that land
+          img.classList.add('flying');
+          img.style.transitionDelay = `${i * 40}ms`;
+          img.style.transform = '';
+        } else {
+          img.classList.add('flying');
+          img.style.transitionDelay = `${(FAN - 1 - i) * 30}ms`;
+          img.style.transform = t;
+        }
+      });
+    }
+
+    function open(deck) {
+      const slug = deck.dataset.paper;
+      if (!PAPERS[slug] || flying) return;
+      opener = deck; current = deck;
+      build(slug, deck);
+      room.hidden = false;
+      document.body.style.overflow = 'hidden';
+      stream.scrollLeft = 0;
+      // the fan's pages go dark while their doubles are in the air
+      const fanPages = deck.querySelectorAll('.deck-page');
+      if (!reduced) {
+        fly(deck, true);
+        fanPages.forEach(p => { p.style.visibility = 'hidden'; });
+      }
+      requestAnimationFrame(() => room.classList.add('is-in'));
+      // is the abstract clipped?
+      more.hidden = abstract.scrollHeight <= abstract.clientHeight + 2;
+      more.textContent = 'Read the whole abstract';
+      closeBtn.focus({ preventScroll: true });
+    }
+
+    function close() {
+      if (!current || flying) return;
+      const deck = current;
+      const fanPages = deck.querySelectorAll('.deck-page');
+      room.classList.remove('is-in');
+      const finish = () => {
+        room.hidden = true;
+        document.body.style.overflow = '';
+        fanPages.forEach(p => { p.style.visibility = ''; });
+        pagesEl.querySelectorAll('img').forEach(i => { i.style.transform = ''; i.classList.remove('flying'); });
+        flying = false;
+        current = null;
+        if (opener) { opener.focus({ preventScroll: true }); opener = null; }
+      };
+      if (reduced) { finish(); return; }
+      flying = true;
+      fly(deck, false);
+      setTimeout(finish, 680);
+    }
+
+    document.querySelectorAll('.deck[data-paper]').forEach(deck => {
+      deck.addEventListener('click', e => {
+        // a modified click means "the PDF, please", as the link says
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        open(deck);
+      });
+    });
+    closeBtn.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    more.addEventListener('click', () => {
+      const on = abstract.classList.toggle('is-open');
+      more.textContent = on ? 'Show less' : 'Read the whole abstract';
+    });
+    document.addEventListener('keydown', e => {
+      if (room.hidden) return;
+      if (e.key === 'Escape') { close(); return; }
+      // the arrow keys page the stream, wherever focus is in the room
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const page = pagesEl.firstElementChild;
+        if (!page) return;
+        const step = page.getBoundingClientRect().width + 22;
+        stream.scrollBy({ left: e.key === 'ArrowRight' ? step : -step, behavior: 'smooth' });
+        e.preventDefault();
+      }
+    });
+    // the wheel scrolls the stream sideways, so a mouse can read along it
+    stream.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        stream.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
   })();
   </script>
 
