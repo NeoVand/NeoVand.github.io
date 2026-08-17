@@ -794,13 +794,29 @@
       padding: 14px 24px 16px;
     }
 
+    /* The template is one SVG. The script takes it apart into a handful of
+       pieces — each side in bands by distance from the middle, and the
+       finial — and stacks those as separate SVGs inside this box, so that
+       opening the flourish moves and fades whole elements. That is what lets
+       the browser run the animation on the compositor: transforms on paths
+       *inside* an SVG are re-painted on the main thread every frame, and on
+       a page with this many layers below, that showed as stutter while
+       scrolling past. */
     .fl {
+      position: relative;
       width: 100%;
       max-width: 470px;
-      height: auto;
       display: block;
+      aspect-ratio: 1004 / 154;
       overflow: visible;
       fill: var(--ink);
+    }
+
+    .fl-part {
+      position: absolute;
+      display: block;
+      overflow: visible;
+      will-change: transform, opacity;
     }
 
     .fl .st1 { fill-rule: evenodd; clip-rule: evenodd; }
@@ -808,7 +824,7 @@
     /* In daylight the ornament stops being ink and becomes a branch: brown
        where it leaves the middle, green out at the curls. --far is how far
        from the centre each stroke sits, set on the element by the script. */
-    .day .fl > * {
+    .day .fl path {
       fill: var(--bark);
       fill: color-mix(in oklab, var(--bark), var(--leaf) calc(var(--far, 0.5) * 100%));
     }
@@ -816,21 +832,20 @@
     /* The leaves are in the markup at night too — they have to be, or their
        boxes would measure as nothing and throw off the layout that decides
        how the whole flourish unrolls — but they are painted with nothing. */
-    .fl > .lf { fill: transparent; }
-    .day .fl > .lf { fill: var(--leaf); }
-    .day .fl > .lf.pale { fill: color-mix(in oklab, var(--leaf), white 26%); }
+    .fl path.lf { fill: transparent; }
+    .day .fl path.lf { fill: var(--leaf); }
+    .day .fl path.lf.pale { fill: color-mix(in oklab, var(--leaf), white 26%); }
 
     /* The closed state carries its own, shorter delays, so folding away runs
        tails-first and quicker than opening rather than replaying it backwards. */
-    .fl > * {
-      transform-box: fill-box;
+    .fl-part {
       opacity: 0;
       transform: scale(0.3) rotate(var(--r, 0deg));
       transition: opacity 360ms var(--ease) var(--dc, 0ms),
                   transform 520ms cubic-bezier(0.4, 0, 0.7, 0.2) var(--dc, 0ms);
     }
 
-    .rule.is-open .fl > * {
+    .rule.is-open .fl-part {
       opacity: 1;
       transform: none;
       transition: opacity 560ms var(--ease) var(--d, 0ms),
@@ -838,7 +853,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .fl > * { transform: none; transition: opacity 300ms linear; }
+      .fl-part { transform: none; transition: opacity 300ms linear; }
     }
 
     /* ─── PUBLICATIONS ─── */
@@ -898,7 +913,13 @@
       transform-origin: 50% 100%;
       transform: rotate(calc((var(--i) - 2) * var(--fan, 5.5deg)));
       transition: transform 420ms var(--ease), filter 420ms var(--ease);
-      will-change: transform;
+      /* No will-change here, deliberately. Promoted to its own layer, a page
+         has its whole filter chain — the two blurred shadows included — run
+         again by the GPU on every frame, for every page on screen, and that
+         is a large part of why scrolling past the papers dragged. Left as
+         ordinary content, the filter is painted into the tiles once and
+         merely scrolls; the browser still lifts a page onto a layer for the
+         length of the hover transition, so the fan is unaffected. */
       /* Pages are inverted, so a paper reads as dark on the dark page rather
          than as a slab of white. Not a full inversion: at 1.0 they sink into
          the background. hue-rotate puts the colour back into the figures,
@@ -5024,22 +5045,61 @@
       let far = 1;
       for (const b of boxes) far = Math.max(far, Math.abs(b.x + b.width / 2 - mid));
 
+      // Sort the strokes into pieces: the finial, and each side in five
+      // bands by distance from the middle. Each piece becomes its own SVG,
+      // stacked in the .fl box at the place its strokes occupied, and it is
+      // the piece that swings open — pivoted on its inner end — so the
+      // animation is a compositor one and never touches the main thread.
+      const BANDS = 5;
+      const groups = new Map();
       parts.forEach((p, i) => {
         const b = boxes[i];
         const dx = b.x + b.width / 2 - mid;
         const t = Math.abs(dx) / far;
-        if (Math.abs(dx) < 24) {
-          // the finial at the centre: it rises rather than swings
-          p.style.transformOrigin = '50% 100%';
-        } else {
-          p.style.transformOrigin = dx > 0 ? '0% 50%' : '100% 50%';
-          p.style.setProperty('--r', (dx > 0 ? -14 : 14) + 'deg');
-        }
         // how far out this stroke sits, which daylight colours it by
         p.style.setProperty('--far', Math.pow(t, 0.7).toFixed(3));
-        p.style.setProperty('--d', Math.round(Math.pow(t, 0.8) * 620) + 'ms');
-        p.style.setProperty('--dc', Math.round(Math.pow(1 - t, 1.2) * 300) + 'ms');
+        const key = Math.abs(dx) < 24 ? 'C'
+                  : (dx > 0 ? 'R' : 'L') + Math.min(BANDS - 1, Math.floor(t * BANDS));
+        let g = groups.get(key);
+        if (!g) groups.set(key, g = { key, parts: [], t: 0, x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity });
+        g.parts.push(p);
+        g.t += t;
+        g.x0 = Math.min(g.x0, b.x); g.x1 = Math.max(g.x1, b.x + b.width);
+        g.y0 = Math.min(g.y0, b.y); g.y1 = Math.max(g.y1, b.y + b.height);
       });
+
+      const vb = svg.viewBox.baseVal;
+      const NS = 'http://www.w3.org/2000/svg';
+      const wrap = document.createElement('div');
+      wrap.className = 'fl';
+      wrap.setAttribute('aria-hidden', 'true');
+      wrap.style.aspectRatio = `${vb.width} / ${vb.height}`;
+      const PAD = 4;
+      for (const g of groups.values()) {
+        const t = g.t / g.parts.length;
+        const x0 = g.x0 - PAD, y0 = g.y0 - PAD, w = g.x1 - g.x0 + PAD * 2, h = g.y1 - g.y0 + PAD * 2;
+        const part = document.createElementNS(NS, 'svg');
+        part.setAttribute('class', 'fl-part');
+        part.setAttribute('viewBox', `${x0} ${y0} ${w} ${h}`);
+        part.setAttribute('preserveAspectRatio', 'none');
+        part.style.left = ((x0 - vb.x) / vb.width * 100).toFixed(3) + '%';
+        part.style.top = ((y0 - vb.y) / vb.height * 100).toFixed(3) + '%';
+        part.style.width = (w / vb.width * 100).toFixed(3) + '%';
+        part.style.height = (h / vb.height * 100).toFixed(3) + '%';
+        if (g.key === 'C') {
+          // the finial at the centre: it rises rather than swings
+          part.style.transformOrigin = '50% 100%';
+        } else {
+          const right = g.key[0] === 'R';
+          part.style.transformOrigin = right ? '0% 50%' : '100% 50%';
+          part.style.setProperty('--r', (right ? -14 : 14) + 'deg');
+        }
+        part.style.setProperty('--d', Math.round(Math.pow(t, 0.8) * 620) + 'ms');
+        part.style.setProperty('--dc', Math.round(Math.pow(1 - t, 1.2) * 300) + 'ms');
+        for (const p of g.parts) part.appendChild(p);
+        wrap.appendChild(part);
+      }
+      svg.replaceWith(wrap);
     });
 
     if (!('IntersectionObserver' in window)) {
