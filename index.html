@@ -291,6 +291,34 @@
       pointer-events: none;
     }
 
+    /* The shelf the grove stands on: three slabs of the same glass as the
+       buttons, each a little narrower than the one above, so it reads as a
+       small cornice rather than a stretched pill. The grove script places
+       them where the paragraph ends. They sit under the canvas, so the trunks
+       paint over the top one and the ivy spills over the front of all three.
+       (Scoped to the column so `absolute` outranks the `relative` they share
+       with the buttons in the glass rules below.) */
+    .hero-lead .ledge {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      --gb: 9px;
+      transform-origin: 50% 0;
+    }
+
+    .has-intro .ledge {
+      opacity: 0;
+      transform: scaleX(0.55);
+      transition: opacity 640ms var(--ease), transform 900ms var(--ease);
+    }
+    .has-intro .ledge + .ledge { transition-delay: 90ms; }
+    .has-intro .ledge + .ledge + .ledge { transition-delay: 180ms; }
+    .is-lit .ledge { opacity: 1; transform: none; }
+
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -320,7 +348,8 @@
        by script and is simply absent everywhere else. What is left without it
        is the same pane minus the refraction, which is most of it. */
     .about-link,
-    .filter-btn {
+    .filter-btn,
+    .ledge {
       position: relative;
       isolation: isolate;
       /* A gradient rather than a flat fill and an inset highlight line: the
@@ -340,7 +369,8 @@
        the tint showed outside it — two pixels of edge where there should be
        one. There is no border now, and the ring is the outermost pixel. */
     .about-link::after,
-    .filter-btn::after {
+    .filter-btn::after,
+    .ledge::after {
       content: '';
       position: absolute;
       inset: 0;
@@ -1500,6 +1530,9 @@
   <header class="hero">
     <div class="hero-lead">
       <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
+      <div class="ledge" aria-hidden="true"></div>
+      <div class="ledge" aria-hidden="true"></div>
+      <div class="ledge" aria-hidden="true"></div>
       <canvas id="grove" aria-hidden="true"></canvas>
     </div>
 
@@ -2695,10 +2728,17 @@
     const nameEl = document.querySelector('.about-name');
     const bioEl = document.querySelector('.about-bio');
     const linksEl = document.querySelector('.about-links');
+    const ledgeEls = Array.from(document.querySelectorAll('.hero-lead .ledge'));
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34;
+    // The shelf under the grove: three slabs, each [height, inset from the
+    // ends of the one above], top to bottom. The top slab runs a little past
+    // the outermost slots; LEDGE_H is the whole stack.
+    const LEDGE_LAYERS = [[10, 0], [9, 12], [8, 26]];
+    const LEDGE_H = LEDGE_LAYERS.reduce((a, l) => a + l[0], 0);
+    const LEDGE_PAD = 8;
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const WIDE = window.matchMedia('(min-width: 901px)');   // matches the CSS breakpoint
@@ -3384,6 +3424,238 @@
     let W = 0, H = 0, dpr = 1;
     let moonX = 0, moonY = 0, moonR = 0;
 
+    // ── The shelf and its ivy ─────────────────────────────────────────────
+    // The grove stands on a thin pane of glass, and ivy hangs off the front
+    // of it — a fringe of strands, each a little different in length and
+    // curl, carrying small heart-shaped leaves, and all of it swinging on the
+    // same wind the trees answer to.
+    let ground = 0, ivyDrop = 0, ledgeX0 = 0, ledgeX1 = 0;
+    // Ivy on a balcony grows in the trough on top and spills over the rail.
+    // It does not hang as an even comb: from a few places along the shelf a
+    // clump of it heaps over the lip, and from each clump several vines trail
+    // down together, thin, at different lengths, fanning apart a little as
+    // they fall, one or two of them throwing off a side runner partway. The
+    // leaves are small against the length of the vine and well spaced along
+    // it; it is the vines that make the shape.
+    const IVY_TUFT = 50;        // px between clumps, roughly
+    const IVY_LEAF = 5.0;       // px, a leaf's length
+    const strands = [];         // { x, len, lean, phase, curl, twist, lag, w, parent, at, leaves: [t, side, size, tilt] }
+    const crowns = [];          // { x, leaves: [dx, dy, ang, size] } — the heap on the lip
+
+    function planIvy() {
+      strands.length = 0;
+      crowns.length = 0;
+      const span = ledgeX1 - ledgeX0;
+      if (span <= 0 || ivyDrop <= LEDGE_H + 4) return;
+      const inset = LEDGE_LAYERS[0][0] * 0.8;
+      const roots = Math.max(1, Math.round((span - inset * 2) / IVY_TUFT));
+      let id = 0;
+      const vine = (x, len, lean, salt, parent, at, w) => {
+        const s = {
+          x, len, lean, parent, at, w,
+          phase: hash(salt, 103) * Math.PI * 2,
+          curl: (hash(salt, 104) - 0.5) * 2,     // which way it bows, and how much
+          twist: 0.5 + hash(salt, 105) * 0.6,    // how many bends along its length
+          lag: hash(salt, 106) * 320,            // ms behind the gust
+          leaves: [],
+        };
+        // Leaves alternate sides, a leaf-length and a half or two apart. On
+        // a vine off the shelf they begin at once, since it comes out of the
+        // heap; on a runner a little way down.
+        let t = (parent ? 0.14 : 0.03) + hash(salt, 107) * 0.06;
+        let side = hash(salt, 109) > 0.5 ? 1 : -1, j = 0;
+        while (t < 0.98) {
+          s.leaves.push(t, side, 0.72 + hash(salt * 7 + j, 110) * 0.55, (hash(salt * 7 + j, 111) - 0.5) * 0.7);
+          t += (IVY_LEAF * (1.5 + hash(salt * 7 + j, 112) * 0.9)) / Math.max(12, len);
+          side = -side; j++;
+        }
+        strands.push(s);
+        return s;
+      };
+      for (let r = 0; r < roots; r++) {
+        // clumps wander off an even spacing, so they are irregular
+        const rx = ledgeX0 + inset + ((r + 0.5) / roots) * (span - inset * 2)
+                 + (hash(r, 101) - 0.5) * IVY_TUFT * 0.7;
+        // the heap on the lip: a handful of leaves piled just above the
+        // ground line, turned every which way, from which the vines fall
+        const crown = { x: rx, leaves: [] };
+        const cn = 4 + Math.floor(hash(r, 120) * 4);
+        for (let c = 0; c < cn; c++) {
+          crown.leaves.push((hash(r * 9 + c, 121) - 0.5) * 16, -1 - hash(r * 9 + c, 122) * 4,
+                            (hash(r * 9 + c, 123) - 0.5) * 2.6, 0.9 + hash(r * 9 + c, 124) * 0.5);
+        }
+        crowns.push(crown);
+        const count = 3 + Math.floor(hash(r, 113) * 3);        // 3..5 vines a clump
+        for (let k = 0; k < count; k++, id++) {
+          const x = rx + (hash(id, 114) - 0.5) * 12;
+          // in each clump one vine goes the whole way, and the rest trail
+          // shorter, so the hem is ragged and every clump has a leader
+          const len = ivyDrop * (k === 0 ? 0.96 + hash(id, 102) * 0.04
+                                         : 0.42 + Math.pow(hash(id, 102), 1.2) * 0.52);
+          // the vines of a clump fan apart as they fall
+          const lean = (hash(id, 118) - 0.5) * 20;
+          const s = vine(x, len, lean, id, null, 0, 0.8);
+          // often a runner leaves the vine partway down and hangs beside it,
+          // shorter and finer
+          if (hash(id, 115) < 0.5 && len > 30) {
+            const at = 0.22 + hash(id, 116) * 0.3;
+            vine(x, len * (1 - at) * (0.5 + hash(id, 117) * 0.45),
+                 (hash(id, 119) - 0.5) * 14, id + 1000, s, at, 0.6);
+          }
+        }
+      }
+    }
+
+    // One small ivy leaf, drawn pointing down +y from its stalk at the
+    // origin, three-lobed as ivy is: a heart with the shoulders pulled out.
+    // It is cut from the scrub's own palette so it always matches the bushes
+    // it grows out of, by night as by day, and re-baked as the light changes.
+    const IVY_S = IVY_LEAF;     // sprite is 2·IVY_S square
+    let ivySprite = null, ivyKey = '';
+    const ivyTone = (n, d) => `rgb(${Math.round(lerp(n[0], d[0], mix))},${Math.round(lerp(n[1], d[1], mix))},${Math.round(lerp(n[2], d[2], mix))})`;
+    function ivyLeafSprite() {
+      const key = Math.round(mix * 20) + ':' + dpr;
+      if (ivySprite && ivyKey === key) return ivySprite;
+      ivyKey = key;
+      const c = document.createElement('canvas');
+      const px = Math.round(IVY_S * 2 * dpr);
+      c.width = c.height = px;
+      const g = c.getContext('2d');
+      g.scale(px / (IVY_S * 2), px / (IVY_S * 2));
+      g.translate(IVY_S, IVY_S * 0.35);
+      const s = IVY_S * 0.62;
+      g.beginPath();
+      g.moveTo(0, -s * 0.05);
+      g.bezierCurveTo(-s * 0.55, -s * 0.45, -s * 1.15, s * 0.05, -s * 0.72, s * 0.42);
+      g.bezierCurveTo(-s * 0.55, s * 0.62, -s * 0.28, s * 0.85, 0, s * 1.15);
+      g.bezierCurveTo(s * 0.28, s * 0.85, s * 0.55, s * 0.62, s * 0.72, s * 0.42);
+      g.bezierCurveTo(s * 1.15, s * 0.05, s * 0.55, -s * 0.45, 0, -s * 0.05);
+      g.closePath();
+      // the same greens the scrub is painted in by day (see leaf()), and by
+      // night the greys its twigs are drawn in
+      const gr = g.createLinearGradient(-s, 0, s, 0);
+      gr.addColorStop(0, ivyTone([66, 66, 66], [48, 88, 38]));
+      gr.addColorStop(0.5, ivyTone([96, 96, 96], [64, 116, 50]));
+      gr.addColorStop(1, ivyTone([66, 66, 66], [48, 88, 38]));
+      g.fillStyle = gr;
+      g.fill();
+      g.strokeStyle = ivyTone([48, 48, 48], [34, 62, 28]);
+      g.lineWidth = 0.6;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(0, s * 0.95);
+      g.stroke();
+      return (ivySprite = c);
+    }
+
+    // Draw order puts this under the plants, so the scrub on the shelf sits
+    // over the heaps the vines come out of.
+    function drawIvy(now, grow) {
+      if (!strands.length || grow <= 0.001) return;
+      const breeze = reduced ? 0 : 1;
+      const sprite = ivyLeafSprite();
+      // the vine is a stalk in the scrub's darker tone; by night, like the
+      // trees, it is thin and carries next to nothing
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = ivyTone([56, 56, 56], [50, 68, 40]);
+      const night = mix < 0.5;
+      const leafA = 0.92;
+      const stamp = (x, y, ang, size) => {
+        const d = IVY_S * 2 * size, hd = d / 2;
+        const c = Math.cos(ang), sn = Math.sin(ang);
+        ctx.setTransform(dpr * c, dpr * sn, -dpr * sn, dpr * c, dpr * x, dpr * y);
+        ctx.drawImage(sprite, -hd, -hd * 0.35, d, d);
+      };
+      const K = 8;                              // segments per vine
+      for (const s of strands) {
+        // a runner starts where it left its parent, and hangs from there
+        let x0 = s.x, y0 = ground - 1, len = s.len * grow;
+        if (s.parent) {
+          const P = s.parent.pts;
+          if (!P || s.at > grow) continue;        // parent not there yet
+          const seg = Math.min(K - 1, Math.floor(s.at * K)), f = s.at * K - seg;
+          x0 = P[seg * 2] + (P[seg * 2 + 2] - P[seg * 2]) * f;
+          y0 = P[seg * 2 + 1] + (P[seg * 2 + 3] - P[seg * 2 + 1]) * f;
+        }
+        const w = windAt(now - s.lag, s.x);
+        // the whole vine swings on the slow swell, and the tail flutters
+        const swing = (w.swell * 0.7 + w.ripple * 0.5) * w.calm * breeze;
+        const flut = w.flutter * w.calm * breeze;
+        // A hanging vine bows more the further down it goes: sway grows with
+        // the square of the distance from the lip. The lean carries it out
+        // over the lip and then lets it fall straight; the curl is its own
+        // slow bend, so no two hang the same.
+        const pts = s.pts || (s.pts = new Float64Array((K + 1) * 2));
+        const amp = Math.min(3.5, len * 0.06);
+        for (let k = 0; k <= K; k++) {
+          const t = k / K;
+          const dx = swing * t * t * len * 0.30
+                   + flut * t * t * t * len * 0.18
+                   + s.lean * (2 * t - t * t)
+                   + Math.sin(t * Math.PI * s.twist + s.phase) * s.curl * amp * t;
+          pts[k * 2] = x0 + dx;
+          pts[k * 2 + 1] = y0 + t * len;
+        }
+        ctx.lineWidth = night ? s.w * 0.8 : s.w;
+        ctx.beginPath();
+        ctx.moveTo(pts[0], pts[1]);
+        for (let k = 1; k < K; k++) {
+          const mx = (pts[k * 2] + pts[k * 2 + 2]) / 2, my = (pts[k * 2 + 1] + pts[k * 2 + 3]) / 2;
+          ctx.quadraticCurveTo(pts[k * 2], pts[k * 2 + 1], mx, my);
+        }
+        ctx.lineTo(pts[K * 2], pts[K * 2 + 1]);
+        ctx.stroke();
+
+        // Leaves along it, each hanging off its own side and drooping a
+        // little, turned with the vine's local slope. By night only every
+        // other one is drawn — the vines are the drawing then, as the twigs
+        // are on the trees.
+        const L = s.leaves;
+        ctx.globalAlpha = leafA;
+        for (let j = 0; j < L.length; j += 4) {
+          const t = L[j];
+          if (t > grow) break;                    // not grown this far yet
+          if (night && ((j >> 2) & 1)) continue;
+          const side = L[j + 1], size = L[j + 2];
+          const seg = Math.min(K - 1, Math.floor(t * K)), f = t * K - seg;
+          const ax = pts[seg * 2], ay = pts[seg * 2 + 1], bx = pts[seg * 2 + 2], by = pts[seg * 2 + 3];
+          const slope = Math.atan2(by - ay, bx - ax) - Math.PI / 2;   // 0 when hanging straight
+          stamp(ax + (bx - ax) * f, ay + (by - ay) * f,
+                slope + side * (0.62 + L[j + 3]) + flut * 0.4 * t, size);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+
+      // the heaps on the lip, over the vines' tops so they seem to come out
+      // from under the leaves
+      ctx.globalAlpha = leafA * Math.min(1, grow * 1.5);
+      for (const c of crowns) {
+        const L = c.leaves;
+        for (let j = 0; j < L.length; j += 4) {
+          if (night && ((j >> 2) & 1)) continue;
+          stamp(c.x + L[j], ground + L[j + 1], L[j + 2], L[j + 3]);
+        }
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+
+    // A little shade under each trunk, so the plants stand on the glass
+    // rather than end at it.
+    function drawFootings() {
+      ctx.fillStyle = mix > 0.5 ? 'rgba(20,30,20,0.13)' : 'rgba(0,0,0,0.26)';
+      for (const t of trees) {
+        if (!t.sx || t.grow < 0.05) continue;
+        // it comes in with the trunk, and goes with it when the tree is pressed
+        const r = Math.max(2.5, t.width * 2.6) * Math.min(1, t.grow * 1.5);
+        ctx.beginPath();
+        ctx.ellipse(t.ox, ground + 0.6, r, 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     // Hold the pointer on the moon and it starts to edge away, at first so
     // slowly you could miss it. Keep after it and it picks up speed, until it
     // gives up on being polite and bolts across the sky. Let it be and it just
@@ -3420,14 +3692,20 @@
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Side by side, the canopy spans exactly the block it sits beside:
-      // the top of the name down to the foot of the profile buttons.
-      let top = BLEED_Y, treeBase = H - BLEED_Y;
-      if (WIDE.matches && nameEl && linksEl) {
+      // Side by side, the canopy spans the block it sits beside: the top of
+      // the name down to the end of the paragraph, where the shelf is. Below
+      // that the ivy takes over, and reaches the foot of the profile buttons.
+      let top = BLEED_Y, treeBase = H - BLEED_Y - 58, ivyEnd = H - BLEED_Y;
+      if (WIDE.matches && nameEl && bioEl && linksEl) {
         top = nameEl.getBoundingClientRect().top - rect.top;
-        treeBase = linksEl.getBoundingClientRect().bottom - rect.top;
+        treeBase = bioEl.getBoundingClientRect().bottom - rect.top;
+        ivyEnd = linksEl.getBoundingClientRect().bottom - rect.top;
       }
       const band = Math.max(40, treeBase - top);
+      ground = treeBase;
+      // the ivy grows on top of the shelf and spills over its front, so it
+      // is measured from the ground line, not from under the slabs
+      ivyDrop = Math.max(0, ivyEnd - ground);
 
       // sits high and left, so the canopies break across it
       // moonR is the sprite's half-size; the glow dies out by about 0.53 of
@@ -3494,6 +3772,22 @@
         planFoliage(t);
         x += slot + gap;
       });
+
+      // The shelf runs the width of the row, and the ivy hangs off its front.
+      ledgeX0 = edge - LEDGE_PAD;
+      ledgeX1 = W - edge + LEDGE_PAD;
+      // the elements live in the column, which the canvas bleeds past
+      let ly = treeBase - BLEED_Y;
+      LEDGE_LAYERS.forEach(([h, inset], i) => {
+        const el = ledgeEls[i];
+        if (!el) return;
+        el.style.left = (ledgeX0 + inset - BLEED_X) + 'px';
+        el.style.top = ly + 'px';
+        el.style.width = (ledgeX1 - ledgeX0 - inset * 2) + 'px';
+        el.style.height = h + 'px';
+        ly += h;
+      });
+      planIvy();
 
       // Scatter the scrub by rejection sampling: a candidate near a trunk is
       // usually thrown away, so it thins out under the trees and gathers in
@@ -3647,6 +3941,7 @@
         if (I.t0) {
           const u = Math.min(1, (now - I.t0) / I.dur);
           const e = 1 - Math.pow(1 - u, 3);
+          introEase = e;
           for (const p of plants) {
             const o = p.introOff;
             p.grow = 1 - Math.pow(1 - Math.max(0, (u - o) / (1 - o)), 3);
@@ -3708,6 +4003,14 @@
       pointer.y += (pointer.ty - pointer.y) * 0.055;
 
       const breeze = reduced ? 0 : 1;
+
+      // the ivy and the shade under the trunks go on before the plants, so
+      // the wood and the scrub sit over them
+      // the ivy waits for the shelf to have faded in and the first plants
+      // to have broken ground, then spills over during the rest
+      drawIvy(now, introing ? Math.max(0, (introEase - 0.28) / 0.72) : 1);
+      drawFootings();
+
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
@@ -3941,7 +4244,7 @@
     const easeInOut = e => (e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2);
 
     // ── opening state ──────────────────────────────────────────────────────
-    let introing = INTRO, introStarted = false, introWait = 0;
+    let introing = INTRO, introStarted = false, introWait = 0, introEase = 0;
     let introMoonX = 0, introMoonY = 0;
 
     // Called on the first frame of the opening, once the canvas has been laid
@@ -5095,6 +5398,9 @@
 
     const start = () => {
       document.body.appendChild(holder);
+      // not the shelf: its slabs are thinner than the bend band, so the map
+      // would only smear them, and three wide panes of SVG-filtered backdrop
+      // are the one thing here the GPU would feel
       document.querySelectorAll('.about-link, .filter-btn').forEach(glaze);
     };
     if (document.readyState === 'complete') start();
