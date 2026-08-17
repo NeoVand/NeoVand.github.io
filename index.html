@@ -1945,13 +1945,17 @@
           // has the whole viewport to spread over and no edge to be cut off
           // at. The first term goes well past 1.0, so it blows out to a white
           // core that no cloud can reach; the other two are the falloff —
-          // wider and redder when the sun is low.
+          // wider and redder when the sun is low. They are kept faint enough
+          // that, summed, they clear the clip only right at the core: any
+          // brighter and the sky goes flat white for some way out and the
+          // glow reads as a disc with an edge, rather than a light that
+          // simply thins with distance.
           vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
           vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
           vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
-          day += s1 * exp(-sd * 21.0) * (2.30 - uWarm * 0.6)
-               + s2 * exp(-sd *  8.0) * (0.72 + uWarm * 0.30)
-               + s3 * exp(-sd *  3.0) * (0.24 + uWarm * 0.34);
+          day += s1 * exp(-sd * 19.0) * (2.00 - uWarm * 0.6)
+               + s2 * exp(-sd *  5.5) * (0.34 + uWarm * 0.12)
+               + s3 * exp(-sd *  1.5) * (0.12 + uWarm * 0.14);
           // and the whole scene a shade dimmer toward the ends of the day
           day *= 1.0 - uWarm * 0.09;
           col += day * uMix;
@@ -3863,13 +3867,14 @@
       };
 
       // the corona, dead by the clip radius
-      paint(D * 0.8, R * 0.62, [
+      paint(D * 0.8, R * 0.80, [
         [0.00, 'rgba(255,246,204,0.30)'],
-        [0.11, 'rgba(255,239,180,0.175)'],
-        [0.24, 'rgba(255,231,154,0.090)'],
-        [0.39, 'rgba(255,223,132,0.042)'],
-        [0.56, 'rgba(255,216,116,0.016)'],
-        [0.74, 'rgba(255,211,104,0.004)'],
+        [0.11, 'rgba(255,239,180,0.190)'],
+        [0.24, 'rgba(255,231,154,0.110)'],
+        [0.39, 'rgba(255,223,132,0.058)'],
+        [0.56, 'rgba(255,216,116,0.026)'],
+        [0.74, 'rgba(255,211,104,0.009)'],
+        [0.88, 'rgba(255,209,100,0.002)'],
         [1.00, 'rgba(255,209,100,0)'],
       ]);
 
@@ -3892,17 +3897,19 @@
       }
       g.restore();
 
-      // the body: opaque in the middle, gone by a couple of disc radii, and
-      // never a hard boundary in between
-      paint(0, D * 2.1, [
+      // the body: opaque in the middle, gone by two and a half disc radii,
+      // and never a hard boundary in between — the flat core is kept small
+      // and the fall away from it long, so it thins rather than ends
+      paint(0, D * 2.6, [
         [0.00, 'rgba(255,255,252,1)'],
-        [0.28, 'rgba(255,254,242,1)'],
-        [0.42, 'rgba(255,249,218,0.94)'],
-        [0.54, 'rgba(255,241,186,0.68)'],
-        [0.66, 'rgba(255,231,152,0.38)'],
-        [0.78, 'rgba(255,221,126,0.170)'],
-        [0.89, 'rgba(255,214,108,0.052)'],
-        [0.96, 'rgba(255,211,100,0.011)'],
+        [0.18, 'rgba(255,254,242,1)'],
+        [0.30, 'rgba(255,250,224,0.90)'],
+        [0.42, 'rgba(255,244,198,0.66)'],
+        [0.54, 'rgba(255,236,168,0.42)'],
+        [0.66, 'rgba(255,227,140,0.24)'],
+        [0.78, 'rgba(255,219,118,0.110)'],
+        [0.89, 'rgba(255,213,104,0.038)'],
+        [0.96, 'rgba(255,211,100,0.009)'],
         [1.00, 'rgba(255,210,98,0)'],
       ]);
     }
