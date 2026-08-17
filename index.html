@@ -3693,12 +3693,17 @@
     let NTREES = 5 + Math.floor(Math.random() * (innerWidth < 600 ? 2 : 4));
     try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
     const shapes = TREES.map(expand);
-    const trees = Array.from({ length: NTREES }, () => {
-      const k = Math.floor(Math.random() * TREES.length);
-      // and stands a little taller or shorter than its kind, so the stand
+    // every species at least once, the rest drawn at random, in a shuffled
+    // order — so no two loads plant the same grove and none goes without
+    const kinds = TREES.map((_, k) => k);
+    while (kinds.length < NTREES) kinds.push(Math.floor(Math.random() * TREES.length));
+    while (kinds.length > NTREES) kinds.splice(Math.floor(Math.random() * kinds.length), 1);
+    for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
+    const trees = kinds.map(k => ({
+      // each stands a little taller or shorter than its kind, so the stand
       // has a skyline rather than a hedge's flat top
-      return { ...TREES[k], kind: 'tree', leafSpec: k, ...shapes[k], rise: TREES[k].rise * (0.72 + Math.random() * 0.28) };
-    });
+      ...TREES[k], kind: 'tree', leafSpec: k, ...shapes[k], rise: TREES[k].rise * (0.72 + Math.random() * 0.28),
+    }));
     // In a stand the crowns may overlap their neighbours' slots by this much
     // rather than being squeezed to fit — ?over= to try another
     let OVERLAP = 1.9;
@@ -4689,10 +4694,15 @@
       const edge = BLEED_X + 14;
       const n = trees.length;
       const gap = Math.max(6, W * 0.012);
-      const usable = (W - edge * 2) - gap * (n - 1);
-      const slot = usable / n;
+      // The slots are inset from the gutter by as much as a crown may
+      // overhang its slot, so the outermost trees have the same room to
+      // spread as the inner ones and are not cut off at the canvas edge:
+      // slot * (n + 2k) = usable width, with k the overhang each side.
+      const over = (OVERLAP - 1) / 2;
+      const slot = ((W - edge * 2) - gap * (n - 1)) / (n + 2 * over);
+      const inset = edge + slot * over;
 
-      fit = { edge, slot, gap, band, treeBase };
+      fit = { edge: inset, slot, gap, band, treeBase };
       fitTrees();
 
       // The shelf runs the width of the row, and the ivy hangs off its front.
