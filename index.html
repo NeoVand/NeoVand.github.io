@@ -959,6 +959,17 @@
       --sh: drop-shadow(0 3px 6px rgba(0,0,0,0.65)) drop-shadow(0 20px 38px rgba(0,0,0,0.6));
     }
 
+    /* Just closed from the reading room, with the pointer still where it
+       clicked: the deck would be hovered the instant the room went, and its
+       fan and shadow would swing out on their own transitions right after
+       the pages had landed. So hover is held off until the pointer moves. */
+    .deck.no-hover:hover .deck-fan,
+    .deck.no-hover:focus-visible .deck-fan { --fan: 5.5deg; }
+    .deck.no-hover:hover .deck-page,
+    .deck.no-hover:focus-visible .deck-page {
+      --sh: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 12px 22px rgba(0,0,0,0.5));
+    }
+
     .deck-meta {
       display: flex;
       flex-direction: column;
@@ -1623,6 +1634,10 @@
     .day .deck:hover .deck-page,
     .day .deck:focus-visible .deck-page {
       --sh: drop-shadow(0 2px 4px rgba(22,36,47,0.2)) drop-shadow(0 16px 30px rgba(22,36,47,0.18));
+    }
+    .day .deck.no-hover:hover .deck-page,
+    .day .deck.no-hover:focus-visible .deck-page {
+      --sh: drop-shadow(0 1px 2px rgba(22,36,47,0.16)) drop-shadow(0 10px 18px rgba(22,36,47,0.14));
     }
 
     .day .card:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 12px 28px rgba(22,36,47,0.16); }
@@ -6192,6 +6207,12 @@
       const deck = current;
       room.classList.remove('is-in');
       const finish = () => {
+        // hover stays off this deck until the pointer moves, so the fan does
+        // not swing out under a pointer that merely stayed where it clicked
+        deck.classList.add('no-hover');
+        const wake = () => { deck.classList.remove('no-hover'); removeEventListener('pointermove', wake); removeEventListener('keydown', wake); };
+        addEventListener('pointermove', wake);
+        addEventListener('keydown', wake);
         room.hidden = true;
         document.body.style.overflow = '';
         deck.querySelectorAll('.deck-page').forEach(p => { p.style.visibility = ''; });
