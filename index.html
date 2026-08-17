@@ -3612,6 +3612,13 @@
       let minX = ox, maxX = ox, minY = oy, maxY = oy;
       const s = p.str;
 
+      // The grammar is fixed; its reading is not. Each symbol carries its
+      // own small deviation — a turn a little wider or tighter, a segment a
+      // little longer or shorter, a branch that leans off its parent — drawn
+      // from the plant's seed (see reseed). So the same tree is never quite
+      // the same tree twice, and it is still, frame to frame, one tree.
+      const jA = p.jA, jL = p.jL, jB = p.jB;
+
       for (let i = 0; i < s.length; i++) {
         const c = s[i];
         if (c === 'F') {
@@ -3623,8 +3630,9 @@
           if (reach <= 0.001) continue;          // this level has receded away
           if (bend) a += bend(depth, x, y);
           const px = x, py = y;
-          x += Math.cos(a) * sx * reach;
-          y += Math.sin(a) * sy * reach;
+          const len = jL ? reach * jL[i] : reach;
+          x += Math.cos(a) * sx * len;
+          y += Math.sin(a) * sy * len;
           if (buckets) {
             // A segment with nothing drawn after it on this branch is a twig
             // end. Those are what carry the highlight — keyed off depth alone,
@@ -3655,9 +3663,9 @@
           }
           if (x < minX) minX = x; else if (x > maxX) maxX = x;
           if (y < minY) minY = y; else if (y > maxY) maxY = y;
-        } else if (c === '+') a += turn;
-        else if (c === '-') a -= turn;
-        else if (c === '[') { stack.push(x, y, a, depth); depth++; }
+        } else if (c === '+') a += jA ? turn * jA[i] : turn;
+        else if (c === '-') a -= jA ? turn * jA[i] : turn;
+        else if (c === '[') { stack.push(x, y, a, depth); depth++; if (jB) a += turn * jB[i]; }
         else if (c === ']') { depth = stack.pop(); a = stack.pop(); y = stack.pop(); x = stack.pop(); }
       }
       return { minX, maxX, minY, maxY };
@@ -3665,6 +3673,36 @@
 
     // leafSpec keys into FOLIAGE, so each species keeps its own leaf and green
     const trees = TREES.map((s, i) => ({ ...s, kind: 'tree', leafSpec: i, ...expand(s) }));
+
+    // How far a reading may stray from the letter of the grammar: turns by a
+    // fifth either way, segments by an eighth, and each branch leaning off
+    // its parent by up to a sixth of a turn. Enough that two growths of a
+    // tree are visibly two trees; not so much that a species loses its shape.
+    const VARY_TURN = 0.20, VARY_LEN = 0.125, VARY_LEAN = 0.16;
+
+    // Deal a tree a new reading of its grammar. Called once at load, and
+    // again whenever a tree has been drawn all the way back into the ground,
+    // so what grows back is a fresh individual of the same species. The
+    // tables are keyed by position in the string, which is also how a leaf
+    // keeps its state, so nothing else about the tree needs to know.
+    function reseed(p) {
+      const seed = Math.floor(Math.random() * 1e6);
+      const n = p.str.length;
+      const jA = new Float32Array(n), jL = new Float32Array(n), jB = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const c = p.str[i];
+        if (c === '+' || c === '-') jA[i] = 1 + (hash(i, seed) * 2 - 1) * VARY_TURN;
+        else if (c === 'F') jL[i] = 1 + (hash(i, seed + 1) * 2 - 1) * VARY_LEN;
+        else if (c === '[') jB[i] = (hash(i, seed + 2) * 2 - 1) * VARY_LEAN;
+      }
+      p.seed = seed; p.jA = jA; p.jL = jL; p.jB = jB;
+      // measured whole, however much of it is standing
+      const front = p.front, shrink = p.shrink;
+      p.front = undefined; p.shrink = undefined;
+      p.box = walk(p, 1, 1, 0, 0, null, null);
+      p.front = front; p.shrink = shrink;
+    }
+    trees.forEach(reseed);
 
     // one expansion, reused by every instance — only the transform differs
     const underShape = expand(UNDER_SPEC);
@@ -3694,7 +3732,7 @@
     const plants = undergrowth.concat(trees);
     undergrowth.forEach(u => { u.under = true; });
     plants.forEach((p, i) => {
-      p.box = walk(p, 1, 1, 0, 0, null, null);
+      if (!p.box) p.box = walk(p, 1, 1, 0, 0, null, null);
       p.stiff = 0.78 + hash(i, 12) * 0.44;   // how hard it answers the wind
       p.lag = hash(i, 13) * 800;             // ms behind the gust front
       p.tipSalt = 30 + i;                    // which twigs carry the highlight
@@ -4497,6 +4535,48 @@
     // itself — and can keep doing so once the grove has scrolled away.
     let groveOX = 0, groveOY = 0;
 
+    // The row's measure, kept from the last layout, so one tree can be
+    // re-fitted to its slot on its own when it has been dealt a new shape.
+    let fit = null;
+    function fitTrees(only) {
+      if (!fit) return;
+      const { edge, slot, gap, band, treeBase } = fit;
+      // How much narrowing the broadest species needs in order to still reach
+      // its target height. Deriving this from the band means the row re-fits
+      // itself when the text beside it reflows, instead of the widest tree
+      // quietly falling short of the title.
+      let needed = 1;
+      trees.forEach(t => {
+        const spanX = Math.max(1e-6, t.box.maxX - t.box.minX);
+        const spanY = Math.max(1e-6, -t.box.minY);
+        needed = Math.min(needed, (slot / spanX) / ((band * t.rise) / spanY));
+      });
+      const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
+
+      let x = edge;
+      trees.forEach(t => {
+        if (!only || t === only) {
+          const b = t.box;
+          const spanX = Math.max(1e-6, b.maxX - b.minX);
+          const spanY = Math.max(1e-6, -b.minY);
+
+          let sy = (band * t.rise) / spanY;
+          let sx = Math.min(sy, slot / spanX);
+          // Rather than let a broad species overlap its neighbour, narrow it.
+          if (sx < sy * ratio) sy = sx / ratio;
+
+          t.sx = sx; t.sy = sy;
+          t.ox = x + (slot - spanX * sx) / 2 - b.minX * sx;
+          t.oy = treeBase;
+          t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
+          t.tipWidth = Math.max(0.6, t.width * 0.24);
+          t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
+          planFoliage(t);
+        }
+        x += slot + gap;
+      });
+    }
+
     function layout() {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
@@ -4570,38 +4650,8 @@
       const usable = (W - edge * 2) - gap * (n - 1);
       const slot = usable / n;
 
-      // How much narrowing the broadest species needs in order to still reach
-      // its target height. Deriving this from the band means the row re-fits
-      // itself when the text beside it reflows, instead of the widest tree
-      // quietly falling short of the title.
-      let needed = 1;
-      trees.forEach(t => {
-        const spanX = Math.max(1e-6, t.box.maxX - t.box.minX);
-        const spanY = Math.max(1e-6, -t.box.minY);
-        needed = Math.min(needed, (slot / spanX) / ((band * t.rise) / spanY));
-      });
-      const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
-
-      let x = edge;
-      trees.forEach(t => {
-        const b = t.box;
-        const spanX = Math.max(1e-6, b.maxX - b.minX);
-        const spanY = Math.max(1e-6, -b.minY);
-
-        let sy = (band * t.rise) / spanY;
-        let sx = Math.min(sy, slot / spanX);
-        // Rather than let a broad species overlap its neighbour, narrow it.
-        if (sx < sy * ratio) sy = sx / ratio;
-
-        t.sx = sx; t.sy = sy;
-        t.ox = x + (slot - spanX * sx) / 2 - b.minX * sx;
-        t.oy = treeBase;
-        t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
-        t.tipWidth = Math.max(0.6, t.width * 0.24);
-        t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
-        planFoliage(t);
-        x += slot + gap;
-      });
+      fit = { edge, slot, gap, band, treeBase };
+      fitTrees();
 
       // The shelf runs the width of the row, and the ivy hangs off its front.
       ledgeX0 = edge - LEDGE_PAD;
@@ -4806,6 +4856,9 @@
             // how far it was drawn in sets how hard it springs out again,
             // so a tap gives a nudge and a long press gives a real bounce
             p.popAmp = POP_MAX * (1 - p.grow);
+            // drawn all the way back into the ground, with nothing left
+            // standing: what grows back is a new tree of the same kind
+            if (p.grow <= 0 && p.kind === 'tree') { reseed(p); fitTrees(p); }
           }
         }
 
