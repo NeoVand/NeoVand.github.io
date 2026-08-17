@@ -2751,7 +2751,10 @@
     // height — a button, not the row, which is taller whenever the row wraps
     // — so the stack stays flush with the buttons whatever size the page
     // gives them. The top slab runs a little past the outermost slots.
-    const LEDGE_N = 3, LEDGE_INSET = 12, LEDGE_PAD = 8;
+    // A long slab with straight edges reads heavier than a pill of the same
+    // height beside it, so the stack is drawn in from the button's top and
+    // bottom by a few pixels, centred on it, and only then looks a match.
+    const LEDGE_N = 3, LEDGE_INSET = 12, LEDGE_PAD = 8, LEDGE_TRIM = 3;
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
     const ledgeLayers = rowH => {
@@ -3728,9 +3731,10 @@
         const btn = linksEl.firstElementChild;
         const bh = btn ? btn.getBoundingClientRect().height : LEDGE_DEFAULT_H;
         top = nameEl.getBoundingClientRect().top - rect.top;
-        // the whole stack is one button's height, top edge on the row's top
-        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(bh));
-        treeBase = lr.top - rect.top;
+        // the whole stack is one button's height less the optical trim,
+        // centred on the row
+        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(bh) - LEDGE_TRIM * 2);
+        treeBase = lr.top - rect.top + LEDGE_TRIM;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
       const layers = ledgeLayers(LEDGE_H);
