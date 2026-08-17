@@ -1457,7 +1457,8 @@
          again on its way home */
       transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
                   filter 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
-                  box-shadow 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+                  box-shadow 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+                  border-radius 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
     }
     .room-fly img.paper { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45); }
     .day .room-fly img.paper { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
@@ -6136,12 +6137,19 @@
         // the transform that puts this double where its fan page is, and the
         // look the fan page has right now (inverted and shadowed by night)
         const pose = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${(f.w / r.width).toFixed(4)})`;
-        const look = getComputedStyle(f.el).filter;
+        const cs = getComputedStyle(f.el);
+        const look = cs.filter;
+        // the deck page's corner radius, in the double's own units: the
+        // double is scaled down at the deck's end, so its radius there must
+        // be the deck's divided by that scale to look the same
+        const sc = f.w / r.width;
+        const deckR = (parseFloat(cs.borderTopLeftRadius) || 10) / Math.max(0.05, sc) + 'px';
         d.style.transitionDelay = `${(toRoom ? i : FAN - 1 - i) * 36}ms`;
         d.style.transform = toRoom ? pose : 'none';
         d.style.filter = toRoom ? look : 'none';
+        d.style.borderRadius = toRoom ? deckR : '6px';
         d.classList.toggle('paper', !toRoom);
-        d.dataset.pose = pose; d.dataset.look = look;
+        d.dataset.pose = pose; d.dataset.look = look; d.dataset.deckR = deckR;
         flyLayer.appendChild(d);
         doubles.push(d);
       }
@@ -6152,6 +6160,7 @@
       for (const d of doubles) {
         d.style.transform = toRoom ? 'none' : d.dataset.pose;
         d.style.filter = toRoom ? 'none' : d.dataset.look;
+        d.style.borderRadius = toRoom ? '6px' : d.dataset.deckR;
         d.classList.toggle('paper', toRoom);
       }
       setTimeout(() => {
