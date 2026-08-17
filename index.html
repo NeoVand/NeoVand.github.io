@@ -259,7 +259,8 @@
       margin: 0 auto;
       padding: 80px 24px 64px;
       display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      /* half and half: the grove gets as much room as the words */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 64px;
       /* stretch, so the grove column is exactly as tall as the About column */
       align-items: stretch;
@@ -1289,10 +1290,16 @@
       --gb: 15px;
     }
 
-    /* the narrow end of the side-by-side layout: tighter pills, still one row */
-    @media (min-width: 901px) and (max-width: 1060px) {
-      .about-links { gap: 7px; }
-      .about-link { padding: 10px 10px; font-size: 12.5px; gap: 6px; }
+    /* the narrow end of the side-by-side layout: tighter pills, still one
+       row. At full size the four need ~500px; the column has that from
+       about 1110px up, and 395px at the very bottom of the range. */
+    @media (min-width: 901px) and (max-width: 1110px) {
+      .about-links { gap: 8px; }
+      .about-link { padding: 10px 12px; font-size: 12.5px; gap: 6px; }
+    }
+    @media (min-width: 901px) and (max-width: 1000px) {
+      .about-links { gap: 6px; }
+      .about-link { padding: 10px 8px; font-size: 12px; gap: 5px; }
     }
 
     .about-link svg {
