@@ -276,8 +276,9 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* bleeds past the column so swaying branches are never clipped;
-       BLEED_X / BLEED_Y in the grove script must match these */
+    /* bleeds past the column so swaying branches are never clipped, and
+       further below it, into the gap under the buttons, for the ivy to hang
+       in; BLEED_X / BLEED_Y / BLEED_BOTTOM in the grove script must match */
     /* sized with calc, not opposing insets: a canvas is a replaced element,
        so width:auto would fall back to its intrinsic size and feed back into
        the resize observer */
@@ -286,7 +287,7 @@
       top: -34px;
       left: -14px;
       width: calc(100% + 28px);
-      height: calc(100% + 68px);
+      height: calc(100% + 98px);
       display: block;
       pointer-events: none;
     }
@@ -2732,7 +2733,7 @@
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
-    const BLEED_X = 14, BLEED_Y = 34;
+    const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
     // The shelf under the grove: three slabs, each [height, inset from the
     // ends of the one above], top to bottom. The top slab runs a little past
     // the outermost slots; LEDGE_H is the whole stack.
@@ -3693,13 +3694,16 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Side by side, the canopy spans the block it sits beside: the top of
-      // the name down to the end of the paragraph, where the shelf is. Below
-      // that the ivy takes over, and reaches the foot of the profile buttons.
-      let top = BLEED_Y, treeBase = H - BLEED_Y - 58, ivyEnd = H - BLEED_Y;
-      if (WIDE.matches && nameEl && bioEl && linksEl) {
+      // the name down to the row of profile buttons, which the shelf lines
+      // up with — the slabs centred on the row, so trunks and buttons stand
+      // on the same line. Below that the ivy takes over, and hangs into the
+      // gap under the buttons, stopping short of the filters.
+      let top = BLEED_Y, treeBase = H - BLEED_BOTTOM - 62, ivyEnd = H - BLEED_BOTTOM;
+      if (WIDE.matches && nameEl && linksEl) {
+        const lr = linksEl.getBoundingClientRect();
         top = nameEl.getBoundingClientRect().top - rect.top;
-        treeBase = bioEl.getBoundingClientRect().bottom - rect.top;
-        ivyEnd = linksEl.getBoundingClientRect().bottom - rect.top;
+        treeBase = lr.top - rect.top + Math.max(0, (lr.height - LEDGE_H) / 2);
+        ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
       const band = Math.max(40, treeBase - top);
       ground = treeBase;
