@@ -313,6 +313,16 @@
       transform-origin: 50% 100%;
     }
 
+    /* By night the buttons' liquid rim — a bright gradient ring and a lit
+       top — is too much on twenty-seven small bricks: every one glints, and
+       together they turn to clutter. So at night a brick is plainer than a
+       button: one flat tint, a hairline, and a faint even ring. */
+    html:not(.day) .hero-lead .ledge {
+      background: rgba(255,255,255,0.075);
+      box-shadow: 0 0 0 0.5px rgba(0,0,0,0.28);
+    }
+    html:not(.day) .hero-lead .ledge::after { background: rgba(255,255,255,0.13); }
+
     /* Laid one at a time during the opening: bottom course first, each course
        from the middle out, every brick rising a little into its place. --bd
        is the brick's turn, set by the script. */
@@ -4613,15 +4623,20 @@
     const canvas = document.getElementById('pull-canvas');
     if (!host || !canvas) return;
     const ctx = canvas.getContext('2d');
+    const hero = document.querySelector('.hero');
 
-    const N = 16;              // beads, anchor included
-    const SEG = 9.2;           // rest length between beads
+    const N = 14;              // beads, anchor included
+    const SEG = 7.6;           // rest length between beads
     const GRAV = 1500;         // px/s²
-    const DAMP = 0.78;         // share of velocity kept per second; light, so it swings itself out slowly
-    const ITER = 12;           // constraint passes; fewer = stretchier
-    const STIFF = 0.82;
-    const TRIP = 58;           // how far past rest the knob must travel
-    const KNOB = 8.2;
+    // Share of velocity kept per second. Sideways it swings itself out over
+    // a few seconds; up and down it is damped hard, because a cord that
+    // keeps bobbing on its own stretch after you have let go is a
+    // distraction, not a pendulum. Between them it comes to a still hang.
+    const DAMP = 0.62, DAMP_Y = 0.02;
+    const ITER = 16;           // constraint passes; fewer = stretchier
+    const STIFF = 0.9;
+    const TRIP = 52;           // how far past rest the knob must travel
+    const KNOB = 7.4;
 
     let W = 0, H = 0, ax = 0, ay = 0;
     const px = new Float64Array(N), py = new Float64Array(N);
@@ -4637,8 +4652,16 @@
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      // the anchor sits in from the top-right corner, closer in on a phone
-      const nax = W - (W <= 600 ? 50 : 80);
+      // The anchor sits in from the top-right corner. Side by side with the
+      // text, the cord would hang over the paragraph's right end, so where
+      // the page leaves a gutter beside the content the cord moves out into
+      // it; where it does not, it keeps as close to the edge as it can, and
+      // is short enough to hang above the first line.
+      const hr = hero ? hero.getBoundingClientRect() : null;
+      const gutter = hr ? W - hr.right : 0;
+      const nax = W <= 600 ? W - 50
+                : gutter >= 64 ? Math.min(W - 40, hr.right + gutter * 0.5)
+                : W - 44;
       ay = -6;
       if (!ready) {
         ax = nax;
@@ -4656,9 +4679,9 @@
     function step(dt) {
       // verlet; the drag is taken per second, so a fast screen does not
       // stop the cord any sooner than a slow one
-      const damp = Math.pow(DAMP, dt);
+      const damp = Math.pow(DAMP, dt), dampY = Math.pow(DAMP_Y, dt);
       for (let i = 1; i < N; i++) {
-        const vx = (px[i] - ox[i]) * damp, vy = (py[i] - oy[i]) * damp;
+        const vx = (px[i] - ox[i]) * damp, vy = (py[i] - oy[i]) * dampY;
         ox[i] = px[i]; oy[i] = py[i];
         px[i] += vx;
         py[i] += vy + GRAV * dt * dt;
@@ -4726,7 +4749,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = cord;
-      ctx.lineWidth = 1.8;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.moveTo(px[0], py[0]);
       for (let i = 1; i < N - 1; i++) {
