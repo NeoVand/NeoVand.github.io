@@ -1449,16 +1449,17 @@
       color: var(--muted);
       letter-spacing: 0.04em;
     }
-    /* pages beyond the deck's five arrive after them, from a little below */
+    /* pages beyond the deck's five arrive after them, from a little below —
+       and only once each is decoded, so none comes up as blank paper */
     .room-page.late img { opacity: 0; transform: translateY(14px); }
-    .room.is-in .room-page.late img {
+    .room.is-in .room-page.late.ready img {
       opacity: 1; transform: none;
       transition: opacity 420ms var(--ease) var(--pd, 300ms), transform 520ms var(--ease) var(--pd, 300ms);
     }
     /* the pages in flight: doubles in a layer over the whole room, so they
        are never clipped by the stream's box on their way in or out */
     .room-fly { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
-    .room-fly img {
+    .room-fly .dbl {
       position: absolute;
       display: block;
       object-fit: cover;
@@ -1476,8 +1477,8 @@
                   box-shadow 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
                   border-radius 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
     }
-    .room-fly img.paper { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45); }
-    .day .room-fly img.paper { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
+    .room-fly .dbl.paper { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45); }
+    .day .room-fly .dbl.paper { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
 
     @media (max-width: 700px) {
       .room-head { padding: 56px 20px 12px; }
@@ -1486,7 +1487,7 @@
       .room-page { scroll-margin-left: 20px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .room-backdrop, .room-head, .room-page img, .room-page.late img, .room-fly img { transition: none !important; }
+      .room-backdrop, .room-head, .room-page img, .room-page.late img, .room-fly .dbl { transition: none !important; }
       .room-page.late img { opacity: 1; transform: none; }
     }
 
@@ -6081,7 +6082,10 @@
       for (const e of entries) {
         if (!e.isIntersecting) continue;
         const img = e.target;
-        if (img.dataset.src) { img.src = img.dataset.src; delete img.dataset.src; }
+        if (img.dataset.src) {
+          img.src = img.dataset.src; delete img.dataset.src;
+          decoded(img).then(() => img.parentElement.classList.add('ready'));
+        }
         lazy.unobserve(img);
       }
     }, { root: stream, rootMargin: '0px 600px 0px 600px' });
@@ -6126,6 +6130,9 @@
         fig.append(img, num);
         pagesEl.appendChild(fig);
         if (i > FAN + 2) lazy.observe(img);
+        // a late page rises only once it is decoded, so it never comes up
+        // blank and fills in a moment later
+        else if (i > FAN) decoded(img).then(() => fig.classList.add('ready'));
       }
     }
 
@@ -6138,6 +6145,7 @@
     // are shown or hidden underneath as the doubles arrive or leave.
     const flyLayer = $('.room-fly');
     function fly(deck, toRoom, done) {
+      endHold();
       const fan = fanRects(deck);
       const imgs = [...pagesEl.querySelectorAll('.room-page img')].slice(0, FAN);
       const fanPages = [...deck.querySelectorAll('.deck-page')];
@@ -6149,9 +6157,8 @@
         const img = imgs[i], f = fan[i];
         if (!f) continue;
         const r = img.getBoundingClientRect();
-        const d = document.createElement('img');
-        d.src = f.el.currentSrc || f.el.src;
-        d.alt = '';
+        const d = makeDouble(f.el, r.width, r.height);
+        d.className = 'dbl';
         d.style.left = r.left + 'px'; d.style.top = r.top + 'px';
         d.style.width = r.width + 'px'; d.style.height = r.height + 'px';
         // the transform that puts this double where its fan page is, and the
@@ -6187,12 +6194,87 @@
         d.style.borderRadius = toRoom ? '6px' : d.dataset.deckR;
         d.classList.toggle('paper', toRoom);
       }
+      // The hand-over. The pages underneath must be decoded before the
+      // doubles leave, or the swap paints a frame of blank paper where the
+      // image has not landed yet — that read as a flash at the very end of
+      // the flight. And on the way in the doubles fade over the real pages
+      // rather than vanishing, so the change from the deck's small image
+      // to the room's sharp one is a blend and not a cut. Coming home the
+      // fan's pages are the very images the doubles carry, so there is
+      // nothing to blend and the swap is exact.
+      const under = toRoom ? imgs : fanPages;
+      const ready = Promise.all(under.map(decoded));
+      // patient, but not forever: on a slow line the deck's own images stand
+      // in for a while, then the pages come up as they are
+      const patient = new Promise(r => setTimeout(r, toRoom ? 8000 : 1500));
       setTimeout(() => {
-        flyLayer.innerHTML = '';
-        if (toRoom) imgs.forEach(img => { img.style.visibility = ''; });
-        else fanPages.forEach(p => { p.style.visibility = ''; });
+        if (!toRoom) {
+          Promise.race([ready, patient]).then(() => requestAnimationFrame(() => {
+            under.forEach(im => { im.style.visibility = ''; });
+            flyLayer.innerHTML = '';
+            done && done();
+          }));
+          return;
+        }
+        // the motion is over and the room can be closed from here on; the
+        // doubles hold their places until the pages beneath are ready, and
+        // if the room is closed before then, the hold ends then and there
         done && done();
+        let held = true;
+        const swap = () => {
+          if (!held) return;
+          held = false; holding = null;
+          under.forEach(im => { im.style.visibility = ''; });
+          for (const d of doubles) {
+            // the shadow goes at once — the real page's identical one is now
+            // beneath — and the paper itself dissolves into the real page
+            d.style.transition = 'opacity 180ms linear';
+            d.classList.remove('paper');
+            d.style.opacity = '0';
+          }
+          setTimeout(() => { if (doubles[0].parentNode === flyLayer) flyLayer.innerHTML = ''; }, 200);
+        };
+        holding = swap;
+        Promise.race([ready, patient]).then(() => requestAnimationFrame(swap));
       }, 620 + FAN * 36 + 40);
+    }
+    // the hand-over waiting on its pages, if one is; called to end it early
+    let holding = null;
+    function endHold() { const h = holding; holding = null; h && h(); }
+
+    // A double of a fan page: a canvas painted from the page's own image, so
+    // it needs nothing from the network and is whole the instant it is made.
+    // A fresh <img> of the same URL is not: once the file's cache life has
+    // run out the browser goes back to the server to ask whether it has
+    // changed, and the double flies as blank paper until the answer comes.
+    // Only if the fan page itself has not loaded is an <img> used instead.
+    function makeDouble(src, w, h) {
+      if (src.complete && src.naturalWidth) {
+        const c = document.createElement('canvas');
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+        const g = c.getContext('2d');
+        // object-fit: cover, top centre — as the pages themselves are shown
+        const s = Math.max(c.width / src.naturalWidth, c.height / src.naturalHeight);
+        const dw = src.naturalWidth * s, dh = src.naturalHeight * s;
+        g.drawImage(src, (c.width - dw) / 2, 0, dw, dh);
+        return c;
+      }
+      const d = document.createElement('img');
+      d.src = src.currentSrc || src.src;
+      d.alt = '';
+      return d;
+    }
+
+    // A promise for an image being decoded and ready to paint, whatever the
+    // browser offers: decode() where it exists, else the load event.
+    function decoded(img) {
+      if (img.decode) return img.decode().catch(() => {});
+      return new Promise(r => {
+        if (img.complete) return r();
+        img.addEventListener('load', r, { once: true });
+        img.addEventListener('error', r, { once: true });
+      });
     }
 
     function open(deck) {
@@ -6203,11 +6285,14 @@
       room.hidden = false;
       document.body.style.overflow = 'hidden';
       stream.scrollLeft = 0;
-      if (!reduced) { flying = true; fly(deck, true, () => { flying = false; }); }
-      requestAnimationFrame(() => room.classList.add('is-in'));
-      // is the abstract clipped?
+      // is the abstract clipped? Settled before the flight is measured: the
+      // button's line changes the head's height, and with it the size and
+      // place of every page in the stream, and the doubles must fly to where
+      // the pages will be, not where they were a moment before
       more.hidden = abstract.scrollHeight <= abstract.clientHeight + 2;
       more.textContent = 'Read the whole abstract';
+      if (!reduced) { flying = true; fly(deck, true, () => { flying = false; }); }
+      requestAnimationFrame(() => room.classList.add('is-in'));
       room.focus({ preventScroll: true });
     }
 
