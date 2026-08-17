@@ -4680,8 +4680,15 @@
       // verlet; the drag is taken per second, so a fast screen does not
       // stop the cord any sooner than a slow one
       const damp = Math.pow(DAMP, dt), dampY = Math.pow(DAMP_Y, dt);
+      // Below a crawl the chain is nothing but its own jitter — beads working
+      // against the constraints at fractions of a pixel — so anything that
+      // slow is treated as friction would treat it, and stopped inside a
+      // quarter of a second. A real swing is only that slow at the ends of
+      // its arc, and loses next to nothing there.
+      const crawl = 18 * dt, creep = Math.pow(0.03, dt);
       for (let i = 1; i < N; i++) {
-        const vx = (px[i] - ox[i]) * damp, vy = (py[i] - oy[i]) * dampY;
+        let vx = (px[i] - ox[i]) * damp, vy = (py[i] - oy[i]) * dampY;
+        if (vx * vx + vy * vy < crawl * crawl) { vx *= creep; vy *= creep; }
         ox[i] = px[i]; oy[i] = py[i];
         px[i] += vx;
         py[i] += vy + GRAV * dt * dt;
