@@ -6153,12 +6153,16 @@
         // look the fan page has right now (inverted and shadowed by night)
         const pose = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${(f.w / r.width).toFixed(4)})`;
         const cs = getComputedStyle(f.el);
-        const look = cs.filter;
-        // the deck page's corner radius, in the double's own units: the
-        // double is scaled down at the deck's end, so its radius there must
-        // be the deck's divided by that scale to look the same
-        const sc = f.w / r.width;
-        const deckR = (parseFloat(cs.borderTopLeftRadius) || 10) / Math.max(0.05, sc) + 'px';
+        // The double is scaled down at the deck's end, and everything drawn
+        // in its own units scales with it — its corner radius, and the
+        // offsets and blur of its drop-shadows. So the deck page's radius and
+        // shadows are divided by that scale for the double, and come out the
+        // deck's true size once scaled; without this the shadows and corners
+        // snapped to size at the hand-over.
+        const sc = Math.max(0.05, f.w / r.width);
+        const look = cs.filter.replace(/drop-shadow\(([^()]*(?:\([^()]*\))?[^()]*)\)/g,
+          (m, inner) => 'drop-shadow(' + inner.replace(/(-?\d*\.?\d+)px/g, (mm, v) => (parseFloat(v) / sc).toFixed(2) + 'px') + ')');
+        const deckR = (parseFloat(cs.borderTopLeftRadius) || 10) / sc + 'px';
         d.style.transitionDelay = `${(toRoom ? i : FAN - 1 - i) * 36}ms`;
         d.style.transform = toRoom ? pose : 'none';
         d.style.filter = toRoom ? look : 'none';
