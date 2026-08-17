@@ -755,6 +755,12 @@
        painted at once. Items in the same row ripple across rather than landing
        together, which reads as arriving with the divider above them. */
     .reveal { opacity: 0; transform: translateY(14px); }
+    /* and the same from the first style, before the script below has taken
+       them over: a page painted while it is still arriving would otherwise
+       show them and then blink them out a moment later */
+    .has-intro .card:not(.in):not(.landed),
+    .has-intro .deck:not(.in):not(.landed),
+    .has-intro .rcard:not(.in):not(.landed) { opacity: 0; transform: translateY(14px); }
 
     /* Doubled up on purpose. Cards further down the sheet declare their own
        transition for hover, which replaces this one wholesale and leaves
@@ -804,6 +810,9 @@
     }
 
     #pull.tugging { cursor: grabbing; }
+    /* it comes down with the rest of the opening, not before it */
+    .has-intro #pull-canvas { opacity: 0; transition: opacity 700ms var(--ease); }
+    .is-lit #pull-canvas { opacity: 1; }
 
     /* ─── SECTION FLOURISH ─── */
     /* A calligraphic divider that draws itself outward from the middle when it
@@ -1753,6 +1762,323 @@
   <!-- The sky the whole page sits in: drifting cloud by day, stars and the
        occasional meteor by night. Behind everything, and inert. -->
   <canvas id="sky" aria-hidden="true"></canvas>
+
+  <script>
+  // ─── The sky ──────────────────────────────────────────────────────────────
+  // One full-screen fragment shader behind the whole document. By day it is a
+  // drifting cloudscape built from a gyroid FBM — the same family of noise as
+  // Leon Denise's "Cloudy Blue Sky", but with the scrolling blue-noise texture
+  // replaced by a third smooth octave, so the cloud edges dissolve instead of
+  // fizzing, and with no texture to download. By night the same canvas carries
+  // a star field, a faint band of galaxy, and a meteor every so often.
+  //
+  // It runs first, from up here, so it is up before anything is drawn over
+  // it: the opening below waits on __sky.ready, and the page comes up as one
+  // piece rather than a flat ground with a sun on it and then, a moment
+  // later, the sky.
+  (() => {
+    let skyUp = null;
+    window.__sky = { lit: false, ready: new Promise(r => { skyUp = r; }) };
+    const up = () => { window.__sky.lit = true; skyUp(); };
+
+    const cv = document.getElementById('sky');
+    if (!cv) { up(); return; }
+
+    let gl = null;
+    try {
+      gl = cv.getContext('webgl', {
+        alpha: false, antialias: false, depth: false, stencil: false,
+        powerPreference: 'low-power', preserveDrawingBuffer: false,
+      });
+    } catch (e) { /* falls back to the flat --bg underneath */ }
+    if (!gl) { up(); return; }
+
+    const VERT = `
+      attribute vec2 a;
+      void main(){ gl_Position = vec4(a, 0.0, 1.0); }
+    `;
+
+    const FRAG = `
+      precision highp float;
+      uniform vec2  uRes;
+      uniform float uTime;
+      uniform float uMix;    // 0 night .. 1 day
+      uniform vec2  uSun;    // where the sun is, in p-units, so the cloud lights up under it
+      uniform float uWarm;   // 0 at noon .. 1 with the sun on the horizon
+
+      // Gyroid, as explained by Martijn Steinrucken. Two trig calls buy a
+      // pattern with far more structure than value noise of the same cost.
+      float gyroid(vec3 p){ return dot(sin(p), cos(p.yzx)); }
+
+      // Four octaves, each displaced along z by the sum so far, which is what
+      // bends the layers into something cloud-shaped rather than blobby.
+      float fbmG(vec3 p, float t, float w, float aa){
+        float r = 0.0, a = 0.5;
+        for (int i = 0; i < 4; i++){
+          p.z += t + r * w;
+          r += abs(gyroid(p / a)) * a;
+          a /= aa;
+        }
+        return r;
+      }
+
+      float h21(vec2 p){
+        vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+        q += dot(q, q.yzx + 33.33);
+        return fract((q.x + q.y) * q.z);
+      }
+
+      // ── stars ──
+      // Three sheets of cells; each cell may hold one star, jittered off centre
+      // so the grid never shows. Radii are measured in p-units, so a star is
+      // the same size on screen whatever the device pixel ratio.
+      // band is how deep into the galaxy this pixel sits: it lowers the bar
+      // for a cell holding a star, so the Milky Way arrives as a crowd of
+      // stars rather than a grey smear painted over them.
+      vec3 starField(vec2 p, float t, float band){
+        vec3 acc = vec3(0.0);
+        for (int i = 0; i < 3; i++){
+          float fi = float(i);
+          float dens = 10.0 + fi * 12.0;
+          vec2 g = p * dens;
+          vec2 id = floor(g);
+          vec2 f  = fract(g) - 0.5;
+          float h  = h21(id + fi * 31.7);
+          float on = step(0.855 + fi * 0.045 - band * 0.09, h);
+          vec2 off = vec2(h21(id + fi * 7.1 + 2.3), h21(id + fi * 7.1 + 5.9)) - 0.5;
+          float d  = length(f - off * 0.72) / dens;
+          float core = exp(-d * (760.0 - fi * 90.0));
+          float halo = exp(-d * 190.0) * 0.07;
+          float tw   = 0.45 + 0.55 * sin(t * (0.5 + h * 1.7) + h * 63.0);
+          float lum  = (0.18 + 0.62 * h21(id + fi * 13.3)) * (1.0 - fi * 0.32);
+          vec3 tint  = mix(vec3(0.74, 0.83, 1.0), vec3(1.0, 0.91, 0.76), h21(id + fi * 3.7));
+          acc += tint * (core + halo) * on * tw * lum;
+        }
+        return acc;
+      }
+
+      // ── a meteor ──
+      // Time is cut into slots; most slots stay empty, and the ones that fire
+      // draw a tapered streak that brightens in and dies out.
+      vec3 meteor(vec2 p, float t, float seed){
+        float ts   = t / 26.0 + seed;
+        float slot = floor(ts), lt = fract(ts);
+        float h    = h21(vec2(slot, seed + 1.0));
+        float live = step(0.62, h) * step(lt, 0.045);
+        float u    = lt / 0.045;                      // 0..1 across ~1.2s of flight
+        vec2  a    = vec2(mix(-1.9, 1.5, h21(vec2(slot, seed + 3.0))),
+                          mix( 0.35, 1.05, h21(vec2(slot, seed + 5.0))));
+        float ang  = mix(-1.05, -0.45, h21(vec2(slot, seed + 8.0)));
+        vec2  dir  = vec2(cos(ang), sin(ang));
+        vec2  head = a + dir * (u * 2.2);
+        vec2  tail = head - dir * (0.20 + 0.12 * h);
+        vec2  pa = p - tail, ba = head - tail;
+        float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
+        float d  = length(pa - ba * hh);
+        float streak = exp(-d * 1100.0) + exp(-d * 320.0) * 0.10;
+        return streak * pow(hh, 2.6) * sin(u * 3.14159) * live * vec3(0.86, 0.92, 1.0) * 0.65;
+      }
+
+      void main(){
+        vec2 uv = gl_FragCoord.xy / uRes;                       // 0 at the bottom
+        vec2 p  = (gl_FragCoord.xy - uRes * 0.5) * 2.0 / uRes.y;
+
+        vec3 col = vec3(0.0);
+
+        if (uMix < 0.999) {
+          // ── night ──
+          vec3 sky = mix(vec3(0.043, 0.055, 0.086), vec3(0.016, 0.020, 0.039),
+                         smoothstep(-0.10, 1.05, uv.y));
+          // a band of galaxy, laid across the diagonal: mottled where it is
+          // thick, and mostly made of the stars it crowds together
+          vec2 mp = vec2(p.x * 0.90 + p.y * 0.44, -p.x * 0.44 + p.y * 0.90);
+          float band = exp(-pow((mp.y + 0.22) * 2.6, 2.0));
+          float neb  = smoothstep(0.34, 1.00, fbmG(vec3(mp * 4.2, 0.0), uTime * 0.004, 0.25, 1.9));
+          band *= 0.30 + 0.70 * neb;
+          sky += band * vec3(0.016, 0.018, 0.030);
+          sky += starField(p, uTime, band);
+          sky += meteor(p, uTime, 0.0);
+          col += sky * (1.0 - uMix);
+        }
+
+        if (uMix > 0.001) {
+          // ── day ──
+          // the 1/uv.y term is the perspective: cloud detail compresses and
+          // runs faster the closer it gets to the horizon
+          float t = uTime * 0.016 - 0.2 / max(uv.y, 0.05);
+          vec3 q = vec3(p * 1.15, 0.0);                         // smaller, more of them
+          q.y += fbmG(q * 10.0, -t * 3.0, 0.0, 1.9) * 0.07;     // fine relief
+          float c = fbmG(q, t, 0.3, 1.7) * 0.5 - 0.5;           // the shapes
+          // The reference dissolves the cloud edge with scrolling blue noise,
+          // which is lovely at 60fps and pure static at anything less. Its mean
+          // is all that is kept; the edge is softened with a wider threshold
+          // instead, which is the same picture without the fizz.
+          c += 0.00;
+          c *= smoothstep(0.02, 0.46, uv.y);                    // clear toward the horizon
+
+          // Low sun: the horizon goes amber and the zenith a deeper, duller
+          // blue, the way the sky does when the light comes through more air.
+          vec3 hor = mix(vec3(0.690, 0.805, 0.905), vec3(0.960, 0.760, 0.560), uWarm);
+          vec3 zen = mix(vec3(0.350, 0.565, 0.780), vec3(0.330, 0.440, 0.660), uWarm * 0.7);
+          vec3 sky = mix(hor, zen, smoothstep(-0.15, 0.95, uv.y));
+
+          float sd = length(p - uSun);
+
+          // Cloud tops stop short of white. Nothing in a sky is allowed to be
+          // brighter than the sun, and a cloud painted at 1.0 was — which is
+          // why the sun read as the dimmer of the two. What a cloud does get
+          // is the sun's own light: the nearer it sits, the warmer and the
+          // brighter it goes, so the two belong to the same picture. Near
+          // dawn and dusk that light is amber, and the shaded cloud goes a
+          // little mauve against it.
+          vec3 shade = mix(vec3(0.700, 0.765, 0.845), vec3(0.720, 0.680, 0.780), uWarm);
+          vec3 lit   = mix(vec3(1.0, 0.985, 0.945), vec3(1.0, 0.860, 0.700), uWarm);
+          vec3 cloud = mix(shade, vec3(0.945, 0.955, 0.970), smoothstep(0.02, 0.34, c));
+          cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15));
+          vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
+
+          // The sun itself lives here rather than on the grove canvas: the sky
+          // has the whole viewport to spread over and no edge to be cut off
+          // at. The first term goes well past 1.0, so it blows out to a white
+          // core that no cloud can reach; the other two are the falloff —
+          // wider and redder when the sun is low.
+          vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
+          vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
+          vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
+          day += s1 * exp(-sd * 21.0) * (2.30 - uWarm * 0.6)
+               + s2 * exp(-sd *  8.0) * (0.72 + uWarm * 0.30)
+               + s3 * exp(-sd *  3.0) * (0.24 + uWarm * 0.34);
+          // and the whole scene a shade dimmer toward the ends of the day
+          day *= 1.0 - uWarm * 0.09;
+          col += day * uMix;
+        }
+
+        // an eighth of a level of noise, purely to break up the gradient banding
+        col += (h21(gl_FragCoord.xy + fract(uTime)) - 0.5) / 255.0;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    function build(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.warn('sky:', gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    }
+
+    const vs = build(gl.VERTEX_SHADER, VERT), fs = build(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) { up(); return; }
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.warn('sky:', gl.getProgramInfoLog(prog));
+      up();
+      return;
+    }
+    gl.useProgram(prog);
+
+    // one triangle large enough to cover the clip square; cheaper than a quad
+    // and it avoids the seam two triangles leave down the diagonal
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'a');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+    const uRes = gl.getUniformLocation(prog, 'uRes');
+    const uTime = gl.getUniformLocation(prog, 'uTime');
+    const uMix = gl.getUniformLocation(prog, 'uMix');
+    const uSun = gl.getUniformLocation(prog, 'uSun');
+    const uWarm = gl.getUniformLocation(prog, 'uWarm');
+
+    // A full-screen shader is billed per pixel, so the buffer is capped well
+    // under a retina viewport's worth. Cloud is soft and stars are drawn with
+    // a smooth falloff, so neither shows the difference.
+    const MAXPX = matchMedia('(max-width: 700px)').matches ? 1.3e6 : 2.4e6;
+    let W = 0, H = 0;
+
+    function resize() {
+      const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
+      let s = Math.min(devicePixelRatio || 1, 2);
+      if (w * h * s * s > MAXPX) s = Math.sqrt(MAXPX / (w * h));
+      const nw = Math.max(1, Math.round(w * s)), nh = Math.max(1, Math.round(h * s));
+      if (nw === W && nh === H) return;
+      W = cv.width = nw; H = cv.height = nh;
+      gl.viewport(0, 0, W, H);
+      gl.uniform2f(uRes, W, H);
+    }
+
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let mix = window.__theme && window.__theme.day ? 1 : 0;
+    let mixTo = mix;
+    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; });
+
+    // The sky runs at half the display's rate. Cloud drifts over tens of
+    // seconds and stars twinkle slowly, so the only thing fast enough to care
+    // is a meteor, and a 0.9-second flight still gets some thirty frames.
+    const FRAME = 1000 / 30;
+    let prev = 0, lit = false, raf = 0;
+
+    function draw(now) {
+      const dt = prev ? Math.min(0.05, (now - prev) / 1000) : 0;
+      prev = now;
+      if (mix !== mixTo) {
+        const step = dt / 0.48;   // matches the CSS cross-fade
+        mix = mix < mixTo ? Math.min(mixTo, mix + step) : Math.max(mixTo, mix - step);
+      }
+      gl.uniform1f(uMix, mix);
+      gl.uniform1f(uTime, reduced ? 12.0 : now / 1000);
+      // how low the sun is; by night the moon's arc is drawn as neutral, and
+      // a lit lamp at night is a lamp, not a sunset
+      const clk = window.__clock;
+      gl.uniform1f(uWarm, clk ? (clk.isDay ? clk.sun().warm : 0) : 0);
+
+      // The sun is drawn by the grove, and it wanders when it is bothered, so
+      // its glow in the cloud has to follow it rather than sit at a fixed spot.
+      const s = window.__sun;
+      if (s && H) {
+        // published in document coordinates, so it keeps scrolling away
+        // correctly even after the grove has stopped drawing itself
+        const px = (s.x - window.scrollX - innerWidth / 2) * 2 / innerHeight;
+        const py = (innerHeight / 2 - (s.y - window.scrollY)) * 2 / innerHeight;
+        gl.uniform2f(uSun, px, py);
+      } else {
+        gl.uniform2f(uSun, -0.75, 0.62);
+      }
+
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (!lit) { lit = true; cv.classList.add('lit'); up(); }
+    }
+
+    function loop(now) {
+      raf = requestAnimationFrame(loop);
+      if (now - prev < FRAME - 1) return;
+      resize();
+      draw(now);
+      // Nothing moves under reduced motion, and nothing needs to: one frame,
+      // then the loop stops until the lights change or the window resizes.
+      if (reduced && mix === mixTo) { cancelAnimationFrame(raf); raf = 0; }
+    }
+
+    function start() { if (!raf && !document.hidden) raf = requestAnimationFrame(loop); }
+    function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; prev = 0; } }
+
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+    addEventListener('resize', () => { if (reduced) { resize(); draw(performance.now()); } });
+    document.addEventListener('lights', start);
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
+
+    resize();
+    start();
+  })();
+  </script>
 
   <!-- Shared icon sprite -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -4348,7 +4674,12 @@
       }
       if (flare > 0) flare = Math.max(0, flare - dt / 0.55);
 
-      if (moonR > 0) {
+      // Before the opening begins the canvas stays clear. The sun or moon
+      // comes in from the corner on the opening's first beat, and drawn at
+      // its home before then it hung alone on an empty ground and then
+      // jumped to the corner to make its entrance — which looked like the
+      // page reloading.
+      if (moonR > 0 && !(introing && !introStarted)) {
         // The hour moves the body's home along its arc — a pixel a minute in
         // the ordinary way of things, a longer glide when the lamp changes
         // which body is up. The move is applied as a shift, so a moon the
@@ -5511,13 +5842,19 @@
       raf = requestAnimationFrame(tick);
     }
 
-    // Wait for the webfont: starting first would type in the fallback and then
-    // reflow mid-sentence when Inter arrives.
+    // Wait for the webfont, and for the sky: starting before the font would
+    // type in the fallback and then reflow mid-sentence when Inter arrives,
+    // and starting before the sky would grow the grove on a flat ground and
+    // then have the sky come up behind it, which read as the page reloading.
+    // Neither is waited on for long.
     const go = () => requestAnimationFrame(start);
-    if (document.fonts && document.fonts.ready) {
+    const gates = [];
+    if (document.fonts && document.fonts.ready) gates.push(document.fonts.ready);
+    if (window.__sky && window.__sky.ready) gates.push(window.__sky.ready);
+    if (gates.length) {
       let fired = false;
       const once = () => { if (!fired) { fired = true; go(); } };
-      document.fonts.ready.then(once);
+      Promise.all(gates).then(once);
       setTimeout(once, 900);
     } else go();
 
@@ -5564,7 +5901,7 @@
         e.target.classList.add('in');
         obs.unobserve(e.target);
         // hand the element back to its own styles once it has arrived
-        setTimeout(() => e.target.classList.remove('reveal', 'in'), wait + 820);
+        setTimeout(() => { e.target.classList.add('landed'); e.target.classList.remove('reveal', 'in'); }, wait + 820);
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
@@ -6470,313 +6807,6 @@
     };
     if (document.readyState === 'complete') start();
     else addEventListener('load', start, { once: true });
-  })();
-  </script>
-
-  <script>
-  // ─── The sky ──────────────────────────────────────────────────────────────
-  // One full-screen fragment shader behind the whole document. By day it is a
-  // drifting cloudscape built from a gyroid FBM — the same family of noise as
-  // Leon Denise's "Cloudy Blue Sky", but with the scrolling blue-noise texture
-  // replaced by a third smooth octave, so the cloud edges dissolve instead of
-  // fizzing, and with no texture to download. By night the same canvas carries
-  // a star field, a faint band of galaxy, and a meteor every so often.
-  (() => {
-    const cv = document.getElementById('sky');
-    if (!cv) return;
-
-    let gl = null;
-    try {
-      gl = cv.getContext('webgl', {
-        alpha: false, antialias: false, depth: false, stencil: false,
-        powerPreference: 'low-power', preserveDrawingBuffer: false,
-      });
-    } catch (e) { /* falls back to the flat --bg underneath */ }
-    if (!gl) return;
-
-    const VERT = `
-      attribute vec2 a;
-      void main(){ gl_Position = vec4(a, 0.0, 1.0); }
-    `;
-
-    const FRAG = `
-      precision highp float;
-      uniform vec2  uRes;
-      uniform float uTime;
-      uniform float uMix;    // 0 night .. 1 day
-      uniform vec2  uSun;    // where the sun is, in p-units, so the cloud lights up under it
-      uniform float uWarm;   // 0 at noon .. 1 with the sun on the horizon
-
-      // Gyroid, as explained by Martijn Steinrucken. Two trig calls buy a
-      // pattern with far more structure than value noise of the same cost.
-      float gyroid(vec3 p){ return dot(sin(p), cos(p.yzx)); }
-
-      // Four octaves, each displaced along z by the sum so far, which is what
-      // bends the layers into something cloud-shaped rather than blobby.
-      float fbmG(vec3 p, float t, float w, float aa){
-        float r = 0.0, a = 0.5;
-        for (int i = 0; i < 4; i++){
-          p.z += t + r * w;
-          r += abs(gyroid(p / a)) * a;
-          a /= aa;
-        }
-        return r;
-      }
-
-      float h21(vec2 p){
-        vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
-        q += dot(q, q.yzx + 33.33);
-        return fract((q.x + q.y) * q.z);
-      }
-
-      // ── stars ──
-      // Three sheets of cells; each cell may hold one star, jittered off centre
-      // so the grid never shows. Radii are measured in p-units, so a star is
-      // the same size on screen whatever the device pixel ratio.
-      // band is how deep into the galaxy this pixel sits: it lowers the bar
-      // for a cell holding a star, so the Milky Way arrives as a crowd of
-      // stars rather than a grey smear painted over them.
-      vec3 starField(vec2 p, float t, float band){
-        vec3 acc = vec3(0.0);
-        for (int i = 0; i < 3; i++){
-          float fi = float(i);
-          float dens = 10.0 + fi * 12.0;
-          vec2 g = p * dens;
-          vec2 id = floor(g);
-          vec2 f  = fract(g) - 0.5;
-          float h  = h21(id + fi * 31.7);
-          float on = step(0.855 + fi * 0.045 - band * 0.09, h);
-          vec2 off = vec2(h21(id + fi * 7.1 + 2.3), h21(id + fi * 7.1 + 5.9)) - 0.5;
-          float d  = length(f - off * 0.72) / dens;
-          float core = exp(-d * (760.0 - fi * 90.0));
-          float halo = exp(-d * 190.0) * 0.07;
-          float tw   = 0.45 + 0.55 * sin(t * (0.5 + h * 1.7) + h * 63.0);
-          float lum  = (0.18 + 0.62 * h21(id + fi * 13.3)) * (1.0 - fi * 0.32);
-          vec3 tint  = mix(vec3(0.74, 0.83, 1.0), vec3(1.0, 0.91, 0.76), h21(id + fi * 3.7));
-          acc += tint * (core + halo) * on * tw * lum;
-        }
-        return acc;
-      }
-
-      // ── a meteor ──
-      // Time is cut into slots; most slots stay empty, and the ones that fire
-      // draw a tapered streak that brightens in and dies out.
-      vec3 meteor(vec2 p, float t, float seed){
-        float ts   = t / 26.0 + seed;
-        float slot = floor(ts), lt = fract(ts);
-        float h    = h21(vec2(slot, seed + 1.0));
-        float live = step(0.62, h) * step(lt, 0.045);
-        float u    = lt / 0.045;                      // 0..1 across ~1.2s of flight
-        vec2  a    = vec2(mix(-1.9, 1.5, h21(vec2(slot, seed + 3.0))),
-                          mix( 0.35, 1.05, h21(vec2(slot, seed + 5.0))));
-        float ang  = mix(-1.05, -0.45, h21(vec2(slot, seed + 8.0)));
-        vec2  dir  = vec2(cos(ang), sin(ang));
-        vec2  head = a + dir * (u * 2.2);
-        vec2  tail = head - dir * (0.20 + 0.12 * h);
-        vec2  pa = p - tail, ba = head - tail;
-        float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
-        float d  = length(pa - ba * hh);
-        float streak = exp(-d * 1100.0) + exp(-d * 320.0) * 0.10;
-        return streak * pow(hh, 2.6) * sin(u * 3.14159) * live * vec3(0.86, 0.92, 1.0) * 0.65;
-      }
-
-      void main(){
-        vec2 uv = gl_FragCoord.xy / uRes;                       // 0 at the bottom
-        vec2 p  = (gl_FragCoord.xy - uRes * 0.5) * 2.0 / uRes.y;
-
-        vec3 col = vec3(0.0);
-
-        if (uMix < 0.999) {
-          // ── night ──
-          vec3 sky = mix(vec3(0.043, 0.055, 0.086), vec3(0.016, 0.020, 0.039),
-                         smoothstep(-0.10, 1.05, uv.y));
-          // a band of galaxy, laid across the diagonal: mottled where it is
-          // thick, and mostly made of the stars it crowds together
-          vec2 mp = vec2(p.x * 0.90 + p.y * 0.44, -p.x * 0.44 + p.y * 0.90);
-          float band = exp(-pow((mp.y + 0.22) * 2.6, 2.0));
-          float neb  = smoothstep(0.34, 1.00, fbmG(vec3(mp * 4.2, 0.0), uTime * 0.004, 0.25, 1.9));
-          band *= 0.30 + 0.70 * neb;
-          sky += band * vec3(0.016, 0.018, 0.030);
-          sky += starField(p, uTime, band);
-          sky += meteor(p, uTime, 0.0);
-          col += sky * (1.0 - uMix);
-        }
-
-        if (uMix > 0.001) {
-          // ── day ──
-          // the 1/uv.y term is the perspective: cloud detail compresses and
-          // runs faster the closer it gets to the horizon
-          float t = uTime * 0.016 - 0.2 / max(uv.y, 0.05);
-          vec3 q = vec3(p * 1.15, 0.0);                         // smaller, more of them
-          q.y += fbmG(q * 10.0, -t * 3.0, 0.0, 1.9) * 0.07;     // fine relief
-          float c = fbmG(q, t, 0.3, 1.7) * 0.5 - 0.5;           // the shapes
-          // The reference dissolves the cloud edge with scrolling blue noise,
-          // which is lovely at 60fps and pure static at anything less. Its mean
-          // is all that is kept; the edge is softened with a wider threshold
-          // instead, which is the same picture without the fizz.
-          c += 0.00;
-          c *= smoothstep(0.02, 0.46, uv.y);                    // clear toward the horizon
-
-          // Low sun: the horizon goes amber and the zenith a deeper, duller
-          // blue, the way the sky does when the light comes through more air.
-          vec3 hor = mix(vec3(0.690, 0.805, 0.905), vec3(0.960, 0.760, 0.560), uWarm);
-          vec3 zen = mix(vec3(0.350, 0.565, 0.780), vec3(0.330, 0.440, 0.660), uWarm * 0.7);
-          vec3 sky = mix(hor, zen, smoothstep(-0.15, 0.95, uv.y));
-
-          float sd = length(p - uSun);
-
-          // Cloud tops stop short of white. Nothing in a sky is allowed to be
-          // brighter than the sun, and a cloud painted at 1.0 was — which is
-          // why the sun read as the dimmer of the two. What a cloud does get
-          // is the sun's own light: the nearer it sits, the warmer and the
-          // brighter it goes, so the two belong to the same picture. Near
-          // dawn and dusk that light is amber, and the shaded cloud goes a
-          // little mauve against it.
-          vec3 shade = mix(vec3(0.700, 0.765, 0.845), vec3(0.720, 0.680, 0.780), uWarm);
-          vec3 lit   = mix(vec3(1.0, 0.985, 0.945), vec3(1.0, 0.860, 0.700), uWarm);
-          vec3 cloud = mix(shade, vec3(0.945, 0.955, 0.970), smoothstep(0.02, 0.34, c));
-          cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15));
-          vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
-
-          // The sun itself lives here rather than on the grove canvas: the sky
-          // has the whole viewport to spread over and no edge to be cut off
-          // at. The first term goes well past 1.0, so it blows out to a white
-          // core that no cloud can reach; the other two are the falloff —
-          // wider and redder when the sun is low.
-          vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
-          vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
-          vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
-          day += s1 * exp(-sd * 21.0) * (2.30 - uWarm * 0.6)
-               + s2 * exp(-sd *  8.0) * (0.72 + uWarm * 0.30)
-               + s3 * exp(-sd *  3.0) * (0.24 + uWarm * 0.34);
-          // and the whole scene a shade dimmer toward the ends of the day
-          day *= 1.0 - uWarm * 0.09;
-          col += day * uMix;
-        }
-
-        // an eighth of a level of noise, purely to break up the gradient banding
-        col += (h21(gl_FragCoord.xy + fract(uTime)) - 0.5) / 255.0;
-        gl_FragColor = vec4(col, 1.0);
-      }
-    `;
-
-    function build(type, src) {
-      const s = gl.createShader(type);
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        console.warn('sky:', gl.getShaderInfoLog(s));
-        return null;
-      }
-      return s;
-    }
-
-    const vs = build(gl.VERTEX_SHADER, VERT), fs = build(gl.FRAGMENT_SHADER, FRAG);
-    if (!vs || !fs) return;
-    const prog = gl.createProgram();
-    gl.attachShader(prog, vs);
-    gl.attachShader(prog, fs);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-      console.warn('sky:', gl.getProgramInfoLog(prog));
-      return;
-    }
-    gl.useProgram(prog);
-
-    // one triangle large enough to cover the clip square; cheaper than a quad
-    // and it avoids the seam two triangles leave down the diagonal
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, 'a');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-    const uRes = gl.getUniformLocation(prog, 'uRes');
-    const uTime = gl.getUniformLocation(prog, 'uTime');
-    const uMix = gl.getUniformLocation(prog, 'uMix');
-    const uSun = gl.getUniformLocation(prog, 'uSun');
-    const uWarm = gl.getUniformLocation(prog, 'uWarm');
-
-    // A full-screen shader is billed per pixel, so the buffer is capped well
-    // under a retina viewport's worth. Cloud is soft and stars are drawn with
-    // a smooth falloff, so neither shows the difference.
-    const MAXPX = matchMedia('(max-width: 700px)').matches ? 1.3e6 : 2.4e6;
-    let W = 0, H = 0;
-
-    function resize() {
-      const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
-      let s = Math.min(devicePixelRatio || 1, 2);
-      if (w * h * s * s > MAXPX) s = Math.sqrt(MAXPX / (w * h));
-      const nw = Math.max(1, Math.round(w * s)), nh = Math.max(1, Math.round(h * s));
-      if (nw === W && nh === H) return;
-      W = cv.width = nw; H = cv.height = nh;
-      gl.viewport(0, 0, W, H);
-      gl.uniform2f(uRes, W, H);
-    }
-
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let mix = window.__theme && window.__theme.day ? 1 : 0;
-    let mixTo = mix;
-    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; });
-
-    // The sky runs at half the display's rate. Cloud drifts over tens of
-    // seconds and stars twinkle slowly, so the only thing fast enough to care
-    // is a meteor, and a 0.9-second flight still gets some thirty frames.
-    const FRAME = 1000 / 30;
-    let prev = 0, lit = false, raf = 0;
-
-    function draw(now) {
-      const dt = prev ? Math.min(0.05, (now - prev) / 1000) : 0;
-      prev = now;
-      if (mix !== mixTo) {
-        const step = dt / 0.48;   // matches the CSS cross-fade
-        mix = mix < mixTo ? Math.min(mixTo, mix + step) : Math.max(mixTo, mix - step);
-      }
-      gl.uniform1f(uMix, mix);
-      gl.uniform1f(uTime, reduced ? 12.0 : now / 1000);
-      // how low the sun is; by night the moon's arc is drawn as neutral, and
-      // a lit lamp at night is a lamp, not a sunset
-      const clk = window.__clock;
-      gl.uniform1f(uWarm, clk ? (clk.isDay ? clk.sun().warm : 0) : 0);
-
-      // The sun is drawn by the grove, and it wanders when it is bothered, so
-      // its glow in the cloud has to follow it rather than sit at a fixed spot.
-      const s = window.__sun;
-      if (s && H) {
-        // published in document coordinates, so it keeps scrolling away
-        // correctly even after the grove has stopped drawing itself
-        const px = (s.x - window.scrollX - innerWidth / 2) * 2 / innerHeight;
-        const py = (innerHeight / 2 - (s.y - window.scrollY)) * 2 / innerHeight;
-        gl.uniform2f(uSun, px, py);
-      } else {
-        gl.uniform2f(uSun, -0.75, 0.62);
-      }
-
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      if (!lit) { lit = true; cv.classList.add('lit'); }
-    }
-
-    function loop(now) {
-      raf = requestAnimationFrame(loop);
-      if (now - prev < FRAME - 1) return;
-      resize();
-      draw(now);
-      // Nothing moves under reduced motion, and nothing needs to: one frame,
-      // then the loop stops until the lights change or the window resizes.
-      if (reduced && mix === mixTo) { cancelAnimationFrame(raf); raf = 0; }
-    }
-
-    function start() { if (!raf && !document.hidden) raf = requestAnimationFrame(loop); }
-    function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; prev = 0; } }
-
-    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
-    addEventListener('resize', () => { if (reduced) { resize(); draw(performance.now()); } });
-    document.addEventListener('lights', start);
-    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
-
-    resize();
-    start();
   })();
   </script>
 
