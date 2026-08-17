@@ -38,12 +38,54 @@
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('has-intro');
 
+    // The clock. The page keeps the visitor's own hour: it decides whether
+    // the lights start on or off, where the sun or moon stands, and how warm
+    // the light is — low and amber near dawn and dusk, high and white at
+    // noon. Sunrise and sunset are fixed rather than fetched: this is a mood,
+    // not an almanac. ?hour=18.5 previews any hour.
+    (() => {
+      const RISE = 6.5, SET = 19.5;
+      let forced = NaN;
+      try { forced = parseFloat(new URLSearchParams(location.search).get('hour')); } catch (e) {}
+      const hour = () => {
+        if (forced === forced) return ((forced % 24) + 24) % 24;
+        const d = new Date();
+        return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+      };
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+      window.__clock = {
+        get hour() { return hour(); },
+        RISE, SET,
+        get isDay() { const h = hour(); return h >= RISE && h < SET; },
+        // the sun's way across the sky: u 0 at sunrise, 1 at sunset; elev 0
+        // at the horizon, 1 at noon; warm 1 at the horizon, gone once the sun
+        // is well up
+        sun() {
+          const u = clamp((hour() - RISE) / (SET - RISE), 0, 1);
+          const elev = Math.sin(u * Math.PI);
+          const warm = Math.pow(clamp(1 - elev * 2.1, 0, 1), 1.3);
+          return { u, elev, warm };
+        },
+        // and the moon's, over the night hours, sunset to sunrise
+        moon() {
+          const night = 24 - (SET - RISE);
+          const u = clamp((((hour() - SET) % 24) + 24) % 24 / night, 0, 1);
+          return { u, elev: Math.sin(u * Math.PI), warm: 0 };
+        },
+      };
+    })();
+
     // The lights. Applied here rather than after load, or a remembered choice
-    // would show the wrong palette for a frame first.
+    // would show the wrong palette for a frame first. A pull on the cord is
+    // remembered for eight hours; after that the page goes back to keeping
+    // the visitor's own time.
     (() => {
       const root = document.documentElement;
-      let day = false;
-      try { day = localStorage.getItem('lights') === 'day'; } catch (e) {}
+      let day = window.__clock.isDay;
+      try {
+        const kept = localStorage.getItem('lights'), at = +localStorage.getItem('lightsAt') || 0;
+        if (kept && Date.now() - at < 8 * 3600e3) day = kept === 'day';
+      } catch (e) {}
       if (day) root.classList.add('day');
       window.__theme = {
         get day() { return root.classList.contains('day'); },
@@ -51,7 +93,10 @@
           const on = !root.classList.contains('day');
           root.classList.add('theming');
           root.classList.toggle('day', on);
-          try { localStorage.setItem('lights', on ? 'day' : 'night'); } catch (e) {}
+          try {
+            localStorage.setItem('lights', on ? 'day' : 'night');
+            localStorage.setItem('lightsAt', String(Date.now()));
+          } catch (e) {}
           document.dispatchEvent(new CustomEvent('lights', { detail: { day: on } }));
           clearTimeout(window.__themeT);
           window.__themeT = setTimeout(() => root.classList.remove('theming'), 560);
@@ -293,46 +338,11 @@
       pointer-events: none;
     }
 
-    /* The shelf the grove stands on: three courses of small glass bricks, in
-       the same glass as the buttons. Ten across the top, one fewer in each
-       course below, every brick the same size and centred, so the courses
-       step in by half a brick and bond like brickwork. The grove script
-       lays them where the row of buttons is. They sit under the canvas, so
-       the trunks paint over the top course and the ivy spills over the front.
-       (Scoped to the column so `absolute` outranks the `relative` they share
-       with the buttons in the glass rules below.) */
-    .hero-lead .ledge {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 0;
-      height: 10px;
-      border-radius: 4px;
-      pointer-events: none;
-      --gb: 9px;
-      transform-origin: 50% 100%;
-    }
-
-    /* By night the buttons' liquid rim — a bright gradient ring and a lit
-       top — is too much on twenty-seven small bricks: every one glints, and
-       together they turn to clutter. So at night a brick is plainer than a
-       button: one flat tint, a hairline, and a faint even ring. */
-    html:not(.day) .hero-lead .ledge {
-      background: rgba(255,255,255,0.075);
-      box-shadow: 0 0 0 0.5px rgba(0,0,0,0.28);
-    }
-    html:not(.day) .hero-lead .ledge::after { background: rgba(255,255,255,0.13); }
-
-    /* Laid one at a time during the opening: bottom course first, each course
-       from the middle out, every brick rising a little into its place. --bd
-       is the brick's turn, set by the script. */
-    .has-intro .ledge {
-      opacity: 0;
-      transform: translateY(7px) scale(0.72);
-      transition: opacity 420ms var(--ease) var(--bd, 0ms),
-                  transform 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--bd, 0ms);
-    }
-    .is-lit .ledge { opacity: 1; transform: none; }
+    /* The shelf the grove stands on — three courses of small glass bricks
+       in the buttons' glass — is painted by the grove script on its canvas.
+       It used to be twenty-seven backdrop-filtered elements, and each of
+       those is its own blur pass over the animated sky, which halved the
+       frame rate; painted, the same look costs one blit. */
 
     .visually-hidden {
       position: absolute;
@@ -363,8 +373,7 @@
        by script and is simply absent everywhere else. What is left without it
        is the same pane minus the refraction, which is most of it. */
     .about-link,
-    .filter-btn,
-    .ledge {
+    .filter-btn {
       position: relative;
       isolation: isolate;
       /* A gradient rather than a flat fill and an inset highlight line: the
@@ -384,8 +393,7 @@
        the tint showed outside it — two pixels of edge where there should be
        one. There is no border now, and the ring is the outermost pixel. */
     .about-link::after,
-    .filter-btn::after,
-    .ledge::after {
+    .filter-btn::after {
       content: '';
       position: absolute;
       inset: 0;
@@ -1583,7 +1591,6 @@
   <header class="hero">
     <div class="hero-lead">
       <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
-      <!-- the shelf's bricks are laid here by the grove script -->
       <canvas id="grove" aria-hidden="true"></canvas>
     </div>
 
@@ -2779,8 +2786,7 @@
     const nameEl = document.querySelector('.about-name');
     const bioEl = document.querySelector('.about-bio');
     const linksEl = document.querySelector('.about-links');
-    const lead = canvas.parentElement;
-    const bricks = [];       // the .ledge elements, made as the layout needs them
+    const bricks = [];       // the shelf's bricks, as rectangles on the canvas
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
@@ -2808,23 +2814,15 @@
       return out;
     };
 
-    // Lay the bricks: make or drop .ledge elements to the count needed, and
-    // place each. Every brick also gets its turn in the opening — bottom
-    // course first, each course from the middle outward.
+    // Lay the bricks: work out where each one goes. Every brick also gets
+    // its turn in the opening — bottom course first, each course from the
+    // middle outward, with a little jitter so it is laid, not printed.
     function layBricks(x0, x1, top, courses) {
+      bricks.length = 0;
+      shelfKey = '';
       const span = x1 - x0;
       const brick = (span - LEDGE_GAP * (LEDGE_ACROSS - 1)) / LEDGE_ACROSS;
       const step = brick + LEDGE_GAP;
-      let need = 0;
-      for (let c = 0; c < courses.length; c++) need += Math.max(1, LEDGE_ACROSS - c);
-      while (bricks.length < need) {
-        const el = document.createElement('div');
-        el.className = 'ledge';
-        el.setAttribute('aria-hidden', 'true');
-        lead.insertBefore(el, canvas);
-        bricks.push(el);
-      }
-      while (bricks.length > need) bricks.pop().remove();
       let k = 0, y = top;
       const rows = courses.length;
       for (let c = 0; c < rows; c++) {
@@ -2832,20 +2830,118 @@
         const rowW = n * step - LEDGE_GAP;
         const rx = x0 + (span - rowW) / 2;
         for (let i = 0; i < n; i++, k++) {
-          const el = bricks[k];
-          const s = el.style;
-          s.left = (rx + i * step - BLEED_X).toFixed(2) + 'px';
-          s.top = (y - BLEED_Y).toFixed(2) + 'px';
-          s.width = brick.toFixed(2) + 'px';
-          s.height = courses[c] + 'px';
-          // its turn: courses from the bottom up, and within a course from
-          // the middle out, with a little jitter so it is laid, not printed
           const out = Math.abs(i - (n - 1) / 2) / Math.max(1, (n - 1) / 2);
           const turn = (rows - 1 - c) * 0.32 + out * 0.5 + hash(k, 131) * 0.08;
-          s.setProperty('--bd', Math.round(120 + turn * 640) + 'ms');
+          bricks.push({ x: rx + i * step, y, w: brick, h: courses[c], bd: 0.12 + turn * 0.64 });
         }
         y += courses[c];
       }
+    }
+
+    // ── Painting the shelf ─────────────────────────────────────────────────
+    // A brick is a pane of the buttons' glass: a tint lit toward the top, a
+    // one-pixel rim that carries a diagonal gradient — bright at the top-left
+    // and bottom-right corners, dim between — a hairline, and a soft cast
+    // beneath. By night the buttons' liquid rim is too much on twenty-seven
+    // small bricks, so a night brick is plainer: one flat tint, a hairline,
+    // an even faint ring. The two are cross-faded with the light. The whole
+    // shelf is painted once into a sheet and blitted, and repainted only when
+    // the light or the layout changes; during the opening, when the bricks
+    // are still arriving one by one, they are painted directly.
+    let shelfSheet = null, shelfKey = '', shelfBox = null;
+    const RR = (g, x, y, w, h, r) => {
+      g.moveTo(x + r, y);
+      g.arcTo(x + w, y, x + w, y + h, r);
+      g.arcTo(x + w, y + h, x, y + h, r);
+      g.arcTo(x, y + h, x, y, r);
+      g.arcTo(x, y, x + w, y, r);
+      g.closePath();
+    };
+    function paintBrick(g, b, day, night) {
+      const { x, y, w, h } = b, r = 4;
+      if (night > 0.001) {
+        g.globalAlpha = night;
+        g.fillStyle = 'rgba(255,255,255,0.075)';
+        g.beginPath(); RR(g, x, y, w, h, r); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,0.28)';
+        g.lineWidth = 0.75;
+        g.beginPath(); RR(g, x - 0.4, y - 0.4, w + 0.8, h + 0.8, r + 0.4); g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,0.13)';
+        g.lineWidth = 1;
+        g.beginPath(); RR(g, x + 0.5, y + 0.5, w - 1, h - 1, r - 0.5); g.stroke();
+      }
+      if (day > 0.001) {
+        g.globalAlpha = day;
+        // the cast beneath, then the hairline round the outside
+        g.save();
+        g.shadowColor = 'rgba(22,36,47,0.20)';
+        g.shadowBlur = 3; g.shadowOffsetY = 1;
+        g.fillStyle = 'rgba(38,66,92,0.14)';
+        g.beginPath(); RR(g, x - 0.5, y - 0.5, w + 1, h + 1, r + 0.5); g.fill();
+        g.restore();
+        // the pane, lit toward its top
+        const fill = g.createLinearGradient(0, y, 0, y + h);
+        fill.addColorStop(0, 'rgba(255,255,255,0.44)');
+        fill.addColorStop(1, 'rgba(255,255,255,0.30)');
+        g.fillStyle = fill;
+        g.beginPath(); RR(g, x, y, w, h, r); g.fill();
+        // the rim: a ring, filled with the diagonal gradient (146deg in CSS
+        // terms: down and to the right)
+        const ang = 146 * Math.PI / 180, dx = Math.sin(ang), dy = -Math.cos(ang);
+        const L = Math.abs(w * dx) + Math.abs(h * dy);
+        const cx = x + w / 2, cy = y + h / 2;
+        const rim = g.createLinearGradient(cx - dx * L / 2, cy - dy * L / 2, cx + dx * L / 2, cy + dy * L / 2);
+        rim.addColorStop(0.00, 'rgba(255,255,255,0.92)');
+        rim.addColorStop(0.19, 'rgba(255,255,255,0.30)');
+        rim.addColorStop(0.47, 'rgba(74,110,144,0.20)');
+        rim.addColorStop(0.72, 'rgba(74,110,144,0.30)');
+        rim.addColorStop(1.00, 'rgba(255,255,255,0.72)');
+        g.fillStyle = rim;
+        g.beginPath();
+        RR(g, x, y, w, h, r);
+        RR(g, x + 1, y + 1, w - 2, h - 2, r - 1);
+        g.fill('evenodd');
+      }
+      g.globalAlpha = 1;
+    }
+    function drawShelf(now) {
+      if (!bricks.length) return;
+      const day = mix, night = 1 - mix;
+      if (introing) {
+        // laid one at a time
+        const I = window.__intro;
+        const t = I && I.t0 ? (now - I.t0) / 1000 : 0;
+        for (const b of bricks) {
+          const u = Math.min(1, Math.max(0, (t - b.bd) / 0.62));
+          if (u <= 0) continue;
+          const e = 1 - Math.pow(1 - u, 3);
+          const sc = 0.72 + 0.28 * e, dy = 7 * (1 - e);
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, u * 1.5);
+          ctx.translate(b.x + b.w / 2, b.y + b.h + dy);
+          ctx.scale(sc, sc);
+          ctx.translate(-(b.x + b.w / 2), -(b.y + b.h));
+          paintBrick(ctx, b, day, night);
+          ctx.restore();
+        }
+        return;
+      }
+      const key = `${Math.round(mix * 24)}|${dpr}|${W}`;
+      if (key !== shelfKey || !shelfSheet) {
+        shelfKey = key;
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const b of bricks) { x0 = Math.min(x0, b.x); x1 = Math.max(x1, b.x + b.w); y0 = Math.min(y0, b.y); y1 = Math.max(y1, b.y + b.h); }
+        x0 -= 6; y0 -= 6; x1 += 6; y1 += 8;
+        shelfBox = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        shelfSheet = shelfSheet || document.createElement('canvas');
+        shelfSheet.width = Math.ceil(shelfBox.w * dpr);
+        shelfSheet.height = Math.ceil(shelfBox.h * dpr);
+        const g = shelfSheet.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+        g.clearRect(x0, y0, shelfBox.w, shelfBox.h);
+        for (const b of bricks) paintBrick(g, b, day, night);
+      }
+      ctx.drawImage(shelfSheet, shelfBox.x, shelfBox.y, shelfBox.w, shelfBox.h);
     }
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -3509,6 +3605,7 @@
     const LEAF_TIP_SPLAY = 0.36;     // and a twig-end leaf, which mostly follows it
     let mix = window.__theme && window.__theme.day ? 1 : 0;   // 0 night, 1 day
     let mixTo = mix;
+    let flare = 0;      // the twig ends' flash as the lamp goes out, 1 → 0
     const lerp = (a, b, t) => a + (b - a) * t;
     const band = (lo, hi, t) => [Math.round(lerp(lo[0], hi[0], t)),
                                  Math.round(lerp(lo[1], hi[1], t)),
@@ -3778,6 +3875,23 @@
     const MOON_TRAVEL = 0.62;   // s to cross, when it bolts
     const MOON_BOUNCE = 0.09;   // overshoot on arrival, as a share of the trip
     let moonLo = 0, moonHi = 0, moonYLo = 0, moonYHi = 0, moonXHome = 0, moonYHome = 0, moonYSpan = 0;
+    let skyTop = 0, skyBand = 0, homeX = 0, homeY = 0;
+
+    // Where the sun or moon belongs at this hour: across the sky from left
+    // to right as the day (or night) goes on, high in the middle of it and
+    // down toward the canopy at either end. Whichever body is up is the one
+    // whose arc counts, so a lamp pulled on at night puts the sun where the
+    // night is — low, as at the end of a day — rather than jumping it to noon.
+    function homeFor() {
+      const clk = window.__clock;
+      const b = clk ? (window.__theme && window.__theme.day ? clk.sun() : clk.moon())
+                    : { u: 0.30, elev: 0.85 };
+      const span = moonHi - moonLo;
+      const x = moonLo + span * (0.12 + 0.76 * b.u);
+      const hi = Math.max(moonYLo, skyTop + skyBand * 0.10);
+      const y = moonYHi + (hi - moonYHi) * Math.pow(b.elev, 0.75);
+      return { x: Math.min(Math.max(x, moonLo), moonHi), y: Math.min(Math.max(y, moonYLo), moonYHi) };
+    }
     let moonFromX = 0, moonFromY = 0, moonToX = 0, moonToY = 0;
     let moonT = -1;             // seconds into a bolt, or -1 when it is not running
     let moonFear = 0;
@@ -3834,16 +3948,20 @@
       moonLo = halo + 4;
       moonHi = W - halo - 4;
       moonYLo = halo + 4;
-      moonYHome = Math.max(top + band * 0.15, moonYLo);
-      moonYHi = Math.max(moonYHome, top + band * 0.28);
+      // as low as the sun or moon may stand: half way down the canopy, so a
+      // sunset happens behind the trees
+      moonYHi = Math.max(moonYLo, top + band * 0.50);
       moonYSpan = band * 0.10;   // it wanders a little vertically, not far
+      skyTop = top; skyBand = band;
 
       // A resize re-fits the sky, but it must not march the moon back to where
       // it started once the pointer has chased it off. Any move in flight is
       // abandoned, since its endpoints belong to the old layout.
       const cx = v => Math.min(Math.max(v, moonLo), moonHi);
       const cy = v => Math.min(Math.max(v, moonYLo), moonYHi);
-      moonXHome = cx(W * 0.30);
+      const home = homeFor();
+      moonXHome = homeX = home.x;
+      moonYHome = homeY = home.y;
       moonX = moonPlaced ? cx(moonX) : moonXHome;
       moonY = moonPlaced ? cy(moonY) : moonYHome;
       moonT = -1;
@@ -3966,8 +4084,23 @@
         const step = dt / 0.52;
         mix = mix < mixTo ? Math.min(mixTo, mix + step) : Math.max(mixTo, mix - step);
       }
+      if (flare > 0) flare = Math.max(0, flare - dt / 0.55);
 
       if (moonR > 0) {
+        // The hour moves the body's home along its arc — a pixel a minute in
+        // the ordinary way of things, a longer glide when the lamp changes
+        // which body is up. The move is applied as a shift, so a moon the
+        // pointer has chased off keeps its distance from home rather than
+        // being marched back.
+        if (!introing && moonT < 0) {
+          const g = homeFor();
+          const k = 1 - Math.exp(-dt / 1.8);
+          const nx = homeX + (g.x - homeX) * k, ny = homeY + (g.y - homeY) * k;
+          moonX = Math.min(Math.max(moonX + (nx - homeX), moonLo), moonHi);
+          moonY = Math.min(Math.max(moonY + (ny - homeY), moonYLo), moonYHi);
+          homeX = nx; homeY = ny;
+          moonXHome = homeX; moonYHome = homeY;
+        }
         if (moonT >= 0) {
           // Bolting: slow off the mark, quickest at the end, then it rocks
           // once and settles.
@@ -4117,6 +4250,7 @@
       // the wood and the scrub sit over them
       // the ivy waits for the shelf to have faded in and the first plants
       // to have broken ground, then spills over during the rest
+      drawShelf(now);
       drawIvy(now, introing ? Math.max(0, (introEase - 0.28) / 0.72) : 1);
       drawFootings();
 
@@ -4125,13 +4259,24 @@
 
       for (const p of plants) {
         if (!p.sx) continue;
-        const buckets = [], tipSegs = [];
+        let buckets = [], tipSegs = [];
         // leaves are only gathered when there is daylight to draw them by
         const leafSegs = p.fol && mix > 0.01 ? [] : null;
         // The scrub is only tens of pixels tall, so the same bend per segment
         // barely shows on it. It needs a much larger multiplier to read as
         // moving at all next to the trees.
         const give = p.kind === 'under' ? 4.5 : 1;
+        // Forty-odd clumps of scrub are more segments than the five trees put
+        // together, and at that size their sway at thirty frames a second is
+        // indistinguishable from sixty. So the scrub is walked on alternate
+        // frames — half the clumps on even frames, half on odd — and drawn
+        // from its last walk in between. Not while it is growing or
+        // withdrawing, when every frame is a different shape.
+        const settled = p.grow === p.growTarget && p.popT >= POP_LIFE && !introing;
+        let levels = [];
+        if (p.kind === 'under' && settled && p.lastWalk && ((frameNo + p.tipSalt) & 1)) {
+          buckets = p.lastWalk[0]; tipSegs = p.lastWalk[1];
+        } else {
         // The wind reads even more weakly on the scrub than the pointer does.
         // A gust is spread over the branching levels, and these plants only
         // have three, so almost none of it accumulates before the twig ends.
@@ -4141,7 +4286,6 @@
         // plant as a wave instead of swinging every part at once, and each
         // level takes only the frequencies its thickness would allow: the
         // trunk leans on the slow swell, twigs get the flutter as well.
-        const levels = [];
         for (let d = 0; d <= p.maxDepth; d++) {
           const dn = p.maxDepth ? d / p.maxDepth : 1;
           const w = windAt(now - p.lag - d * LEVEL_LAG, p.ox);
@@ -4167,6 +4311,8 @@
           }
           return b;
         }, buckets, tipSegs, leafSegs);
+        if (p.kind === 'under') p.lastWalk = [buckets, tipSegs];
+        }
 
         const [tone0, tone1] = p.tone;
         for (let depth = 0; depth < buckets.length; depth++) {
@@ -4214,6 +4360,15 @@
             path();
             ctx.stroke();
           }
+          if (flare > 0.01 && !p.under) {
+            // the last of the lamp's light, caught on the twig ends
+            const f = flare * flare;
+            ctx.globalAlpha = f * 0.95;
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = p.tipWidth * (1 + f * 1.4);
+            path();
+            ctx.stroke();
+          }
           ctx.globalAlpha = 1;
         }
 
@@ -4225,6 +4380,7 @@
           const S = p.folS, lit = p.fol, dark = p.folDark;
           const A = p.leafA, V = p.leafV, on = p.leafOn;
           const PX = p.leafPX, PY = p.leafPY, VX = p.leafVX, VY = p.leafVY, SEEN = p.leafSeen;
+          const SHED = p.leafShed;   // leaves that have fallen and not grown back
           const U = p.leafU, OFF = p.leafOff, KK = p.leafK, FR = p.leafFrq, PH = p.leafPh;
           const half = p.leafFrom + Math.max(1, Math.round((p.maxDepth + 1 - p.leafFrom) * 0.55));
           // the tremble follows the gust reaching the top of this plant
@@ -4238,7 +4394,7 @@
               const term = leafSegs[k + 6];
               if ((pass === 1) !== (term === 1)) continue;
               const i = leafSegs[k + 5];
-              if (!on[i]) continue;
+              if (!on[i] || (SHED && SHED[i] > now)) continue;
               // A leaf follows its twig down. Cubed, so it holds its size
               // most of the way and then goes quickly, and dropped only once
               // it is small enough that losing it is not a visible step.
@@ -4318,9 +4474,101 @@
         }
 
         if (p === host) hostTips = tipSegs;
+        if (leafSegs) p.lastLeafSegs = leafSegs;
       }
-
+      stepFallers(now, dt);
       drawFireflies(now, dt, hostTips);
+    }
+
+    // ── Falling leaves ────────────────────────────────────────────────────
+    // Now and then a leaf lets go. It tumbles down on the same wind the
+    // trees answer to, rocking side to side as a falling leaf does, and
+    // either comes to rest on the shelf, where it lies a while and fades, or
+    // drops out of the bottom of the picture. The leaf it was is missing
+    // from the tree for a time. A pressed tree sheds a handful at once.
+    const fallers = [];
+    let nextFall = 8;                       // seconds until the next leaf lets go
+    const FALL_KEEP = 22;                   // seconds a fallen leaf lies on the shelf
+
+    function shed(p, count) {
+      const segs = p.lastLeafSegs;
+      if (!segs || !segs.length || !p.fol) return;
+      for (let c = 0; c < count; c++) {
+        // a random leaf that is actually there
+        let k = -1;
+        for (let tries = 0; tries < 12 && k < 0; tries++) {
+          const j = Math.floor(Math.random() * (segs.length / 8)) * 8;
+          const i = segs[j + 5];
+          if (p.leafOn[i] && !(p.leafShed && p.leafShed[i] > now0) && segs[j + 4] > 0.6) k = j;
+        }
+        if (k < 0) return;
+        const i = segs[k + 5];
+        const u = p.leafU[i];
+        const x = segs[k] + (segs[k + 2] - segs[k]) * u, y = segs[k + 1] + (segs[k + 3] - segs[k + 1]) * u;
+        if (!p.leafShed) p.leafShed = new Float64Array(p.str.length);
+        p.leafShed[i] = now0 + 40000 + Math.random() * 30000;    // ms; it grows back
+        fallers.push({
+          x, y, vx: (Math.random() - 0.5) * 20, vy: 0,
+          a: p.leafA[i] || 0, va: (Math.random() - 0.5) * 6,
+          size: p.folS * 0.95, sprite: p.fol[i % LEAF_VAR],
+          phase: Math.random() * Math.PI * 2, rock: 0.7 + Math.random() * 0.6,
+          rest: 0,                          // seconds it has lain on the shelf
+        });
+      }
+    }
+    let now0 = 0;
+
+    function stepFallers(now, dt) {
+      now0 = now;
+      if (introing || reduced) return;
+      // a leaf lets go now and then, from a random tree, by day only
+      if (mix > 0.6 && dt > 0) {
+        nextFall -= dt;
+        if (nextFall <= 0) {
+          nextFall = 7 + Math.random() * 9;
+          const t = trees[Math.floor(Math.random() * trees.length)];
+          if (t.grow >= 1) shed(t, 1);
+        }
+      }
+      if (!fallers.length) return;
+      const onShelf = x => x > ledgeX0 + 2 && x < ledgeX1 - 2;
+      for (let n = fallers.length - 1; n >= 0; n--) {
+        const f = fallers[n];
+        if (f.rest > 0) {
+          // lying on the shelf: settle flat, then fade and go
+          f.rest += dt;
+          f.a += (Math.round(f.a / Math.PI) * Math.PI - f.a) * Math.min(1, dt * 6);
+          if (f.rest > FALL_KEEP) fallers.splice(n, 1);
+          continue;
+        }
+        const w = windAt(now, f.x);
+        // slow under its own drag, carried sideways by the wind, and rocking
+        // as the air spills off one side then the other
+        f.phase += dt * (3.2 + f.rock);
+        const rockX = Math.sin(f.phase) * 46 * f.rock;
+        f.vy += (52 - f.vy) * Math.min(1, dt * 2.2);
+        f.vx += ((w.swell * 26 + w.ripple * 18 + w.flutter * 22) * w.calm + rockX - f.vx) * Math.min(1, dt * 1.6);
+        f.x += f.vx * dt;
+        f.y += f.vy * dt;
+        f.va += (Math.cos(f.phase) * 2.2 * f.rock - f.va) * Math.min(1, dt * 2);
+        f.a += f.va * dt;
+        if (f.y >= ground - 1 && onShelf(f.x)) { f.y = ground - 1 - f.size * 0.12; f.rest = 1e-3; f.va = 0; }
+        else if (f.y > H + 30 || f.x < -40 || f.x > W + 40) fallers.splice(n, 1);
+      }
+      // draw
+      const day = mix;
+      for (const f of fallers) {
+        let a = day * 0.95;
+        if (f.rest > 0) a *= 1 - Math.max(0, (f.rest - FALL_KEEP * 0.5) / (FALL_KEEP * 0.5));
+        if (a <= 0.01) continue;
+        const z = f.size, hz = z / 2;
+        const c = Math.cos(f.a), s = Math.sin(f.a);
+        ctx.globalAlpha = a;
+        ctx.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, dpr * f.x, dpr * f.y);
+        ctx.drawImage(f.sprite, -hz, -hz, z, z);
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalAlpha = 1;
     }
 
     // Whichever tree currently carries them. Pressing that tree sends the
@@ -4512,6 +4760,8 @@
       if (hit) {
         hit.growTarget = 0;
         if (hit === host) migrate();   // disturb their tree and they move on
+        // and it sheds a few leaves as it is shaken
+        if (mix > 0.6 && !introing) shed(hit, 3 + Math.floor(Math.random() * 4));
       }
     });
 
@@ -4528,6 +4778,8 @@
       mixTo = e.detail.day ? 1 : 0;
       start();
     });
+    // the lamp going out: the twig ends catch the last of its light
+    document.addEventListener('lamp', e => { if (!e.detail.on) { flare = 1; start(); } });
 
     const relayout = () => { layout(); render(performance.now()); };
     const ro = new ResizeObserver(relayout);
@@ -4736,19 +4988,67 @@
 
     const restY = () => ay + (N - 1) * SEG;
 
+    // The lamp. A pull-cord switch is attached to something, and here it is a
+    // lamp hung above the page: pull it on and a warm light blooms at the
+    // anchor and washes down the page, and only then does the day arrive
+    // under it. Pull it off and there is the flash of a filament going dark,
+    // and the grove's twig ends flare white for a moment as it does. The
+    // palette walks over a beat behind the light, so the light reads as the
+    // cause. This is drawn on the cord's own sheet, which covers the window.
+    let lamp = 0, lampOn = false;          // seconds into the bloom, and which way
+    const LAMP_LIFE = 0.9;
     function trip() {
       armed = false;
       glow = 1;
       click(true);
-      window.__theme && window.__theme.toggle();
+      lampOn = !(window.__theme && window.__theme.day);
+      lamp = 1e-6;
+      document.dispatchEvent(new CustomEvent('lamp', { detail: { on: lampOn, x: ax, y: ay } }));
+      setTimeout(() => window.__theme && window.__theme.toggle(), lampOn ? 160 : 60);
       // let go of the cord: it flies back up and swings itself out
       held = false;
       oy[N - 1] = py[N - 1] + 6;
       setTimeout(() => click(false), 90);
     }
 
+    function drawLamp() {
+      const t = lamp / LAMP_LIFE;
+      // rises quickly, holds, and dies away
+      const env = Math.pow(Math.sin(Math.min(1, t) * Math.PI), 0.7);
+      if (lampOn) {
+        // warm light from the anchor, and a wash of it down the page
+        const R = Math.max(220, W * 0.22);
+        ctx.globalCompositeOperation = 'lighter';
+        const g = ctx.createRadialGradient(ax, ay + 4, 0, ax, ay + 4, R);
+        g.addColorStop(0, `rgba(255,214,140,${0.55 * env})`);
+        g.addColorStop(0.25, `rgba(255,200,120,${0.22 * env})`);
+        g.addColorStop(1, 'rgba(255,190,110,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(ax - R, ay - R, R * 2, R * 2);
+        const w = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+        w.addColorStop(0, `rgba(255,208,140,${0.16 * env})`);
+        w.addColorStop(1, 'rgba(255,208,140,0)');
+        ctx.fillStyle = w;
+        ctx.fillRect(0, 0, W, H * 0.7);
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        // the filament: a small hard flash that is gone almost at once
+        const f = Math.max(0, 1 - t * 3.2);
+        if (f > 0) {
+          const R = 90;
+          const g = ctx.createRadialGradient(ax, ay + 4, 0, ax, ay + 4, R);
+          g.addColorStop(0, `rgba(255,246,225,${0.9 * f})`);
+          g.addColorStop(0.3, `rgba(255,236,200,${0.35 * f})`);
+          g.addColorStop(1, 'rgba(255,230,190,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(ax - R, ay - R, R * 2, R * 2);
+        }
+      }
+    }
+
     function draw() {
       ctx.clearRect(0, 0, W, H);
+      if (lamp > 0) drawLamp();
       const styles = getComputedStyle(document.documentElement);
       const cord = styles.getPropertyValue('--cord').trim() || '#4a4a4a';
       const knobA = styles.getPropertyValue('--knob').trim() || '#8a8a8a';
@@ -4807,6 +5107,7 @@
       last = now;
       step(dt);
       glow *= 0.94;
+      if (lamp > 0) { lamp += dt; if (lamp >= LAMP_LIFE) lamp = 0; }
       // re-arm once it has come most of the way home
       if (!armed && py[N - 1] < restY() + TRIP * 0.45) armed = true;
       if (armed && held && py[N - 1] > restY() + TRIP) trip();
@@ -4815,7 +5116,7 @@
       // one slow frame proves nothing. It is only asleep once every bead has
       // been quiet, and the knob has hung straight under the anchor, for a
       // good half second together.
-      let quiet = !held && glow <= 0.01 && Math.abs(px[N - 1] - ax) < 0.4;
+      let quiet = !held && glow <= 0.01 && lamp <= 0 && Math.abs(px[N - 1] - ax) < 0.4;
       for (let i = 1; quiet && i < N; i++) {
         if (Math.abs(px[i] - ox[i]) > 0.02 || Math.abs(py[i] - oy[i]) > 0.02) quiet = false;
       }
@@ -5608,6 +5909,7 @@
       uniform float uTime;
       uniform float uMix;    // 0 night .. 1 day
       uniform vec2  uSun;    // where the sun is, in p-units, so the cloud lights up under it
+      uniform float uWarm;   // 0 at noon .. 1 with the sun on the horizon
 
       // Gyroid, as explained by Martijn Steinrucken. Two trig calls buy a
       // pattern with far more structure than value noise of the same cost.
@@ -5719,8 +6021,11 @@
           c += 0.00;
           c *= smoothstep(0.02, 0.46, uv.y);                    // clear toward the horizon
 
-          vec3 sky = mix(vec3(0.690, 0.805, 0.905), vec3(0.350, 0.565, 0.780),
-                         smoothstep(-0.15, 0.95, uv.y));
+          // Low sun: the horizon goes amber and the zenith a deeper, duller
+          // blue, the way the sky does when the light comes through more air.
+          vec3 hor = mix(vec3(0.690, 0.805, 0.905), vec3(0.960, 0.760, 0.560), uWarm);
+          vec3 zen = mix(vec3(0.350, 0.565, 0.780), vec3(0.330, 0.440, 0.660), uWarm * 0.7);
+          vec3 sky = mix(hor, zen, smoothstep(-0.15, 0.95, uv.y));
 
           float sd = length(p - uSun);
 
@@ -5728,19 +6033,28 @@
           // brighter than the sun, and a cloud painted at 1.0 was — which is
           // why the sun read as the dimmer of the two. What a cloud does get
           // is the sun's own light: the nearer it sits, the warmer and the
-          // brighter it goes, so the two belong to the same picture.
-          vec3 cloud = mix(vec3(0.700, 0.765, 0.845), vec3(0.945, 0.955, 0.970),
-                           smoothstep(0.02, 0.34, c));
-          cloud = mix(cloud, vec3(1.0, 0.985, 0.945), exp(-sd * 1.6) * 0.85);
+          // brighter it goes, so the two belong to the same picture. Near
+          // dawn and dusk that light is amber, and the shaded cloud goes a
+          // little mauve against it.
+          vec3 shade = mix(vec3(0.700, 0.765, 0.845), vec3(0.720, 0.680, 0.780), uWarm);
+          vec3 lit   = mix(vec3(1.0, 0.985, 0.945), vec3(1.0, 0.860, 0.700), uWarm);
+          vec3 cloud = mix(shade, vec3(0.945, 0.955, 0.970), smoothstep(0.02, 0.34, c));
+          cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15));
           vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
 
           // The sun itself lives here rather than on the grove canvas: the sky
           // has the whole viewport to spread over and no edge to be cut off
           // at. The first term goes well past 1.0, so it blows out to a white
-          // core that no cloud can reach; the other two are the falloff.
-          day += vec3(1.00, 0.980, 0.930) * exp(-sd * 21.0) * 2.30
-               + vec3(1.00, 0.940, 0.790) * exp(-sd *  8.0) * 0.72
-               + vec3(1.00, 0.920, 0.750) * exp(-sd *  3.0) * 0.24;
+          // core that no cloud can reach; the other two are the falloff —
+          // wider and redder when the sun is low.
+          vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
+          vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
+          vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
+          day += s1 * exp(-sd * 21.0) * (2.30 - uWarm * 0.6)
+               + s2 * exp(-sd *  8.0) * (0.72 + uWarm * 0.30)
+               + s3 * exp(-sd *  3.0) * (0.24 + uWarm * 0.34);
+          // and the whole scene a shade dimmer toward the ends of the day
+          day *= 1.0 - uWarm * 0.09;
           col += day * uMix;
         }
 
@@ -5786,6 +6100,7 @@
     const uTime = gl.getUniformLocation(prog, 'uTime');
     const uMix = gl.getUniformLocation(prog, 'uMix');
     const uSun = gl.getUniformLocation(prog, 'uSun');
+    const uWarm = gl.getUniformLocation(prog, 'uWarm');
 
     // A full-screen shader is billed per pixel, so the buffer is capped well
     // under a retina viewport's worth. Cloud is soft and stars are drawn with
@@ -5824,6 +6139,10 @@
       }
       gl.uniform1f(uMix, mix);
       gl.uniform1f(uTime, reduced ? 12.0 : now / 1000);
+      // how low the sun is; by night the moon's arc is drawn as neutral, and
+      // a lit lamp at night is a lamp, not a sunset
+      const clk = window.__clock;
+      gl.uniform1f(uWarm, clk ? (clk.isDay ? clk.sun().warm : 0) : 0);
 
       // The sun is drawn by the grove, and it wanders when it is bothered, so
       // its glow in the cloud has to follow it rather than sit at a fixed spot.
