@@ -293,11 +293,12 @@
       pointer-events: none;
     }
 
-    /* The shelf the grove stands on: three slabs of the same glass as the
-       buttons, each a little narrower than the one above, so it reads as a
-       small cornice rather than a stretched pill. The grove script places
-       them where the paragraph ends. They sit under the canvas, so the trunks
-       paint over the top one and the ivy spills over the front of all three.
+    /* The shelf the grove stands on: three courses of small glass bricks, in
+       the same glass as the buttons. Ten across the top, one fewer in each
+       course below, every brick the same size and centred, so the courses
+       step in by half a brick and bond like brickwork. The grove script
+       lays them where the row of buttons is. They sit under the canvas, so
+       the trunks paint over the top course and the ivy spills over the front.
        (Scoped to the column so `absolute` outranks the `relative` they share
        with the buttons in the glass rules below.) */
     .hero-lead .ledge {
@@ -309,16 +310,18 @@
       border-radius: 4px;
       pointer-events: none;
       --gb: 9px;
-      transform-origin: 50% 0;
+      transform-origin: 50% 100%;
     }
 
+    /* Laid one at a time during the opening: bottom course first, each course
+       from the middle out, every brick rising a little into its place. --bd
+       is the brick's turn, set by the script. */
     .has-intro .ledge {
       opacity: 0;
-      transform: scaleX(0.55);
-      transition: opacity 640ms var(--ease), transform 900ms var(--ease);
+      transform: translateY(7px) scale(0.72);
+      transition: opacity 420ms var(--ease) var(--bd, 0ms),
+                  transform 620ms cubic-bezier(0.16, 1, 0.3, 1) var(--bd, 0ms);
     }
-    .has-intro .ledge + .ledge { transition-delay: 90ms; }
-    .has-intro .ledge + .ledge + .ledge { transition-delay: 180ms; }
     .is-lit .ledge { opacity: 1; transform: none; }
 
     .visually-hidden {
@@ -1570,9 +1573,7 @@
   <header class="hero">
     <div class="hero-lead">
       <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
-      <div class="ledge" aria-hidden="true"></div>
-      <div class="ledge" aria-hidden="true"></div>
-      <div class="ledge" aria-hidden="true"></div>
+      <!-- the shelf's bricks are laid here by the grove script -->
       <canvas id="grove" aria-hidden="true"></canvas>
     </div>
 
@@ -2768,33 +2769,74 @@
     const nameEl = document.querySelector('.about-name');
     const bioEl = document.querySelector('.about-bio');
     const linksEl = document.querySelector('.about-links');
-    const ledgeEls = Array.from(document.querySelectorAll('.hero-lead .ledge'));
+    const lead = canvas.parentElement;
+    const bricks = [];       // the .ledge elements, made as the layout needs them
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
-    // The shelf under the grove: three slabs, each set in a little from the
-    // ends of the one above, together exactly as thick as one of the buttons
-    // they line up with. The heights are dealt out from a button's measured
-    // height — a button, not the row, which is taller whenever the row wraps
-    // — so the stack stays flush with the buttons whatever size the page
-    // gives them. The top slab runs a little past the outermost slots.
+    // The shelf under the grove: three courses of bricks, together exactly
+    // as thick as one of the buttons they line up with. The course heights
+    // are dealt out from a button's measured height — a button, not the row,
+    // which is taller whenever the row wraps — so the stack stays flush with
+    // the buttons whatever size the page gives them. The top course runs a
+    // little past the outermost slots and is LEDGE_ACROSS bricks wide; each
+    // course below has one brick fewer, the same size, centred, so the
+    // courses step in by half a brick and bond.
     // A long slab with straight edges reads heavier than a pill of the same
     // height beside it, so the stack is drawn in from the button's top and
-    // bottom by a few pixels, centred on it, and only then looks a match.
-    const LEDGE_N = 3, LEDGE_INSET = 12, LEDGE_PAD = 8, LEDGE_TRIM = 3;
-    const LEDGE_LIFT = 3;   // and then the whole stack sits this much higher
+    // bottom by a few pixels, and sits a little higher besides.
+    const LEDGE_N = 3, LEDGE_ACROSS = 10, LEDGE_GAP = 3, LEDGE_PAD = 8, LEDGE_TRIM = 3;
+    const LEDGE_LIFT = 3;
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
-    const ledgeLayers = rowH => {
-      // top to bottom: [height, inset]; the spare pixel goes to the top slab
+    const ledgeCourses = rowH => {
+      // top to bottom, the height of each course; the spare pixel to the top
       const base = Math.floor(rowH / LEDGE_N);
-      const layers = [];
-      for (let i = 0; i < LEDGE_N; i++) {
-        layers.push([base + (i < rowH - base * LEDGE_N ? 1 : 0), i * LEDGE_INSET]);
-      }
-      return layers;
+      const out = [];
+      for (let i = 0; i < LEDGE_N; i++) out.push(base + (i < rowH - base * LEDGE_N ? 1 : 0));
+      return out;
     };
+
+    // Lay the bricks: make or drop .ledge elements to the count needed, and
+    // place each. Every brick also gets its turn in the opening — bottom
+    // course first, each course from the middle outward.
+    function layBricks(x0, x1, top, courses) {
+      const span = x1 - x0;
+      const brick = (span - LEDGE_GAP * (LEDGE_ACROSS - 1)) / LEDGE_ACROSS;
+      const step = brick + LEDGE_GAP;
+      let need = 0;
+      for (let c = 0; c < courses.length; c++) need += Math.max(1, LEDGE_ACROSS - c);
+      while (bricks.length < need) {
+        const el = document.createElement('div');
+        el.className = 'ledge';
+        el.setAttribute('aria-hidden', 'true');
+        lead.insertBefore(el, canvas);
+        bricks.push(el);
+      }
+      while (bricks.length > need) bricks.pop().remove();
+      let k = 0, y = top;
+      const rows = courses.length;
+      for (let c = 0; c < rows; c++) {
+        const n = Math.max(1, LEDGE_ACROSS - c);
+        const rowW = n * step - LEDGE_GAP;
+        const rx = x0 + (span - rowW) / 2;
+        for (let i = 0; i < n; i++, k++) {
+          const el = bricks[k];
+          const s = el.style;
+          s.left = (rx + i * step - BLEED_X).toFixed(2) + 'px';
+          s.top = (y - BLEED_Y).toFixed(2) + 'px';
+          s.width = brick.toFixed(2) + 'px';
+          s.height = courses[c] + 'px';
+          // its turn: courses from the bottom up, and within a course from
+          // the middle out, with a little jitter so it is laid, not printed
+          const out = Math.abs(i - (n - 1) / 2) / Math.max(1, (n - 1) / 2);
+          const turn = (rows - 1 - c) * 0.32 + out * 0.5 + hash(k, 131) * 0.08;
+          s.setProperty('--bd', Math.round(120 + turn * 640) + 'ms');
+        }
+        y += courses[c];
+      }
+    }
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const WIDE = window.matchMedia('(min-width: 901px)');   // matches the CSS breakpoint
@@ -3766,7 +3808,7 @@
         treeBase = lr.top - rect.top + LEDGE_TRIM - LEDGE_LIFT;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
-      const layers = ledgeLayers(LEDGE_H);
+      const courses = ledgeCourses(LEDGE_H);
       const band = Math.max(40, treeBase - top);
       ground = treeBase;
       // the ivy grows on top of the shelf and spills over its front, so it
@@ -3842,17 +3884,8 @@
       // The shelf runs the width of the row, and the ivy hangs off its front.
       ledgeX0 = edge - LEDGE_PAD;
       ledgeX1 = W - edge + LEDGE_PAD;
-      // the elements live in the column, which the canvas bleeds past
-      let ly = treeBase - BLEED_Y;
-      layers.forEach(([h, inset], i) => {
-        const el = ledgeEls[i];
-        if (!el) return;
-        el.style.left = (ledgeX0 + inset - BLEED_X) + 'px';
-        el.style.top = ly + 'px';
-        el.style.width = (ledgeX1 - ledgeX0 - inset * 2) + 'px';
-        el.style.height = h + 'px';
-        ly += h;
-      });
+      // the bricks live in the column, which the canvas bleeds past
+      layBricks(ledgeX0, ledgeX1, treeBase, courses);
       planIvy();
 
       // Scatter the scrub by rejection sampling: a candidate near a trunk is
