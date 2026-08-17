@@ -316,9 +316,8 @@
       transform: scaleX(0.55);
       transition: opacity 640ms var(--ease), transform 900ms var(--ease);
     }
-    .has-intro .ledge + .ledge { transition-delay: 80ms; }
-    .has-intro .ledge + .ledge + .ledge { transition-delay: 160ms; }
-    .has-intro .ledge + .ledge + .ledge + .ledge { transition-delay: 240ms; }
+    .has-intro .ledge + .ledge { transition-delay: 90ms; }
+    .has-intro .ledge + .ledge + .ledge { transition-delay: 180ms; }
     .is-lit .ledge { opacity: 1; transform: none; }
 
     .visually-hidden {
@@ -1261,9 +1260,12 @@
       text-decoration-color: var(--muted);
     }
 
+    /* One row, always: the shelf across the way is sized and placed to this
+       row, and a second line would throw both off. Where the column runs
+       narrow the pills tighten a little rather than wrap. */
     .about-links {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 10px;
     }
 
@@ -1282,7 +1284,15 @@
       text-decoration: none;
       border-radius: 99px;
       padding: 10px 18px;
+      white-space: nowrap;
+      flex: 0 0 auto;
       --gb: 15px;
+    }
+
+    /* the narrow end of the side-by-side layout: tighter pills, still one row */
+    @media (min-width: 901px) and (max-width: 1060px) {
+      .about-links { gap: 7px; }
+      .about-link { padding: 10px 10px; font-size: 12.5px; gap: 6px; }
     }
 
     .about-link svg {
@@ -1532,7 +1542,6 @@
   <header class="hero">
     <div class="hero-lead">
       <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
-      <div class="ledge" aria-hidden="true"></div>
       <div class="ledge" aria-hidden="true"></div>
       <div class="ledge" aria-hidden="true"></div>
       <div class="ledge" aria-hidden="true"></div>
@@ -2736,12 +2745,13 @@
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
-    // The shelf under the grove: four slabs, each set in a little from the
-    // ends of the one above, together exactly as thick as the row of buttons
-    // they line up with. The heights are dealt out from the row's measured
-    // height, so the stack stays flush with the buttons whatever size the
-    // page gives them. The top slab runs a little past the outermost slots.
-    const LEDGE_N = 4, LEDGE_INSET = 10, LEDGE_PAD = 8;
+    // The shelf under the grove: three slabs, each set in a little from the
+    // ends of the one above, together exactly as thick as one of the buttons
+    // they line up with. The heights are dealt out from a button's measured
+    // height — a button, not the row, which is taller whenever the row wraps
+    // — so the stack stays flush with the buttons whatever size the page
+    // gives them. The top slab runs a little past the outermost slots.
+    const LEDGE_N = 3, LEDGE_INSET = 12, LEDGE_PAD = 8;
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
     const ledgeLayers = rowH => {
@@ -3715,9 +3725,11 @@
       let top = BLEED_Y, treeBase = H - BLEED_BOTTOM - LEDGE_H - 40, ivyEnd = H - BLEED_BOTTOM;
       if (WIDE.matches && nameEl && linksEl) {
         const lr = linksEl.getBoundingClientRect();
+        const btn = linksEl.firstElementChild;
+        const bh = btn ? btn.getBoundingClientRect().height : LEDGE_DEFAULT_H;
         top = nameEl.getBoundingClientRect().top - rect.top;
-        // the whole stack is the row's height, top edge on the row's top
-        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(lr.height));
+        // the whole stack is one button's height, top edge on the row's top
+        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(bh));
         treeBase = lr.top - rect.top;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
