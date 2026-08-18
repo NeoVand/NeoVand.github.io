@@ -62,6 +62,123 @@ The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
 Commons), which requires no attribution. It is also the favicon, rendered over
 a night ground with the same glow it has on the page.
 
+### How it fits together
+
+Everything below lives in one script in `index.html`, under the heading
+`Grove: L-system trees under a shared wind`. The expensive work — expanding
+the grammars, dealing each tree its reading, fitting the stand to the column,
+baking sprites — happens once at load and again on resize; a frame is one
+`walk()` per plant, driven by the wind field, the pointer and each tree's
+growth, and the segments it collects are stroked straight onto the canvas.
+
+```mermaid
+flowchart TB
+  subgraph once["Once — at load, and again on resize"]
+    direction TB
+    G["Five species<br/>axiom + rules"] -->|"expand()"| S["symbol string<br/>+ maxDepth"]
+    S -->|"reseed()"| J["a reading of the grammar<br/>per-symbol jitter: turn, length,<br/>lean, limb scale"]
+    J -->|"walk() dry run"| BB["bounding box"]
+    LY["layout()<br/>canvas size, band beside the words,<br/>slots for 5–8 trees, ground line"] --> FT
+    BB --> FT["fitTrees()<br/>sx sy ox oy · trunk width"]
+    FT --> PF["planFoliage()<br/>leaf budget · leafFrom per species"]
+    LY --> SC["scrub scattered by rejection<br/>sampling away from trunks"]
+    LY --> BR["bricks laid · ivy planned"]
+    SP["sprites baked once<br/>leaves × variants · bricks · moon/sun · spark"]
+  end
+
+  subgraph inputs["Inputs"]
+    PTR["pointermove<br/>pointerdown / pointerup"]
+    LT["'lights' event<br/>mix: 0 night → 1 day"]
+    VIS["IntersectionObserver<br/>start / stop rAF"]
+    RS["ResizeObserver<br/>WIDE media query"]
+  end
+
+  subgraph frame["Every frame — render(now)"]
+    direction TB
+    DT["dt = min(50 ms, now − last)"] --> GRW
+    GRW["per plant: grow → growTarget<br/>front = grow·(maxDepth+SOFT)<br/>shrink, pop spring"] --> WK
+    WD["windAt(now − lag − depth·LEVEL_LAG, x)<br/>swell · ripple · flutter · calm"] --> LV["levels[depth]<br/>slow bands low, flutter at the twigs"]
+    LV --> BEND["bend(depth, x, y)<br/>wind + pointer smoothstep, twigs give most"]
+    PE["pointer eased<br/>x, y, amp"] --> BEND
+    BEND --> WK["walk() per plant<br/>scrub on alternate frames"]
+    WK --> SEG["buckets[depth] · tipSegs · leafSegs<br/>each with its own reach"]
+    SEG --> DRAW["stroke branches by depth<br/>twig-end highlight<br/>leaves stamped, scaled by reach³ (day)"]
+    SEG --> FF["fireflies<br/>perch on host tree's tips<br/>or fly a Bezier to a new host"]
+    SHF["shelf sheet · ivy · footings<br/>drawn under the plants"] --> DRAW
+    DRAW --> FALL["falling leaves<br/>on the same wind"]
+  end
+
+  PTR --> PE
+  PTR --> GRW
+  LT --> DRAW
+  RS --> LY
+  VIS --> frame
+  once --> frame
+```
+
+### A frame, and a press
+
+The loop only runs while the canvas is on screen. A press picks the nearest
+trunk and sends its `growTarget` to zero; the tree draws itself back in at a
+fixed rate, so a tree with more branching levels takes the same time as one
+with fewer, and letting go sends every tree back up with a small overshoot
+that rings down.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as Visitor
+  participant E as window events
+  participant R as render(now)
+  participant T as tree
+  participant W as windAt / walk
+  participant C as canvas
+  participant F as fireflies
+
+  Note over R: requestAnimationFrame while the canvas intersects the viewport
+  loop every frame
+    R->>R: dt = min(50 ms, now − last)
+    R->>C: clear · shelf sheet · ivy · footings
+    loop each plant — scrub first, then trees
+      R->>T: step grow toward growTarget → front, shrink
+      R->>W: windAt(now − lag − d·LEVEL_LAG, ox) for each depth d
+      W-->>R: levels[d] = (swell + ripple·d + flutter·d²) · calm · stiff
+      R->>W: walk(p, sx, sy, ox, oy, bend, buckets, tipSegs, leafSegs)
+      W-->>R: segments per depth · twig ends · leaf sites, each with reach
+      R->>C: stroke by depth · twig-end highlight · leaves ×reach³ by day
+    end
+    R->>F: drawFireflies(hostTips)
+    F->>C: perched — blink on a twig end · flying — quadratic Bezier
+  end
+
+  U->>E: pointermove
+  E->>R: pointer.tx, ty · target = near the canvas ? 1 : 0
+  Note over R,W: bend += smoothstep(REACH) · depth · amp, eased in over frames
+
+  U->>E: pointerdown over the grove
+  E->>T: nearest trunk gets growTarget = 0
+  opt that tree hosts the fireflies
+    E->>F: migrate() — pick another host, all take flight
+  end
+  opt daylight
+    E->>T: shed(3–6 leaves) → fallers
+  end
+  loop while grow > growTarget
+    R->>T: grow −= GROW_RATE·dt · front = grow·(maxDepth+SOFT) · shrink = 0.5 + 0.5·grow
+    Note over W: levels past front are skipped, SOFT levels part-grown, leaves shrink with reach³
+    opt grow reaches 0
+      R->>T: reseed() + fitTrees(tree) — a new individual of the same species
+    end
+  end
+
+  U->>E: pointerup
+  E->>T: growTarget = 1 for every tree
+  loop while grow < 1
+    R->>T: grow += GROW_RATE·dt
+  end
+  R->>T: at full height — popAmp spring past 1, rings down over 0.7 s
+```
+
 ## The glass
 
 The profile links and the filter chips are panes of glass rather than tinted
