@@ -4,7 +4,7 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 
 **Live site:** https://neovand.github.io
 
-![The homepage: an animated grove of L-system trees beside a short bio, above the demo gallery](media/screenshot.png)
+![The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf beside a short bio, above the demo gallery](media/screenshot.jpg)
 
 ## Structure
 
