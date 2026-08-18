@@ -1835,6 +1835,16 @@
 
     @media (max-width: 900px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* The two shapes of the page. Side by side — the grove beside the words —
+       from 901px up, and on a phone held sideways: that is as wide as a small
+       laptop window and no taller than a hand, and stacked it was one screen
+       of hedge with the name below the fold. Stacked everywhere else: narrow
+       windows, phones upright, tablets upright. The grove script keeps the
+       same two conditions (WIDE), since it fits the trees differently in
+       each. */
+    @media (max-width: 900px) and (min-height: 501px), (max-width: 699px) {
       .hero {
         /* minmax(0, …), as above: a bare 1fr track will not go narrower than
            its content's minimum, and a row of no-wrap pills would push the
@@ -1853,18 +1863,32 @@
       .hero-about { padding-top: 0; }
     }
 
-    @media (max-width: 600px) {
-      /* one left edge down the whole phone: the words, the cards, the decks
-         and the earlier work all start 16px in */
-      .hero { padding: 52px 16px 44px; gap: 32px; }
-      .papers-inner { padding: 0 16px; }
-      .hero-lead { min-height: 280px; min-height: clamp(280px, 52vh, 420px); min-height: clamp(280px, 52svh, 420px); }
-      .gallery-wrap { --pad: 16px; padding: 0 var(--pad) 72px; }
+    /* A phone on its side: the wide layout, in less room. The head padding
+       is cut to fit the short screen, and the side padding gives way where
+       the safe-area insets already keep the content off the notch and the
+       rounded corners, so the two columns get what width there is. */
+    @media (min-width: 700px) and (max-width: 900px) and (max-height: 500px) {
+      .hero {
+        gap: 40px;
+        padding: 40px 24px 40px;
+        padding-left: max(10px, calc(24px - env(safe-area-inset-left, 0px)));
+        padding-right: max(10px, calc(24px - env(safe-area-inset-right, 0px)));
+      }
+      /* the gallery's padding is its --pad, which the chip strip bleeds by */
+      .gallery-wrap { --pad: max(10px, calc(24px - env(safe-area-inset-left, 0px))); }
+      .papers-inner, .research-inner {
+        padding-left: max(10px, calc(24px - env(safe-area-inset-left, 0px)));
+        padding-right: max(10px, calc(24px - env(safe-area-inset-right, 0px)));
+      }
+    }
 
-      /* One row of four on a phone too, as on the wide screen, rather than
-         a two-by-two block of stretched pills. They share the width equally,
-         a size down, and Google Scholar goes by its surname to make room:
-         the labels stay, which is the point of them. */
+    /* One row of four on a phone too, as on the wide screen, rather than a
+       two-by-two block of stretched pills. They share the width equally, a
+       size down, and Google Scholar goes by its surname to make room: the
+       labels stay, which is the point of them. Upright, and on its side,
+       where the column beside the grove is narrower than the wide screen's
+       tightest. */
+    @media (max-width: 600px), (min-width: 700px) and (max-width: 900px) and (max-height: 500px) {
       .about-links {
         gap: 6px;
       }
@@ -1881,6 +1905,15 @@
         letter-spacing: 0;
       }
       .about-link .wide-only { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      /* one left edge down the whole phone: the words, the cards, the decks
+         and the earlier work all start 16px in */
+      .hero { padding: 52px 16px 44px; gap: 32px; }
+      .papers-inner { padding: 0 16px; }
+      .hero-lead { min-height: 280px; min-height: clamp(280px, 52vh, 420px); min-height: clamp(280px, 52svh, 420px); }
+      .gallery-wrap { --pad: 16px; padding: 0 var(--pad) 72px; }
       .research-inner { padding: 0 16px; }
       .grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; gap: 8px; padding: 20px; }
@@ -3765,7 +3798,12 @@
     }
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const WIDE = window.matchMedia('(min-width: 901px)');   // matches the CSS breakpoint
+    // Side by side with the words, or stacked above them: the same two
+    // conditions as the stylesheet — wide screens, and phones on their side.
+    const WIDE = window.matchMedia('(min-width: 901px), (min-width: 700px) and (max-height: 500px)');
+    // and a phone is a phone either way up: a hand's width of canvas, or a
+    // hand's height of column, plants fewer trees
+    const PHONE = innerWidth < 600 || window.matchMedia('(max-width: 900px) and (max-height: 500px)').matches;
 
     // Canopy: five grammars, each with its own silhouette, height and grey ramp.
     const TREES = [
@@ -3788,7 +3826,7 @@
     // low, spreading clump.
     const UNDER_SPEC = { axiom: 'F', rules: { F: 'F[+F]F[-F]F' }, angle: 42, iters: 3 };
     // fewer clumps across a phone's canvas, or the scrub packs into a hedge
-    const UNDER_COUNT = innerWidth < 600 ? 32 : 44;
+    const UNDER_COUNT = PHONE ? 32 : 44;
 
     // deterministic jitter, so a resize re-fits the same thicket
     const hash = (i, salt) => {
@@ -3919,8 +3957,7 @@
     // its height, as the wide screen's do. ?trees=N sets the count for a
     // look. leafSpec keys into FOLIAGE, so each species keeps its own leaf
     // and green.
-    const NARROW = innerWidth < 600;
-    let NTREES = NARROW ? 4 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 4);
+    let NTREES = PHONE ? 4 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 4);
     try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
     const shapes = TREES.map(expand);
     // every species at least once, the rest drawn at random, in a shuffled
@@ -5879,9 +5916,12 @@
       const rs = getComputedStyle(document.documentElement);
       const sat = parseFloat(rs.getPropertyValue('--sat')) || 0;
       const sar = parseFloat(rs.getPropertyValue('--sar')) || 0;
+      // (on a phone held sideways the inset is wide and the columns are
+      // narrow, so the cord hangs part-way into it rather than fully inside
+      // it, off the end of the lines)
       const nax = W <= 600 ? W - 50 - sar
                 : gutter >= 64 ? Math.min(W - 40 - sar, hr.right + gutter * 0.5)
-                : W - 44 - sar;
+                : W - 44 - Math.max(0, sar - 24);
       ay = -6 + sat;
       // Where the page is stacked — the grove above the words, both the
       // whole width of a phone — there is no gutter for the cord to hang in,
