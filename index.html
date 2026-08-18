@@ -3729,6 +3729,10 @@
       // has a skyline rather than a hedge's flat top
       ...TREES[k], kind: 'tree', leafSpec: k, ...shapes[k], rise: TREES[k].rise * (0.72 + Math.random() * 0.28),
     }));
+    // but the tallest of them always reaches the top of the name: the
+    // skyline is relative, the canopy's height is not
+    const tallest = Math.max(...trees.map(t => t.rise));
+    trees.forEach(t => { t.rise /= tallest; });
     // In a stand the crowns may overlap their neighbours' slots by this much
     // rather than being squeezed to fit — ?over= to try another
     let OVERLAP = 1.9;
