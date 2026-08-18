@@ -3402,9 +3402,9 @@
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
-    // The shelf under the grove: three courses of bricks, together exactly
-    // as thick as one of the buttons they line up with. The course heights
-    // are dealt out from a button's measured height — a button, not the row,
+    // The shelf under the grove: four courses of bricks, together exactly as
+    // thick as one of the buttons they line up with. The course heights are
+    // dealt out from a button's measured height — a button, not the row,
     // which is taller whenever the row wraps — so the stack stays flush with
     // the buttons whatever size the page gives them. The top course runs a
     // little past the outermost slots and is LEDGE_ACROSS bricks wide; each
@@ -3413,16 +3413,23 @@
     // A long slab with straight edges reads heavier than a pill of the same
     // height beside it, so the stack is drawn in from the button's top and
     // bottom by a few pixels, and sits a little higher besides.
-    const LEDGE_N = 3, LEDGE_ACROSS = 10, LEDGE_GAP = 3, LEDGE_PAD = 8, LEDGE_TRIM = 3;
+    //
+    // LEDGE_H is the whole thickness and does not change: the courses and the
+    // joints between them are dealt out of it, so going from three courses to
+    // four makes smaller bricks rather than a deeper shelf. Eighteen across a
+    // typical span puts a brick at about three times as long as it is tall,
+    // which is roughly a real one.
+    const LEDGE_N = 4, LEDGE_ACROSS = 18, LEDGE_GAP = 1.6, LEDGE_PAD = 8, LEDGE_TRIM = 3;
+    const LEDGE_VGAP = 1.6;       // the bed joint between courses
     const LEDGE_LIFT = 3;
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
     const ledgeCourses = rowH => {
-      // top to bottom, the height of each course; the spare pixel to the top
-      const base = Math.floor(rowH / LEDGE_N);
-      const out = [];
-      for (let i = 0; i < LEDGE_N; i++) out.push(base + (i < rowH - base * LEDGE_N ? 1 : 0));
-      return out;
+      // the courses share what the bed joints leave, so the stack still
+      // measures exactly rowH from the top of the first to the bottom of the
+      // last
+      const h = (rowH - LEDGE_VGAP * (LEDGE_N - 1)) / LEDGE_N;
+      return Array.from({ length: LEDGE_N }, () => h);
     };
 
     // Lay the bricks: work out where each one goes. Every brick also gets
@@ -3445,7 +3452,7 @@
           const turn = (rows - 1 - c) * 0.32 + out * 0.5 + hash(k, 131) * 0.08;
           bricks.push({ x: rx + i * step, y, w: brick, h: courses[c], bd: 0.12 + turn * 0.64, k });
         }
-        y += courses[c];
+        y += courses[c] + LEDGE_VGAP;
       }
     }
 
@@ -3478,14 +3485,16 @@
       g.closePath();
     };
     const BRICK_PAD = 3;        // room in the sprite for the cast beneath
-    // A brick's own clay. Three kilns' worth: the common red, a pale sand,
+    // A brick's own clay. Three kilns' worth: the common red, a sandy buff,
     // and one fired too hard. The odd ones are rare enough to be a surprise
-    // in the wall rather than a pattern in it.
+    // in the wall rather than a pattern in it. The whole range is kept below
+    // about 60% lightness — a brick lighter than that stops reading as fired
+    // clay and starts reading as a gap in the wall.
     function brickClay(k) {
       const a = hash(k, 17), s = hash(k, 53), pick = hash(k, 91);
-      if (pick < 0.16) return { h: 28 + a * 14, s: 17 + s * 13, l: 65 + a *  8 };
-      if (pick > 0.84) return { h:  7 + a * 11, s: 25 + s * 14, l: 38 + a *  8 };
-      return                   { h: 11 + a * 16, s: 29 + s * 19, l: 49 + s * 12 };
+      if (pick < 0.13) return { h: 26 + a * 14, s: 21 + s * 12, l: 47 + a * 7 };
+      if (pick > 0.87) return { h:  6 + a * 11, s: 27 + s * 14, l: 33 + a * 7 };
+      return                   { h: 10 + a * 16, s: 33 + s * 18, l: 41 + s * 11 };
     }
     function brickSprite(b, clay, day) {
       const P = BRICK_PAD, w = b.w, h = b.h, k = b.k;
@@ -3499,22 +3508,25 @@
       // colour, and the whole range is pulled down to where a night sky can
       // sit behind it without the shelf glowing.
       const sat = day ? clay.s : 0;
-      const L = day ? clay.l : clay.l * 0.40 + 2;
+      const L = day ? clay.l : clay.l * 0.46 + 4;
       const col = (dl, a) =>
         `hsla(${clay.h}, ${sat}%, ${Math.max(0, Math.min(100, L + dl))}%, ${a})`;
 
       // A brick is not a machined block: the corner radius and the seating in
-      // its slot are dealt per brick, so no two sit quite alike.
-      const r = 2.4 + hash(k, 7) * 2.0;
-      const x = P + (hash(k, 23) - 0.5) * 0.8;
-      const y = P + (hash(k, 41) - 0.5) * 0.6;
+      // its slot are dealt per brick, so no two sit quite alike. The radius
+      // is a share of the short side, or a small brick comes out a lozenge.
+      const m = Math.min(w, h);
+      const r = m * (0.13 + hash(k, 7) * 0.10);
+      const x = P + (hash(k, 23) - 0.5) * 0.7;
+      const y = P + (hash(k, 41) - 0.5) * 0.5;
 
-      // The cast beneath. It doubles as the joint: between two courses it is
-      // all that separates them, and it is what keeps the shelf from reading
-      // as one slab with lines scored across it.
+      // The cast beneath. It doubles as the joint: it is most of what
+      // separates one course from the next, and it is what keeps the shelf
+      // from reading as one slab with lines scored across it.
       g.save();
       g.shadowColor = day ? 'rgba(30,20,14,0.34)' : 'rgba(0,0,0,0.62)';
-      g.shadowBlur = 2.6; g.shadowOffsetY = 1;
+      g.shadowBlur = Math.min(2.4, h * 0.26);
+      g.shadowOffsetY = Math.min(1, h * 0.09);
       g.fillStyle = col(-14, 1);
       g.beginPath(); RR(g, x, y, w, h, r); g.fill();
       g.restore();
@@ -3548,35 +3560,35 @@
       // Grit: speck and pit, dark and light in about equal measure, so the
       // face grains rather than darkens. Baked in, so it costs nothing to
       // draw and — unlike noise generated per frame — it holds still.
-      const n = Math.round(w * h * 0.16);
+      const n = Math.round(w * h * 0.20);
       for (let i = 0; i < n; i++) {
         const j = k * 131 + i;
         g.fillStyle = col(hash(j, 23) < 0.5 ? -21 : 15, 0.10 + hash(j, 37) * 0.16);
-        g.fillRect(x + hash(j, 5) * w, y + hash(j, 13) * h, 0.7 + hash(j, 43) * 0.8, 0.7);
+        g.fillRect(x + hash(j, 5) * w, y + hash(j, 13) * h, 0.45 + hash(j, 43) * 0.55, 0.5);
       }
 
       // A worn light edge along the top and a dark one under the bottom. Both
       // stop short of the corners by a different amount on every brick: a
       // line that runs the whole way round is a rim, and a rim is what made
       // these look like panes in the first place.
-      g.lineWidth = 1;
+      g.lineWidth = 0.9;
       g.strokeStyle = col(day ? 18 : 15, 0.5);
       g.beginPath();
-      g.moveTo(x + w * hash(k, 61) * 0.2, y + 0.6);
-      g.lineTo(x + w * (0.7 + hash(k, 67) * 0.3), y + 0.6);
+      g.moveTo(x + w * hash(k, 61) * 0.2, y + 0.5);
+      g.lineTo(x + w * (0.7 + hash(k, 67) * 0.3), y + 0.5);
       g.stroke();
       g.strokeStyle = col(-23, 0.42);
       g.beginPath();
-      g.moveTo(x + w * hash(k, 71) * 0.24, y + h - 0.6);
-      g.lineTo(x + w * (0.66 + hash(k, 73) * 0.34), y + h - 0.6);
+      g.moveTo(x + w * hash(k, 71) * 0.24, y + h - 0.5);
+      g.lineTo(x + w * (0.66 + hash(k, 73) * 0.34), y + h - 0.5);
       g.stroke();
       g.restore();
 
       // and the outside edge, just enough to hold the brick against the sky
       g.strokeStyle = day ? 'rgba(46,29,19,0.26)' : 'rgba(0,0,0,0.48)';
-      g.lineWidth = 0.8;
+      g.lineWidth = 0.7;
       g.beginPath();
-      RR(g, x + 0.4, y + 0.4, w - 0.8, h - 0.8, Math.max(0.5, r - 0.4));
+      RR(g, x + 0.35, y + 0.35, w - 0.7, h - 0.7, Math.max(0.4, r - 0.35));
       g.stroke();
       return cv;
     }
