@@ -98,6 +98,45 @@ tenth survived, at 1.8px about half does. Daylight has far more room, since the
 description text still measures near 6:1 against the frost at half the tint it
 started with, so the cloud comes through much more than it did.
 
+## On a phone
+
+Below 900px the page stacks: the grove above the words, both the width of the
+screen. The grove takes its height from the screen there — about half of the
+first one, capped — so the trees stand at the same proportions they have
+beside the bio on a wide screen, and a phone plants four or five of them
+rather than squeezing in the wide screen's five to eight.
+
+The bio writes itself over the finished paragraph rather than into it: the
+text is all there from the first frame, laid out once, and the part not yet
+typed is painted with no colour through a CSS custom highlight, with the caret
+carried along as a separate box. Typing by truncating the text nodes re-broke
+the lines on every frame under `text-wrap: pretty` — Safari re-solves the whole
+paragraph — which on a twenty-line column read as the bio shivering. Browsers
+without the Highlight API get the older way, under greedy breaking.
+
+The lamp cord hangs from the top of the *page* on a stacked layout, over the
+grove, and scrolls away with it — fixed to the window it rode down over the
+right end of every line. A tap on the knob switches the lights on a touch
+screen; dragging still works, but a short drag on a phone is how the page
+scrolls. The four profile links stay one row, a size down, with Google Scholar
+going by its surname; the filter chips are one strip that scrolls, and the one
+you tap is brought to the middle of it. `viewport-fit=cover` lets the sky run
+under the notch and the home bar, with the content held inside the safe area,
+so a phone held sideways no longer shows a strip of the flat fallback colour
+either side of the weather.
+
+To try it on a real phone without deploying: serve the folder and open the
+Mac's address on the phone over the same Wi‑Fi —
+
+```bash
+python3 -m http.server 8899
+```
+
+then `http://<your-mac's-ip>:8899/` (System Settings → Wi‑Fi → Details shows
+the address; `ipconfig getifaddr en0` prints it). Safari's Web Inspector will
+attach to the phone from the Mac's Develop menu. Playwright's WebKit build is a
+fair stand-in for Mobile Safari when a device is not to hand.
+
 ## The section flourishes
 
 The dividers between sections are one calligraphic ornament, split into its

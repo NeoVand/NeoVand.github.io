@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport-fit=cover: the sky is painted right out to the edges of a
+       phone's screen, under the notch and the home bar, instead of a phone
+       held sideways showing a strip of the flat fallback colour either side
+       of it. The content itself keeps out of those zones through the
+       safe-area insets on the body, further down. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Neo Mohsenvand</title>
+  <!-- the browser's own bars take the colour of the top of the sky; the
+       script below keeps this in step with the lights -->
+  <meta name="theme-color" content="#4e70a3" />
   <meta name="description" content="Interactive simulations, visualizations, and tools built for the browser — by Neo Mohsenvand." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://neovand.github.io/" />
@@ -94,12 +102,17 @@
         if (kept && Date.now() - at < 8 * 3600e3) day = kept === 'day';
       } catch (e) {}
       if (day) root.classList.add('day');
+      // the top of the sky, by day and by night, for the browser's own bars
+      const tone = document.querySelector('meta[name="theme-color"]');
+      const paintBars = d => { if (tone) tone.setAttribute('content', d ? '#4e70a3' : '#04050a'); };
+      paintBars(day);
       window.__theme = {
         get day() { return root.classList.contains('day'); },
         toggle() {
           const on = !root.classList.contains('day');
           root.classList.add('theming');
           root.classList.toggle('day', on);
+          paintBars(on);
           try {
             localStorage.setItem('lights', on ? 'day' : 'night');
             localStorage.setItem('lightsAt', String(Date.now()));
@@ -201,6 +214,10 @@
          browser that never receives one is invalid at computed-value time and
          takes the whole backdrop-filter with it, blur and all. */
       --lg: ;
+      /* the phone's safe-area insets, where a script can read them: the
+         lamp cord hangs clear of the notch and the rounded corner */
+      --sat: env(safe-area-inset-top, 0px);
+      --sar: env(safe-area-inset-right, 0px);
     }
 
     /* Daylight. The background is the grove's sky, so the page and the canvas
@@ -299,6 +316,11 @@
       -webkit-font-smoothing: antialiased;
       /* no orphaned last words in running text; titles balanced across lines */
       text-wrap: pretty;
+      /* The page runs under a phone's notch and home bar (viewport-fit=cover
+         in the head), so the sky can; the words and the cards keep out of
+         those zones. Nothing on a desktop, where every inset is zero. */
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+               env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     }
     h1, h2, h3, .card-title, .deck-title, .rcard-title, .section-title, .modal-title { text-wrap: balance; }
     /* numbers that sit in a run or tick over — page counts, years — keep
@@ -730,7 +752,36 @@
     .is-lit .about-links > * { opacity: 1; transform: none; }
     .is-lit .about-name { letter-spacing: -0.005em; }
 
-    /* the caret, which rides the end of the text while it is being written */
+    /* The bio is written out over the whole paragraph, not into it. The text
+       is all there from the first frame and laid out once; what has not been
+       typed yet is painted with no colour through a custom highlight, and the
+       caret is a separate box carried along the line. Typing by truncating
+       the text nodes — the older way, kept below as the fallback — re-broke
+       the lines on every frame: `text-wrap: pretty` re-solves the paragraph
+       as it grows, and on a phone's twenty-line column that read as the
+       whole bio shivering while it wrote itself. */
+    ::highlight(untyped) { color: transparent; }
+
+    .about-bio { position: relative; }
+
+    .bio-caret {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2px;
+      height: 1em;
+      background: var(--muted-2);
+      pointer-events: none;
+      display: none;
+      will-change: transform;
+      animation: caret 780ms steps(1, end) infinite;
+    }
+    .about-bio.writing .bio-caret { display: block; }
+
+    /* the fallback's caret, which rides the end of the text while it is being
+       written; and the fallback types under plain greedy breaking, which is
+       stable as a paragraph grows, and lets pretty back in once it is done */
+    .about-bio.typing { text-wrap: wrap; }
     .about-bio.typing::after {
       content: '';
       display: inline-block;
@@ -759,7 +810,8 @@
       .has-intro .about-links > *,
       .has-intro .filter-btn { opacity: 1; transform: none; transition: none; }
       .has-intro .about-name { letter-spacing: -0.005em; }
-      .about-bio.typing::after { display: none; }
+      .about-bio.typing::after,
+      .about-bio.writing .bio-caret { display: none; }
     }
 
     /* ─── REVEAL ─── */
@@ -819,6 +871,19 @@
       touch-action: none;
       cursor: grab;
       will-change: transform;
+      /* a hand on the cord is not a hand on the page: no selection loupe on
+         the words beside it, no callout, no grey flash under the finger */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* under a finger the grip is wider than the bead it rides on; and a tap
+       on it, not only a pull, is enough to switch the lights (see the cord
+       script), since a short drag on a phone is what scrolls the page */
+    @media (pointer: coarse) {
+      #pull { width: 88px; height: 88px; margin: -44px 0 0 -44px; }
     }
 
     #pull.tugging { cursor: grabbing; }
@@ -1027,9 +1092,13 @@
       .papers-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
+    /* One deck to a row on a phone, and the whole deck — fan and title
+       together — held to a hand's width and centred in the column. The fan
+       alone used to carry the cap, and sat against the left edge: on a wide
+       phone that left more air on its right than its left. */
     @media (max-width: 560px) {
-      .papers-grid { grid-template-columns: 1fr; gap: 30px; }
-      .deck-fan { max-width: 340px; }
+      .papers-grid { grid-template-columns: 1fr; gap: 34px; justify-items: center; }
+      .deck { width: 100%; max-width: 340px; }
     }
 
     /* ─── RESEARCH ─── */
@@ -1169,6 +1238,10 @@
       align-items: flex-start;
       justify-content: center;
       padding: 40px 24px;
+      /* the sheet covers the whole screen, notch and all; the panel keeps
+         inside the safe area */
+      padding: calc(40px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px))
+               calc(40px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
       overflow-y: auto;
       overscroll-behavior: contain;
     }
@@ -1286,7 +1359,13 @@
 
     @media (max-width: 600px) {
       .modal { padding: 0; }
-      .modal-panel { border-radius: 0; border: none; min-height: 100%; padding: 28px 20px 32px; }
+      .modal-panel {
+        border-radius: 0; border: none; min-height: 100%;
+        padding: 28px 20px 32px;
+        padding: calc(28px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px))
+                 calc(32px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+      }
+      .modal-close { top: calc(14px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); }
     }
 
     /* ─── READING ROOM ─── */
@@ -1303,6 +1382,10 @@
       display: flex;
       flex-direction: column;
       overscroll-behavior: contain;
+      /* the backdrop covers the whole screen; the reading keeps inside the
+         safe area, clear of a phone's notch and home bar */
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+               env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
     }
     .room-backdrop {
       position: fixed;
@@ -1320,6 +1403,8 @@
       position: absolute;
       top: 18px;
       right: 20px;
+      top: calc(18px + env(safe-area-inset-top, 0px));
+      right: calc(20px + env(safe-area-inset-right, 0px));
       z-index: 2;
       width: 36px;
       height: 36px;
@@ -1697,14 +1782,14 @@
 
     /* On a narrow screen ten chips wrap to three ragged lines and eat the top
        of the gallery. They become one line that scrolls instead, bled out to
-       both edges so it is obvious there is more of it, with the ends faded and
-       a snap so a flick lands on a chip rather than between two. */
+       both edges so it is obvious there is more of it, with the ends faded.
+       No snap: a flick should run out the way every other strip on the phone
+       does, and the chip you tap is brought into the middle by the script. */
     @media (max-width: 760px) {
       .filters {
         flex-wrap: nowrap;
         overflow-x: auto;
         overscroll-behavior-x: contain;
-        scroll-snap-type: x proximity;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
         margin: 0 calc(var(--pad, 24px) * -1) 24px;
@@ -1719,45 +1804,92 @@
 
       .filter-btn {
         flex: 0 0 auto;
-        scroll-snap-align: center;
+        /* a little taller under a finger; the row is a control strip now */
+        padding: 8px 15px 8px 13px;
         /* the lift would be clipped by the scroller's own overflow */
         transform: none;
       }
 
       .filter-btn:hover { transform: none; }
+      /* the press reads as a press: it gives under the finger rather than
+         lifting, which the strip could not show anyway */
+      .filter-btn:active { transform: scale(0.96); }
+    }
+
+    /* Under a finger there is no hover, only the tap — and a tap leaves the
+       browser's hover state stuck on whatever was last touched. So on a
+       touch screen the cards do not stay lifted, and the tap gets no grey
+       flash; the press itself is the feedback. */
+    @media (hover: none) {
+      .card:hover, .rcard:hover { transform: none; }
+      .card:hover .card-thumb img, .card:hover .card-thumb video,
+      .rcard:hover .rcard-thumb img { transform: none; }
+      .card:hover .card-arrow { transform: none; }
+      .card-link, .card-repo, .rcard, .deck, .about-link, .filter-btn,
+      .modal-close, .room-close, .room-more, .modal-link, .room-pdf, #pull {
+        -webkit-tap-highlight-color: transparent;
+      }
+      .card:active .card-thumb img, .card:active .card-thumb video { transform: scale(0.985); }
+      .rcard:active .rcard-thumb img { transform: scale(0.985); }
     }
 
     @media (max-width: 900px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
       .hero {
-        grid-template-columns: 1fr;
+        /* minmax(0, …), as above: a bare 1fr track will not go narrower than
+           its content's minimum, and a row of no-wrap pills would push the
+           column past the edge of a small phone */
+        grid-template-columns: minmax(0, 1fr);
         gap: 40px;
         padding-top: 64px;
       }
-      .hero-lead { min-height: 300px; }
+      /* Stacked, the grove has no text block to measure itself against, so
+         it takes its height from the screen: a good share of the first
+         screen, capped, and never so short that the trees come out as a
+         hedge. Side by side the canopy spans the top of the name to the
+         button row — some 450px on a wide screen — and these bounds keep
+         the trees at about those proportions on a phone. */
+      .hero-lead { min-height: 300px; min-height: clamp(300px, 56vh, 440px); min-height: clamp(300px, 56svh, 440px); }
       .hero-about { padding-top: 0; }
     }
 
     @media (max-width: 600px) {
-      .hero { padding: 52px 20px 44px; gap: 32px; }
-      .hero-lead { min-height: 240px; }
+      /* one left edge down the whole phone: the words, the cards, the decks
+         and the earlier work all start 16px in */
+      .hero { padding: 52px 16px 44px; gap: 32px; }
+      .papers-inner { padding: 0 16px; }
+      .hero-lead { min-height: 280px; min-height: clamp(280px, 52vh, 420px); min-height: clamp(280px, 52svh, 420px); }
       .gallery-wrap { --pad: 16px; padding: 0 var(--pad) 72px; }
 
-      /* Four links across a phone is four cramped pills; two rows of two fills
-         the width exactly and keeps the labels, which is the point of them. */
+      /* One row of four on a phone too, as on the wide screen, rather than
+         a two-by-two block of stretched pills. They share the width equally,
+         a size down, and Google Scholar goes by its surname to make room:
+         the labels stay, which is the point of them. */
       .about-links {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        gap: 6px;
       }
 
-      .about-link {
+      /* the row's own pills only: the reading room borrows the class for its
+         PDF button, and that one keeps its size */
+      .about-links > .about-link {
+        flex: 1 1 0;
+        min-width: 0;
         justify-content: center;
-        padding: 11px 10px;
+        padding: 10px 4px;
+        font-size: 12px;
+        gap: 5px;
+        letter-spacing: 0;
       }
+      .about-link .wide-only { display: none; }
       .research-inner { padding: 0 16px; }
       .grid { grid-template-columns: 1fr; }
       footer { flex-direction: column; gap: 8px; padding: 20px; }
+    }
+
+    /* the very smallest phones have no row for four; two and two, then */
+    @media (max-width: 350px) {
+      .about-links { flex-wrap: wrap; }
+      .about-links > .about-link { flex: 1 1 40%; }
     }
   </style>
 </head>
@@ -2197,7 +2329,9 @@
         </a>
         <a class="about-link" href="https://scholar.google.com/citations?user=nRug1xsAAAAJ&amp;hl=en" target="_blank" rel="noopener">
           <svg width="14" height="14" aria-hidden="true"><use href="#icon-scholar" /></svg>
-          Google Scholar
+          <!-- one flex item, so the phone can drop the first word without
+               leaving a gap where it was -->
+          <span><span class="wide-only">Google </span>Scholar</span>
         </a>
         <a class="about-link" href="https://orcid.org/0000-0001-8114-3617" target="_blank" rel="noopener">
           <svg width="14" height="14" aria-hidden="true"><use href="#icon-orcid" /></svg>
@@ -3653,7 +3787,8 @@
     // A wide branching angle turns this rule from a spindly sapling into a
     // low, spreading clump.
     const UNDER_SPEC = { axiom: 'F', rules: { F: 'F[+F]F[-F]F' }, angle: 42, iters: 3 };
-    const UNDER_COUNT = 44;
+    // fewer clumps across a phone's canvas, or the scrub packs into a hedge
+    const UNDER_COUNT = innerWidth < 600 ? 32 : 44;
 
     // deterministic jitter, so a resize re-fits the same thicket
     const hash = (i, salt) => {
@@ -3779,10 +3914,13 @@
     // A stand rather than a row: five to eight trees, each a species drawn
     // at random, so no two loads plant the same grove. More than about ten
     // and the frame budget goes — every tree is walked and leafed each
-    // frame — and a phone's column has room for fewer still. ?trees=N sets
-    // the count for a look. leafSpec keys into FOLIAGE, so each species
-    // keeps its own leaf and green.
-    let NTREES = 5 + Math.floor(Math.random() * (innerWidth < 600 ? 2 : 4));
+    // frame — and a phone's column has room for fewer still: four or five
+    // across a canvas under 400px keeps each crown about as wide, against
+    // its height, as the wide screen's do. ?trees=N sets the count for a
+    // look. leafSpec keys into FOLIAGE, so each species keeps its own leaf
+    // and green.
+    const NARROW = innerWidth < 600;
+    let NTREES = NARROW ? 4 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 4);
     try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
     const shapes = TREES.map(expand);
     // every species at least once, the rest drawn at random, in a shuffled
@@ -5546,6 +5684,12 @@
 
     window.addEventListener('blur', () => { pointer.target = 0; });
     document.addEventListener('pointerleave', () => { pointer.target = 0; });
+    // A finger is not a pointer that stays: once it lifts there is nothing
+    // over the grove, and the trees should stand back up rather than keep
+    // leaning away from wherever it last touched.
+    const lifted = e => { if (e.pointerType !== 'mouse') pointer.target = 0; };
+    window.addEventListener('pointerup', lifted);
+    window.addEventListener('pointercancel', lifted);
 
     // Press a tree and it withdraws into itself, twigs first; let go and it
     // grows back. Listening on the window keeps the canvas pointer-transparent,
@@ -5554,6 +5698,10 @@
       const r = canvas.getBoundingClientRect();
       const x = e.clientX - r.left, y = e.clientY - r.top;
       if (x < 0 || y < 0 || x > r.width || y > r.height) return;
+      // the canvas bleeds a little way under the name when the page is
+      // stacked, and on a phone the lamp cord hangs in front of the trees:
+      // a tap on the words, or a hand on the cord, is not a press on a tree
+      if (e.target && e.target.closest && e.target.closest('.hero-about, #pull')) return;
       let hit = null, best = Infinity;
       for (const t of trees) {
         const d = Math.abs(x - t.ox);
@@ -5651,6 +5799,7 @@
     const btns = document.querySelectorAll('.filter-btn');
     const cards = document.querySelectorAll('.card');
 
+    const strip = document.querySelector('.filters');
     btns.forEach(btn => {
       btn.addEventListener('click', () => {
         const filter = btn.dataset.filter;
@@ -5663,6 +5812,15 @@
           const show = filter === 'all' || cats.split(' ').includes(filter);
           card.classList.toggle('hidden', !show);
         });
+
+        // On a phone the chips are one strip that scrolls: bring the one just
+        // tapped into the middle of it, so what is selected is in view and
+        // its neighbours are within reach either side.
+        if (strip && strip.scrollWidth > strip.clientWidth + 1) {
+          const b = btn.getBoundingClientRect(), s = strip.getBoundingClientRect();
+          const left = strip.scrollLeft + (b.left - s.left) - (s.width - b.width) / 2;
+          strip.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+        }
       });
     });
   </script>
@@ -5697,8 +5855,11 @@
     const ox = new Float64Array(N), oy = new Float64Array(N);
     let held = false, hx = 0, hy = 0, armed = true, glow = 0;
 
-    // Everything is in window coordinates: the sheet is the window.
-    let ready = false;
+    // Everything is in window coordinates: the sheet is the window — except
+    // on a stacked page (see layout), where the sheet is pinned to the top of
+    // the document and scrolls with it; `sy` is what separates the two.
+    let ready = false, docAnchored = false;
+    const sy = () => docAnchored ? (window.scrollY || 0) : 0;
     function layout() {
       W = window.innerWidth; H = window.innerHeight;
       if (!W || !H) return;
@@ -5713,10 +5874,24 @@
       // is short enough to hang above the first line.
       const hr = hero ? hero.getBoundingClientRect() : null;
       const gutter = hr ? W - hr.right : 0;
-      const nax = W <= 600 ? W - 50
-                : gutter >= 64 ? Math.min(W - 40, hr.right + gutter * 0.5)
-                : W - 44;
-      ay = -6;
+      // and clear of a phone's notch and rounded corner: the safe-area
+      // insets are read back off the root, where the stylesheet keeps them
+      const rs = getComputedStyle(document.documentElement);
+      const sat = parseFloat(rs.getPropertyValue('--sat')) || 0;
+      const sar = parseFloat(rs.getPropertyValue('--sar')) || 0;
+      const nax = W <= 600 ? W - 50 - sar
+                : gutter >= 64 ? Math.min(W - 40 - sar, hr.right + gutter * 0.5)
+                : W - 44 - sar;
+      ay = -6 + sat;
+      // Where the page is stacked — the grove above the words, both the
+      // whole width of a phone — there is no gutter for the cord to hang in,
+      // and a cord fixed to the window would ride down the page over the
+      // right end of every line. So there it hangs from the top of the page
+      // instead, over the grove, and scrolls away with it: the lamp is above
+      // the hero, and you go back up to it. The physics is unchanged; only
+      // where the sheet is pinned differs, and the scroll offset is taken
+      // out when it is drawn and put back on the way in from the pointer.
+      docAnchored = W <= 900;
       if (!ready) {
         ax = nax;
         for (let i = 0; i < N; i++) { px[i] = ox[i] = ax; py[i] = oy[i] = ay + i * SEG; }
@@ -5746,6 +5921,13 @@
         ox[i] = px[i]; oy[i] = py[i];
         px[i] += vx;
         py[i] += vy + GRAV * dt * dt;
+        // The cord hangs through the ceiling: no bead goes up past the
+        // anchor. Let go after a trip it flew up hard enough that a few beads
+        // went over the top, folded there out of sight, and were held by the
+        // damping in a balance too still to wake the solver — so the cord
+        // came to rest a good deal shorter than it was hung, and after a
+        // couple of pulls on a phone the knob was up under the status bar.
+        if (py[i] < ay) py[i] = ay;
       }
       px[0] = ax; py[0] = ay;
       if (held) { px[N - 1] = hx; py[N - 1] = hy; }
@@ -5756,8 +5938,8 @@
           const d = Math.hypot(dx, dy) || 1e-6;
           const f = ((d - SEG) / d) * STIFF * 0.5;
           dx *= f; dy *= f;
-          if (i > 0) { px[i] += dx; py[i] += dy; }
-          if (!(held && i + 1 === N - 1)) { px[i + 1] -= dx; py[i + 1] -= dy; }
+          if (i > 0) { px[i] += dx; py[i] += dy; if (py[i] < ay) py[i] = ay; }
+          if (!(held && i + 1 === N - 1)) { px[i + 1] -= dx; py[i + 1] -= dy; if (py[i + 1] < ay) py[i + 1] = ay; }
         }
         px[0] = ax; py[0] = ay;
         if (held) { px[N - 1] = hx; py[N - 1] = hy; }
@@ -5801,6 +5983,7 @@
     const LAMP_LIFE = 0.9;
     function trip() {
       armed = false;
+      tripped = true;
       glow = 1;
       click(true);
       lampOn = !(window.__theme && window.__theme.day);
@@ -5810,6 +5993,14 @@
       // let go of the cord: it flies back up and swings itself out
       held = false;
       oy[N - 1] = py[N - 1] + 6;
+      // and a touch of sideways with it. Flung straight up the tail can fold
+      // back over the beads above it in a dead-straight line, and a chain
+      // folded exactly along itself has nothing to push it open: gravity and
+      // the constraints only ever move it along that same line, so it hangs
+      // a few beads short from then on. That happened whenever the pull was
+      // perfectly vertical — every keyboard press, and every tap on a phone.
+      // A hair of drift either way and it swings open as it should.
+      ox[N - 1] = px[N - 1] - (Math.random() < 0.5 ? -1 : 1) * (0.7 + Math.random() * 0.6);
       setTimeout(() => click(false), 90);
     }
 
@@ -5850,6 +6041,18 @@
 
     function draw() {
       ctx.clearRect(0, 0, W, H);
+      const off = sy();
+      // the grip goes wherever the knob goes, off the screen included
+      const kx = px[N - 1], ky = py[N - 1];
+      host.style.transform = `translate(${kx.toFixed(1)}px, ${(ky - off).toFixed(1)}px)`;
+      // scrolled away with the page: nothing to draw, unless the lamp is lit
+      if (off > 0 && lamp <= 0) {
+        let low = 0;
+        for (let i = 0; i < N; i++) low = Math.max(low, py[i]);
+        if (low - off < -KNOB * 4) return;
+      }
+      ctx.save();
+      ctx.translate(0, -off);
       if (lamp > 0) drawLamp();
       const styles = getComputedStyle(document.documentElement);
       const cord = styles.getPropertyValue('--cord').trim() || '#4a4a4a';
@@ -5869,7 +6072,6 @@
       ctx.stroke();
 
       // the knob: a little turned bead, lit from the upper left
-      const kx = px[N - 1], ky = py[N - 1];
       const ang = Math.atan2(ky - py[N - 3], kx - px[N - 3]);
       ctx.save();
       ctx.translate(kx, ky);
@@ -5896,9 +6098,7 @@
       ctx.lineWidth = 1.1;
       ctx.stroke();
       ctx.restore();
-
-      // the grip goes wherever the knob goes
-      host.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
+      ctx.restore();
     }
 
     let last = 0, raf = 0, still = 0;
@@ -5928,10 +6128,14 @@
     }
     const wake = () => { still = 0; if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
 
-    const local = e => [e.clientX, e.clientY];
+    const local = e => [e.clientX, e.clientY + sy()];
+    // where and when the hand took hold, so a touch that lets go almost at
+    // once, almost where it began, can be told from a pull
+    let grabX = 0, grabY = 0, grabAt = 0, tripped = false;
     host.addEventListener('pointerdown', e => {
       const [x, y] = local(e);
       held = true; hx = x; hy = y;
+      grabX = x; grabY = y; grabAt = performance.now(); tripped = false;
       host.classList.add('tugging');
       host.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -5952,10 +6156,31 @@
       try { host.releasePointerCapture(e.pointerId); } catch (_) {}
       if (!held) return;
       held = false;
+      // A tap on the bead, from a finger or a pen, is a pull. Dragging a
+      // small thing a set distance is a poor gesture on a phone — a short
+      // drag is how the page scrolls, and it wants a precision a thumb has
+      // not got — so a quick touch that hardly moved switches the lights the
+      // way a press of the keyboard does: the knob is set past the trip line
+      // and let go, and the cord springs back and swings itself out.
+      const [x, y] = local(e);
+      const quick = performance.now() - grabAt < 350 && Math.hypot(x - grabX, y - grabY) < 12;
+      if (e.type === 'pointerup' && e.pointerType !== 'mouse' && quick && !tripped) {
+        py[N - 1] = restY() + TRIP + 12;
+        oy[N - 1] = py[N - 1] - 26;
+        armed = true;
+        trip();
+      }
       wake();
     };
     host.addEventListener('pointerup', letGo);
     host.addEventListener('pointercancel', letGo);
+    // Belt and braces for the touch screen: touch-action:none should keep a
+    // drag on the grip from scrolling the page, and preventing the touch
+    // itself makes sure of it, and of no selection starting on the text
+    // under a slow finger.
+    const eat = e => { if (e.cancelable) e.preventDefault(); };
+    host.addEventListener('touchstart', eat, { passive: false });
+    host.addEventListener('touchmove', eat, { passive: false });
 
     // keyboard: a tug and a release
     host.addEventListener('keydown', e => {
@@ -5971,6 +6196,9 @@
     layout();
     if (ready) draw();
     window.addEventListener('resize', () => { layout(); if (ready) { draw(); wake(); } });
+    // pinned to the page, the cord has to be redrawn as the page moves under
+    // the window; a frame or two, then it sleeps again
+    window.addEventListener('scroll', () => { if (docAnchored && ready) wake(); }, { passive: true });
     wake();
   })();
   </script>
@@ -5984,22 +6212,19 @@
     const bioEl = document.querySelector('.about-bio');
     const links = [...document.querySelectorAll('.about-links > *')];
     const filters = [...document.querySelectorAll('.filter-btn')];
+    let write = null, restore = null;
 
     const finish = () => {
       if (root.classList.contains('lit-done')) return;
       root.classList.add('lit-done', 'is-lit', 'filters-in');
-      bioEl && bioEl.classList.remove('typing');
-      if (bioEl) restore();   // the reserved height stays, so nothing reflows
+      bioEl && bioEl.classList.remove('typing', 'writing');
+      if (restore) restore();   // the reserved height stays, so nothing reflows
       I.done = true;
       if (!I.t0) I.t0 = performance.now() - I.dur;   // tell the grove to land now
       document.dispatchEvent(new Event('intro:done'));
     };
 
     if (!root.classList.contains('has-intro') || !bioEl) { finish(); return; }
-
-    // Reserve the height the finished bio takes before emptying it, or the
-    // column would grow line by line and drag the grove's canopy with it.
-    bioEl.style.minHeight = Math.ceil(bioEl.getBoundingClientRect().height) + 'px';
 
     // Type over the text nodes rather than the markup, so the links and the
     // bold names inside the bio survive being written out.
@@ -6011,15 +6236,76 @@
       }
     })(bioEl);
     const total = runs.reduce((a, r) => a + r.full.length, 0);
-    function write(k) {
-      let left = k;
-      for (const r of runs) {
-        const take = left <= 0 ? 0 : Math.min(left, r.full.length);
-        if (r.node.nodeValue.length !== take) r.node.nodeValue = r.full.slice(0, take);
-        left -= take;
-      }
+
+    // Two ways of writing. Where the browser has the CSS Custom Highlight API
+    // the paragraph is never touched: it is laid out whole, in its final
+    // breaks, and a highlight over the untyped tail paints it with no colour;
+    // the caret is a small box moved to the end of the last typed character.
+    // Nothing reflows, so the lines hold still however the paragraph is
+    // broken. Without the API the text nodes are cut and grown back, as they
+    // always were, under greedy breaking so a growing paragraph keeps its
+    // earlier lines.
+    const HL = !!(window.CSS && CSS.highlights && typeof Highlight === 'function' && typeof Range === 'function');
+    let caret = null, hl = null;
+    if (HL) {
+      hl = new Highlight();
+      CSS.highlights.set('untyped', hl);
+      caret = document.createElement('span');
+      caret.className = 'bio-caret';
+      caret.setAttribute('aria-hidden', 'true');
+      bioEl.appendChild(caret);
+      const last = runs[runs.length - 1];
+      // the text position k characters in, as a node and an offset
+      const at = k => {
+        let left = k;
+        for (const r of runs) {
+          if (left <= r.full.length) return [r.node, left];
+          left -= r.full.length;
+        }
+        return [last.node, last.full.length];
+      };
+      let shown = -1;
+      write = k => {
+        if (k === shown) return;
+        shown = k;
+        hl.clear();
+        if (k < total) {
+          const r = new Range();
+          const [n, o] = at(k);
+          r.setStart(n, o);
+          r.setEnd(last.node, last.full.length);
+          hl.add(r);
+        }
+        // the caret sits after the last typed character — or, before anything
+        // is written, where the first one will go
+        const c = new Range();
+        if (k > 0) { const [n0, o0] = at(k - 1); const [n1, o1] = at(k); c.setStart(n0, o0); c.setEnd(n1, o1); }
+        else { const [n1, o1] = at(0); c.setStart(n1, o1); c.setEnd(n1, Math.min(1, last.full.length)); }
+        const rects = c.getClientRects();
+        const rc = rects.length ? rects[rects.length - 1] : null;
+        if (rc) {
+          const b = bioEl.getBoundingClientRect();
+          const x = (k > 0 ? rc.right : rc.left) - b.left + 1;
+          const y = rc.top - b.top;
+          caret.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+          caret.style.height = rc.height.toFixed(1) + 'px';
+        }
+      };
+      restore = () => { hl.clear(); CSS.highlights.delete('untyped'); if (caret) caret.remove(); caret = null; };
+    } else {
+      // Reserve the height the finished bio takes before emptying it, or the
+      // column would grow line by line and drag the grove's canopy with it.
+      bioEl.style.minHeight = Math.ceil(bioEl.getBoundingClientRect().height) + 'px';
+      write = k => {
+        let left = k;
+        for (const r of runs) {
+          const take = left <= 0 ? 0 : Math.min(left, r.full.length);
+          if (r.node.nodeValue.length !== take) r.node.nodeValue = r.full.slice(0, take);
+          left -= take;
+        }
+      };
+      restore = () => { for (const r of runs) r.node.nodeValue = r.full; };
     }
-    function restore() { for (const r of runs) r.node.nodeValue = r.full; }
     write(0);
 
     // The buttons land one after another and the last one lands with everything
@@ -6034,7 +6320,7 @@
       const u = Math.min(1, (now - I.t0) / I.dur);
       write(Math.round(u * total));
       if (u < 1) raf = requestAnimationFrame(tick);
-      else { bioEl.classList.remove('typing'); restore(); finishPhase2(); }
+      else { bioEl.classList.remove('typing', 'writing'); restore(); finishPhase2(); }
     }
 
     function finishPhase2() {
@@ -6047,7 +6333,7 @@
       if (I.t0) return;
       I.t0 = performance.now();
       root.classList.add('is-lit');
-      bioEl.classList.add('typing');
+      bioEl.classList.add(HL ? 'writing' : 'typing');
       raf = requestAnimationFrame(tick);
     }
 
@@ -6918,6 +7204,10 @@
     const CHROMIUM = !!window.chrome &&
       CSS.supports('backdrop-filter', 'url(#a) blur(1px)');
     if (!CHROMIUM) return;
+    // Not on a phone or tablet. Fourteen SVG-filtered backdrops over a live
+    // sky is a real cost on a mobile GPU, and at a phone's size the bend at
+    // the rim is a few pixels nobody will see. The panes keep their blur.
+    if (matchMedia('(hover: none) and (pointer: coarse)').matches) return;
 
     const NS = 'http://www.w3.org/2000/svg';
     const holder = document.createElementNS(NS, 'svg');
