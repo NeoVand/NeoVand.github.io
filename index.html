@@ -859,6 +859,21 @@
       pointer-events: none;
     }
 
+    /* ─── THE AIR ─── */
+    /* The birds and fireflies: a sheet the size of the window over the page
+       — above everything on it, below the lamp cord, and below the reading
+       room and the modals, whose backdrops should cover a bird left sitting
+       on the grove as they cover the grove. */
+    #air {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 55;
+      pointer-events: none;
+    }
+
     #pull {
       position: fixed;
       top: 0;
@@ -1587,6 +1602,8 @@
     }
     .room-fly .dbl.paper { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 18px 40px rgba(0,0,0,0.45); }
     .day .room-fly .dbl.paper { box-shadow: 0 1px 3px rgba(22,36,47,0.18), 0 16px 34px rgba(22,36,47,0.22); }
+    /* the birds that come to sit on the pages, over everything in the room */
+    #air-room { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 4; pointer-events: none; }
 
     @media (max-width: 700px) {
       .room-head { padding: 56px 20px 12px; }
@@ -2320,6 +2337,8 @@
     </symbol>
   </svg>
 
+  <!-- the air: birds by day, fireflies by night, drawn over the whole page -->
+  <canvas id="air" aria-hidden="true"></canvas>
   <canvas id="pull-canvas" aria-hidden="true"></canvas>
   <div id="pull" role="button" tabindex="0"
        aria-label="Pull the cord to change the lights" title="Pull to switch the lights"></div>
@@ -3519,6 +3538,9 @@
       <div class="room-pages"></div>
     </div>
     <div class="room-fly" aria-hidden="true"></div>
+    <!-- the air's second sheet: the party that visits the pages is drawn
+         over the room, not under its backdrop -->
+    <canvas id="air-room" aria-hidden="true"></canvas>
   </div>
 
   <div class="modal" id="proj-modal" hidden>
@@ -3835,6 +3857,10 @@
     };
 
     const REACH = 340;          // px radius of the pointer's influence
+    // A bird has weight, and these are thin trees. SAG_R is how far along the
+    // wood one bird's weight is felt, SAG how hard it pulls (see the load
+    // term in render).
+    const SAG_R = 58, SAG_R2 = SAG_R * SAG_R, SAG = 0.058;
     const SOFT = 2.2;           // branching levels drawing back at once
     const MIN_RATIO = 0.35;     // hard floor on how narrow a tree may be squeezed
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -3903,7 +3929,9 @@
             ? shrink
             : Math.max(0, Math.min(1, (front - depth) / SOFT)) * shrink;
           if (reach <= 0.001) continue;          // this level has receded away
-          if (bend) a += bend(depth, x, y) * bendDir;
+          // the heading goes to the bend as well: a load only makes a branch
+          // sag by as much as its heading lets it (see the load term)
+          if (bend) a += bend(depth, x, y, a) * bendDir;
           const px = x, py = y;
           const len = jL ? reach * jL[i] * limb : reach;
           x += Math.cos(a) * sx * len;
@@ -4218,33 +4246,15 @@
       art.src = 'media/moon.svg';
     }
 
-    // ─── Fireflies on the centre tree ───
-    // A soft dot, stamped rather than drawn as a gradient each frame.
-    const spark = document.createElement('canvas');
-    spark.width = spark.height = 64;
-    {
-      const g = spark.getContext('2d');
-      const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-      grad.addColorStop(0.00, 'rgba(255,255,255,1)');
-      grad.addColorStop(0.14, 'rgba(255,255,255,0.85)');
-      grad.addColorStop(0.34, 'rgba(255,255,255,0.25)');
-      grad.addColorStop(0.62, 'rgba(255,255,255,0.06)');
-      grad.addColorStop(1.00, 'rgba(255,255,255,0)');
-      g.fillStyle = grad;
-      g.fillRect(0, 0, 64, 64);
-    }
-
-    const fireflies = Array.from({ length: 18 }, (_, i) => ({
-      pick: hash(i, 40),                        // which twig it perches on
-      phase: hash(i, 41) * Math.PI * 2,
-      speed: 0.7 + hash(i, 42) * 1.6,           // blink rate
-      duty: 0.30 + hash(i, 43) * 0.34,          // how much of the cycle it is lit
-      size: 1.6 + hash(i, 44) * 1.5,
-      x: 0, y: 0, alpha: 0,
-      state: 'perched',        // perched ⇄ flying
-      hold: 0,                 // stays lit this long after landing
-      sx: 0, sy: 0, t: 0, dur: 1, delay: 0, bow: 0, lift: 0,
-    }));
+    // ─── What the air needs of the grove ───
+    // The birds and fireflies used to be drawn here, on the middle tree. They
+    // live in the script after this one now, on a sheet the size of the
+    // window, so they can go anywhere on the page; what they need from the
+    // grove is handed over through this object — the twig ends of every tree,
+    // fresh each frame it draws, where the canvas sits on the page, and a
+    // word when a tree is pressed or the opening begins.
+    const G = window.__grove = { trees: trees.map(() => ({ tips: null })), left: 0, top: 0, W: 0, H: 0 };
+    trees.forEach((t, i) => { t.idx = i; });
 
     // ── night and day ──────────────────────────────────────────────────────
     // Every plant keeps its greyscale tone pair from the grammar; the theme
@@ -4904,6 +4914,7 @@
       groveOY = rect.top + window.scrollY;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       W = rect.width; H = rect.height;
+      G.left = groveOX; G.top = groveOY; G.W = W; G.H = H;
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -5142,10 +5153,10 @@
       }
 
       // ── the opening ──────────────────────────────────────────────────────
-      // Plants push up, the moon slides in off the corner, and the fireflies
-      // arrive from below, all on the same clock as the text beside them. If
-      // no opening ever starts, the grove grows itself in rather than sitting
-      // invisible.
+      // Plants push up, the moon slides in off the corner, and the birds or
+      // the fireflies arrive from below (see the air, in the next script),
+      // all on the same clock as the text beside them. If no opening ever
+      // starts, the grove grows itself in rather than sitting invisible.
       if (introing) {
         const I = window.__intro;
         if (!I.t0) {
@@ -5155,7 +5166,7 @@
           introBegin();
         }
         if (I.t0) {
-          const u = Math.min(1, (now - I.t0) / I.dur);
+          const u = Math.max(0, Math.min(1, (now - I.t0) / I.dur));
           const e = 1 - Math.pow(1 - u, 3);
           introEase = e;
           for (const p of plants) {
@@ -5209,11 +5220,6 @@
           p.shrink = 0.5 + 0.5 * p.grow;
         }
       }
-
-      // Wander off to another tree now and then, but never mid-crossing:
-      // if any of them is still in the air the countdown just waits.
-      migrateIn -= dt;
-      if (migrateIn <= 0 && !fireflies.some(f => f.state === 'flying')) migrate();
 
       // slow easing on both the pointer and its strength, so the grove drifts
       // rather than snaps
@@ -5271,11 +5277,46 @@
                        w.flutter * dn * dn) * w.calm * p.stiff;
         }
 
-        walk(p, p.sx, p.sy, p.ox, p.oy, (depth, x, y) => {
+        // What is sitting on this tree, and where — handed over by the air.
+        // A bird has weight and these are thin trees, so the wood under it
+        // turns toward the ground. How much of a turn goes into dropping the
+        // tip depends on the heading: cos(a) is zero on an upright trunk,
+        // which does not sag under a load, and greatest on a level branch,
+        // which does. The outer levels, being thinner, give the most. The
+        // box is a cheap reject — most of a tree is nowhere near a bird.
+        let loads = null, lx0 = 0, lx1 = 0, ly0 = 0, ly1 = 0;
+        if (p.kind === 'tree' && G.loads) {
+          const arr = G.loads[p.idx];
+          if (arr && arr.length) {
+            loads = arr;
+            lx0 = Infinity; ly0 = Infinity; lx1 = -Infinity; ly1 = -Infinity;
+            for (let k = 0; k < arr.length; k += 3) {
+              if (arr[k] < lx0) lx0 = arr[k];
+              if (arr[k] > lx1) lx1 = arr[k];
+              if (arr[k + 1] < ly0) ly0 = arr[k + 1];
+              if (arr[k + 1] > ly1) ly1 = arr[k + 1];
+            }
+            lx0 -= SAG_R; lx1 += SAG_R; ly0 -= SAG_R; ly1 += SAG_R;
+          }
+        }
+        // walk multiplies the whole bend by this for a mirrored plant; the
+        // sag must not be mirrored, since down is down either way round
+        const sagDir = p.sx < 0 ? -1 : 1;
+
+        walk(p, p.sx, p.sy, p.ox, p.oy, (depth, x, y, a) => {
           const d = depth / p.maxDepth;
           // the 0.16 floor lets the trunk lean too, so whole plants move
           // rather than only their twigs
           let b = levels[depth] * 0.0072 * (0.16 + 0.84 * d) * windGive * breeze;
+          if (loads && depth && x > lx0 && x < lx1 && y > ly0 && y < ly1) {
+            let w = 0;
+            for (let k = 0; k < loads.length; k += 3) {
+              const ax = x - loads[k], ay = y - loads[k + 1];
+              const q = 1 - (ax * ax + ay * ay) / SAG_R2;
+              if (q > 0) w += loads[k + 2] * q;
+            }
+            if (w > 0) b += Math.cos(a) * w * SAG * d * sagDir;
+          }
           if (pointer.amp > 0.002) {
             const dx = x - pointer.x, dy = y - pointer.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -5450,11 +5491,13 @@
           }
         }
 
-        if (p === host) hostTips = tipSegs;
+        // the twig ends, for the air to perch on
+        if (p.kind === 'tree') G.trees[p.idx].tips = tipSegs;
         if (leafSegs) p.lastLeafSegs = leafSegs;
       }
       stepFallers(now, dt);
-      drawFireflies(now, dt, hostTips);
+      // and a word to the air that the branches have moved
+      if (G.tick) G.tick();
     }
 
     // ── Falling leaves ────────────────────────────────────────────────────
@@ -5548,35 +5591,6 @@
       ctx.globalAlpha = 1;
     }
 
-    // Whichever tree currently carries them. Pressing that tree sends the
-    // swarm off to a different one; there is no returning home.
-    let host = trees[Math.floor(trees.length / 2)];
-    let hostTips = null;
-
-    // They also move on by themselves every 20 to 30 seconds. The countdown
-    // runs on the clamped frame delta rather than the clock, so a grove that
-    // was scrolled out of view does not come back owing several crossings.
-    const MIGRATE_MIN = 20, MIGRATE_MAX = 30;
-    let migrateIn = MIGRATE_MIN + Math.random() * (MIGRATE_MAX - MIGRATE_MIN);
-
-    function migrate() {
-      migrateIn = MIGRATE_MIN + Math.random() * (MIGRATE_MAX - MIGRATE_MIN);
-      const others = trees.filter(t => t !== host);
-      host = others[(Math.random() * others.length) | 0];
-      for (const f of fireflies) {
-        f.state = 'flying';
-        f.pick = Math.random();                  // a twig on the new tree
-        f.sx = f.x; f.sy = f.y;
-        f.t = 0;
-        f.delay = Math.random() * 0.45;          // they leave raggedly
-        f.dur = 1.5 + Math.random() * 1.2;
-        f.bow = (Math.random() - 0.5) * 0.9;     // how far the arc bends sideways
-        f.lift = 0.18 + Math.random() * 0.30;    // and how high it rises
-      }
-    }
-
-    const easeInOut = e => (e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2);
-
     // ── opening state ──────────────────────────────────────────────────────
     let introing = INTRO, introStarted = false, introWait = 0, introEase = 0;
     let introMoonX = 0, introMoonY = 0;
@@ -5590,119 +5604,9 @@
       introMoonY = -moonR * 0.9;
       moonX = introMoonX; moonY = introMoonY;
 
-      // fireflies rise from below and off to the side, landing on the middle
-      // tree just before the rest of the opening lands
-      const secs = window.__intro.dur / 1000;
-      host = trees[Math.floor(trees.length / 2)];
-      for (const f of fireflies) {
-        f.state = 'flying';
-        f.pick = Math.random();
-        f.sx = W * (0.15 + Math.random() * 0.7) + (Math.random() - 0.5) * W * 0.5;
-        f.sy = H + 40 + Math.random() * 120;
-        f.x = f.sx; f.y = f.sy;
-        f.t = 0;
-        f.delay = Math.random() * secs * 0.22;
-        f.dur = Math.max(0.5, secs * 0.86 - f.delay);
-        f.bow = (Math.random() - 0.5) * 0.9;
-        f.lift = 0.18 + Math.random() * 0.3;
-        f.alpha = 0;
-      }
-    }
-
-    function drawFireflies(now, dt, tips) {
-      const n = tips ? tips.length / 5 : 0;
-
-      for (let i = 0; i < fireflies.length; i++) {
-        const f = fireflies[i];
-
-        // the twig it is heading for, or sitting on — recomputed every frame,
-        // so the target tracks the branch as the wind moves it
-        let px = f.x, py = f.y;
-        if (n) {
-          const k = Math.min(n - 1, Math.floor(f.pick * n)) * 5;
-          px = tips[k + 2];
-          py = tips[k + 3];
-        }
-
-        if (f.state === 'flying') {
-          if (f.delay > 0) {
-            f.delay -= dt;                       // still sitting, lit, about to go
-            f.alpha += (1 - f.alpha) * 0.2;
-          } else {
-            f.t = Math.min(1, f.t + dt / f.dur);
-            const e = easeInOut(f.t);
-
-            // Quadratic Bezier: the control point is offset perpendicular to
-            // the crossing and lifted, which gives a curved, unhurried path
-            // instead of a straight dash between trees.
-            const dx = px - f.sx, dy = py - f.sy;
-            const cx = (f.sx + px) / 2 - dy * f.bow;
-            const cy = (f.sy + py) / 2 + dx * f.bow - Math.hypot(dx, dy) * f.lift;
-            const u = 1 - e;
-            // a small waver, fading out so the landing is clean
-            const wob = Math.sin(now * 0.005 + f.phase) * 4 * (1 - e);
-
-            f.x = u * u * f.sx + 2 * u * e * cx + e * e * px + wob;
-            f.y = u * u * f.sy + 2 * u * e * cy + e * e * py + wob * 0.6;
-            f.alpha += (0.95 - f.alpha) * 0.2;   // stays lit the whole crossing
-
-            if (f.t >= 1) {
-              f.state = 'perched';
-              f.hold = 0.9 + Math.random() * 0.5;   // glows a moment after landing
-            }
-          }
-        } else {
-          if (!n) continue;
-          f.x = px; f.y = py;
-          if (f.hold > 0) {
-            f.hold -= dt;
-            f.alpha += (1 - f.alpha) * 0.15;
-          } else {
-            const s = 0.5 + 0.5 * Math.sin(now * 0.001 * f.speed + f.phase);
-            const lit = s > 1 - f.duty ? (s - (1 - f.duty)) / f.duty : 0;
-            f.alpha += (lit - f.alpha) * 0.14;
-          }
-        }
-
-        if (f.alpha > 0.015) {
-          // The halo stays the same size in flight — scaling it up just reads
-          // as going out of focus — and a hard core keeps the centre white.
-          const r = f.size * 3.0;
-          // By night a lit speck; by day the same creature drawn as a bird,
-          // wings beating while it crosses and folded once it settles.
-          if (mix < 0.995) {
-            ctx.globalAlpha = Math.min(1, f.alpha) * (1 - mix);
-            ctx.drawImage(spark, f.x - r, f.y - r, r * 2, r * 2);
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(f.x, f.y, Math.max(0.7, f.size * 0.44), 0, Math.PI * 2);
-            ctx.fill();
-          }
-          if (mix > 0.005) {
-            const s = Math.max(2.6, f.size * 1.5);
-            const flying = f.state === 'flying';
-            // wings sweep while flying, and rest nearly closed when perched
-            const beat = flying ? Math.sin(now / 90 + f.phase) : -0.55;
-            const lift = 0.55 + beat * 0.5;
-            ctx.globalAlpha = mix * Math.min(1, 0.35 + f.alpha * 0.8);
-            ctx.strokeStyle = 'rgb(46,42,38)';
-            ctx.lineWidth = Math.max(0.9, s * 0.26);
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(f.x - s, f.y + s * lift * 0.5);
-            ctx.quadraticCurveTo(f.x - s * 0.45, f.y - s * lift, f.x, f.y);
-            ctx.quadraticCurveTo(f.x + s * 0.45, f.y - s * lift, f.x + s, f.y + s * lift * 0.5);
-            ctx.stroke();
-            if (!flying) {                       // a body to sit on the twig
-              ctx.fillStyle = 'rgb(46,42,38)';
-              ctx.beginPath();
-              ctx.ellipse(f.x, f.y + s * 0.16, s * 0.4, s * 0.3, 0, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-          ctx.globalAlpha = 1;
-        }
-      }
+      // and the birds or the fireflies rise from below, each party to its
+      // tree, landing just before the rest of the opening lands
+      if (G.onIntro) G.onIntro(window.__intro.dur / 1000);
     }
 
     let running = false, raf = 0;
@@ -5746,7 +5650,7 @@
       }
       if (hit) {
         hit.growTarget = 0;
-        if (hit === host) migrate();   // disturb their tree and they move on
+        if (G.onPress) G.onPress(hit.idx);   // disturb their tree and the party on it moves on
         // and it sheds a few leaves as it is shaken
         if (mix > 0.6 && !introing) shed(hit, 3 + Math.floor(Math.random() * 4));
       }
@@ -5785,6 +5689,1002 @@
     render(performance.now());
   })();
 
+  </script>
+
+  <script>
+  // ─── The air: birds by day, fireflies by night, over the whole page ───
+  // The same two dozen creatures whichever the lamp says. After dark each is
+  // a lit speck — blinking on a twig end, or drifting about the crown on a
+  // slow wandering course before it settles again — and in daylight the same
+  // one is a small dark bird, sitting up on the crown where it shows against
+  // the sky, hopping to the next twig, turning to look the other way, now and
+  // then flicking its tail. They keep to the grove in two parties, one to a
+  // tree, and a party crosses to another tree when it feels like it, or when
+  // the tree it is on is pressed. But the grove is not a cage. A paper opened
+  // into its pages brings a party down to sit along the tops of the pages,
+  // riding them as the stream scrolls and moving on when a page scrolls out
+  // from under them, and they leave with the pages when the room closes.
+  //
+  // None of this is drawn on the grove's canvas, which is the size of the
+  // grove. They have a sheet of their own the size of the window, over the
+  // page and under the lamp cord, so a flight can go anywhere; and a second
+  // sheet inside the reading room, over its backdrop, for the visit. All of
+  // it is kept in page coordinates and taken to the window at draw time, so a
+  // scroll carries a perched bird along with its branch and leaves a flying
+  // one where it is in the air. A flight to or from somewhere far off the
+  // screen is not flown across the whole page — a bird leaving the grove for
+  // a paper three screens below would cross at a streak — but from the edge
+  // of the window: it comes in from just outside, or goes out at the edge and
+  // is set down at the far end unseen.
+  (() => {
+    const sheet = document.getElementById('air');
+    if (!sheet) return;
+    const roomEl = document.getElementById('room');
+    const roomSheet = document.getElementById('air-room');
+    const ctxP = sheet.getContext('2d');
+    const ctxR = roomSheet ? roomSheet.getContext('2d') : null;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const PHONE = innerWidth < 600 || matchMedia('(max-width: 900px) and (max-height: 500px)').matches;
+    const hash = (i, salt) => { const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
+    const rnd = Math.random;
+    const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+    const easeInOut = e => (e < 0.5 ? 4 * e * e * e : 1 - Math.pow(-2 * e + 2, 3) / 2);
+
+    // What the grove hands over: the twig ends of every tree, fresh each frame
+    // it draws, where its canvas sits on the page, and hooks for a press on a
+    // tree and for the opening. If there is no grove there is nowhere to
+    // live, and nothing here ever shows.
+    const G = window.__grove || (window.__grove = { trees: [], left: 0, top: 0, W: 0, H: 0 });
+
+    // the light, kept here as the grove keeps it: 0 night, 1 day, walking
+    // across in half a second when the lamp is pulled
+    let mix = window.__theme && window.__theme.day ? 1 : 0, mixTo = mix;
+
+    // ── the glow ────────────────────────────────────────────────────────
+    // A small soft dot, stamped rather than drawn as a gradient each frame,
+    // and laid on with `lighter` so two that cross brighten rather than
+    // cover. White, not the yellow-green a firefly really is: by night this
+    // page is a greyscale drawing — black trees to white twigs, a white
+    // moon, the colour taken out of the brick — and one coloured thing in it
+    // is a spot of paint on a pencil study. What keeps them from being lost
+    // among the white twig ends is not their hue; it is that they sit up on
+    // the crown and that a third of them are always adrift.
+    const glow = document.createElement('canvas');
+    glow.width = glow.height = 64;
+    {
+      const g = glow.getContext('2d');
+      const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0.00, 'rgba(255,255,255,1)');
+      gr.addColorStop(0.14, 'rgba(255,255,255,0.85)');
+      gr.addColorStop(0.34, 'rgba(255,255,255,0.25)');
+      gr.addColorStop(0.62, 'rgba(255,255,255,0.06)');
+      gr.addColorStop(1.00, 'rgba(255,255,255,0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 64, 64);
+    }
+
+    // ── the flock ───────────────────────────────────────────────────────
+    // Plumage: a sparrow's, which is one muted earth brown and not much of
+    // it. Black birds were holes cut in the sky and the eye went to the holes
+    // rather than to the grove; brick colours were the other way wrong — too
+    // light, and dealt from three clays, so a stand of them read as a handful
+    // of different birds scattered about, which is busier than a flock. One
+    // narrow family, a shade darker than the wall below, and the small
+    // difference between individuals is only enough that they are not
+    // stamped from the same die.
+    function plumage(i) {
+      const a = hash(i, 46), s = hash(i, 49);
+      return `hsl(${(24 + a * 8).toFixed(0)}, ${(18 + s * 8).toFixed(0)}%, ${(28 + a * 6).toFixed(0)}%)`;
+    }
+
+    // Two parties, and a few besides who do not stay in the grove once the
+    // visitor has left it (the escort, below).
+    const N = PHONE ? 16 : 24, ESCORT = PHONE ? 3 : 4;
+    const flock = Array.from({ length: N }, (_, i) => ({
+      i, group: i < N - ESCORT ? (i & 1) : 2,
+      phase: hash(i, 41) * Math.PI * 2,
+      speed: 0.6 + hash(i, 42) * 1.5,        // blink rate, by night
+      duty: 0.30 + hash(i, 43) * 0.32,       // share of the cycle it is lit
+      size: 1.6 + hash(i, 44) * 1.5,         // the glow's size — small, and it stays small
+      len: 6.6 + hash(i, 45) * 2.6,          // the bird's, beak to tail, px
+      coat: plumage(i),                       // its own brown, out of the shelf's clays
+      face: hash(i, 47) < 0.5 ? -1 : 1,      // which way it looks
+      x: 0, y: 0, vx: 0, vy: 0,
+      head: 0,                                // the heading it is drawn along
+      pose: 1, poseTo: 1,                     // 0 in the air, 1 on the perch
+      alpha: 0,                               // the light, by night
+      vis: 0, visTo: 1,                       // whether it is there at all
+      state: 'hidden',                        // hidden · perched · flying · drift
+      perch: null,                            // where it sits, or is going
+      fl: null, drift: null,                  // the flight or the wander under way
+      hold: 0, flick: 0, shy: 0, out: 0,
+      idle: 2 + hash(i, 48) * 5,              // seconds until it does something
+      room: false,                            // drawn on the room's sheet
+      nextMove: 0,                            // the escort's own pace, ms
+    }));
+    // the parties, and the tree each is on
+    const groups = [0, 1, 2].map(() => ({ host: -1, timer: 0, away: false }));
+    // what each tree is carrying, handed to the grove so it can bend
+    const loads = [];
+    const MIGRATE_MIN = 14, MIGRATE_MAX = 24;
+
+    // ── perches ─────────────────────────────────────────────────────────
+    // A perch is somewhere to sit — a twig end on a tree, or a point along
+    // the top of an element — resolved to a point on the page every frame,
+    // so it tracks the branch in the wind or the page in the stream. Element
+    // boxes are measured once a frame at most.
+    let sx = 0, sy = 0;         // the scroll, read once a frame
+    let frameNo = 0;
+    const rects = new Map();
+    function rectOf(el) {
+      let r = rects.get(el);
+      if (!r) { r = el.getBoundingClientRect(); rects.set(el, r); }
+      return r;
+    }
+    function where(p) {
+      if (!p) return null;
+      if (p.kind === 'tree') {
+        const T = G.trees[p.t], tips = T && T.tips;
+        const n = tips ? tips.length / 5 : 0;
+        if (!n) return null;
+        const k = Math.min(n - 1, Math.floor(p.u * n)) * 5;
+        return { x: G.left + tips[k + 2], y: G.top + tips[k + 3] };
+      }
+      const r = rectOf(p.el);
+      if (!r || (!r.width && !r.height)) return null;
+      return { x: r.left + sx + r.width * p.u + (p.dx || 0), y: r.top + sy + (p.dy || 0) };
+    }
+    // the crown of a tree: the box its twig ends span, a little enlarged,
+    // which is where a firefly wanders
+    const crowns = [];
+    function crown(t) {
+      let b = crowns[t];
+      if (b && b.frame === frameNo) return b;
+      const T = G.trees[t], tips = T && T.tips;
+      if (!tips || !tips.length) return null;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let k = 0; k < tips.length; k += 5) {
+        const x = tips[k + 2], y = tips[k + 3];
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+      b = { frame: frameNo, x0: G.left + x0 - 30, x1: G.left + x1 + 30, y0: G.top + y0 - 44, y1: G.top + y1 };
+      crowns[t] = b;
+      return b;
+    }
+    // is this twig taken already
+    function taken(t, j, n) {
+      for (const c of flock) {
+        const p = c.perch;
+        if (p && p.kind === 'tree' && p.t === t && Math.floor(p.u * n) === j) return true;
+      }
+      return false;
+    }
+    // A twig on tree t, chosen from a handful drawn at random. Left to
+    // itself the choice is the highest of the handful: birds sit up on the
+    // crown, where they show against the sky, rather than deep in the
+    // canopy; `rounds` is how many are drawn, and one is any twig at all,
+    // which is how a firefly chooses. Given a point, the choice is instead
+    // the one of the handful about a hop away from it — not the same twig,
+    // and not the far side of the tree — and sooner one above than one
+    // below, so a bird that landed deep in the canopy works its way up.
+    // Returned as a fraction along the tree's list of twigs, which is how the
+    // perch keeps its place while the tree grows or draws in.
+    function pickTwig(t, rounds, near) {
+      const T = G.trees[t], tips = T && T.tips;
+      const n = tips ? tips.length / 5 : 0;
+      if (!n) return rnd();
+      let best = -1, score = Infinity;
+      for (let r = 0; r < rounds; r++) {
+        const j = (rnd() * n) | 0;
+        const x = G.left + tips[j * 5 + 2], y = G.top + tips[j * 5 + 3];
+        let s;
+        if (near) {
+          const d = Math.hypot(x - near.x, y - near.y);
+          s = Math.abs(d - 42) + Math.max(0, y - near.y) * 0.6 + (d < 6 ? 1e5 : 0);
+        } else s = y;
+        if (taken(t, j, n)) s += 1e6;
+        if (s < score) { score = s; best = j; }
+      }
+      return (best + 0.5) / n;
+    }
+
+    // ── flying ──────────────────────────────────────────────────────────
+    // The point on the edge of the window — a little outside it — where a
+    // line from `from` toward `toward` leaves, set off to one side by a
+    // little, so a party does not file through a single point.
+    function edge(from, toward) {
+      const M = 70, x0 = sx - M, x1 = sx + innerWidth + M, y0 = sy - M, y1 = sy + innerHeight + M;
+      let dx = toward.x - from.x, dy = toward.y - from.y;
+      const L = Math.hypot(dx, dy) || 1;
+      dx /= L; dy /= L;
+      let t = Infinity;
+      if (dx > 0) t = Math.min(t, (x1 - from.x) / dx); else if (dx < 0) t = Math.min(t, (x0 - from.x) / dx);
+      if (dy > 0) t = Math.min(t, (y1 - from.y) / dy); else if (dy < 0) t = Math.min(t, (y0 - from.y) / dy);
+      if (!isFinite(t) || t < 0) t = 0;
+      const j = (rnd() - 0.5) * 160;
+      return { x: from.x + dx * t - dy * j, y: from.y + dy * t + dx * j };
+    }
+    const seen = (x, y, M) => x > sx - M && x < sx + innerWidth + M && y > sy - M && y < sy + innerHeight + M;
+
+    // set down on a perch without a flight: out of sight, or under reduced
+    // motion, where arrivals fade in where they land
+    function settleAt(c, perch, at) {
+      c.perch = perch; c.fl = null; c.drift = null;
+      c.state = 'perched';
+      if (at) { c.x = at.x; c.y = at.y; }
+      c.vis = 0; c.visTo = 1;
+      c.hold = 0.6 + rnd() * 0.5; c.pose = 1; c.poseTo = 1;
+      c.idle = 2 + rnd() * 5;
+    }
+    function land(c) {
+      const intro = c.fl && c.fl.intro;
+      c.state = 'perched'; c.fl = null;
+      c.hold = 0.9 + rnd() * 0.5;      // glows a moment after landing
+      c.idle = 2 + rnd() * 5;
+      c.out = 0;
+      // Landed from the opening, on whatever twig there was — the tree was
+      // still growing when the flight began: a bird moves up to the crown
+      // in a moment, one after another
+      if (intro) { c.climb = true; c.idle = 0.4 + rnd() * 1.8; }
+    }
+
+    // Send one on its way to a perch. The path is a quadratic bezier whose
+    // control point is set off sideways from the straight line by `bow` and
+    // lifted by `lift`, so the flight curves and rises rather than dashing.
+    // How long it takes goes by the distance — a hop to the next twig is
+    // quick, a crossing of the grove unhurried — and fireflies take longer
+    // over it than birds. `delay` is a moment's sitting, lit, before it goes.
+    function fly(c, perch, o) {
+      o = o || {};
+      const to = where(perch);
+      const has = c.state !== 'hidden';
+      const from = { x: c.x, y: c.y };
+      // what it is sitting on now, which is not what it is being sent to:
+      // during the moment before it goes, it is still on this
+      const was = c.state === 'perched' ? c.perch : null;
+      c.perch = perch; c.drift = null; c.out = 0;
+      if (reduced && !o.direct) { settleAt(c, perch, to); return; }
+      let ax = from.x, ay = from.y, via = null;
+      if (to && !o.direct) {
+        const far = !has || Math.hypot(to.x - from.x, to.y - from.y) > innerHeight * 1.4;
+        if (far) {
+          if (!has || !seen(from.x, from.y, 70)) {
+            // out of sight where it starts: if the perch is out of sight too
+            // it is simply there; otherwise it comes in from the edge nearest
+            // to where it was
+            if (!seen(to.x, to.y, 70)) { settleAt(c, perch, to); return; }
+            const e = edge(to, has ? from : { x: to.x, y: to.y - 1e4 });
+            ax = e.x; ay = e.y;
+          } else via = edge(from, to);   // goes out at the edge, and is set down beyond it
+        }
+      }
+      c.x = ax; c.y = ay;
+      const dest = via || to || from;
+      const dist = Math.hypot(dest.x - ax, dest.y - ay);
+      const slow = mix < 0.5 ? 1.35 : 1;
+      c.state = 'flying';
+      c.vis = has ? c.vis : 1; c.visTo = 1;
+      c.fl = {
+        sx: ax, sy: ay, t: 0, delay: o.delay || 0,
+        dur: o.dur || clamp(0.3 + dist / 320, 0.36, 2.6) * slow,
+        bow: o.bow ?? (rnd() - 0.5) * 0.9,
+        lift: o.lift ?? 0.18 + rnd() * 0.3,
+        via, wob: 3 + rnd() * 3, last: to, from: was,
+      };
+      wake();
+    }
+
+    function stepFly(c, dt, now) {
+      const f = c.fl;
+      if (f.delay > 0) {                       // still sitting, lit, about to go
+        // Still on the branch it was on — not the one it is bound for — so
+        // it rides that one while it waits its turn, and a tree being drawn
+        // back into the ground carries it down. Once there is nothing under
+        // it at all it goes at once and is drawn flying: a bird cannot wait
+        // its turn in mid-air.
+        const still = f.from ? where(f.from) : null;
+        if (still) { c.x = still.x; c.y = still.y; c.poseTo = 1; f.sx = still.x; f.sy = still.y; }
+        else { c.poseTo = 0; f.delay = 0; }
+        f.delay -= dt;
+        c.alpha += (1 - c.alpha) * 0.2;
+        if (f.intro) c.vis = 0;                // in the opening there is nothing to sit on yet
+        if (f.delay > 0) return;
+      }
+      // the twig it is heading for is found again every frame, so the
+      // landing tracks the branch as the wind moves it
+      const to = f.via || where(c.perch) || f.last || { x: c.x, y: c.y };
+      f.last = to;
+      f.t = Math.min(1, f.t + dt / f.dur);
+      const e = easeInOut(f.t), u = 1 - e;
+      const dx = to.x - f.sx, dy = to.y - f.sy;
+      const cx = (f.sx + to.x) / 2 - dy * f.bow;
+      const cy = (f.sy + to.y) / 2 + dx * f.bow - Math.hypot(dx, dy) * f.lift;
+      // a small waver, fading out so the landing is clean
+      const wob = Math.sin(now * 0.005 + c.phase) * f.wob * (1 - e);
+      const nx = u * u * f.sx + 2 * u * e * cx + e * e * to.x + wob;
+      const ny = u * u * f.sy + 2 * u * e * cy + e * e * to.y + wob * 0.6;
+      if (dt > 0) { c.vx = (nx - c.x) / dt; c.vy = (ny - c.y) / dt; }
+      c.x = nx; c.y = ny;
+      if (c.vx || c.vy) c.head = Math.atan2(c.vy, c.vx);
+      // The flare: a bird does not land by stopping. About a third of a
+      // second out it puts its wings up, drops its feet and comes up into
+      // the sitting pose, so there is no moment where one drawing is swapped
+      // for the other. It lands facing the way it flew.
+      const near = (1 - f.t) * f.dur < 0.32;
+      if (near && !f.flared) { f.flared = true; c.face = Math.cos(c.head) >= 0 ? 1 : -1; }
+      c.poseTo = near ? 1 : 0;
+      c.alpha += (0.95 - c.alpha) * 0.2;      // lit the whole crossing
+      if (f.t >= 1) {
+        if (f.via) { const p = where(c.perch); if (p) { c.x = p.x; c.y = p.y; } }
+        land(c);
+      }
+    }
+
+    // ── sitting ─────────────────────────────────────────────────────────
+    let pointer = { x: -1e4, y: -1e4 };
+    function stepPerched(c, dt, now) {
+      const p = where(c.perch);
+      // a bird on a tree not yet grown, or on a page that is gone: unseen
+      // until there is something under it — and flying, not sitting, for as
+      // long as it is still drawn
+      c.visTo = p ? 1 : 0;
+      c.poseTo = p ? 1 : 0;
+      if (!p) return;
+      c.x = p.x; c.y = p.y;
+      c.vx = c.vy = 0;
+      const night = mix < 0.5;
+      // the light: a moment's glow after landing, then its own blink
+      if (c.hold > 0) { c.hold -= dt; c.alpha += (1 - c.alpha) * 0.15; }
+      else {
+        const s = 0.5 + 0.5 * Math.sin(now * 0.001 * c.speed + c.phase);
+        const lit = s > 1 - c.duty ? (s - (1 - c.duty)) / c.duty : 0;
+        c.alpha += (lit - c.alpha) * 0.14;
+      }
+      if (reduced) return;
+      const onTree = c.perch.kind === 'tree';
+      // a hand coming close sends it off: a bird hops to another twig, a
+      // firefly takes to the air; one of the escort on a card moves along
+      if (c.shy <= 0 && !c.perch.room && Math.hypot(c.x - pointer.x, c.y - pointer.y) < 30) {
+        c.shy = 3 + rnd() * 3;
+        if (onTree) { if (night) startDrift(c); else hop(c); return; }
+        if (c.group === 2) {
+          const spots = freePageSpots();
+          if (spots.length) { fly(c, spots[(rnd() * spots.length) | 0], {}); return; }
+        }
+      }
+      // in the reading room, a page scrolled out from under it: after a
+      // moment it moves to one that is in view
+      if (c.perch.room && room.open) {
+        const out = p.x < sx + 24 || p.x > sx + innerWidth - 24;
+        c.out = out ? c.out + dt : 0;
+        if (c.out > 0.45 + hash(c.i, 9) * 0.5) {
+          const s = freeSpot();
+          c.out = 0;
+          if (s) { fly(c, s, {}); return; }
+        }
+      }
+      // by day a tail flick now and then
+      if (!night && c.flick <= 0 && rnd() < dt * 0.22) c.flick = 1;
+      // and, in its own time, something else: a bird turns round or hops to
+      // the next twig; a firefly lets go and drifts
+      c.idle -= dt;
+      if (c.idle <= 0) {
+        // in the room after dark they keep more to the air, over the dark
+        // backdrop, than to the paper
+        c.idle = (night && c.perch.room ? 1.5 : 2.5) + rnd() * (night && c.perch.room ? 4 : 5);
+        if (c.climb) {
+          c.climb = false;
+          if (!night && onTree) {
+            const t = c.perch.t;
+            fly(c, { kind: 'tree', t, u: pickTwig(t, 8, null) }, { lift: 0.3 + rnd() * 0.2, bow: (rnd() - 0.5) * 0.5 });
+            return;
+          }
+        }
+        if (night) { if (rnd() < 0.7) startDrift(c); }
+        else if (onTree) { if (rnd() < 0.4) c.face = -c.face; else hop(c); }
+        else if (c.perch.room && room.open) {
+          if (rnd() < 0.55) c.face = -c.face;
+          else { const s = freeSpot(); if (s) fly(c, s, {}); }
+        } else if (rnd() < 0.6) c.face = -c.face;
+      }
+    }
+    // a short flight to a twig about a hop away on the same tree
+    function hop(c) {
+      const t = c.perch.t;
+      fly(c, { kind: 'tree', t, u: pickTwig(t, 7, { x: c.x, y: c.y }) },
+          { dur: 0.45 + rnd() * 0.25, lift: 0.35 + rnd() * 0.3, bow: (rnd() - 0.5) * 0.5 });
+    }
+
+    // ── drifting ────────────────────────────────────────────────────────
+    // A firefly does not sit all night. Now and then one lets go of its
+    // twig and drifts about the crown, lit, on a slow wandering course —
+    // leaning toward wherever it has decided to go next and overshooting a
+    // little, as a thing that flies does — and settles on another twig a
+    // while later. In the reading room the room is the crown, and it goes
+    // back to its own place on the page.
+    function roam(c) {
+      const p = c.perch;
+      if (!p) return null;
+      if (p.kind === 'tree') return crown(p.t);
+      if (p.room && room.els) {
+        const r = rectOf(room.els.stream);
+        return { x0: sx + r.left + 20, x1: sx + r.right - 20, y0: sy + r.top - 30, y1: sy + r.bottom - 24 };
+      }
+      const r = rectOf(p.el);
+      return { x0: sx + r.left - 40, x1: sx + r.right + 40, y0: sy + r.top - 70, y1: sy + r.top + 20 };
+    }
+    function startDrift(c) {
+      c.state = 'drift';
+      c.drift = { t: 0, life: 4 + rnd() * 7, tx: c.x, ty: c.y - 24, vx: 0, vy: -10, next: 0 };
+      wake();
+    }
+    function stepDrift(c, dt, now) {
+      const d = c.drift;
+      d.t += dt; d.next -= dt;
+      const box = roam(c);
+      if (d.next <= 0 && box) {
+        d.next = 0.7 + rnd() * 1.3;
+        d.tx = box.x0 + rnd() * (box.x1 - box.x0);
+        d.ty = box.y0 + rnd() * (box.y1 - box.y0);
+      }
+      d.vx += ((d.tx - c.x) * 2.2 - d.vx * 1.6) * dt;
+      d.vy += ((d.ty - c.y) * 2.2 - d.vy * 1.6) * dt;
+      const sp = Math.hypot(d.vx, d.vy), MAX = 46;
+      if (sp > MAX) { d.vx *= MAX / sp; d.vy *= MAX / sp; }
+      c.x += d.vx * dt + Math.sin(now * 0.004 + c.phase) * 0.25;
+      c.y += d.vy * dt + Math.cos(now * 0.0031 + c.phase) * 0.2;
+      c.vx = d.vx; c.vy = d.vy;
+      c.poseTo = 0;
+      if (d.vx || d.vy) c.head = Math.atan2(d.vy, d.vx);
+      if (Math.abs(d.vx) > 4) c.face = d.vx > 0 ? 1 : -1;
+      // lit most of the way, with a slow pulse
+      const lit = 0.66 + 0.34 * Math.sin(now * 0.0016 * c.speed + c.phase);
+      c.alpha += (lit - c.alpha) * 0.08;
+      // time to settle — or the day has come, and a bird does not hover
+      if (d.t > d.life || mix > 0.5) {
+        const p = c.perch;
+        if (p.kind === 'tree') fly(c, { kind: 'tree', t: p.t, u: pickTwig(p.t, 2, null) }, { dur: 0.7 + rnd() * 0.5, lift: 0.1, bow: (rnd() - 0.5) * 0.4 });
+        else fly(c, p, { dur: 0.7 + rnd() * 0.5, lift: 0.1, bow: (rnd() - 0.5) * 0.4 });
+      }
+    }
+
+    // ── the parties ─────────────────────────────────────────────────────
+    // Two trees to begin with, well apart: the middle one, and one at least
+    // two slots off it; the escort takes a third if there is one.
+    function hosts() {
+      const n = G.trees.length;
+      if (!n) return false;
+      if (groups[0].host >= 0) return true;
+      const a = Math.floor(n / 2);
+      let cands = [];
+      for (let t = 0; t < n; t++) if (Math.abs(t - a) >= 2) cands.push(t);
+      if (!cands.length) for (let t = 0; t < n; t++) if (t !== a) cands.push(t);
+      groups[0].host = a;
+      groups[1].host = cands.length ? cands[(rnd() * cands.length) | 0] : a;
+      cands = [];
+      for (let t = 0; t < n; t++) if (t !== a && t !== groups[1].host) cands.push(t);
+      groups[2].host = cands.length ? cands[(rnd() * cands.length) | 0] : a;
+      // staggered, so the parties do not move on the same beat
+      groups[0].timer = MIGRATE_MIN * 0.5 + rnd() * 8;
+      groups[1].timer = MIGRATE_MIN + rnd() * 10;
+      groups[2].timer = MIGRATE_MIN * 0.75 + rnd() * 12;
+      return true;
+    }
+    // Send a whole party across to another tree — not one another party is
+    // on — leaving raggedly. By day they bank together: birds in a flock
+    // curve the same way, so the bow of the path is shared and only
+    // jittered, where fireflies each go their own way.
+    function migrate(g, startled) {
+      const grp = groups[g];
+      grp.timer = MIGRATE_MIN + rnd() * (MIGRATE_MAX - MIGRATE_MIN);
+      const n = G.trees.length;
+      const cands = [];
+      for (let t = 0; t < n; t++) if (!groups.some(o => o.host === t)) cands.push(t);
+      if (!cands.length) return;
+      const to = cands[(rnd() * cands.length) | 0];
+      grp.host = to;
+      const day = mix > 0.5;
+      const bow = (rnd() - 0.5) * 0.9, lift = 0.18 + rnd() * 0.3;
+      for (const c of flock) {
+        // only those on the tree go: not a visitor to the room, nor one of
+        // the escort down the page
+        if (c.group !== g || c.room || (c.perch && c.perch.kind !== 'tree')) continue;
+        fly(c, { kind: 'tree', t: to, u: pickTwig(to, day ? 6 : 2, null) }, {
+          // grabbed, they are off the branch almost together; left to
+          // themselves they drift away raggedly
+          delay: rnd() * (startled ? 0.11 : 0.45),
+          bow: day ? bow * (0.8 + rnd() * 0.4) : (rnd() - 0.5) * 0.9,
+          lift: day ? lift * (0.85 + rnd() * 0.3) : 0.18 + rnd() * 0.3,
+        });
+      }
+    }
+    // Everyone to their tree — the one arrival, whether it is riding the
+    // opening's clock or the page has simply been loaded with none.
+    //
+    // Nobody is ever put down where they will end up. A bird that is already
+    // sitting on the first frame and starts moving on the second is a
+    // cardboard cut-out that has been remembered to; one that comes into the
+    // picture has been somewhere. So they come in from off the canvas — the
+    // birds down out of the sky, on an arc that dips below the straight line
+    // so they drop and then flatten into the branch, and the fireflies up
+    // from the grass, which is where fireflies come from.
+    function arrive(secs) {
+      if (!hosts()) return false;
+      const day = mix > 0.5;
+      for (const c of flock) {
+        if (c.state !== 'hidden') continue;
+        const t = groups[c.group].host;
+        const perch = { kind: 'tree', t, u: day ? pickTwig(t, 6, null) : rnd() };
+        if (reduced) { settleAt(c, perch, where(perch) || { x: G.left, y: G.top }); c.vis = 1; continue; }
+        c.x = G.left + G.W * (0.12 + rnd() * 0.76) + (rnd() - 0.5) * G.W * 0.5;
+        c.y = day ? G.top - 70 - rnd() * 220 : G.top + G.H + 40 + rnd() * 120;
+        c.state = 'flying'; c.vis = 1; c.alpha = 0;
+        c.pose = 0; c.poseTo = 0;
+        c.head = day ? 1.25 : -1.25;          // pointing the way it is going
+        const delay = rnd() * (secs ? secs * 0.22 : 1.1);
+        fly(c, perch, {
+          direct: true, delay,
+          dur: secs ? Math.max(0.5, secs * 0.86 - delay) : 1.5 + rnd() * 1.1,
+          bow: (rnd() - 0.5) * 0.9,
+          lift: day ? -0.08 - rnd() * 0.16 : 0.18 + rnd() * 0.3,
+        });
+        if (c.fl) c.fl.intro = true;
+      }
+      return true;
+    }
+    // the lamp changing stirs them: most of those in the trees move within
+    // the moment
+    function stir() {
+      for (const c of flock) {
+        if (c.state === 'perched' && c.perch && c.perch.kind === 'tree' && rnd() < 0.6) c.idle = Math.min(c.idle, rnd() * 0.8);
+      }
+    }
+
+    // ── the grove's hooks ───────────────────────────────────────────────
+    // The grove drew a frame, so the branches have moved: keep up with them.
+    G.tick = () => wake();
+    // A tree pressed: the party on it moves on.
+    G.onPress = t => {
+      for (let g = 0; g < groups.length; g++) if (groups[g].host === t && !groups[g].away) migrate(g, true);
+      wake();
+    };
+    // The opening: they come in on its clock, landing just before the rest
+    // of it does.
+    let arrived = false;
+    G.onIntro = secs => { if (!arrived && arrive(secs)) arrived = true; };
+    // No opening, or one that never reaches here: they come in on their own
+    // account instead. Not before the grove has been walked once, though —
+    // until it has there are no twigs to aim at.
+    const INTRO = !!window.__intro && !reduced;
+    if (INTRO) setTimeout(() => { if (!arrived && arrive(0)) { arrived = true; wake(); } }, 5000);
+
+    // ── the reading room ────────────────────────────────────────────────
+    // A paper opened brings a party in — the one that did not go last time —
+    // to sit along the tops of the pages in view, three to a page, and on the
+    // close button and the download pill. They come once the pages have
+    // landed, from the edge of the window, since the grove is screens away by
+    // then; and when the room closes they go the way they came.
+    const room = { open: false, els: null, group: 1, timer: 0, seated: false };
+    function roomSpots() {
+      const els = room.els;
+      if (!els) return [];
+      const out = [], vw = innerWidth;
+      for (const img of els.pagesEl.querySelectorAll('.room-page img')) {
+        const r = rectOf(img);
+        if (!r.width || r.right < 0 || r.left > vw) continue;
+        for (const u of [0.16, 0.5, 0.84]) {
+          const x = r.left + r.width * u;
+          if (x > 30 && x < vw - 30) out.push({ kind: 'el', el: img, u, dy: 0, room: true });
+        }
+      }
+      if (els.closeBtn) out.push({ kind: 'el', el: els.closeBtn, u: 0.5, dy: 0, room: true });
+      if (els.pdf) out.push({ kind: 'el', el: els.pdf, u: 0.5, dy: 0, room: true });
+      return out;
+    }
+    const sameSpot = (a, b) => a && b && a.el === b.el && a.u === b.u;
+    function freeSpot() {
+      const spots = roomSpots().filter(s => !flock.some(c => sameSpot(c.perch, s)));
+      return spots.length ? spots[(rnd() * spots.length) | 0] : null;
+    }
+    function seatRoom() {
+      const spots = roomSpots();
+      if (!spots.length) { room.timer = 0.4; return; }
+      for (let i = spots.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; [spots[i], spots[j]] = [spots[j], spots[i]]; }
+      let k = 0;
+      for (const c of flock) {
+        if (c.group !== room.group || k >= spots.length) continue;
+        c.room = true;
+        fly(c, spots[k++], { delay: rnd() * 1.1 });
+      }
+      groups[room.group].away = true;
+      room.seated = true;
+    }
+    const api = window.__air = {
+      flock, groups,       // for a look from the console
+      room: {
+        open(els) {
+          if (!hosts()) return;
+          room.open = true; room.els = els; room.seated = false;
+          room.group = 1 - room.group;
+          room.timer = 0.75;
+          if (ctxR) { ctxR.clearRect(0, 0, W, H); dirtyR.length = 0; }
+          wake();
+        },
+        close() {
+          if (!room.open) return;
+          room.open = false; room.timer = 0;
+          // closed again before anyone came: nothing to send home
+          if (!room.seated) return;
+          const g = room.group, grp = groups[g];
+          grp.away = false;
+          // home is a tree — one no other party has got
+          const n = G.trees.length;
+          const cands = [];
+          for (let t = 0; t < n; t++) if (!groups.some(o => o !== grp && o.host === t)) cands.push(t);
+          const to = cands.length ? cands[(rnd() * cands.length) | 0] : 0;
+          grp.host = to;
+          grp.timer = MIGRATE_MIN + rnd() * (MIGRATE_MAX - MIGRATE_MIN);
+          const day = mix > 0.5;
+          for (const c of flock) {
+            if (c.group !== g) continue;
+            fly(c, { kind: 'tree', t: to, u: pickTwig(to, day ? 6 : 2, null) }, { delay: rnd() * 0.35 });
+          }
+          wake();
+        },
+      },
+    };
+
+    // ── the escort ──────────────────────────────────────────────────────
+    // A few of them do not stay in the grove once the visitor has left it.
+    // When the grove has scrolled away they come down the page after the
+    // reader — from the top of the window, since that is where they were —
+    // and sit along the top edges of the cards near the top of the window,
+    // or up on the flourish between sections, which by day is a branch. When
+    // the reader moves on and a perch is left behind, they follow, at their
+    // own pace rather than the scrollbar's; and when the grove comes back
+    // into view they go home to it.
+    const flourishSpots = new WeakMap();
+    function pageSpots() {
+      const out = [], vh = innerHeight, vw = innerWidth;
+      for (const el of document.querySelectorAll('.card, .rcard')) {
+        const r = rectOf(el);
+        if (!r.width || r.top < 24 || r.top > vh * 0.55 || r.right < 40 || r.left > vw - 40) continue;
+        for (const u of [0.22, 0.5, 0.78]) out.push({ kind: 'el', el, u, dy: 0 });
+      }
+      // The flourish: the highest point of the ink on either side and the
+      // finial in the middle. Measured once it stands still, from the
+      // strokes themselves, and kept until the box moves.
+      for (const rule of document.querySelectorAll('.rule.is-open')) {
+        const box = rule.querySelector('.fl');
+        if (!box) continue;
+        const r = rectOf(box);
+        if (!r.width || r.bottom < 24 || r.top > vh * 0.7) continue;
+        let spots = flourishSpots.get(rule);
+        const key = `${Math.round(r.left + sx)}|${Math.round(r.top + sy)}|${Math.round(r.width)}`;
+        if (!spots || spots.key !== key) {
+          const parts = box.querySelectorAll('.fl-part');
+          if (!parts.length) continue;
+          const tf = getComputedStyle(parts[0]).transform;
+          if (tf !== 'none' && tf !== 'matrix(1, 0, 0, 1, 0, 0)') continue;   // still unrolling
+          const mid = r.left + r.width / 2;
+          const best = [null, null, null];      // left, centre, right
+          for (const part of parts) {
+            const m = part.getScreenCTM && part.getScreenCTM();
+            if (!m) continue;
+            for (const path of part.querySelectorAll('path:not(.lf)')) {
+              const L = path.getTotalLength ? path.getTotalLength() : 0;
+              if (!L) continue;
+              const n = Math.max(6, Math.min(40, Math.round(L / 20)));
+              for (let i = 0; i <= n; i++) {
+                const q = path.getPointAtLength((i / n) * L);
+                const X = m.a * q.x + m.c * q.y + m.e, Y = m.b * q.x + m.d * q.y + m.f;
+                const side = X < mid - r.width * 0.06 ? 0 : X > mid + r.width * 0.06 ? 2 : 1;
+                if (!best[side] || Y < best[side].y) best[side] = { x: X, y: Y };
+              }
+            }
+          }
+          spots = { key, pts: best.filter(Boolean).map(p => ({ dx: p.x - r.left, dy: p.y - r.top })) };
+          flourishSpots.set(rule, spots);
+        }
+        for (const p of spots.pts) out.push({ kind: 'el', el: box, u: 0, dx: p.dx, dy: p.dy });
+      }
+      return out;
+    }
+    let escortAt = 0;
+    function stepEscort(now) {
+      if (now - escortAt < 160) return;      // often enough to keep up with a scroll
+      escortAt = now;
+      const home = G.top + G.H > sy + 40;    // the grove is still in view
+      let spots = null;
+      for (const c of flock) {
+        if (c.group !== 2 || c.state !== 'perched' || c.room) continue;
+        if (home) {
+          if (c.perch.kind !== 'tree' && now >= c.nextMove) {
+            c.nextMove = now + 1200 + rnd() * 1200;
+            const t = groups[2].host;
+            fly(c, { kind: 'tree', t, u: pickTwig(t, mix > 0.5 ? 6 : 2, null) }, {});
+          }
+          continue;
+        }
+        const p = where(c.perch);
+        // Its perch has gone out from under it. That is not something to
+        // get round to in its own time — it goes now, near enough: it is
+        // following someone, and the whole point is keeping up.
+        const gone = c.perch.kind === 'tree' || !p || p.y < sy - 40 || p.y > sy + innerHeight * 0.8;
+        if (!gone) continue;
+        if (!spots) spots = freePageSpots();
+        if (!spots.length) continue;
+        const s = spots.splice((rnd() * spots.length) | 0, 1)[0];
+        c.nextMove = now + 900 + rnd() * 900;
+        fly(c, s, { delay: rnd() * 0.22 });
+      }
+    }
+    const samePage = (a, b) => a && b && a.el === b.el && a.u === b.u && a.dx === b.dx;
+    const freePageSpots = () => pageSpots().filter(s => !flock.some(o => samePage(o.perch, s)));
+
+    // ── drawing ─────────────────────────────────────────────────────────
+    // A small bird in a few strokes, all of one colour and near enough
+    // black. Perched: a body with its head up and its tail down, two threads
+    // of legs to the twig, and the wings still folding for a moment after it
+    // lands. In flight: the same body laid along its heading, with the wings
+    // beating across it.
+    //
+    // One pair of wings, drawn in the body's own frame — +x forward, the
+    // body along y = 0 — and mirrored across it, which is the bird seen
+    // head-on, and is the reading everyone has of a bird crossing the sky.
+    // Each wing leaves the shoulder, bows forward along its leading edge and
+    // comes to a tip set back from where it started, so it is swept as a
+    // wing is. `open` is how far it is spread; the beat is what changes it.
+    // (These used to be one stroked arc through the body, drawn in the
+    // window's frame while the body was turned to its heading — which is to
+    // say a rotating body with a fixed horizontal line through it, and the
+    // line always read as legs. That is what made it a spider.)
+    function wingPair(ctx, L, open) {
+      const wl = L * (0.24 + 0.80 * open);      // how far the tip reaches out
+      // and how far behind the shoulder it sits: the further the wing is
+      // spread the more it trails, so a wing at full stretch is a scythe
+      // swept back past square. Held square it was a cross, not a bird.
+      const back = L * (0.22 + 0.34 * open);
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(L * 0.16, 0);
+        ctx.quadraticCurveTo(L * 0.06, s * wl * 0.50, -back, s * wl);   // leading edge, bowed forward
+        ctx.quadraticCurveTo(-L * 0.34, s * wl * 0.34, -L * 0.22, 0);   // trailing edge, swept back
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    // The one bird, in one drawing. There is no perched bird and no flying
+    // bird to switch between — there is a bird, and `pose` says how far it
+    // has come from the air onto the branch. Every number below is read off
+    // that: the body swings from its heading to the small backward lean of a
+    // bird on a branch, rises off the perch onto its legs, puffs up, lifts
+    // its head, drops its tail; and the wings run out of the beat, up into
+    // the spread it brakes on, and down onto its back. Drawn as two poses
+    // and swapped at the moment of landing — as this was — the change was
+    // the one thing you saw.
+    const lerp = (a, b, t) => a + (b - a) * t;
+    function angLerp(a, b, t) {
+      let d = b - a;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      return a + d * t;
+    }
+    function drawBird(ctx, c, x, y, now) {
+      const L = c.len, P = c.pose;
+      // The pale breast that used to be here showed only when it sat: a bird
+      // that changes colour when it takes off is two birds. One coat, its own
+      // brown, so no two of them are quite the same bird either.
+      ctx.fillStyle = c.coat; ctx.strokeStyle = c.coat;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const A0 = ctx.globalAlpha;
+
+      // sitting, the body stands off the perch on its legs; in the air it is
+      // the body that rides the path
+      const by = y - P * L * 0.46;
+      const rest = c.face > 0 ? -0.20 : Math.PI + 0.20;
+      const rot = angLerp(c.head, rest, P);
+      const flip = Math.cos(rot) < 0 ? -1 : 1;
+
+      // A small bird flies in bounds — a burst of flapping, then the wings
+      // shut against the body while it arcs — and lands with them spread
+      // wide to brake before they fold. One run, so nothing jumps.
+      const burst = Math.sin(now * 0.0038 + c.phase * 3) > -0.70;
+      const beat = Math.sin(now * 0.030 + c.phase);
+      const flap = burst ? 0.26 + 0.74 * (0.5 + 0.5 * beat) : 0.06;
+      const open = P < 0.5 ? lerp(flap, 0.95, P * 2) : lerp(0.95, 0.03, (P - 0.5) * 2);
+
+      // the feet come down for the branch on the way in, and hold it after
+      if (P > 0.03) {
+        ctx.globalAlpha = A0 * Math.min(1, P * 1.7);
+        ctx.lineWidth = Math.max(0.6, L * 0.07);
+        ctx.beginPath();
+        ctx.moveTo(x - flip * L * 0.04, by + L * 0.22); ctx.lineTo(x - flip * L * 0.12, y);
+        ctx.moveTo(x + flip * L * 0.11, by + L * 0.22); ctx.lineTo(x + flip * L * 0.04, y);
+        ctx.stroke();
+        ctx.globalAlpha = A0;
+      }
+
+      ctx.save();
+      ctx.translate(x, by);
+      ctx.rotate(rot);
+      // heading left, the frame is upside down: mirror it back across the
+      // body's own axis so the head is on top either way
+      ctx.scale(1, flip);
+      wingPair(ctx, L, open);        // under the body, so the roots are covered
+      ctx.beginPath();               // body — it puffs up as it settles
+      ctx.ellipse(0, 0, L * lerp(0.40, 0.50, P), L * lerp(0.19, 0.32, P), 0, 0, Math.PI * 2);
+      ctx.fill();
+      const hx = L * lerp(0.38, 0.46, P), hy = -L * lerp(0.06, 0.30, P), hr = L * lerp(0.16, 0.22, P);
+      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath();               // beak
+      ctx.moveTo(hx + hr * 0.72, hy - hr * 0.34);
+      ctx.lineTo(hx + hr + L * 0.21, hy + hr * 0.02);
+      ctx.lineTo(hx + hr * 0.72, hy + hr * 0.38);
+      ctx.closePath(); ctx.fill();
+      // tail: straight back in the air, back and down on the branch, and
+      // flicked now and then once it is sitting
+      const tk = c.flick > 0 ? Math.sin(c.flick * Math.PI * 3) * L * 0.12 * P : 0;
+      const tl = L * lerp(0.74, 0.92, P), tu = L * lerp(-0.13, 0.10, P) + tk;
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.32, -L * 0.07 + tu * 0.25);
+      ctx.lineTo(-tl, tu);
+      ctx.lineTo(-tl * 0.97, tu + L * lerp(0.22, 0.21, P));
+      ctx.lineTo(-L * 0.32, L * 0.06 + tu * 0.25);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = A0;
+    }
+
+    // Each sheet remembers what it drew last frame and clears only that,
+    // rather than the whole window every frame.
+    const dirtyP = [], dirtyR = [];
+    let W = 0, H = 0, dpr = 1;
+    function size() {
+      W = innerWidth; H = innerHeight;
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      for (const [cv, cx, d] of [[sheet, ctxP, dirtyP], [roomSheet, ctxR, dirtyR]]) {
+        if (!cv) continue;
+        cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+        cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        d.length = 0;
+      }
+    }
+    function draw(ctx, dirty, forRoom, now) {
+      for (let k = 0; k < dirty.length; k += 4) ctx.clearRect(dirty[k], dirty[k + 1], dirty[k + 2], dirty[k + 3]);
+      dirty.length = 0;
+      let drawn = 0;
+      for (const c of flock) {
+        if (c.state === 'hidden' || c.room !== forRoom || c.vis < 0.01) continue;
+        const x = c.x - sx, y = c.y - sy;
+        if (x < -40 || x > W + 40 || y < -40 || y > H + 40) continue;
+        drawn++;
+        if (mix < 0.995 && c.alpha > 0.015) {
+          const a = Math.min(1, c.alpha) * (1 - mix) * c.vis;
+          // The halo does not grow in flight — that only reads as going out
+          // of focus — and a hard core keeps the middle white.
+          const r = c.size * 3.0;
+          ctx.globalAlpha = a;
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.drawImage(glow, x - r, y - r, r * 2, r * 2);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.arc(x, y, Math.max(0.7, c.size * 0.44), 0, Math.PI * 2); ctx.fill();
+          dirty.push(x - r - 2, y - r - 2, r * 2 + 4, r * 2 + 4);
+        }
+        if (mix > 0.005) {
+          ctx.globalAlpha = mix * c.vis;
+          drawBird(ctx, c, x, y, now);
+          // wide enough for a wing at full stretch, whichever way it points
+          const L = c.len;
+          dirty.push(x - L * 1.5, y - L * 1.6, L * 3.0, L * 3.0);
+        }
+        ctx.globalAlpha = 1;
+      }
+      return drawn;
+    }
+
+    // ── the loop ────────────────────────────────────────────────────────
+    // Runs while there is anything to show or anything on the move, and
+    // sleeps otherwise — with the grove scrolled away and everyone sitting
+    // still on it, there is nothing to draw and nothing to step.
+    let raf = 0, last = 0, still = 0;
+    function frame(now) {
+      // `raf` keeps the handle that has just fired until the end of the
+      // frame, so a wake() from inside it — a flight begun mid-step — does
+      // not start a second loop alongside this one
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
+      last = now;
+      frameNo++;
+      const psx = sx, psy = sy;
+      sx = window.scrollX || 0; sy = window.scrollY || 0;
+      rects.clear();
+      // The room is fixed to the window, so its birds are too: a scroll under
+      // the room — nothing a visitor can do, but a script can — carries a
+      // flight in progress along with the page it is heading for.
+      if ((sx !== psx || sy !== psy) && frameNo > 1) {
+        const dx = sx - psx, dy = sy - psy;
+        for (const c of flock) {
+          if (!c.room) continue;
+          c.x += dx; c.y += dy;
+          if (c.fl) { c.fl.sx += dx; c.fl.sy += dy; if (c.fl.via) { c.fl.via.x += dx; c.fl.via.y += dy; } }
+          if (c.drift) { c.drift.tx += dx; c.drift.ty += dy; }
+        }
+      }
+      if (mix !== mixTo) {
+        const s = dt / 0.52;
+        mix = mix < mixTo ? Math.min(mixTo, mix + s) : Math.max(mixTo, mix - s);
+      }
+      const roomOpen = !!roomEl && !roomEl.hidden;
+      if (!roomOpen) {
+        let had = false;
+        for (const c of flock) if (c.room) { c.room = false; had = true; }
+        if (had && ctxR) { ctxR.clearRect(0, 0, W, H); dirtyR.length = 0; }
+      }
+
+      let busy = mix !== mixTo || (room.open && room.timer > 0);
+      // with no opening to ride, they come in as soon as there is a grove to
+      // come in to
+      if (!arrived && !INTRO && G.trees.some(t => t.tips && t.tips.length) && arrive(0)) arrived = true;
+      if (hosts()) {
+        for (let g = 0; g < groups.length; g++) {
+          const grp = groups[g];
+          if (grp.away || reduced) continue;
+          grp.timer -= dt;
+          if (grp.timer <= 0) {
+            if (flock.some(c => c.group === g && c.state === 'flying')) grp.timer = 1;
+            else migrate(g);
+          }
+        }
+        if (room.open && room.timer > 0) { room.timer -= dt; if (room.timer <= 0) seatRoom(); }
+        if (!reduced) stepEscort(now);
+        for (const c of flock) {
+          c.vis += (c.visTo - c.vis) * Math.min(1, dt * 6);
+          if (c.shy > 0) c.shy -= dt;
+          if (c.flick > 0) c.flick = Math.max(0, c.flick - dt / 0.4);
+          if (c.state === 'flying') stepFly(c, dt, now);
+          else if (c.state === 'perched') stepPerched(c, dt, now);
+          else if (c.state === 'drift') stepDrift(c, dt, now);
+          // the one run from wings-out to sitting, and back
+          c.pose += (c.poseTo - c.pose) * Math.min(1, dt * 9);
+          if (c.state === 'flying' || c.state === 'drift' || Math.abs(c.poseTo - c.pose) > 0.01) busy = true;
+        }
+        // What is sitting on each tree, for the grove to bend under. The
+        // weight arrives with the feet — pose is exactly how far down they
+        // are — so a branch dips as a bird settles onto it and comes back up
+        // as it leaves, and none of it needs a spring of its own.
+        // `loads` is sparse — only trees that carry anything get an array
+        for (let t = 0; t < loads.length; t++) if (loads[t]) loads[t].length = 0;
+        for (const c of flock) {
+          const p = c.perch;
+          if (c.room || !p || p.kind !== 'tree' || c.pose < 0.04 || c.vis < 0.2) continue;
+          (loads[p.t] || (loads[p.t] = [])).push(
+            c.x - G.left, c.y - G.top, c.pose * c.vis * (0.5 + c.len / 22));
+        }
+        G.loads = loads;
+      }
+      let drawn = draw(ctxP, dirtyP, false, now);
+      if (roomOpen && ctxR) drawn += draw(ctxR, dirtyR, true, now);
+      if (drawn) busy = true;
+      still = busy ? 0 : still + 1;
+      if (still < 40) raf = requestAnimationFrame(frame);
+      else { raf = 0; last = 0; }
+    }
+    function wake() { still = 0; if (!raf) { last = 0; raf = requestAnimationFrame(frame); } }
+    api.dbg = () => ({ raf, last, still, frameNo, mix });
+    api.draw = drawBird;      // for a look at the drawing on its own
+
+    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; stir(); wake(); });
+    addEventListener('pointermove', e => {
+      pointer.x = e.clientX + (window.scrollX || 0);
+      pointer.y = e.clientY + (window.scrollY || 0);
+    }, { passive: true });
+    addEventListener('scroll', wake, { passive: true });
+    addEventListener('resize', () => { size(); wake(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+    size();
+    wake();
+  })();
   </script>
 
   <script>
@@ -6297,7 +7197,7 @@
       const last = runs[runs.length - 1];
       // the text position k characters in, as a node and an offset
       const at = k => {
-        let left = k;
+        let left = Math.max(0, k);
         for (const r of runs) {
           if (left <= r.full.length) return [r.node, left];
           left -= r.full.length;
@@ -6337,7 +7237,7 @@
       // column would grow line by line and drag the grove's canopy with it.
       bioEl.style.minHeight = Math.ceil(bioEl.getBoundingClientRect().height) + 'px';
       write = k => {
-        let left = k;
+        let left = Math.max(0, k);
         for (const r of runs) {
           const take = left <= 0 ? 0 : Math.min(left, r.full.length);
           if (r.node.nodeValue.length !== take) r.node.nodeValue = r.full.slice(0, take);
@@ -6357,7 +7257,13 @@
 
     let raf = 0;
     function tick(now) {
-      const u = Math.min(1, (now - I.t0) / I.dur);
+      // Clamped at both ends. A frame's timestamp is the moment the frame
+      // began, but t0 was read part-way into an earlier frame — after the
+      // grove and the rest of that frame's work — so on a fast display, or a
+      // heavy first frame, the next timestamp can land a millisecond or two
+      // *before* t0. Unclamped that is a negative character count, and a
+      // negative offset into a Range, which throws.
+      const u = Math.max(0, Math.min(1, (now - I.t0) / I.dur));
       write(Math.round(u * total));
       if (u < 1) raf = requestAnimationFrame(tick);
       else { bioEl.classList.remove('typing', 'writing'); restore(); finishPhase2(); }
@@ -6441,11 +7347,21 @@
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
     // The gallery waits for the head of the page to finish before it starts
-    // arriving, so the two do not compete for attention.
-    const begin = () => items.forEach(el => io.observe(el));
-    window.__intro && !window.__intro.done
-      ? document.addEventListener('intro:done', begin, { once: true })
-      : begin();
+    // arriving, so the two do not compete for attention. But it waits on a
+    // watchdog, not on trust: every card, deck and paper on the page is
+    // held at zero opacity until this runs, so if the opening ever fails to
+    // say it has finished — it once threw part-way through and left the flag
+    // that arms the skip already set by the grove, which meant scrolling
+    // could not rescue it either — the whole page below the fold stays
+    // blank, for good. Nothing in the header is worth that. If word has not
+    // come by the time the opening should long since have ended, the gallery
+    // starts anyway.
+    let begun = false;
+    const begin = () => { if (begun) return; begun = true; items.forEach(el => io.observe(el)); };
+    if (window.__intro && !window.__intro.done) {
+      document.addEventListener('intro:done', begin, { once: true });
+      setTimeout(begin, (window.__intro.dur || 2800) + 1500);
+    } else begin();
   })();
   </script>
 
@@ -7166,12 +8082,16 @@
       if (!reduced) { flying = true; fly(deck, true, () => { flying = false; }); }
       requestAnimationFrame(() => room.classList.add('is-in'));
       room.focus({ preventScroll: true });
+      // and the birds come in to sit along the tops of the pages
+      if (window.__air) window.__air.room.open({ stream, pagesEl, closeBtn, pdf });
     }
 
     function close() {
       if (!current || flying) return;
       const deck = current;
       room.classList.remove('is-in');
+      // the birds leave with the pages
+      if (window.__air) window.__air.room.close();
       const finish = () => {
         // hover stays off this deck until the pointer moves, so the fan does
         // not swing out under a pointer that merely stayed where it clicked
