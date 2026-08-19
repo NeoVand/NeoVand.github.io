@@ -273,6 +273,25 @@ handful of different birds scattered about, which is busier than a flock. One
 narrow family, a shade darker than the wall below, with only enough difference
 between individuals that they are not stamped from the same die.
 
+One brown, though, is still one brown, and a bird made of nothing else is a
+blob with a beak: the silhouette carries the pose and there is nothing left to
+carry the bird. So the coat has two neighbours now — the wing and the tail a
+shade under it, the cheek and the throat a good way over it — and every mark
+they make is on the bird rather than on the pose, which is the condition an
+earlier pale breast failed: it showed only when the bird sat, and one that
+changes colour when it takes off is two birds. The folded wing is the same
+shape as the spread one, run between two sets of the same five points, so no
+wing is ever swapped for another at any size; sitting, it lies along the flank
+from the shoulder to the root of the tail, and on a bird that is holding still
+it is the one mark that says which way up it is. The eye is a dark point at
+the front of the cheek rather than a pale ring around a pupil — at this size
+the ring is a fraction of a pixel and comes out as one grey smudge, so it is
+laid *under* the pupil in the cheek's own tone and shows only where it laps
+onto the crown: a big bird has a pixel to spare for it, a small one has not,
+and neither of them has to be told which. The pupil has a floor under it
+measured in the screen's own pixels rather than the bird's, because below
+about two thirds of one an eye stops being dark and starts being grey.
+
 The firefly's light is white, not the yellow-green a firefly really is. By
 night this page is a greyscale drawing — black trees to white twigs, a white
 moon, the colour taken out of the brick — and one coloured thing in it is a

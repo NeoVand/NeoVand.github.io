@@ -5979,9 +5979,21 @@
     // narrow family, a shade darker than the wall below, and the small
     // difference between individuals is only enough that they are not
     // stamped from the same die.
+    // Three tones off the one hue, not one: the coat; the wing and tail a
+    // shade under it, which is what gives a folded wing an edge to be seen
+    // by; and the cheek and throat a good way over it. A sparrow is not a
+    // cut-out — it is a small brown bird with a pale face, and at eight
+    // pixels the difference between those two is the whole difference.
     function plumage(i) {
       const a = hash(i, 46), s = hash(i, 49);
-      return `hsl(${(24 + a * 8).toFixed(0)}, ${(18 + s * 8).toFixed(0)}%, ${(25 + a * 5).toFixed(0)}%)`;
+      const h = 24 + a * 8, sat = 18 + s * 8, l = 25 + a * 5;
+      const hsl = (H, S, L) => `hsl(${H.toFixed(0)}, ${S.toFixed(0)}%, ${L.toFixed(1)}%)`;
+      return {
+        coat: hsl(h, sat, l),
+        dark: hsl(h - 2, sat + 4, l - 8),
+        pale: hsl(h + 8, sat - 5, l + 22),
+        eye: hsl(h - 2, sat + 6, l - 15),
+      };
     }
 
     // Two parties, and a few besides who do not stay in the grove once the
@@ -6829,20 +6841,33 @@
     // window's frame while the body was turned to its heading — which is to
     // say a rotating body with a fixed horizontal line through it, and the
     // line always read as legs. That is what made it a spider.)
-    function wingPair(ctx, L, open) {
-      const wl = L * (0.24 + 0.80 * open);      // how far the tip reaches out
-      // and how far behind the shoulder it sits: the further the wing is
-      // spread the more it trails, so a wing at full stretch is a scythe
-      // swept back past square. Held square it was a cross, not a bird.
-      const back = L * (0.22 + 0.34 * open);
-      for (const s of [-1, 1]) {
-        ctx.beginPath();
-        ctx.moveTo(L * 0.16, 0);
-        ctx.quadraticCurveTo(L * 0.06, s * wl * 0.50, -back, s * wl);   // leading edge, bowed forward
-        ctx.quadraticCurveTo(-L * 0.34, s * wl * 0.34, -L * 0.22, 0);   // trailing edge, swept back
-        ctx.closePath();
-        ctx.fill();
-      }
+    // One wing, from folded to spread, as one shape: the same five points
+    // moved between two sets, so nothing is swapped and there is no size at
+    // which it flickers. Spread, the tip reaches out and well back — the
+    // further it opens the more it trails, so a wing at full stretch is a
+    // scythe and not a cross. Folded, it lies along the flank from the
+    // shoulder to the root of the tail, which is where a wing goes when a
+    // bird is not using it, and is the one mark that says which way is up
+    // on a bird sitting still.
+    //
+    // `s` is the side. Spread, the two mirror about the body's axis and the
+    // bird beats; folded, both settle onto the same flank — the far one
+    // under the body, where it cannot be seen, and the near one over it.
+    function wing(ctx, L, open, s) {
+      const o = open, m = 1 - o;
+      // folded x, folded y, spread x, spread y
+      const P = (fx, fy, sx, sy) => [(fx * m + sx * o) * L, (fy * m + s * sy * o) * L];
+      const [rx, ry] = P( 0.15, -0.05,  0.16, 0.00);   // the shoulder
+      const [ax, ay] = P( 0.03,  0.06,  0.06, 0.50);   // leading edge, bowed forward
+      const [tx, ty] = P(-0.47,  0.10, -0.56, 1.04);   // the tip
+      const [bx, by] = P(-0.30,  0.25, -0.34, 0.35);   // trailing edge, swept back
+      const [ex, ey] = P(-0.06,  0.16, -0.22, 0.00);   // and home into the body
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.quadraticCurveTo(ax, ay, tx, ty);
+      ctx.quadraticCurveTo(bx, by, ex, ey);
+      ctx.closePath();
+      ctx.fill();
     }
     // The one bird, in one drawing. There is no perched bird and no flying
     // bird to switch between — there is a bird, and `pose` says how far it
@@ -6862,10 +6887,14 @@
     }
     function drawBird(ctx, c, x, y, now) {
       const L = c.len, P = c.pose;
-      // The pale breast that used to be here showed only when it sat: a bird
-      // that changes colour when it takes off is two birds. One coat, its own
-      // brown, so no two of them are quite the same bird either.
-      ctx.fillStyle = c.coat; ctx.strokeStyle = c.coat;
+      // The pale breast that was once here showed only when it sat, and a
+      // bird that changes colour when it takes off is two birds. What is
+      // here now is on it in every pose, because it is on the bird and not
+      // on the pose: a wing a shade under the coat, a cheek and a throat a
+      // shade over it, and an eye. Its own brown underneath, so no two of
+      // them are quite the same bird either.
+      const coat = c.coat.coat, dark = c.coat.dark, pale = c.coat.pale;
+      ctx.fillStyle = coat; ctx.strokeStyle = dark;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       const A0 = ctx.globalAlpha;
 
@@ -6888,6 +6917,7 @@
       if (P > 0.03) {
         ctx.globalAlpha = A0 * Math.min(1, P * 1.7);
         ctx.lineWidth = Math.max(0.6, L * 0.07);
+        ctx.strokeStyle = dark;
         ctx.beginPath();
         ctx.moveTo(x - flip * L * 0.04, by + L * 0.22); ctx.lineTo(x - flip * L * 0.12, y);
         ctx.moveTo(x + flip * L * 0.11, by + L * 0.22); ctx.lineTo(x + flip * L * 0.04, y);
@@ -6901,27 +6931,77 @@
       // heading left, the frame is upside down: mirror it back across the
       // body's own axis so the head is on top either way
       ctx.scale(1, flip);
-      wingPair(ctx, L, open);        // under the body, so the roots are covered
-      ctx.beginPath();               // body — it puffs up as it settles
-      ctx.ellipse(0, 0, L * lerp(0.40, 0.50, P), L * lerp(0.19, 0.32, P), 0, 0, Math.PI * 2);
-      ctx.fill();
-      const hx = L * lerp(0.38, 0.46, P), hy = -L * lerp(0.06, 0.30, P), hr = L * lerp(0.16, 0.22, P);
-      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath();               // beak
-      ctx.moveTo(hx + hr * 0.72, hy - hr * 0.34);
-      ctx.lineTo(hx + hr + L * 0.21, hy + hr * 0.02);
-      ctx.lineTo(hx + hr * 0.72, hy + hr * 0.38);
-      ctx.closePath(); ctx.fill();
-      // tail: straight back in the air, back and down on the branch, and
-      // flicked now and then once it is sitting
+
+      // tail and far wing first, both a shade under the coat: they are the
+      // far side of the bird and the body is drawn over their roots
       const tk = c.flick > 0 ? Math.sin(c.flick * Math.PI * 3) * L * 0.12 * P : 0;
       const tl = L * lerp(0.74, 0.92, P), tu = L * lerp(-0.13, 0.10, P) + tk;
+      ctx.fillStyle = dark;
       ctx.beginPath();
       ctx.moveTo(-L * 0.32, -L * 0.07 + tu * 0.25);
       ctx.lineTo(-tl, tu);
       ctx.lineTo(-tl * 0.97, tu + L * lerp(0.22, 0.21, P));
       ctx.lineTo(-L * 0.32, L * 0.06 + tu * 0.25);
       ctx.closePath(); ctx.fill();
+      wing(ctx, L, open, -1);
+
+      ctx.fillStyle = coat;
+      ctx.beginPath();               // body — it puffs up as it settles
+      const brx = L * lerp(0.40, 0.50, P), bry = L * lerp(0.19, 0.32, P);
+      ctx.ellipse(0, 0, brx, bry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const hx = L * lerp(0.38, 0.46, P), hy = -L * lerp(0.06, 0.30, P), hr = L * lerp(0.16, 0.22, P);
+      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+
+      // The throat: the pale runs from under the chin down the front of the
+      // breast, where the light falls on a bird and where every small brown
+      // one of them is paler. It is a wedge of the body's own ellipse, so it
+      // puffs and leans with it and never stands off the edge.
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, brx, bry, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = pale;
+      ctx.beginPath();
+      ctx.ellipse(brx * 1.06, bry * 0.34, brx * 0.52, bry * 0.66, -0.30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = dark;
+      ctx.beginPath();               // beak
+      ctx.moveTo(hx + hr * 0.72, hy - hr * 0.34);
+      ctx.lineTo(hx + hr + L * 0.21, hy + hr * 0.02);
+      ctx.lineTo(hx + hr * 0.72, hy + hr * 0.38);
+      ctx.closePath(); ctx.fill();
+
+      // The cheek, and the eye on it. A pale ring round a dark pupil is how
+      // an eye is drawn, but at this size the ring is a fraction of a pixel
+      // and comes out as one grey smudge. So the eye is set at the front of
+      // the cheek, dark on pale, which is the one place it reads; the ring
+      // is laid under it in the cheek's own tone, and shows only where it
+      // laps onto the crown — on a big bird there is a pixel for it, on a
+      // small one there is not, and neither of them has to be told which.
+      // The pupil is a fraction of the head, with a floor under it measured
+      // in the screen's own pixels: below about two thirds of one it stops
+      // being a dark point and comes out a grey smudge, and the smallest of
+      // them lose the eye altogether. So the big ones get a proper small
+      // eye and the small ones get the least that can still be seen.
+      const ex = hx + hr * 0.34, ey = hy - hr * 0.02, er = Math.max(hr * 0.17, 0.62 / dpr);
+      ctx.save();
+      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = pale;
+      ctx.beginPath();
+      ctx.ellipse(hx + hr * 0.38, hy + hr * 0.34, hr * 0.62, hr * 0.52, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(ex, ey, er * 2.0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = c.coat.eye;
+      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fill();
+
+      // and the near wing over it all, which on a bird sitting still is the
+      // whole of what tells you it has wings
+      ctx.fillStyle = dark;
+      wing(ctx, L, open, 1);
       ctx.restore();
       ctx.globalAlpha = A0;
     }
