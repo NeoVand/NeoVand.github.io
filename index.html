@@ -5798,6 +5798,7 @@
       perch: null,                            // where it sits, or is going
       fl: null, drift: null,                  // the flight or the wander under way
       hold: 0, flick: 0, shy: 0, out: 0,
+      hopping: null,                          // a hop along a flat top, under way
       idle: 2 + hash(i, 48) * 5,              // seconds until it does something
       room: false,                            // drawn on the room's sheet
       nextMove: 0,                            // the escort's own pace, ms
@@ -5909,7 +5910,7 @@
     // set down on a perch without a flight: out of sight, or under reduced
     // motion, where arrivals fade in where they land
     function settleAt(c, perch, at) {
-      c.perch = perch; c.fl = null; c.drift = null;
+      c.perch = perch; c.fl = null; c.drift = null; c.hopping = null;
       c.state = 'perched';
       if (at) { c.x = at.x; c.y = at.y; }
       c.vis = 0; c.visTo = 1;
@@ -5920,7 +5921,9 @@
       const intro = c.fl && c.fl.intro;
       c.state = 'perched'; c.fl = null;
       c.hold = 0.9 + rnd() * 0.5;      // glows a moment after landing
-      c.idle = 2 + rnd() * 5;
+      // On a flat top it gets going soon after it arrives — that is when
+      // anyone is looking at it — where in a tree it settles for longer.
+      c.idle = c.perch && c.perch.kind === 'el' ? 0.5 + rnd() * 1.5 : 2 + rnd() * 5;
       c.out = 0;
       // Landed from the opening, on whatever twig there was — the tree was
       // still growing when the flight began: a bird moves up to the crown
@@ -5942,7 +5945,7 @@
       // what it is sitting on now, which is not what it is being sent to:
       // during the moment before it goes, it is still on this
       const was = c.state === 'perched' ? c.perch : null;
-      c.perch = perch; c.drift = null; c.out = 0;
+      c.perch = perch; c.drift = null; c.hopping = null; c.out = 0;
       if (reduced && !o.direct) { settleAt(c, perch, to); return; }
       let ax = from.x, ay = from.y, via = null;
       if (to && !o.direct) {
@@ -6023,14 +6026,30 @@
     // ── sitting ─────────────────────────────────────────────────────────
     let pointer = { x: -1e4, y: -1e4 };
     function stepPerched(c, dt, now) {
+      // A hop under way moves it along the surface it is standing on, so the
+      // perch is stepped before it is read. Both feet leave together and the
+      // whole bird goes up in a short arc — that is what a hop is, and it is
+      // why the lift is taken off the foot point rather than off the body.
+      let lift = 0;
+      if (c.hopping) {
+        const h = c.hopping;
+        h.t = Math.min(1, h.t + dt / h.dur);
+        c.perch.u = h.u0 + (h.u1 - h.u0) * h.t;
+        lift = Math.sin(h.t * Math.PI) * h.lift;
+        if (h.t >= 1) {
+          c.hopping = null;
+          // two or three in a row, and then it stops to look about
+          c.idle = rnd() < 0.55 ? 0.07 + rnd() * 0.13 : 1.8 + rnd() * 3.6;
+        }
+      }
       const p = where(c.perch);
       // a bird on a tree not yet grown, or on a page that is gone: unseen
       // until there is something under it — and flying, not sitting, for as
       // long as it is still drawn
       c.visTo = p ? 1 : 0;
       c.poseTo = p ? 1 : 0;
-      if (!p) return;
-      c.x = p.x; c.y = p.y;
+      if (!p) { c.hopping = null; return; }
+      c.x = p.x; c.y = p.y - lift;
       c.vx = c.vy = 0;
       const night = mix < 0.5;
       // the light: a moment's glow after landing, then its own blink
@@ -6063,15 +6082,19 @@
           if (s) { fly(c, s, {}); return; }
         }
       }
+      if (c.hopping) return;              // it is between feet; ask again when it lands
       // by day a tail flick now and then
       if (!night && c.flick <= 0 && rnd() < dt * 0.22) c.flick = 1;
       // and, in its own time, something else: a bird turns round or hops to
       // the next twig; a firefly lets go and drifts
       c.idle -= dt;
       if (c.idle <= 0) {
-        // in the room after dark they keep more to the air, over the dark
-        // backdrop, than to the paper
-        c.idle = (night && c.perch.room ? 1.5 : 2.5) + rnd() * (night && c.perch.room ? 4 : 5);
+        // In the room after dark they keep more to the air, over the dark
+        // backdrop, than to the paper. On a flat top by day they are busy:
+        // a sparrow on a windowsill is never still for five seconds.
+        c.idle = night ? (c.perch.room ? 1.5 : 2.5) + rnd() * (c.perch.room ? 4 : 5)
+               : canHop(c) ? 0.55 + rnd() * 2.0
+               : 2.5 + rnd() * 5;
         if (c.climb) {
           c.climb = false;
           if (!night && onTree) {
@@ -6082,12 +6105,49 @@
         }
         if (night) { if (rnd() < 0.7) startDrift(c); }
         else if (onTree) { if (rnd() < 0.4) c.face = -c.face; else hop(c); }
-        else if (c.perch.room && room.open) {
-          if (rnd() < 0.55) c.face = -c.face;
-          else { const s = freeSpot(); if (s) fly(c, s, {}); }
-        } else if (rnd() < 0.6) c.face = -c.face;
+        else {
+          // on something flat: mostly hopping about, now and then a turn to
+          // look the other way, and once in a while it moves on altogether
+          const r = rnd();
+          if (r < 0.70 && groundHop(c)) { /* off it goes */ }
+          else if (r < 0.90) c.face = -c.face;
+          else if (c.perch.room && room.open) { const s = freeSpot(); if (s) fly(c, s, {}); }
+          else c.face = -c.face;
+        }
       }
     }
+    // ── hopping about ───────────────────────────────────────────────────
+    // A sparrow on anything flat does not walk, it hops: both feet at once,
+    // a short low arc, two or three in a row, then a stop to look around.
+    // On a twig there is nowhere to hop to and it flies to the next one
+    // instead (see hop, below); along the top of a page, a card or the
+    // download pill there is a run of surface, and this is what it does
+    // with it. The distance is measured off the bird rather than off the
+    // surface — a hop is a hop, not a stride, whether it is on a card or on
+    // a thirty-six-page paper.
+    const HOP_RUN = 60;        // px of surface under which there is nowhere to go
+    function canHop(c) {
+      const p = c.perch;
+      if (!p || p.kind !== 'el' || p.dx) return false;   // dx is a point on the flourish, not a run
+      const r = rectOf(p.el);
+      return !!r && r.width > HOP_RUN;
+    }
+    function groundHop(c) {
+      if (!canHop(c)) return false;
+      const p = c.perch, r = rectOf(p.el);
+      const step = (6 + rnd() * 8) * (c.len / 8) / r.width;
+      const lo = 0.04, hi = 0.96;
+      let to = p.u + step * c.face;
+      if (to < lo || to > hi) {          // at the end of the surface it turns round
+        c.face = -c.face;
+        to = p.u + step * c.face;
+        if (to < lo || to > hi) return false;
+      }
+      c.hopping = { t: 0, dur: 0.20 + rnd() * 0.10, u0: p.u, u1: to,
+                    lift: (3.4 + rnd() * 2.6) * (c.len / 8) };
+      return true;
+    }
+
     // a short flight to a twig about a hop away on the same tree
     function hop(c) {
       const t = c.perch.t;
@@ -6114,7 +6174,7 @@
       return { x0: sx + r.left - 40, x1: sx + r.right + 40, y0: sy + r.top - 70, y1: sy + r.top + 20 };
     }
     function startDrift(c) {
-      c.state = 'drift';
+      c.state = 'drift'; c.hopping = null;
       c.drift = { t: 0, life: 4 + rnd() * 7, tx: c.x, ty: c.y - 24, vx: 0, vy: -10, next: 0 };
       wake();
     }
@@ -6281,7 +6341,9 @@
       if (els.pdf) out.push({ kind: 'el', el: els.pdf, u: 0.5, dy: 0, room: true });
       return out;
     }
-    const sameSpot = (a, b) => a && b && a.el === b.el && a.u === b.u;
+    // Near enough the same spot: a bird that has hopped a little way along a
+    // page still has that place, and a second one must not be sent to it.
+    const sameSpot = (a, b) => a && b && a.el === b.el && Math.abs(a.u - b.u) < 0.13;
     function freeSpot() {
       const spots = roomSpots().filter(s => !flock.some(c => sameSpot(c.perch, s)));
       return spots.length ? spots[(rnd() * spots.length) | 0] : null;
@@ -6419,7 +6481,7 @@
         fly(c, s, { delay: rnd() * 0.22 });
       }
     }
-    const samePage = (a, b) => a && b && a.el === b.el && a.u === b.u && a.dx === b.dx;
+    const samePage = (a, b) => a && b && a.el === b.el && (a.dx || 0) === (b.dx || 0) && Math.abs(a.u - b.u) < 0.16;
     const freePageSpots = () => pageSpots().filter(s => !flock.some(o => samePage(o.perch, s)));
 
     // ── drawing ─────────────────────────────────────────────────────────

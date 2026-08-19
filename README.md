@@ -162,7 +162,7 @@ sequenceDiagram
       R->>A: __grove.trees[i].tips = tipSegs
     end
     R->>A: tick() — the branches have moved
-    Note over A: its own frame: pose eases 0↔1 · sit on where(perch) · fly a quadratic Bezier · drift about the crown
+    Note over A: its own frame: pose eases 0↔1 · sit on where(perch) · hop along a flat top · fly a quadratic Bezier · drift about the crown
     A-->>R: __grove.loads — what each tree is carrying, for the next frame to bend under
   end
 
@@ -243,6 +243,17 @@ it leaves, with no spring of its own needed. Grab a tree the birds are on and
 they are off it almost together, riding the twig down for as long as it is
 under them and drawn flying the moment it is not — a bird cannot wait its turn
 in mid-air.
+
+A sparrow on anything flat does not walk, it hops — both feet at once, a short
+low arc, two or three in a row and then a stop to look about — so along the top
+of a page, a card or the download pill that is what it does. The distance is
+measured off the bird rather than off the surface, since a hop is a hop and not
+a stride whether it is on a card or on a thirty-six-page paper; at the end of
+the run it turns round rather than walking off the edge. A twig has nowhere to
+hop to, so there it flies to the next one instead, and a point on the flourish
+is a place to stand rather than a surface, so there it only turns. Sitting
+perfectly still and then flipping round on the spot, which is what they did
+before, is the one thing a sparrow never does.
 
 A sparrow is one muted earth brown and not much of it, which took two goes to
 arrive at. Black birds were holes cut in the sky, and the eye goes to the holes
