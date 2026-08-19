@@ -239,7 +239,13 @@ how much of a turn goes into dropping the tip is `cos` of the branch's own
 heading, so an upright trunk does not sag and a level twig gives all it can,
 and the outer levels, being thinner, give the most. Because the weight arrives
 with the feet, the branch dips as a bird settles onto it and comes back up as
-it leaves, with no spring of its own needed. Grab a tree the birds are on and
+it leaves, with no spring of its own needed. There is a ceiling on it, though,
+because weight adds up: a party that happened to gather on one branch was
+bending it many times as far as a single bird did, and that is the point where
+the effect stops reading as weight and starts reading as a fault. Past the cap
+another bird is another bird, not another branch's worth of droop. A full
+party moves the twig ends of its tree by a few pixels — enough to notice if
+you are watching one, not enough to change the shape of the stand. Grab a tree the birds are on and
 they are off it almost together, riding the twig down for as long as it is
 under them and drawn flying the moment it is not — a bird cannot wait its turn
 in mid-air.
