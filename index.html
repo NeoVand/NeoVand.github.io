@@ -902,6 +902,12 @@
       #pull { width: 88px; height: 88px; margin: -44px 0 0 -44px; }
     }
 
+    /* The bead's own top, in the middle of the grip: the cord script keeps
+       the grip centred on the bead, so this rides the swing without anyone
+       having to be told where the bead went. KNOB * 1.15 is the top of the
+       turned shape the script draws. */
+    #pull-perch { left: 50%; top: 50%; width: 13px; margin: -8.5px 0 0 -6.5px; }
+
     #pull.tugging { cursor: grabbing; }
     /* it comes down with the rest of the opening, not before it */
     .has-intro #pull-canvas { opacity: 0; transition: opacity 700ms var(--ease); }
@@ -1024,7 +1030,7 @@
        so the air can measure them exactly as it measures a card, and so a
        sparrow hops along the base, which is what it does with a run of
        anything flat. */
-    #harp-crown, #harp-plinth { position: absolute; display: block; height: 0; pointer-events: none; }
+    #harp-crown, #harp-plinth, #pull-perch { position: absolute; display: block; height: 0; pointer-events: none; }
     #harp-crown  { left: 85.3%; top: 2.3%; width: 3.1%; }
     #harp-plinth { left: 47.4%; top: 93.5%; width: 51.0%; }
 
@@ -1224,6 +1230,30 @@
     .deck.no-hover:focus-visible .deck-page {
       --sh: drop-shadow(0 2px 3px rgba(0,0,0,0.6)) drop-shadow(0 12px 22px rgba(0,0,0,0.5));
     }
+
+    /* Where a bird stands on a deck: the top corners of the page in front.
+       The frame is that page's own box and rotation — --i is 0 for the one
+       in front, so the angle is -2 fans — and the two markers are points at
+       its top corners, set in by the corner radius so the feet land on the
+       shoulder of the round rather than out past the paper. A zero-sized box
+       has no bounding box to speak of, which is the point: it measures as
+       one place and not as a run to walk along, and it swings with the fan
+       under a pointer because it is turned by the same variable. */
+    .deck-perch {
+      position: absolute;
+      left: 22.4%;
+      bottom: 10.6%;
+      width: 52%;
+      aspect-ratio: 1 / 1.35;
+      pointer-events: none;
+      transform-origin: 50% 100%;
+      transform: rotate(calc(-2 * var(--fan, 5.5deg)));
+      transition: transform 420ms var(--ease);
+    }
+    .deck-perch > i { position: absolute; top: 2px; display: block; width: 0; height: 0; }
+    .deck-perch > i:first-child { left: 9px; }
+    .deck-perch > i:last-child { right: 9px; }
+    @media (prefers-reduced-motion: reduce) { .deck-perch { transition: none; } }
 
     .deck-meta {
       display: flex;
@@ -2521,7 +2551,12 @@
   <canvas id="air" aria-hidden="true"></canvas>
   <canvas id="pull-canvas" aria-hidden="true"></canvas>
   <div id="pull" role="button" tabindex="0"
-       aria-label="Pull the cord to change the lights" title="Pull to switch the lights"></div>
+       aria-label="Pull the cord to change the lights" title="Pull to switch the lights">
+    <!-- where a bird stands: the top of the bead on the end of the cord. The
+         grip is centred on the bead and goes wherever it goes, so a box
+         pinned to the middle of the grip rides the swing for free. -->
+    <i id="pull-perch" aria-hidden="true"></i>
+  </div>
 
   <!-- The harp: the other top corner of the window from the lamp, and the
        page's other switch. Off it is a line drawing; played it takes its
@@ -3273,6 +3308,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/bone-conduction-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/bone-conduction-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/bone-conduction-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Soft Speech, Loud World: Bone Conduction Microphones Enhance Voice Assistant Interaction</span>
@@ -3287,6 +3327,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/breathing-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/breathing-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/breathing-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Generating Breathing Patterns in Real-Time: Low-Latency Respiratory Phase Tracking from 25 Hz PPG</span>
@@ -3301,6 +3346,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/seqclr-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/seqclr-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/seqclr-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Contrastive Representation Learning for Electroencephalogram Classification</span>
@@ -3315,6 +3365,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/optical-flow-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/optical-flow-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/optical-flow-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Optical-flow analysis toolbox for characterization of spatiotemporal dynamics in mesoscale optical imaging of brain activity</span>
@@ -3329,6 +3384,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/rumor-gauge-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/rumor-gauge-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/rumor-gauge-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Rumor Gauge: Predicting the Veracity of Rumors on Twitter</span>
@@ -3343,6 +3403,11 @@
             <img class="deck-page" style="--i:2" src="media/papers/motifs-3.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:1" src="media/papers/motifs-2.jpg" alt="" loading="lazy" />
             <img class="deck-page" style="--i:0" src="media/papers/motifs-1.jpg" alt="First page of the paper" loading="lazy" />
+            <!-- where a bird stands: the two top corners of the page in
+                 front, which swing with the fan. Points, not a run — a
+                 corner is not a windowsill — so they are zero-width boxes
+                 inside a frame that carries the front page's own rotation. -->
+            <i class="deck-perch" aria-hidden="true"><i></i><i></i></i>
           </div>
           <div class="deck-meta">
             <span class="deck-title">Spontaneous cortical activity alternates between motifs defined by regional axonal projections</span>
@@ -6051,7 +6116,9 @@
         return { x: G.left + tips[k + 2], y: G.top + tips[k + 3] };
       }
       const r = rectOf(p.el);
-      if (!r || (!r.width && !r.height)) return null;
+      // a point perch — a corner of something — has no width to speak of,
+      // which is exactly what says it is one place and not a run
+      if (!r || (!r.width && !r.height && !p.point)) return null;
       return { x: r.left + sx + r.width * p.u + (p.dx || 0), y: r.top + sy + (p.dy || 0) };
     }
     // the crown of a tree: the box its twig ends span, a little enlarged,
@@ -6136,8 +6203,23 @@
       c.hold = 0.6 + rnd() * 0.5; c.pose = 1; c.poseTo = 1;
       c.idle = 2 + rnd() * 5;
     }
+    // A cord is not a branch: it takes no weight, but it does take a knock.
+    // A bird comes in with some speed across and pushes off with some more,
+    // so the bead swings a little either way and hangs still again. The
+    // numbers are the bird's own, held down to a couple of pixels: it is a
+    // sparrow landing on a bead, not a hand on the cord.
+    // The speed at the moment of landing is nothing — a bird flares and
+    // arrives at a stop — so the knock goes by the way it came in and how
+    // big the bird is, not by how fast it was going.
+    function knockCord(c, dx, dy, down) {
+      if (!window.__cord || !window.__cord.nudge) return;
+      if (!c.perch || c.perch.el !== pullPerch) return;
+      const n = Math.hypot(dx, dy) || 1, m = 1.0 + c.len / 12;
+      window.__cord.nudge(dx / n * m, dy / n * m * 0.45 + down);
+    }
     function land(c) {
       const intro = c.fl && c.fl.intro;
+      knockCord(c, Math.cos(c.head), Math.sin(c.head), 0.45);
       c.state = 'perched'; c.fl = null;
       c.hold = 0.9 + rnd() * 0.5;      // glows a moment after landing
       // On a flat top it gets going soon after it arrives — that is when
@@ -6164,6 +6246,9 @@
       // what it is sitting on now, which is not what it is being sent to:
       // during the moment before it goes, it is still on this
       const was = c.state === 'perched' ? c.perch : null;
+      // pushing off it: the shove goes back the way the bird is leaving,
+      // which is toward wherever it has been sent
+      if (was && was.el === pullPerch && to) knockCord(c, c.x - to.x, c.y - to.y, -0.25);
       c.perch = perch; c.drift = null; c.hopping = null; c.out = 0;
       if (reduced && !o.direct) { settleAt(c, perch, to); return; }
       let ax = from.x, ay = from.y, via = null;
@@ -6285,7 +6370,7 @@
       if (c.shy <= 0 && !c.perch.room && Math.hypot(c.x - pointer.x, c.y - pointer.y) < 30) {
         c.shy = 3 + rnd() * 3;
         if (onTree) { if (night) startDrift(c); else hop(c); return; }
-        if (c.perch.harp) { goHome(c); return; }
+        if (c.perch.fixture) { goHome(c); return; }
         if (c.group === 2) {
           const spots = freePageSpots();
           if (spots.length) { fly(c, spots[(rnd() * spots.length) | 0], {}); return; }
@@ -6327,16 +6412,17 @@
             return;
           }
         }
-        // and now and then one goes over to the harp, which is the only
-        // other thing in the grove to sit on. Birds do this with anything
-        // left standing in a garden; a firefly on the antenna is a firefly
-        // on a stem, which is where they are anyway.
-        if (onTree && !c.room && rnd() < 0.014) {
-          const s = freeHarpSpot();
+        // and now and then one goes over to whatever else is standing in
+        // view — the harp, the bead on the lamp's cord, one of the buttons
+        // under the bio. Birds do this with anything left out in a garden; a
+        // firefly on the antenna is a firefly on a stem, which is where they
+        // are anyway.
+        if (onTree && !c.room && rnd() < 0.016) {
+          const s = freeFixtureSpot();
           if (s) { fly(c, s, { lift: 0.2 + rnd() * 0.24, bow: (rnd() - 0.5) * 0.7 }); return; }
         }
         if (night) {
-          if (c.perch.harp && rnd() < 0.3) goHome(c);
+          if (c.perch.fixture && rnd() < 0.3) goHome(c);
           else if (rnd() < 0.7) startDrift(c);
         }
         else if (onTree) { if (rnd() < 0.4) c.face = -c.face; else hop(c); }
@@ -6347,7 +6433,7 @@
           if (r < 0.70 && groundHop(c)) { /* off it goes */ }
           else if (r < 0.82) c.face = -c.face;
           else if (c.perch.room && room.open) { const s = freeSpot(); if (s) fly(c, s, {}); }
-          else if (c.perch.harp) goHome(c);
+          else if (c.perch.fixture) goHome(c);
           else c.face = -c.face;
         }
       }
@@ -6369,7 +6455,7 @@
       // The harp's top is a short run by the standards of a card, but it is
       // still three or four hops of a bird that size — which is what the
       // constant is really asking about.
-      return !!r && r.width > (p.harp ? 30 : HOP_RUN);
+      return !!r && r.width > (p.fixture ? 30 : HOP_RUN);
     }
     function groundHop(c) {
       if (!canHop(c)) return false;
@@ -6637,6 +6723,20 @@
         for (const c of flock) if (c.state === 'perched' && c.perch && c.perch.harp) goHome(c);
         wake();
       } },
+      // and so does a hand on anything else: the deck about to fly open, the
+      // cord about to be pulled. Anything standing on that element, or on
+      // something inside it, gets up and goes home.
+      press(el) {
+        if (!el) return;
+        let any = false;
+        for (const c of flock) {
+          const p = c.perch;
+          if (c.state !== 'perched' || !p || p.kind !== 'el' || !p.el) continue;
+          if (p.el !== el && !el.contains(p.el)) continue;
+          if (goHome(c)) any = true;
+        }
+        if (any) wake();
+      },
       room: {
         open(els) {
           if (!hosts()) return;
@@ -6749,6 +6849,10 @@
         }
         for (const p of spots.pts) out.push({ kind: 'el', el: box, u: 0, dx: p.dx, dy: p.dy });
       }
+      // and whatever else is standing about up here: a deck of papers is
+      // screens below the grove, so the escort is the only party that will
+      // ever reach one
+      for (const s of fixtureSpots(0.55)) out.push(s);
       return out;
     }
     let escortAt = 0;
@@ -6760,7 +6864,14 @@
       for (const c of flock) {
         if (c.group !== 2 || c.state !== 'perched' || c.room) continue;
         if (home) {
-          if (c.perch.kind !== 'tree' && !c.perch.harp && now >= c.nextMove) {
+          // The grove is back: home, unless it is standing on a fixture that
+          // is still in the window — the harp and the lamp's bead are pinned
+          // there and it may stay on either, but a button or a deck of
+          // papers goes up the page with the scroll, and a bird left on one
+          // of those is a bird sitting somewhere nobody can see.
+          if (c.perch.kind !== 'tree' && now >= c.nextMove) {
+            const p = c.perch.fixture ? where(c.perch) : null;
+            if (p && p.y > sy + 8 && p.y < sy + innerHeight * 0.8) continue;
             c.nextMove = now + 1200 + rnd() * 1200;
             const t = groups[2].host;
             fly(c, { kind: 'tree', t, u: pickTwig(t, mix > 0.5 ? 6 : 2, null) }, {});
@@ -6783,39 +6894,60 @@
     const samePage = (a, b) => a && b && a.el === b.el && (a.dx || 0) === (b.dx || 0) && Math.abs(a.u - b.u) < 0.16;
     const freePageSpots = () => pageSpots().filter(s => !flock.some(o => samePage(o.perch, s)));
 
-    // ── the harp ───────────────────────────────────────────────────────
-    // The one thing in the grove that is not a tree. It has a flat top under
-    // the handle, which is a run to hop along, and a button on the end of the
-    // antenna, which is what a sparrow is really looking for. Both are boxes
-    // in the page rather than numbers here, so they are measured exactly as a
-    // card is and follow the set whatever width it is given.
+    // ── the fixtures ───────────────────────────────────────────────────
+    // Everything on the page that is not a tree, a card or a page of a paper
+    // and that a bird would stand on if any of it were real: the cap on the
+    // harp's column and the front edge of its base, the bead on the end of
+    // the lamp's cord, the four buttons under the bio, and the top edge of
+    // every deck of papers. They are boxes in the page rather than numbers
+    // here, so each is measured exactly as a card is and follows the layout
+    // wherever it is put.
+    //
+    // The deck is the one that needed a box of its own. Its pages are fanned
+    // about a pivot at the foot, so all but one of them have a slanted top
+    // edge and a bounding box whose top is a corner in mid-air. The middle
+    // page is the upright one: its top edge is level, it is the highest
+    // point of the fan, it is painted over the two that lean in front of it,
+    // and it does not move when the fan opens under a pointer. So that is
+    // where a bird stands, out along the right of it where nothing leans
+    // across.
     const harpCrown = document.getElementById('harp-crown');
     const harpPlinth = document.getElementById('harp-plinth');
-    function harpSpots() {
-      const out = [];
-      for (const el of [harpCrown, harpPlinth]) {
-        if (!el) continue;
+    const pullPerch = document.getElementById('pull-perch');
+    function fixtureSpots(band) {
+      const out = [], vh = innerHeight, vw = innerWidth;
+      const add = (el, u, extra) => {
+        if (!el) return;
         const r = rectOf(el);
-        // not while it is off the top of the window: they would be sent to a
-        // perch nobody can see, and the grove is right there
-        if (!r || !r.width || r.top < 8 || r.top > innerHeight * 0.7) continue;
-        out.push({ kind: 'el', el, u: el === harpPlinth ? 0.5 : 0.16 + rnd() * 0.68, dy: 0, harp: true });
+        // not while it is off the top of the window or down past the band:
+        // they would be sent to a perch nobody can see
+        if (!r || (!r.width && !(extra && extra.point))) return;
+        if (r.top < 8 || r.top > vh * band || r.right < 40 || r.left > vw - 40) return;
+        out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true }, extra));
+      };
+      add(harpCrown, 0.16 + rnd() * 0.68, { harp: true });
+      add(harpPlinth, 0.5, { harp: true });
+      add(pullPerch, 0.5);
+      for (const pill of document.querySelectorAll('.about-links > .about-link')) add(pill, 0.26 + rnd() * 0.48);
+      for (const deck of document.querySelectorAll('.deck')) {
+        const corners = deck.querySelectorAll('.deck-perch > i');
+        if (corners.length) add(corners[(rnd() * corners.length) | 0], 0.5, { point: true });
       }
       return out;
     }
-    const freeHarpSpot = () => {
-      // Two at a time at the most, counting one still on its way: more than
-      // that and the set is another tree rather than somewhere one of them
-      // has gone to sit.
-      let taken = 0;
-      for (const c of flock) if (c.perch && c.perch.harp) taken++;
-      if (taken >= 2) return null;
-      const spots = harpSpots().filter(s => !flock.some(c => {
-        const p = c.perch;
-        return p && p.el === s.el && (s.el === harpPlinth || Math.abs(p.u - s.u) < 0.3);
-      }));
+    const sameFixture = (a, b) => a && b && a.el === b.el &&
+      (a.el !== harpCrown ? true : Math.abs(a.u - b.u) < 0.3);
+    function freeFixtureSpot(band) {
+      // Two on the harp at a time at the most, counting one still on its
+      // way: more than that and the set is another tree rather than
+      // somewhere one of them has gone to sit. Everything else takes one.
+      let onHarp = 0;
+      for (const c of flock) if (c.perch && c.perch.harp) onHarp++;
+      const spots = fixtureSpots(band === undefined ? 0.78 : band)
+        .filter(s => !(s.harp && onHarp >= 2))
+        .filter(s => !flock.some(c => sameFixture(c.perch, s)));
       return spots.length ? spots[(rnd() * spots.length) | 0] : null;
-    };
+    }
     // and back to whatever tree its party is on
     function goHome(c) {
       const t = groups[c.group].host;
@@ -7202,7 +7334,12 @@
     api.dbg = () => ({ raf, last, still, frameNo, mix });
     api.draw = drawBird;      // for a look at the drawing on its own
 
-    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; stir(); wake(); });
+    document.addEventListener('lights', e => {
+      mixTo = e.detail.day ? 1 : 0;
+      api.press(pullPerch);          // the cord is about to whip
+      stir();
+      wake();
+    });
     addEventListener('pointermove', e => {
       pointer.x = e.clientX + (window.scrollX || 0);
       pointer.y = e.clientY + (window.scrollY || 0);
@@ -7795,6 +7932,13 @@
     const px = new Float64Array(N), py = new Float64Array(N);
     const ox = new Float64Array(N), oy = new Float64Array(N);
     let held = false, hx = 0, hy = 0, armed = true, glow = 0;
+    // A bird landing on the bead, and pushing off it again. The grove takes
+    // weight and bends under it, because a branch does; a cord does not
+    // stretch, so what a bird does to this one is knock it — it arrives with
+    // some speed across, the bead swings and hangs still again. Verlet has
+    // no velocities to add to: moving a bead without moving its last
+    // position is the impulse.
+    const C = window.__cord || (window.__cord = {});
 
     // Everything is in window coordinates: the sheet is the window — except
     // on a stacked page (see layout), where the sheet is pinned to the top of
@@ -8072,6 +8216,11 @@
       if (!raf) last = 0;
     }
     const wake = () => { still = 0; if (!raf) { last = 0; raf = requestAnimationFrame(frame); } };
+    C.nudge = (dx, dy) => {
+      if (held || !ready) return;
+      px[N - 1] += dx; py[N - 1] += dy;
+      wake();
+    };
 
     const local = e => [e.clientX, e.clientY + sy()];
     // where and when the hand took hold, so a touch that lets go almost at
@@ -9092,7 +9241,10 @@
       requestAnimationFrame(() => room.classList.add('is-in'));
       room.focus({ preventScroll: true });
       // and the birds come in to sit along the tops of the pages
-      if (window.__air) window.__air.room.open({ head, stream, pagesEl, closeBtn, pdf });
+      if (window.__air) {
+        window.__air.press(deck);    // whoever was standing on the deck
+        window.__air.room.open({ head, stream, pagesEl, closeBtn, pdf });
+      }
     }
 
     function close() {

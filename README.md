@@ -118,7 +118,7 @@ flowchart TB
     WHERE --> SHEETS["#air over the page · #air-room over the room<br/>page coords − scroll · dirty rects"]
     RM["reading room<br/>open → seat a party on the page tops<br/>close → send it home"] --> FLK
     ESC["escort<br/>grove scrolled away → card tops, flourish<br/>grove back → home"] --> FLK
-    RAD["the harp<br/>the cap on its column · the front of its base<br/>two at a time, now and then, then home"] --> FLK
+    RAD["the fixtures<br/>harp · the lamp's bead · the profile buttons · the decks<br/>now and then, then home; a hand on one puts them up"] --> FLK
   end
 
   PTR --> PE
@@ -503,6 +503,49 @@ the most, and not often: a bird leaves the trees for it now and then, hops
 along the base the way it would along a windowsill, and goes back; after dark
 it is a firefly blinking on the finial. A hand on it puts up whatever was
 sitting there.
+
+## The fixtures
+
+The harp was the first thing on the page that was not a tree and could be
+stood on, and for a long time it was the only one, which made the rest of the
+furniture look strangely untouchable: a bird would sit on the top of a project
+card but not on a button an inch away from it. Anything a real sparrow would
+land on now takes one — the bead on the end of the lamp's cord, the four
+profile buttons under the bio, and the top edge of every deck of papers — and
+they are all the same kind of thing to the air: a box in the page, measured
+each frame, with a fraction along its top saying where the feet go.
+
+Two of them needed a box drawn for them. The lamp's is an empty marker pinned
+to the middle of the grip, since the cord script keeps the grip centred on the
+bead and it therefore rides the swing for nothing. The deck's are the two top
+corners of the page in front. A bird stands on the corner of a stack of paper,
+not out in the middle of the top sheet, and not walking along it — put on the
+one page of the fan whose top edge is level it read as standing on the paper
+rather than on the deck, and hopped along the sheet like a windowsill, which
+is not a thing that happens. So the markers are zero-sized boxes at the top
+corners of a frame that carries the front page's own rotation: they swing with
+the fan when it opens under a pointer and the bird rides the corner round, and
+a box with no width measures as one place rather than as a run to walk along,
+which is what stops the hopping without anything having to be told not to.
+
+Who reaches what depends on where they live. The parties in the trees will go
+to anything standing in view — which, from the grove, means the harp, the lamp
+and the buttons — for the same reason they went to the harp: birds do this
+with whatever is left out in a garden. The decks are screens below the grove,
+so those belong to the escort, the few that come down the page after the
+reader. An escort bird may stay on a fixture when the grove comes back into
+view, but only one that is still in the window: the harp and the lamp are
+pinned there, while a button or a deck goes up with the scroll, and a bird
+left on one of those is a bird sitting where nobody can see it.
+
+A hand on any of them puts up whatever is standing there — the deck that is
+about to fly open into the reading room, the cord that is about to be pulled.
+And the cord answers back. The grove takes weight and bends under it because a
+branch does; a cord does not stretch, so what a bird does to this one is knock
+it: it arrives with some speed across, the bead swings a few pixels and hangs
+still again, and it gets another shove when the bird pushes off. The speed at
+the moment of landing is no use for that — a bird flares and arrives at a stop
+— so the knock goes by the heading it came in on and how big the bird is.
 
 ## The glass
 
