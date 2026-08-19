@@ -10,7 +10,8 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 
 ```
 /               ← gallery homepage
-/media/         ← thumbnails, and the moon behind the grove
+/media/         ← thumbnails, the moon behind the grove, the harp, and its
+                  two pieces of music
 /media/fonts/   ← Inter, self-hosted (SIL Open Font License, see OFL.txt)
 /media/legacy/  ← figures for the older projects, shown in their modals
 /media/mit/     ← Media Lab project thumbnails, local copies
@@ -20,7 +21,9 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 ```
 
 Every image the page loads is served from this repo. Nothing hotlinks, and
-nothing on the critical path comes from a third-party origin.
+nothing on the critical path comes from a third-party origin. The two pieces
+of music are the only heavy things here, and neither is fetched until somebody
+plays the harp.
 
 ## The sky
 
@@ -115,6 +118,7 @@ flowchart TB
     WHERE --> SHEETS["#air over the page · #air-room over the room<br/>page coords − scroll · dirty rects"]
     RM["reading room<br/>open → seat a party on the page tops<br/>close → send it home"] --> FLK
     ESC["escort<br/>grove scrolled away → card tops, flourish<br/>grove back → home"] --> FLK
+    RAD["the harp<br/>the cap on its column · the front of its base<br/>two at a time, now and then, then home"] --> FLK
   end
 
   PTR --> PE
@@ -345,6 +349,123 @@ Both ends are fixed: the count is clamped at zero, and the gallery no longer
 waits on trust. If word has not come by the time the opening should long since
 have ended, it starts anyway. Nothing in the header is worth a blank page.
 
+## The harp
+
+A harp in the top left of the window: the page's other switch, in the other
+top corner from the lamp and put there off the same measurement — out into the
+gutter, half way across it, where the window is wider than the page; in as
+close to the corner as it can get where it is not. Where there is no gutter
+there is also no corner that is not the page, so there — as with the cord, for
+the same reason — it is pinned to the top of the *document* and scrolls away
+with the grove rather than riding down over the gallery.
+
+Off, it is a line drawing. The artwork paints its colour over a dark compound
+path, and that path on its own — which is what is left when the colour is
+turned off — is a proper line drawing of the whole instrument, strings and
+all. So the two states are one copy of the file with the paint turned off and
+on, and nothing has to be reordered to get there: the colour is painted over
+the ink exactly as it was drawn, and the rim left showing around each shape is
+the line. Played, it takes the colour back, the strings warm, and notes come
+off them.
+
+The lines are thin ribbons of fill rather than strokes, which is how the
+artwork was drawn — and a ribbon two units across in a viewBox 930 units wide
+is a seventh of a pixel at this size: a rumour of a harp, not a drawing of
+one. So the ink is stroked as well as filled, with `vector-effect:
+non-scaling-stroke`, which puts the width in screen pixels and ignores the
+viewBox entirely. Playing, that line halves but keeps its colour, because at
+this size the line is most of what you can see of the thing and it has to hold
+its edge against a bright sky.
+
+### The material
+
+It is made of what the lamp's knob is made of. That bead is a gradient from
+`--knob` to `--cord` lit from the upper left, with a rim in `--cord` so a brass
+thing still has an edge against daylight; the harp is the same two colours,
+the same light, the same rim. Which means it needs no drain after dark: the
+pair is brass by day and pewter by night already, so the instrument turns with
+the lamp the way the lamp's own bead does, and this page's rule about colour in
+a pencil study is kept by the material rather than by a filter. The two top
+corners of the window are then the same small metal thing, hanging in the same
+sky.
+
+One gradient runs across the whole instrument rather than one per shape, so
+there is a single light in the scene — but a flat gradient still leaves every
+column and every scroll a stripe of it. Over the top of it goes a specular
+pass: the alpha blurred, lit by one distant light from the upper left, and
+*added* to the fill rather than replacing it, since at full strength it washes
+the brass out to white. That lights each form on its own, which is what turns
+a drawing of a harp into a harp. It rides on the paint and not on the whole
+drawing, so what is left when the paint is off is a line and not a line with a
+shadow on it.
+
+What says it is playing, after dark, is the light on the strings — and light is
+something the page already allows itself at night in the lamp's bloom.
+
+### What can move, and what cannot
+
+The drawing is two compound paths whose subpaths cut each other's holes. Pull
+the strings out of theirs to animate them one by one and the drawing changes
+under you — eight per cent of its pixels — because the shapes left behind were
+relying on the ones taken away to be holes rather than fills. So there is no
+rig here: a string cannot be plucked without its line staying behind, and
+nothing short of redrawing the harp would change that.
+
+What is left is enough. The whole of it breathes with the piece, rising and
+falling from its base, a little deeper where the music is loud. The light on
+the strings leans on the same reading, so the harp brightens as it plays —
+which at this size says *sounding* far better than a wobble of half a pixel on
+three of twenty strings would, and that wobble is all the file actually
+affords. And the notes come off the strings themselves.
+
+### The two pieces
+
+There is a piece of music for each half of the day. Pull the cord while it is
+playing and it changes piece: what was on fades down and *pauses* — keeping
+its place, so the other half of the day picks up where it left off rather than
+starting over — there is a moment of the noise between, and the other comes
+up. Not a crossfade; two pieces of music over each other is neither of them.
+That noise, and the click of the switch, are built out of a filtered burst
+rather than fetched, the way the lamp's click is, and both switches share one
+`AudioContext`.
+
+Each piece is an `<audio>` element routed through a gain of its own into a
+shared master, so a fade is scheduled on the audio clock rather than stepped
+from a frame loop — a tab that sleeps half way through one does not wake with
+the music stuck at half volume. `preload="none"` is set before the `src`, and
+the element for the other half of the day is not built at all until the lights
+change under it: a visitor who never plays it pays for nothing.
+
+The drawing is fetched too, for the same reason in miniature. It is a hundred
+kilobytes of path data for something sixty pixels across, so it is not written
+into the document; it comes from `media/harp.svg` and lands well inside the
+opening, and until it does there is simply nothing in the corner — which is
+what the grove already does with the moon. What is served there is the export
+with its invisible shapes dropped and its coordinates rounded to a tenth of a
+unit, which cuts it by half. Rounding needs care: the paths are *relative*, so
+a naive round accumulates along each one and walks the drawing apart — the
+error has to be carried into the next segment, and then a tenth of a unit is a
+fiftieth of a pixel at the size it is drawn.
+
+While it plays, notes come off the strings and go up and out to the right.
+They come on the music rather than on a timer — the bottom of the spectrum is
+read off an `AnalyserNode` each frame and spent as a budget, so the stream
+thins and thickens with the piece instead of ticking — and each is drawn, a
+head and a stem and either a flag or a beam, rather than set at U+266A in
+whatever the system happens to have. They go sideways more than up, since the
+harp is in the corner of the window and a note that only rose would be off the
+top of the page in a second and a half. Under `prefers-reduced-motion` there
+are none, it does not breathe, and the music still plays.
+
+It is also somewhere to sit. It hands the air two perches — the cap on the top
+of its column, and the front edge of its base, which is a run to hop along —
+as boxes in the page rather than numbers, so they are measured exactly as a
+card is and follow the drawing at whatever width it is given. Two at a time at
+the most, and not often: a bird leaves the trees for it now and then, hops
+along the base the way it would along a windowsill, and goes back; after dark
+it is a firefly blinking on the finial. A hand on it puts up whatever was
+sitting there.
+
 ## The glass
 
 The profile links and the filter chips are panes of glass rather than tinted
@@ -401,7 +522,9 @@ The lamp cord hangs from the top of the *page* on a stacked layout, over the
 grove, and scrolls away with it — fixed to the window it rode down over the
 right end of every line. A tap on the knob switches the lights on a touch
 screen; dragging still works, but a short drag on a phone is how the page
-scrolls. The four profile links stay one row, a size down, with Google Scholar
+scrolls. The harp in the other corner does the same thing for the same
+reason, and by the same test: a window no wider than the page has no corner
+to stand in that is not the page. The four profile links stay one row, a size down, with Google Scholar
 going by its surname; the filter chips are one strip that scrolls, and the one
 you tap is brought to the middle of it. `viewport-fit=cover` lets the sky run
 under the notch and the home bar, with the content held inside the safe area,
