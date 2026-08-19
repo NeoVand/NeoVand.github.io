@@ -326,11 +326,36 @@ dips below the straight line so they drop and then flatten into the branch,
 the fireflies up from the grass, which is where fireflies come from — either
 on the opening's clock or, where there is no opening, on their own.
 
-They live in a script of their own, after the grove's, on a sheet the size of
-the window rather than the grove's canvas: everything is kept in page
-coordinates and taken to the window at draw time, so a scroll carries a
-perched bird along with its branch and leaves a flying one where it is in the
-air, and a flight can go anywhere on the page. The grove hands over what they
+They live in a script of their own, after the grove's, on a sheet of their own
+rather than the grove's canvas: everything is kept in page coordinates and
+taken to the sheet's own at draw time, so a scroll carries a perched bird
+along with its branch and leaves a flying one where it is in the air, and a
+flight can go anywhere on the page.
+
+That sheet stands *in* the page rather than being pinned to the window, and
+this is not a detail. A canvas fixed to the window is composited against a
+page the compositor has already scrolled further than the main thread has
+painted, so on a hard flick every bird on it slides off whatever it was
+standing on by however far the scroll ran ahead, and snaps back a frame later.
+Instrumented — one bird on a button, the main thread held busy while the wheel
+turns — a fixed sheet put six pixels of daylight between the feet and the
+button, and there is no upper bound on that but how fast the page is moving.
+A sheet in the page takes the same scroll as the button in the same instant,
+whichever thread is ahead, and the gap is zero at any speed. It is a window's
+worth of canvas plus a margin above and below, carried down the document on a
+transform, and kept inside the page's own height at the foot so its overhang
+adds nothing to what there is to scroll.
+
+Which leaves the things the window holds still — the harp, and the lamp's cord
+where it hangs in the corner — since a bird on one of those has the mismatch
+the other way about. They get a short sheet of their own, pinned to the window
+over the corners those keep, and every creature is drawn on the sheet whose
+frame it is standing in: the room's, the window's, or the page's. A flight is
+always the page's, and the hand-over happens at the landing, where the sheets
+agree to a pixel. The lamp's cord went the same way for the same reason: where
+the columns stack it hangs from the top of the *page* rather than the window,
+and it is now drawn on a sheet in the page too, which stopped the whole cord
+sliding on a flick as well. The grove hands over what they
 need through `window.__grove` — the twig ends of every tree, fresh each frame
 it draws, where its canvas sits on the page, and a word when a tree is pressed
 or the opening begins — and the air runs its own loop, which sleeps once

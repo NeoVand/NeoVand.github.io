@@ -865,11 +865,32 @@
        — above everything on it, below the lamp cord, and below the reading
        room and the modals, whose backdrops should cover a bird left sitting
        on the grove as they cover the grove. */
+    /* The sheet is in the page, not pinned to the window. A fixed canvas is
+       composited against a page the compositor has already scrolled further
+       than the main thread has painted, so on a fast scroll everything drawn
+       on it slides off whatever it was standing on and snaps back a frame
+       later. Moving with the page instead, the sheet and the card under the
+       bird take the same scroll at the same moment, whichever thread is
+       ahead. Its size and its place come from the script (see `size` and the
+       frame loop): a window's worth plus a margin either side, put where the
+       window is looking. */
     #air {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      z-index: 55;
+      pointer-events: none;
+      will-change: transform;
+    }
+    /* and the window's own sheet, over the corners the harp and the lamp
+       keep, for the birds that stand on those: they are pinned to the window
+       and so is this, so the two take a scroll the same way — which is to
+       say not at all */
+    #air-pin {
       position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      top: 0;
+      left: 0;
       display: block;
       z-index: 55;
       pointer-events: none;
@@ -2547,8 +2568,15 @@
     </symbol>
   </svg>
 
-  <!-- the air: birds by day, fireflies by night, drawn over the whole page -->
+  <!-- the air: birds by day, fireflies by night, drawn over the whole page.
+       Two sheets: one that stands in the page and goes down it with the
+       scroll, which is where nearly everyone is drawn, and a short one
+       pinned to the window for whoever is standing on the harp or the lamp,
+       which are pinned to the window themselves. Each thing is drawn in the
+       frame it lives in, so no scroll can slide a bird off what it is
+       sitting on. -->
   <canvas id="air" aria-hidden="true"></canvas>
+  <canvas id="air-pin" aria-hidden="true"></canvas>
   <canvas id="pull-canvas" aria-hidden="true"></canvas>
   <div id="pull" role="button" tabindex="0"
        aria-label="Pull the cord to change the lights" title="Pull to switch the lights">
@@ -5993,8 +6021,10 @@
     if (!sheet) return;
     const roomEl = document.getElementById('room');
     const roomSheet = document.getElementById('air-room');
+    const pinSheet = document.getElementById('air-pin');
     const ctxP = sheet.getContext('2d');
     const ctxR = roomSheet ? roomSheet.getContext('2d') : null;
+    const ctxN = pinSheet ? pinSheet.getContext('2d') : null;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const PHONE = innerWidth < 600 || matchMedia('(max-width: 900px) and (max-height: 500px)').matches;
     const hash = (i, salt) => { const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453; return v - Math.floor(v); };
@@ -6911,9 +6941,21 @@
     // and it does not move when the fan opens under a pointer. So that is
     // where a bird stands, out along the right of it where nothing leans
     // across.
+    const harpEl = document.getElementById('harp');
+    const pullEl = document.getElementById('pull');
     const harpCrown = document.getElementById('harp-crown');
     const harpPlinth = document.getElementById('harp-plinth');
     const pullPerch = document.getElementById('pull-perch');
+    // Is this thing held still by the window, or does it go down the page
+    // with everything else? Both of them are one or the other depending on
+    // the layout — the harp comes into the page where the columns stack, and
+    // so does the lamp — and it decides which sheet whoever is standing on
+    // it is drawn on, so it is asked of the things themselves rather than
+    // assumed here.
+    const isPinned = el =>
+      (el === harpCrown || el === harpPlinth) ? !(harpEl && harpEl.classList.contains('at-page'))
+      : el === pullPerch ? !(window.__cord && window.__cord.paged)
+      : false;
     function fixtureSpots(band) {
       const out = [], vh = innerHeight, vw = innerWidth;
       const add = (el, u, extra) => {
@@ -6923,7 +6965,7 @@
         // they would be sent to a perch nobody can see
         if (!r || (!r.width && !(extra && extra.point))) return;
         if (r.top < 8 || r.top > vh * band || r.right < 40 || r.left > vw - 40) return;
-        out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true }, extra));
+        out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true, pin: isPinned(el) }, extra));
       };
       add(harpCrown, 0.16 + rnd() * 0.68, { harp: true });
       add(harpPlinth, 0.5, { harp: true });
@@ -7197,26 +7239,71 @@
 
     // Each sheet remembers what it drew last frame and clears only that,
     // rather than the whole window every frame.
-    const dirtyP = [], dirtyR = [];
-    let W = 0, H = 0, dpr = 1;
+    const dirtyP = [], dirtyR = [], dirtyN = [];
+    let W = 0, H = 0, HP = 0, PH = 0, dpr = 1;
+    // The page sheet is a window's worth of canvas plus a margin above and
+    // below, carried down the document on a transform. The margin is how far
+    // the compositor is allowed to run ahead of the paint before the sheet
+    // stops covering the window — a hard flick is a few thousand pixels a
+    // second, which is a hundred or so a frame — and the sheet's contents are
+    // drawn in its own coordinates, so where it happens to be sitting costs
+    // nothing at draw time.
+    const PAD = 140;
+    let originX = 0, originY = -1;
     function size() {
-      W = innerWidth; H = innerHeight;
+      W = innerWidth; H = innerHeight; HP = H + PAD * 2;
       dpr = Math.min(devicePixelRatio || 1, 2);
-      for (const [cv, cx, d] of [[sheet, ctxP, dirtyP], [roomSheet, ctxR, dirtyR]]) {
+      // The window's sheet is only as tall as the furniture pinned to it —
+      // the harp's foot and the lamp's bead are both up near the top — since
+      // nobody is ever drawn on it who is not standing on one of those.
+      const bottomOf = el => { const r = el && el.getBoundingClientRect(); return r ? r.bottom : 0; };
+      PH = Math.round(Math.min(H, Math.max(240, bottomOf(harpEl), bottomOf(pullEl)) + 70));
+      for (const [cv, cx, d, h] of [[sheet, ctxP, dirtyP, HP], [roomSheet, ctxR, dirtyR, H], [pinSheet, ctxN, dirtyN, PH]]) {
         if (!cv) continue;
-        cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+        cv.width = Math.round(W * dpr); cv.height = Math.round(h * dpr);
         cx.setTransform(dpr, 0, 0, dpr, 0, 0);
         d.length = 0;
       }
+      sheet.style.width = W + 'px';
+      sheet.style.height = HP + 'px';
+      if (pinSheet) { pinSheet.style.width = W + 'px'; pinSheet.style.height = PH + 'px'; }
+      originY = -1;                  // put it where the window is, next frame
     }
-    function draw(ctx, dirty, forRoom, now) {
+    // Where the sheet sits in the document.
+    function place() {
+      const doc = document.documentElement.scrollHeight;
+      // Kept inside the page's own height at the foot, or a box hanging past
+      // the end of the content would add its overhang to what there is to
+      // scroll. Not held at the top, though: a phone bounces the scroll past
+      // zero, and there the sheet wants to go up with it — nothing above the
+      // origin is scrollable, so nothing is added by letting it.
+      const y = Math.min(sy - PAD, doc - HP);
+      if (y === originY && sx === originX) return;
+      originY = y; originX = sx;
+      sheet.style.transform = `translate3d(${originX}px, ${originY}px, 0)`;
+    }
+    // Which sheet a creature is drawn on. The room's own, if it is in the
+    // room; the window's, if it is standing on something the window holds
+    // still; the page's otherwise — which is everyone in a tree, on a card,
+    // on a deck or in the air. A flight is drawn on the page's sheet
+    // whatever it is flying to: the hand-over is one frame at the landing,
+    // where the two sheets agree to a pixel unless the page is moving under
+    // it, and a bird that is moving anyway is not a bird you can see a pixel
+    // of slip on.
+    const sheetFor = c => c.room ? 'room'
+      : (c.state === 'perched' && c.perch && c.perch.pin ? 'pin' : 'page');
+    function draw(ctx, dirty, which, now) {
+      // each sheet is drawn in the frame it is pinned to
+      const page = which === 'page';
+      const ox = page ? originX : sx, oy = page ? originY : sy;
+      const hh = which === 'room' ? H : page ? HP : PH;
       for (let k = 0; k < dirty.length; k += 4) ctx.clearRect(dirty[k], dirty[k + 1], dirty[k + 2], dirty[k + 3]);
       dirty.length = 0;
       let drawn = 0;
       for (const c of flock) {
-        if (c.state === 'hidden' || c.room !== forRoom || c.vis < 0.01) continue;
-        const x = c.x - sx, y = c.y - sy;
-        if (x < -40 || x > W + 40 || y < -40 || y > H + 40) continue;
+        if (c.state === 'hidden' || c.vis < 0.01 || sheetFor(c) !== which) continue;
+        const x = c.x - ox, y = c.y - oy;
+        if (x < -40 || x > W + 40 || y < -40 || y > hh + 40) continue;
         drawn++;
         if (mix < 0.995 && c.alpha > 0.015) {
           const a = Math.min(1, c.alpha) * (1 - mix) * c.vis;
@@ -7257,6 +7344,7 @@
       frameNo++;
       const psx = sx, psy = sy;
       sx = window.scrollX || 0; sy = window.scrollY || 0;
+      place();
       rects.clear();
       // The room is fixed to the window, so its birds are too: a scroll under
       // the room — nothing a visitor can do, but a script can — carries a
@@ -7323,8 +7411,9 @@
         }
         G.loads = loads;
       }
-      let drawn = draw(ctxP, dirtyP, false, now);
-      if (roomOpen && ctxR) drawn += draw(ctxR, dirtyR, true, now);
+      let drawn = draw(ctxP, dirtyP, 'page', now);
+      if (ctxN) drawn += draw(ctxN, dirtyN, 'pin', now);
+      if (roomOpen && ctxR) drawn += draw(ctxR, dirtyR, 'room', now);
       if (drawn) busy = true;
       still = busy ? 0 : still + 1;
       if (still < 40) raf = requestAnimationFrame(frame);
@@ -7345,7 +7434,13 @@
       pointer.y = e.clientY + (window.scrollY || 0);
     }, { passive: true });
     addEventListener('scroll', wake, { passive: true });
-    addEventListener('resize', () => { size(); wake(); });
+    addEventListener('resize', () => {
+      size();
+      // the harp and the lamp change which frame they belong to when the
+      // columns stack, so whoever is on one changes sheets with them
+      for (const c of flock) if (c.perch && c.perch.fixture && c.perch.el) c.perch.pin = isPinned(c.perch.el);
+      wake();
+    });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
     size();
     wake();
@@ -7928,7 +8023,7 @@
     const TRIP = 52;           // how far past rest the knob must travel
     const KNOB = 7.4;
 
-    let W = 0, H = 0, ax = 0, ay = 0;
+    let W = 0, H = 0, CH = 0, ax = 0, ay = 0;
     const px = new Float64Array(N), py = new Float64Array(N);
     const ox = new Float64Array(N), oy = new Float64Array(N);
     let held = false, hx = 0, hy = 0, armed = true, glow = 0;
@@ -7948,9 +8043,25 @@
     function layout() {
       W = window.innerWidth; H = window.innerHeight;
       if (!W || !H) return;
+      // Where the page is stacked the cord's numbers are page numbers (see
+      // `docAnchored` below), so its sheet and its grip go in the page too,
+      // and the scroll is not taken out of them anywhere. Drawn into a
+      // window-fixed sheet with the scroll subtracted, as they were, the
+      // whole cord slid sideways of the page on a fast flick — the
+      // compositor moves the page before the main thread has painted the
+      // frame it is working on, which is the same thing that used to leave
+      // the birds behind their branches. Hanging in the window's corner
+      // instead, the sheet stays pinned to the window and nothing changes.
+      docAnchored = W <= 900;
+      C.paged = docAnchored;         // the air asks, to know which sheet to draw a bird on
+      canvas.style.position = host.style.position = docAnchored ? 'absolute' : 'fixed';
+      // and a little taller than the window when it is in the page, so a
+      // knob hauled down to the foot of the screen is still on the sheet
+      CH = docAnchored ? H + 240 : H;
+      canvas.style.height = CH + 'px';
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(W * dpr);
-      canvas.height = Math.round(H * dpr);
+      canvas.height = Math.round(CH * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       // The anchor sits in from the top-right corner. Side by side with the
       // text, the cord would hang over the paragraph's right end, so where
@@ -7977,9 +8088,8 @@
       // right end of every line. So there it hangs from the top of the page
       // instead, over the grove, and scrolls away with it: the lamp is above
       // the hero, and you go back up to it. The physics is unchanged; only
-      // where the sheet is pinned differs, and the scroll offset is taken
-      // out when it is drawn and put back on the way in from the pointer.
-      docAnchored = W <= 900;
+      // where the sheet is pinned differs, and the scroll offset is put back
+      // on the way in from the pointer.
       if (!ready) {
         ax = nax;
         for (let i = 0; i < N; i++) { px[i] = ox[i] = ax; py[i] = oy[i] = ay + i * SEG; }
@@ -8129,19 +8239,19 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, W, H);
-      const off = sy();
-      // the grip goes wherever the knob goes, off the screen included
+      ctx.clearRect(0, 0, W, CH);
+      // the grip goes wherever the knob goes, off the screen included, and
+      // in the same coordinates the sheet is drawn in
       const kx = px[N - 1], ky = py[N - 1];
-      host.style.transform = `translate(${kx.toFixed(1)}px, ${(ky - off).toFixed(1)}px)`;
+      host.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
       // scrolled away with the page: nothing to draw, unless the lamp is lit
-      if (off > 0 && lamp <= 0) {
+      const away = sy();
+      if (away > 0 && lamp <= 0) {
         let low = 0;
         for (let i = 0; i < N; i++) low = Math.max(low, py[i]);
-        if (low - off < -KNOB * 4) return;
+        if (low - away < -KNOB * 4) return;
       }
       ctx.save();
-      ctx.translate(0, -off);
       if (lamp > 0) drawLamp();
       const styles = getComputedStyle(document.documentElement);
       const cord = styles.getPropertyValue('--cord').trim() || '#4a4a4a';
