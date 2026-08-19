@@ -1597,10 +1597,22 @@
     .room-close:focus-visible { border-color: var(--muted); box-shadow: 0 0 0 3px var(--hair); }
     .room-stream:focus-visible { box-shadow: inset 0 0 0 1px var(--border-2); }
 
+    /* The head gives up its height to the pages before it takes theirs. An
+       abstract opened on a phone is taller than the screen, and a head that
+       simply grew pushed the pages off the bottom with nothing to scroll to
+       get back to them. So it shrinks to whatever the stream's floor leaves
+       it and scrolls inside itself past that: the pages get smaller, and
+       stay. */
     .room-head {
       position: relative;
       z-index: 1;
-      flex: 0 0 auto;
+      flex: 0 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-2) transparent;
       max-width: 720px;
       padding: 44px 24px 18px clamp(24px, 6vw, 96px);
       opacity: 0;
@@ -1608,6 +1620,12 @@
       transition: opacity 360ms var(--ease) 120ms, transform 420ms var(--ease) 120ms;
     }
     .room.is-in .room-head { opacity: 1; transform: none; }
+    /* scrolled, with more of the abstract below: the foot fades out rather
+       than stopping mid-letter against the top of the pages */
+    .room-head.is-cut {
+      -webkit-mask-image: linear-gradient(#000 calc(100% - 2.6em), transparent);
+      mask-image: linear-gradient(#000 calc(100% - 2.6em), transparent);
+    }
     .room-kicker {
       font-size: 11px;
       font-weight: 600;
@@ -1643,8 +1661,12 @@
       mask-image: linear-gradient(#000 calc(100% - 2.4em), transparent);
       transition: max-height 320ms var(--ease);
     }
+    /* Open, it is the whole abstract and not a taller window on it: a long
+       one used to stop dead at forty ems, which is not the whole of it. The
+       height it opens to is set on the element as it goes, so the run has
+       somewhere to travel to, and released to `none` when it lands. */
     .room-abstract.is-open {
-      max-height: 40em;
+      max-height: none;
       -webkit-mask-image: none;
       mask-image: none;
     }
@@ -1672,12 +1694,16 @@
 
     /* The stream: every page of the paper in a row, scrolling sideways, each
        page a snap point. Tall enough to read a figure, short enough that
-       the abstract stays on screen above it. */
+       the abstract stays on screen above it — and never given up entirely:
+       the floor is a share of the room, so whatever the head does above it
+       the pages are still there, smaller, to be scrolled and tapped. */
     .room-stream {
       position: relative;
       z-index: 1;
-      flex: 1 1 auto;
-      min-height: 0;
+      /* from nothing, not from the pages: sized by its own contents it asks
+         for the height of a page and gets it out of the head's hide */
+      flex: 1 1 0;
+      min-height: 38%;
       overflow-x: auto;
       overflow-y: hidden;
       scroll-snap-type: x proximity;
@@ -6256,7 +6282,11 @@
       // in the reading room, a page scrolled out from under it: after a
       // moment it moves to one that is in view
       if (c.perch.room && room.open) {
-        const out = p.x < sx + 24 || p.x > sx + innerWidth - 24;
+        // out at the sides of the window, or off the top or bottom of it:
+        // the head scrolls now, and what it is standing on can be carried
+        // out of the room altogether
+        const out = p.x < sx + 24 || p.x > sx + innerWidth - 24
+                 || p.y < sy + 4 || p.y > sy + innerHeight - 4;
         c.out = out ? c.out + dt : 0;
         if (c.out > 0.45 + hash(c.i, 9) * 0.5) {
           const s = freeSpot();
@@ -6521,7 +6551,7 @@
     // close button and the download pill. They come once the pages have
     // landed, from the edge of the window, since the grove is screens away by
     // then; and when the room closes they go the way they came.
-    const room = { open: false, els: null, group: 1, timer: 0, seated: false };
+    const room = { open: false, els: null, group: 1, timer: 0, seated: false, resettle: 0 };
     function roomSpots() {
       const els = room.els;
       if (!els) return [];
@@ -6529,13 +6559,23 @@
       for (const img of els.pagesEl.querySelectorAll('.room-page img')) {
         const r = rectOf(img);
         if (!r.width || r.right < 0 || r.left > vw) continue;
-        for (const u of [0.16, 0.5, 0.84]) {
+        // three to a page while a page is a page; on the small ones the
+        // abstract leaves behind, two and then one, so a thumbnail the width
+        // of a thumb does not come out as a row of birds shoulder to shoulder
+        const us = r.width > 150 ? [0.16, 0.5, 0.84] : r.width > 82 ? [0.26, 0.74] : [0.5];
+        for (const u of us) {
           const x = r.left + r.width * u;
           if (x > 30 && x < vw - 30) out.push({ kind: 'el', el: img, u, dy: 0, room: true });
         }
       }
       if (els.closeBtn) out.push({ kind: 'el', el: els.closeBtn, u: 0.5, dy: 0, room: true });
-      if (els.pdf) out.push({ kind: 'el', el: els.pdf, u: 0.5, dy: 0, room: true });
+      // The download pill only while the head stands still. Once an abstract
+      // is open past the head's height the head scrolls, and the pill can be
+      // carried out of its own box — a bird would be left sitting on nothing
+      // over the middle of the text.
+      if (els.pdf && (!els.head || els.head.scrollHeight <= els.head.clientHeight + 1)) {
+        out.push({ kind: 'el', el: els.pdf, u: 0.5, dy: 0, room: true });
+      }
       return out;
     }
     // Near enough the same spot: a bird that has hopped a little way along a
@@ -6558,6 +6598,26 @@
       groups[room.group].away = true;
       room.seated = true;
     }
+    // The room has stopped moving, and the places are read again. Whoever is
+    // still in the air bound for one that has since gone — a page grown out
+    // at the right edge when the abstract shut, the download pill carried off
+    // by a head that now scrolls — is given a place that is still there,
+    // mid-flight: the destination is read again every frame, so the path
+    // simply bends to the new one.
+    function resettleRoom() {
+      const still = roomSpots();
+      for (const c of flock) {
+        if (!c.room || c.state === 'hidden' || c.state === 'drift') continue;
+        if (still.some(s => sameSpot(c.perch, s))) continue;
+        const s = freeSpot();
+        if (!s) continue;
+        // in the air it is only the destination that changes; already down
+        // on something that has gone, it goes again
+        if (c.state === 'flying') c.perch = s;
+        else fly(c, s, { dur: 0.6 + rnd() * 0.25, lift: 0.3 + rnd() * 0.2, bow: (rnd() - 0.5) * 0.8 });
+      }
+      wake();
+    }
     const api = window.__air = {
       flock, groups,       // for a look from the console
       // a hand on the harp puts up whatever was sitting on it
@@ -6571,12 +6631,37 @@
           room.open = true; room.els = els; room.seated = false;
           room.group = 1 - room.group;
           room.timer = 0.75;
+          room.resettle = 0;
           if (ctxR) { ctxR.clearRect(0, 0, W, H); dirtyR.length = 0; }
+          wake();
+        },
+        // The abstract has been opened, or shut again: the head takes the
+        // height the pages had, or gives it back, and every page in the
+        // stream changes size under whoever is standing on it. A sparrow
+        // does not ride a shelf down. They put up at the movement, are in
+        // the air while the room settles, and come down on the pages at
+        // whatever size the pages have ended up.
+        restir() {
+          if (!room.open || !room.seated) return;
+          const spots = roomSpots();
+          if (!spots.length) return;
+          for (let i = spots.length - 1; i > 0; i--) { const j = (rnd() * (i + 1)) | 0; [spots[i], spots[j]] = [spots[j], spots[i]]; }
+          let k = 0;
+          for (const c of flock) {
+            if (c.group !== room.group || c.state === 'hidden' || k >= spots.length) continue;
+            c.room = true;
+            // up, and a proper turn in the air rather than a step across:
+            // the room takes a third of a second to stop moving and they
+            // are meant to be off the paper for the whole of it
+            fly(c, spots[k++], { delay: rnd() * 0.13, dur: 0.72 + rnd() * 0.3,
+                                 lift: 0.34 + rnd() * 0.2, bow: (rnd() - 0.5) * 0.9 });
+          }
+          room.resettle = 0.42;
           wake();
         },
         close() {
           if (!room.open) return;
-          room.open = false; room.timer = 0;
+          room.open = false; room.timer = 0; room.resettle = 0;
           // closed again before anyone came: nothing to send home
           if (!room.seated) return;
           const g = room.group, grp = groups[g];
@@ -6927,7 +7012,7 @@
         if (had && ctxR) { ctxR.clearRect(0, 0, W, H); dirtyR.length = 0; }
       }
 
-      let busy = mix !== mixTo || (room.open && room.timer > 0);
+      let busy = mix !== mixTo || (room.open && (room.timer > 0 || room.resettle > 0));
       // with no opening to ride, they come in as soon as there is a grove to
       // come in to
       if (!arrived && !INTRO && G.trees.some(t => t.tips && t.tips.length) && arrive(0)) arrived = true;
@@ -6942,6 +7027,7 @@
           }
         }
         if (room.open && room.timer > 0) { room.timer -= dt; if (room.timer <= 0) seatRoom(); }
+        if (room.open && room.resettle > 0) { room.resettle -= dt; if (room.resettle <= 0) resettleRoom(); }
         if (!reduced) stepEscort(now);
         for (const c of flock) {
           c.vis += (c.visTo - c.vis) * Math.min(1, dt * 6);
@@ -8638,6 +8724,7 @@
 
     const $ = sel => room.querySelector(sel);
     const backdrop = $('.room-backdrop'), closeBtn = $('.room-close');
+    const head = $('.room-head');
     const kicker = $('.room-kicker'), title = $('.room-title'), authors = $('.room-authors');
     const abstract = $('.room-abstract'), more = $('.room-more');
     const pdf = $('.room-pdf'), count = $('.room-count');
@@ -8682,6 +8769,7 @@
         NEO.test(a) ? `<strong>${a}</strong>` : a).join(', ');
       abstract.textContent = meta.abstract;
       abstract.classList.remove('is-open');
+      abstract.style.maxHeight = '';         // the last paper's opened height
       pdf.href = deck.href;
       count.textContent = `${n} page${n === 1 ? '' : 's'}`;
       pagesEl.innerHTML = '';
@@ -8861,11 +8949,13 @@
       // the pages will be, not where they were a moment before
       more.hidden = abstract.scrollHeight <= abstract.clientHeight + 2;
       more.textContent = 'Read the whole abstract';
+      head.scrollTop = 0;
+      headCut();                    // a short screen can cut it from the first
       if (!reduced) { flying = true; fly(deck, true, () => { flying = false; }); }
       requestAnimationFrame(() => room.classList.add('is-in'));
       room.focus({ preventScroll: true });
       // and the birds come in to sit along the tops of the pages
-      if (window.__air) window.__air.room.open({ stream, pagesEl, closeBtn, pdf });
+      if (window.__air) window.__air.room.open({ head, stream, pagesEl, closeBtn, pdf });
     }
 
     function close() {
@@ -8904,9 +8994,66 @@
     });
     closeBtn.addEventListener('click', close);
     backdrop.addEventListener('click', close);
+    // ── the abstract, opened ──────────────────────────────────────────────
+    // The head takes the height it needs from the pages, down to the floor
+    // the stream keeps, and scrolls inside itself for the rest. Three things
+    // follow from the pages changing size, and all three are worth doing:
+    // the run has to be given a height to travel to, since `none` is not a
+    // number and nothing animates to it; the page that was at the left edge
+    // has to be held there, or a stream measured in pixels lands you six
+    // pages further on; and the birds standing on the pages have to be put
+    // up, since a sparrow does not ride a shelf down.
+    //
+    // Which page is at the left edge of the stream, and putting it back.
+    function edgePage() {
+      const pad = parseFloat(getComputedStyle(pagesEl).paddingLeft) || 0;
+      let best = null, near = Infinity;
+      for (const fig of pagesEl.children) {
+        const d = Math.abs(fig.offsetLeft - pad - stream.scrollLeft);
+        if (d < near) { near = d; best = fig; }
+      }
+      return best;
+    }
+    function edgeBack(fig) {
+      if (!fig || fig.parentNode !== pagesEl) return;
+      const pad = parseFloat(getComputedStyle(pagesEl).paddingLeft) || 0;
+      stream.scrollLeft = Math.max(0, fig.offsetLeft - pad);
+    }
+    // is there more of the head below its foot, and is it hidden
+    function headCut() {
+      if (room.hidden) return;
+      head.classList.toggle('is-cut',
+        head.scrollHeight > head.clientHeight + 1 &&
+        head.scrollTop + head.clientHeight < head.scrollHeight - 2);
+    }
+    head.addEventListener('scroll', headCut, { passive: true });
+    addEventListener('resize', headCut);
+    let settling = 0;
     more.addEventListener('click', () => {
-      const on = abstract.classList.toggle('is-open');
+      const on = !abstract.classList.contains('is-open');
+      const keep = edgePage();
+      // its whole height, which is what it opens to and closes from
+      const full = abstract.scrollHeight;
+      if (on) {
+        abstract.classList.add('is-open');
+        abstract.style.maxHeight = full + 'px';
+      } else {
+        abstract.style.maxHeight = full + 'px';
+        abstract.getBoundingClientRect();     // let that land before it goes
+        abstract.classList.remove('is-open');
+        abstract.style.maxHeight = '';
+      }
       more.textContent = on ? 'Show less' : 'Read the whole abstract';
+      if (window.__air) window.__air.room.restir();
+      clearTimeout(settling);
+      settling = setTimeout(() => { edgeBack(keep); headCut(); }, 360);
+    });
+    // opened and arrived: the height it was given is let go, so a window
+    // resized behind it does not clip the last lines
+    abstract.addEventListener('transitionend', e => {
+      if (e.propertyName === 'max-height' && abstract.classList.contains('is-open')) {
+        abstract.style.maxHeight = 'none';
+      }
     });
     document.addEventListener('keydown', e => {
       if (room.hidden) return;
