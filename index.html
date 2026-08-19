@@ -5991,7 +5991,7 @@
       return {
         coat: hsl(h, sat, l),
         dark: hsl(h - 2, sat + 4, l - 8),
-        pale: hsl(h + 8, sat - 5, l + 22),
+        pale: hsl(h + 8, sat - 5, l + 16),
         eye: hsl(h - 2, sat + 6, l - 15),
       };
     }
@@ -6853,15 +6853,56 @@
     // `s` is the side. Spread, the two mirror about the body's axis and the
     // bird beats; folded, both settle onto the same flank — the far one
     // under the body, where it cannot be seen, and the near one over it.
+    // The bird's outline, in one run: rump, back, crown, forehead, chin,
+    // breast, belly, vent, and home to the rump. It was a fat ellipse with
+    // a circle stuck on the front of it and a quad stuck on the back, and
+    // that is exactly what it looked like — two circles and a stick, with
+    // the tail coming away from the middle of the belly. The line a bird
+    // makes in profile is one line: the back runs from the crown to the
+    // rump without a join in it, the mass is forward under the head, and
+    // the body draws down to a point where the tail leaves. Air and branch
+    // are the same run of points at two weights — flying it is slim and
+    // level, sitting it deepens, the breast comes forward and the head
+    // comes up — so nothing is swapped at the landing.
+    function bodyPath(ctx, L, P) {
+      const p = (fx, fy, rx, ry) => [L * lerp(fx, rx, P), L * lerp(fy, ry, P)];
+      const [ax, ay] = p(-0.44, -0.03, -0.50, -0.06);   // the tail's root, above
+      const [b1, b2] = p(-0.14, -0.16, -0.10, -0.28);   // control, along the back
+      const [bx, by] = p( 0.22, -0.26,  0.28, -0.44);   // the back, near the shoulder
+      const [c1, c2] = p( 0.40, -0.30,  0.43, -0.49);   // control, up to the crown
+      const [cx, cy] = p( 0.50, -0.28,  0.53, -0.48);   // the crown, over the eye
+      const [d1, d2] = p( 0.59, -0.27,  0.62, -0.47);   // control, down the forehead
+      const [dx, dy] = p( 0.61, -0.18,  0.65, -0.34);   // the face, in front of the eye
+      const [e1, e2] = p( 0.63, -0.09,  0.67, -0.20);   // control, round to the chin
+      const [ex, ey] = p( 0.55, -0.04,  0.58, -0.13);   // the chin
+      const [f1, f2] = p( 0.47,  0.03,  0.50,  0.02);   // control, the throat's hollow
+      const [fx, fy] = p( 0.36,  0.13,  0.40,  0.17);   // the breast, at its deepest
+      const [g1, g2] = p( 0.18,  0.19,  0.20,  0.29);   // control, under the belly
+      const [gx, gy] = p(-0.06,  0.17, -0.06,  0.27);   // the belly
+      const [h1, h2] = p(-0.28,  0.15, -0.30,  0.24);   // control, along the vent
+      const [ix, iy] = p(-0.42,  0.05, -0.46,  0.09);   // the vent, under the tail
+      const [j1, j2] = p(-0.48,  0.01, -0.53,  0.02);   // control, home to the rump
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.quadraticCurveTo(b1, b2, bx, by);
+      ctx.quadraticCurveTo(c1, c2, cx, cy);
+      ctx.quadraticCurveTo(d1, d2, dx, dy);
+      ctx.quadraticCurveTo(e1, e2, ex, ey);
+      ctx.quadraticCurveTo(f1, f2, fx, fy);
+      ctx.quadraticCurveTo(g1, g2, gx, gy);
+      ctx.quadraticCurveTo(h1, h2, ix, iy);
+      ctx.quadraticCurveTo(j1, j2, ax, ay);
+      ctx.closePath();
+    }
     function wing(ctx, L, open, s) {
       const o = open, m = 1 - o;
       // folded x, folded y, spread x, spread y
       const P = (fx, fy, sx, sy) => [(fx * m + sx * o) * L, (fy * m + s * sy * o) * L];
-      const [rx, ry] = P( 0.15, -0.05,  0.16, 0.00);   // the shoulder
-      const [ax, ay] = P( 0.03,  0.06,  0.06, 0.50);   // leading edge, bowed forward
-      const [tx, ty] = P(-0.47,  0.10, -0.56, 1.04);   // the tip
-      const [bx, by] = P(-0.30,  0.25, -0.34, 0.35);   // trailing edge, swept back
-      const [ex, ey] = P(-0.06,  0.16, -0.22, 0.00);   // and home into the body
+      const [rx, ry] = P( 0.24, -0.22,  0.16, 0.00);   // the shoulder
+      const [ax, ay] = P( 0.02, -0.28,  0.06, 0.50);   // leading edge, along the back
+      const [tx, ty] = P(-0.50,  0.02, -0.56, 1.04);   // the tip, down on the tail
+      const [bx, by] = P(-0.22,  0.26, -0.34, 0.35);   // trailing edge, swept back
+      const [ex, ey] = P( 0.12,  0.12, -0.22, 0.00);   // and home into the body
       ctx.beginPath();
       ctx.moveTo(rx, ry);
       ctx.quadraticCurveTo(ax, ay, tx, ty);
@@ -6916,11 +6957,11 @@
       // the feet come down for the branch on the way in, and hold it after
       if (P > 0.03) {
         ctx.globalAlpha = A0 * Math.min(1, P * 1.7);
-        ctx.lineWidth = Math.max(0.6, L * 0.07);
+        ctx.lineWidth = Math.max(0.55, L * 0.05);
         ctx.strokeStyle = dark;
         ctx.beginPath();
-        ctx.moveTo(x - flip * L * 0.04, by + L * 0.22); ctx.lineTo(x - flip * L * 0.12, y);
-        ctx.moveTo(x + flip * L * 0.11, by + L * 0.22); ctx.lineTo(x + flip * L * 0.04, y);
+        ctx.moveTo(x + flip * L * 0.03, by + L * 0.20); ctx.lineTo(x - flip * L * 0.04, y);
+        ctx.moveTo(x + flip * L * 0.14, by + L * 0.20); ctx.lineTo(x + flip * L * 0.08, y);
         ctx.stroke();
         ctx.globalAlpha = A0;
       }
@@ -6934,44 +6975,63 @@
 
       // tail and far wing first, both a shade under the coat: they are the
       // far side of the bird and the body is drawn over their roots
+      // The tail leaves from the rump and carries on the line the back was
+      // making — straight back in the air, back and down on the branch, and
+      // flicked now and then once it is sitting. Its root is behind the
+      // belly, not above it, which is the whole of what was wrong before.
       const tk = c.flick > 0 ? Math.sin(c.flick * Math.PI * 3) * L * 0.12 * P : 0;
-      const tl = L * lerp(0.74, 0.92, P), tu = L * lerp(-0.13, 0.10, P) + tk;
+      const tr = L * lerp(0.36, 0.42, P);                        // where it leaves
+      const tl = L * lerp(0.98, 1.16, P), tu = L * lerp(-0.07, 0.16, P) + tk;
       ctx.fillStyle = dark;
+      const tw = L * lerp(0.13, 0.12, P);          // how wide it fans at the end
       ctx.beginPath();
-      ctx.moveTo(-L * 0.32, -L * 0.07 + tu * 0.25);
+      ctx.moveTo(-tr, -L * lerp(0.03, 0.01, P) + tu * 0.30);
       ctx.lineTo(-tl, tu);
-      ctx.lineTo(-tl * 0.97, tu + L * lerp(0.22, 0.21, P));
-      ctx.lineTo(-L * 0.32, L * 0.06 + tu * 0.25);
+      ctx.quadraticCurveTo(-tl * 0.99, tu + tw * 0.6, -tl * 0.95, tu + tw);
+      ctx.lineTo(-tr, L * lerp(0.05, 0.08, P) + tu * 0.30);
       ctx.closePath(); ctx.fill();
       wing(ctx, L, open, -1);
 
       ctx.fillStyle = coat;
-      ctx.beginPath();               // body — it puffs up as it settles
       const brx = L * lerp(0.40, 0.50, P), bry = L * lerp(0.19, 0.32, P);
-      ctx.ellipse(0, 0, brx, bry, 0, 0, Math.PI * 2);
+      bodyPath(ctx, L, P);           // it puffs up as it settles
       ctx.fill();
-      const hx = L * lerp(0.38, 0.46, P), hy = -L * lerp(0.06, 0.30, P), hr = L * lerp(0.16, 0.22, P);
-      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+      // where the head is inside that outline: not drawn, only somewhere to
+      // hang the beak, the cheek and the eye on
+      const hx = L * lerp(0.47, 0.49, P), hy = -L * lerp(0.17, 0.31, P), hr = L * lerp(0.140, 0.172, P);
 
       // The throat: the pale runs from under the chin down the front of the
       // breast, where the light falls on a bird and where every small brown
       // one of them is paler. It is a wedge of the body's own ellipse, so it
       // puffs and leans with it and never stands off the edge.
       ctx.save();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, brx, bry, 0, 0, Math.PI * 2);
+      bodyPath(ctx, L, P);
       ctx.clip();
       ctx.fillStyle = pale;
+      // Not a patch stuck on the front — a bird is dark above and pale
+      // below, and the line between the two runs from the face, under the
+      // cheek, along the flank, to the vent. Drawn as rounds it came out as
+      // pale balls sitting on the breast; drawn as a side, everything under
+      // that one curve is pale and the wing lies over most of it, which
+      // leaves the face, the front of the breast and a strip of belly —
+      // which is exactly what you see of a sparrow's underside.
+      const [px, py] = [L * lerp(0.57, 0.62, P), -L * lerp(0.20, 0.34, P)];
+      const [qx, qy] = [L * lerp(0.28, 0.30, P), L * lerp(0.02, 0.02, P)];
+      const [vx2, vy2] = [-L * lerp(0.42, 0.46, P), L * lerp(0.08, 0.12, P)];
       ctx.beginPath();
-      ctx.ellipse(brx * 1.06, bry * 0.34, brx * 0.52, bry * 0.66, -0.30, 0, Math.PI * 2);
+      ctx.moveTo(px, py);
+      ctx.quadraticCurveTo(qx, qy, vx2, vy2);
+      ctx.lineTo(-L * 1.6, vy2); ctx.lineTo(-L * 1.6, L * 1.6);
+      ctx.lineTo(L * 1.6, L * 1.6); ctx.lineTo(L * 1.6, py);
+      ctx.closePath();
       ctx.fill();
       ctx.restore();
 
       ctx.fillStyle = dark;
-      ctx.beginPath();               // beak
-      ctx.moveTo(hx + hr * 0.72, hy - hr * 0.34);
-      ctx.lineTo(hx + hr + L * 0.21, hy + hr * 0.02);
-      ctx.lineTo(hx + hr * 0.72, hy + hr * 0.38);
+      ctx.beginPath();               // beak — a short cone, low on the face
+      ctx.moveTo(hx + hr * 0.76, hy - hr * 0.06);
+      ctx.lineTo(hx + hr + L * 0.13, hy + hr * 0.30);
+      ctx.lineTo(hx + hr * 0.70, hy + hr * 0.52);
       ctx.closePath(); ctx.fill();
 
       // The cheek, and the eye on it. A pale ring round a dark pupil is how
@@ -6986,13 +7046,10 @@
       // being a dark point and comes out a grey smudge, and the smallest of
       // them lose the eye altogether. So the big ones get a proper small
       // eye and the small ones get the least that can still be seen.
-      const ex = hx + hr * 0.34, ey = hy - hr * 0.02, er = Math.max(hr * 0.17, 0.62 / dpr);
+      const ex = hx + hr * 0.30, ey = hy + hr * 0.10, er = Math.max(hr * 0.17, 0.62 / dpr);
       ctx.save();
-      ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.clip();
+      ctx.beginPath(); ctx.arc(hx, hy, hr * 1.1, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = pale;
-      ctx.beginPath();
-      ctx.ellipse(hx + hr * 0.38, hy + hr * 0.34, hr * 0.62, hr * 0.52, 0.22, 0, Math.PI * 2);
-      ctx.fill();
       ctx.beginPath(); ctx.arc(ex, ey, er * 2.0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
       ctx.fillStyle = c.coat.eye;

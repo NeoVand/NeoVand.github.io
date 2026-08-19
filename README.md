@@ -273,13 +273,32 @@ handful of different birds scattered about, which is busier than a flock. One
 narrow family, a shade darker than the wall below, with only enough difference
 between individuals that they are not stamped from the same die.
 
+The bird's outline is one line, because that is what a bird in profile is. It
+was an ellipse for the body with a circle stuck on the front and a quad stuck
+on the back, and it looked like exactly that: two circles and a stick, with
+the tail coming away from the middle of the belly. Now the crown, the back,
+the rump, the vent, the belly, the breast and the chin are one closed run of
+points, blended between a flying set and a sitting one, and the tail leaves
+from the rump where the body has drawn down to its narrowest. Two measurements
+off the reference silhouette fixed the rest: the highest point of a small bird
+is directly over its eye — nine tenths of the way forward, not two thirds, so
+the back is one long slope and not a dome — and the head is about a quarter of
+the body's length, where ours was nearer a half. A head that size on a body
+that size is what makes a drawing look like a toy.
+
 One brown, though, is still one brown, and a bird made of nothing else is a
 blob with a beak: the silhouette carries the pose and there is nothing left to
 carry the bird. So the coat has two neighbours now — the wing and the tail a
-shade under it, the cheek and the throat a good way over it — and every mark
+shade under it, the face and the underside a good way over it — and every mark
 they make is on the bird rather than on the pose, which is the condition an
 earlier pale breast failed: it showed only when the bird sat, and one that
-changes colour when it takes off is two birds. The folded wing is the same
+changes colour when it takes off is two birds. The pale is not a patch stuck
+on the front, either: a bird is dark above and pale below, and the line
+between the two runs from the face, under the cheek, along the flank, to the
+vent. Drawn as rounds it came out as pale balls sitting on the breast; drawn
+as a side, the wing lies over most of it and what is left is the face, the
+front of the breast and a strip of belly — which is what you see of a
+sparrow's underside. The folded wing is the same
 shape as the spread one, run between two sets of the same five points, so no
 wing is ever swapped for another at any size; sitting, it lies along the flank
 from the shoulder to the root of the tail, and on a bird that is holding still
