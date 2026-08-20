@@ -344,6 +344,7 @@
     .hero-lead {
       position: relative;
       min-height: 0;
+      min-height: 0;
       /* Pressing a tree on a touch screen would otherwise long-press onto the
          visually-hidden heading underneath and pop up the selection handles. */
       user-select: none;
@@ -352,17 +353,26 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* bleeds past the column so swaying branches are never clipped, and
-       further below it, into the gap under the buttons, for the ivy to hang
-       in; BLEED_X / BLEED_Y / BLEED_BOTTOM in the grove script must match */
+    /* Bleeds past the column so a crown is never clipped, and further below
+       it, into the gap under the buttons, for the ivy to hang in.
+       BLEED_X / BLEED_Y / BLEED_BOTTOM in the grove script must match.
+
+       The sideways bleed used to be fourteen pixels, which was exactly what
+       a crown could overhang its slot back when a slot was wide. It is not
+       any more — the pavilion takes half the row and the crowns spread over
+       its air to make their height — so the outermost trees were being cut
+       off down a straight edge. Sixty-four is what the widest crown needs,
+       and it costs nothing anywhere else: every measurement in the grove is
+       taken from the canvas's own edges, so the shelf, the slots and the
+       building all sit exactly where they sat. */
     /* sized with calc, not opposing insets: a canvas is a replaced element,
        so width:auto would fall back to its intrinsic size and feed back into
        the resize observer */
     #grove {
       position: absolute;
       top: -34px;
-      left: -14px;
-      width: calc(100% + 28px);
+      left: -64px;
+      width: calc(100% + 128px);
       height: calc(100% + 98px);
       display: block;
       pointer-events: none;
@@ -2267,6 +2277,11 @@
 
     .day #cv .section-label,
     .day #cv .cv-skills dt { color: #1a2e3f; font-weight: 680; }
+
+    /* --border by day is a blue with some body in it, which is right for a
+       card's edge and far too much for six rules stacked down a column: they
+       read as a table when what they are is a breath between groups. */
+    .day #cv .cv-skills > div { border-top-color: rgba(38, 66, 92, 0.11); }
 
     .day #cv .cv-when,
     .day #cv .cv-awards time,
@@ -4430,7 +4445,7 @@
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
-    const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
+    const BLEED_X = 64, BLEED_Y = 34, BLEED_BOTTOM = 64;
 
     // ONE BRICK, for everything on this canvas. The shelf and the gazebo
     // standing on it are the same wall in the end, out of the same three
@@ -7216,7 +7231,12 @@
         xs.push(i < nL ? edge + (wL - run(nL)) / 2 + i * (slot + gap)
                        : gzR + (wR - run(nR)) / 2 + (i - nL) * (slot + gap));
       }
-      fit = { edge: xs[0], slot, gap, band, treeBase, xs, span: Math.max(slot, openSlot) };
+      // A crown is centred on its slot, so the outermost one hangs
+      // (crown - slot) / 2 past the end of the row: never wider than the
+      // canvas can take, whatever the stand is doing.
+      const fits = (slot + 2 * edge) / OVERLAP;
+      fit = { edge: xs[0], slot, gap, band, treeBase, xs,
+              span: Math.max(slot, Math.min(openSlot, fits)) };
       fitTrees();
 
       // and the harp goes to stand in the archway, which the harp's own

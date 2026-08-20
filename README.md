@@ -224,8 +224,19 @@ panels of brick bricked into two windows. What a window wants under it is a
 sill and daylight.
 
 The stand is planted around it in the two clearings either side, with a margin
-of shelf between, and no tree stands behind it. The building takes its ground
-out of the *spacing* and not out of the canopy: how wide a crown may be drawn
+of shelf between, and no tree stands behind it. The canvas hangs sixty-four
+pixels out past its column on each side so a crown that wide has somewhere to
+go: it used to hang fourteen, which was exactly what a crown could overhang
+its slot back when a slot was wide, and once they were not the outermost trees
+were being cut off down a straight edge with sky beyond it. The extra bleed
+costs nothing anywhere else, because every measurement in the grove is taken
+from the canvas's own edges — the shelf, the slots and the building all sit
+exactly where they sat, to the pixel. On a wide page the spill lands in the
+gutter between the grove and the words; stacked on a phone the column is the
+window, and a tree simply runs off the side of the screen, which is what a
+tree at the edge of a picture does.
+
+The building takes its ground out of the *spacing* and not out of the canopy: how wide a crown may be drawn
 is still measured against the whole width, because these trees stand half as
 tall again as the pavilion and what spreads over its roof is sky. Given only
 the clearings to spread in, the broad species could not reach the top of the
