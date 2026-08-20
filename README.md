@@ -983,6 +983,58 @@ the address; `ipconfig getifaddr en0` prints it). Safari's Web Inspector will
 attach to the phone from the Mac's Develop menu. Playwright's WebKit build is a
 fair stand-in for Mobile Safari when a device is not to hand.
 
+## The résumé
+
+The fourth button in the hero used to be ORCID. It is now a leaf, and it does
+not go anywhere: it opens a section between the hero and the gallery that is
+not there until it is asked for. Nothing is downloaded and no page is left.
+
+What unfolds is the plain record in two columns — where he has worked and what
+he read down the left, what he can do and what he was given down the right —
+and every post opens again onto its own detail, so the whole thing reads in
+about twenty seconds and rewards anyone who wants more. The years sit beside
+the names rather than out at the column's right edge: this column is wide and
+the names are short, and the run of empty inches between *Apple* and *2021*
+read as a hole rather than as a column of dates.
+
+The one ornament is the one the page already owns. A hairline of the same ink
+as the flourish runs down each list, growing from the top as the section opens,
+with a bud at every post. Open a post and the bud does not sit beside a leaf,
+it becomes one: the bud shrinks away while the leaf unrolls from the same point
+on the hairline — the foot of the leaf's own stem, which is where its pivot is
+set. The same leaf is the mark on the button that opens all of it. A flourish
+closes the section off from the gallery below, and by day it grows its own
+leaves like every other divider here.
+
+Both disclosures — the section, and each post inside it — are the same trick: a
+grid row taken from `0fr` to `1fr`. The browser interpolates the content's own
+height, so nothing is measured in script, nothing is pinned to a pixel value
+that goes stale when the text rewraps, and the closed section costs the
+document exactly zero. Shut, it is `inert`: not merely invisible but out of the
+tab order and unread, while still laid out, which is what lets it animate at
+all. The script that remains sets three classes and scrolls the section's top
+into view, because on a tall window it opens below the fold and a button that
+changes nothing you can see is a dead button.
+
+## The marks
+
+Every icon here is from Hugeicons' free Stroke Rounded set: the ten filter
+tabs, the tags on each card, the four buttons in the hero, the download in the
+reading room and the two in the résumé. One family, one 24-pixel grid, one
+hand. The only thing changed is the weight — the set draws at 1.5 and the page
+carries 1.7, which is what keeps a mark from going thin beside the type at
+thirteen pixels. The disclosure chevron is heavier still, at 2.5: it is only
+ever drawn at nine pixels, where 1.7 on a 24-grid is two thirds of a pixel and
+reads as a smudge.
+
+The three profile marks — GitHub, LinkedIn, Scholar — are Hugeicons' renditions
+rather than the official logos. That is the price of having one family, and it
+is one line each to put the real marks back.
+
+Nothing from the package ships: the handful of paths actually used are inlined
+into the sprite at the top of the body, so there is no dependency and no
+request. See the credits at the foot of this file.
+
 ## The section flourishes
 
 The dividers between sections are one calligraphic ornament, split into its
@@ -997,6 +1049,11 @@ outlines, so each one sits on the ink rather than beside it — and mirrored
 across the centre, because a figure this symmetrical shows any drift at once.
 They are in the markup at night too, painted with nothing: removing them would
 throw off the measurement that decides how the flourish unrolls.
+
+## Credits
+
+The icons are [Hugeicons](https://hugeicons.com) Stroke Rounded, free tier
+(`@hugeicons/core-free-icons`, MIT). Inlined, not installed.
 
 The ornament is from a text-divider set by Vecteezy. **Free Vecteezy downloads
 require attribution** — check the licence on the original download and add the

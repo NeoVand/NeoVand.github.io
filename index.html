@@ -1973,6 +1973,324 @@
 
 
 
+
+    /* ─── THE RÉSUMÉ ───────────────────────────────────────────────────────
+       Two disclosures, one behind the other: the pill opens the section, and
+       inside it every post opens itself. Both are the same trick — a grid row
+       taken from 0fr to 1fr — so the browser interpolates the content's own
+       height and nothing anywhere has to be measured in script. The section
+       therefore costs no page at all until it is asked for. */
+    .cv {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 640ms var(--ease);
+    }
+    .cv.open { grid-template-rows: 1fr; }
+    .cv > div { overflow: hidden; min-height: 0; }
+
+    .cv-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 40px 24px 8px;
+    }
+
+    /* The long column and the short one. Experience and education run down
+       the left because they are the record; skills and honours sit beside
+       them because they are the index to it. */
+    .cv-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.24fr) minmax(0, 1fr);
+      gap: 0 64px;
+      align-items: start;
+    }
+
+    .cv .section-label { margin: 0 0 12px; }
+    .cv-list + .section-label { margin-top: 30px; }
+    .cv-skills + .section-label { margin-top: 30px; }
+
+    /* Everything inside arrives on the way open, in reading order and a beat
+       apart, the way the buttons in the hero land one after another. */
+    .cv-in, .cv-item {
+      opacity: 0;
+      transform: translateY(9px);
+      transition: opacity 480ms var(--ease) var(--d, 0ms),
+                  transform 560ms var(--ease) var(--d, 0ms);
+    }
+    .cv.open .cv-in,
+    .cv.open .cv-item { opacity: 1; transform: none; }
+
+    /* ── the stem ──
+       One hairline of flourish ink down the column, growing from the top as
+       the section opens. It is drawn on the list rather than between the
+       items so that it stays whole while the posts underneath it change
+       height. */
+    .cv-list {
+      position: relative;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cv-list::before {
+      content: '';
+      position: absolute;
+      left: 7px;
+      top: 12px;
+      bottom: 14px;
+      width: 1px;
+      background: linear-gradient(var(--ink), var(--ink) 78%, transparent);
+      opacity: 0.45;
+      transform: scaleY(0);
+      transform-origin: 50% 0;
+      transition: transform 900ms var(--ease) 120ms;
+    }
+    .cv.open .cv-list::before { transform: scaleY(1); }
+
+    .cv-item { position: relative; padding-left: 27px; }
+
+    /* the bud, and the leaf it puts out when the post is opened. Both are
+       centred on the stem, so the leaf grows out of the joint rather than
+       being parked beside it. */
+    .cv-bud {
+      position: absolute;
+      left: 4.5px;
+      top: 17px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--ink);
+      opacity: 0.8;
+      transition: transform 320ms var(--ease), opacity 320ms var(--ease);
+    }
+
+    .cv-sprout {
+      position: absolute;
+      left: 3.5px;
+      top: 8px;
+      color: var(--ink);
+      opacity: 0;
+      transform: scale(0.12) rotate(-42deg);
+      transform-origin: 25% 75%;
+      transition: transform 520ms var(--ease), opacity 300ms var(--ease);
+      pointer-events: none;
+    }
+
+    .cv-item.open .cv-sprout { opacity: 0.95; transform: none; }
+    .cv-item.open .cv-bud { opacity: 0; transform: scale(0.2); }
+    .cv-item:has(.cv-post:hover) .cv-bud { transform: scale(1.35); opacity: 1; }
+
+    /* ── a post ── */
+    .cv-post {
+      display: block;
+      width: 100%;
+      padding: 10px 0 11px;
+      background: none;
+      border: 0;
+      font: inherit;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .cv-post.is-plain { cursor: default; }
+
+    /* The name and the years sit on one line. Right-aligned dates are the
+       convention, but this column is wide and short-named, and the run of
+       empty inches between "Apple" and "2021" read as a hole rather than as
+       a column. */
+    .cv-top {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+    }
+
+    .cv-org {
+      font-family: 'Young Serif', Georgia, 'Times New Roman', serif;
+      font-size: 15.5px;
+      line-height: 1.25;
+      color: var(--title);
+      transition: color 200ms var(--ease);
+    }
+
+    .cv-when {
+      font-size: 11.5px;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cv-caret {
+      align-self: center;
+      margin-left: -5px;
+      flex: 0 0 auto;
+      opacity: 0.55;
+      transition: transform 380ms var(--ease), opacity 200ms var(--ease);
+    }
+    .cv-item.open .cv-caret { transform: rotate(-180deg); opacity: 0.9; }
+    .cv-post:hover .cv-caret { opacity: 1; }
+
+    .cv-role {
+      margin-top: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted-2);
+    }
+
+    .cv-post:hover .cv-org { color: var(--text); }
+    .cv-post:focus-visible {
+      outline: 2px solid var(--border-2);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    /* ── what a post opens onto ── */
+    .cv-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 480ms var(--ease);
+    }
+    .cv-item.open .cv-body { grid-template-rows: 1fr; }
+    .cv-body > div { overflow: hidden; min-height: 0; }
+
+    /* the earlier titles at the same place, which is the one thing a line of
+       a résumé cannot say by itself */
+    .cv-also {
+      list-style: none;
+      margin: 0;
+      padding: 0 0 2px;
+    }
+    .cv-also li {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 3px 0;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--muted-2);
+    }
+    .cv-also li span:last-child {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      padding-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cv-notes {
+      list-style: none;
+      margin: 7px 0 4px;
+      padding: 0 0 8px;
+      font-size: 12.8px;
+      line-height: 1.62;
+      color: var(--muted-2);
+    }
+    .cv-notes li { position: relative; padding-left: 14px; }
+    .cv-notes li + li { margin-top: 5px; }
+    /* a short rule rather than a bullet: the page has no round dots in its
+       type anywhere else, and the flourish is all strokes */
+    .cv-notes li::before {
+      content: '';
+      position: absolute;
+      left: 1px;
+      top: 0.66em;
+      width: 6px;
+      height: 1px;
+      background: var(--ink);
+      opacity: 0.55;
+    }
+    .cv-notes em, .cv-awards em { font-style: italic; color: var(--text); }
+
+    /* ── skills ── */
+    .cv-skills { margin: 0; }
+    .cv-skills > div { padding: 9px 0; border-top: 1px solid var(--border); }
+    .cv-skills > div:first-child { padding-top: 0; border-top: 0; }
+
+    .cv-skills dt {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .cv-skills dd {
+      margin: 0;
+      font-size: 12.8px;
+      line-height: 1.62;
+      color: var(--muted-2);
+    }
+
+    /* ── honours ── */
+    .cv-awards { list-style: none; margin: 0; padding: 0; }
+    .cv-awards li {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr);
+      gap: 12px;
+      padding: 6px 0;
+      font-size: 12.8px;
+      line-height: 1.55;
+      color: var(--muted-2);
+    }
+    .cv-awards time {
+      color: var(--muted);
+      font-size: 11.5px;
+      letter-spacing: 0.05em;
+      padding-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .cv-awards b { color: var(--text); font-weight: calc(500 + var(--wn)); }
+
+
+    /* Daylight is a bright photograph rather than a flat page, and the grey
+       that holds against the night sky goes thin over cloud. By day the small
+       type here takes more colour and half a step more weight — the subtitles
+       and the skills runs most of all, which carry the longest lines in the
+       section and the least contrast behind them. */
+    .day #cv .cv-role,
+    .day #cv .cv-notes,
+    .day #cv .cv-skills dd,
+    .day #cv .cv-awards li,
+    .day #cv .cv-also li { color: #22394b; font-weight: 450; }
+
+    .day #cv .section-label,
+    .day #cv .cv-skills dt { color: #1a2e3f; font-weight: 680; }
+
+    .day #cv .cv-when,
+    .day #cv .cv-awards time,
+    .day #cv .cv-also li span:last-child { color: #2a4255; font-weight: 500; }
+
+    /* the pill that opens it, while it is open. A button does not inherit
+       its font the way the anchors beside it do, and left to the UA's it
+       came out lighter and narrower than its three neighbours. */
+    .cv-toggle {
+      font-family: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+    .cv-toggle[aria-expanded="true"] { color: var(--title); }
+    .cv-toggle[aria-expanded="true"] svg { opacity: 1; }
+
+    /* On a phone the two columns become one, and the record keeps its order:
+       experience, education, skills, honours. */
+    @media (max-width: 900px) {
+      .cv-inner { padding: 32px 16px 4px; }
+      .cv-grid { grid-template-columns: 1fr; gap: 0; }
+      .cv-col + .cv-col { margin-top: 30px; }
+      .cv-org { font-size: 15px; }
+      .cv-when { font-size: 11px; }
+      .cv-awards li { grid-template-columns: 36px minmax(0, 1fr); gap: 10px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cv-in, .cv-item { opacity: 1; transform: none; transition: none; }
+      .cv-list::before { transform: scaleY(1); transition: none; }
+      .cv, .cv-body { transition: none; }
+      .cv-sprout, .cv-caret, .cv-bud { transition: none; }
+    }
+
     /* ─── FOOTER ─── */
     footer {
       border-top: 1px solid var(--border);
@@ -2531,68 +2849,96 @@
 
   <!-- Shared icon sprite -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-    <!-- Tag icons. Stroked rather than filled, to sit with the text weight. -->
-    <symbol id="tag-ai" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.5l1.7 4.9 4.9 1.7-4.9 1.7L12 15.7l-1.7-4.9L5.4 9.1l4.9-1.7z"/>
-      <path d="M18.2 14.2l.85 2.45 2.45.85-2.45.85-.85 2.45-.85-2.45-2.45-.85 2.45-.85z"/>
-      <path d="M6.4 15.6l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z"/>
+    <!-- Every mark on this page comes from Hugeicons' free Stroke Rounded set
+         (MIT, @hugeicons/core-free-icons) — one family, one 24-pixel grid, so
+         a filter tab, a card's tags and a button in the hero are all drawn by
+         the same hand. Only the stroke is ours: the set draws at 1.5 and the
+         page carries its icons a shade heavier, which is what keeps them from
+         going thin beside the type at thirteen pixels.
+
+         The three profile marks are Hugeicons' renditions rather than the
+         official GitHub, LinkedIn and Scholar logos, which is the price of
+         having one family. -->
+    <symbol id="tag-ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11.9826 10.879L13.5745 11.4096C14.1418 11.5987 14.1418 12.4013 13.5745 12.5904L11.9826 13.121C10.8676 13.4927 9.99268 14.3676 9.62102 15.4826L9.0904 17.0745C8.90127 17.6418 8.09873 17.6418 7.9096 17.0745L7.37898 15.4826C7.00732 14.3676 6.13239 13.4927 5.0174 13.121L3.42553 12.5904C2.85815 12.4013 2.85816 11.5987 3.42553 11.4096L5.0174 10.879C6.13239 10.5073 7.00732 9.63239 7.37898 8.5174L7.9096 6.92553C8.09873 6.35815 8.90127 6.35816 9.0904 6.92553L9.62102 8.5174C9.99268 9.63239 10.8676 10.5073 11.9826 10.879Z"/>
+      <path d="M18.083 4.99045L18.8066 5.23164C19.0645 5.3176 19.0645 5.6824 18.8066 5.76836L18.083 6.00955C17.5762 6.17849 17.1785 6.57619 17.0096 7.083L16.7684 7.80658C16.6824 8.06448 16.3176 8.06447 16.2316 7.80658L15.9904 7.083C15.8215 6.57619 15.4238 6.17849 14.917 6.00955L14.1934 5.76836C13.9355 5.6824 13.9355 5.3176 14.1934 5.23164L14.917 4.99045C15.4238 4.82151 15.8215 4.42381 15.9904 3.917L16.2316 3.19342C16.3176 2.93552 16.6824 2.93553 16.7684 3.19342L17.0096 3.917C17.1785 4.42381 17.5762 4.82151 18.083 4.99045Z"/>
+      <path d="M18.083 17.9904L18.8066 18.2316C19.0645 18.3176 19.0645 18.6824 18.8066 18.7684L18.083 19.0096C17.5762 19.1785 17.1785 19.5762 17.0096 20.083L16.7684 20.8066C16.6824 21.0645 16.3176 21.0645 16.2316 20.8066L15.9904 20.083C15.8215 19.5762 15.4238 19.1785 14.917 19.0096L14.1934 18.7684C13.9355 18.6824 13.9355 18.3176 14.1934 18.2316L14.917 17.9904C15.4238 17.8215 15.8215 17.4238 15.9904 16.917L16.2316 16.1934C16.3176 15.9355 16.6824 15.9355 16.7684 16.1934L17.0096 16.917C17.1785 17.4238 17.5762 17.8215 18.083 17.9904Z"/>
     </symbol>
     <symbol id="tag-art" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 3a9 9 0 1 0 0 18 1.9 1.9 0 0 0 1.5-3 1.9 1.9 0 0 1 1.5-3h1.8A4.2 4.2 0 0 0 21 10.8 9 9 0 0 0 12 3z"/>
-      <circle cx="7.7" cy="12.2" r="1.1" fill="currentColor" stroke="none"/>
-      <circle cx="9.9" cy="8.1" r="1.1" fill="currentColor" stroke="none"/>
-      <circle cx="14.4" cy="7.9" r="1.1" fill="currentColor" stroke="none"/>
+      <path d="M21.8205 10.4127C22.062 11.8519 22.1827 12.5715 21.2423 13.9326C21.1459 14.0722 20.8966 14.3713 20.777 14.4911C19.6103 15.6586 18.4308 15.6586 16.0716 15.6586H14.1392C13.5085 15.6586 13.1931 15.6586 12.9639 15.7142C11.9586 15.9581 11.3031 16.9391 11.453 17.9755C11.4872 18.2118 11.6043 18.5085 11.8386 19.102C11.9345 19.3449 11.9824 19.4664 12.0136 19.7304C12.1292 20.7084 11.0869 21.9508 10.1158 21.9926C9.85358 22.0039 9.83681 22.0002 9.80326 21.9926C7.66174 21.51 5.66204 20.3123 4.18389 18.4421C0.736789 14.0808 1.43146 7.71364 5.73548 4.22064C10.0395 0.727643 16.323 1.43156 19.7701 5.79289C20.868 7.1819 21.5457 8.77438 21.8205 10.4127Z" fill-rule="evenodd" clip-rule="evenodd"/>
+      <path d="M7.36719 7.74976H7.24219M7.49219 7.74976C7.49219 7.88783 7.38026 7.99976 7.24219 7.99976C7.10412 7.99976 6.99219 7.88783 6.99219 7.74976C6.99219 7.61169 7.10412 7.49976 7.24219 7.49976C7.38026 7.49976 7.49219 7.61169 7.49219 7.74976Z"/>
+      <path d="M7.36719 15.7498H7.24219M7.49219 15.7498C7.49219 15.8878 7.38026 15.9998 7.24219 15.9998C7.10412 15.9998 6.99219 15.8878 6.99219 15.7498C6.99219 15.6117 7.10412 15.4998 7.24219 15.4998C7.38026 15.4998 7.49219 15.6117 7.49219 15.7498Z"/>
+      <path d="M11.8672 5.74976H11.7422M11.9922 5.74976C11.9922 5.88783 11.8803 5.99976 11.7422 5.99976C11.6041 5.99976 11.4922 5.88783 11.4922 5.74976C11.4922 5.61169 11.6041 5.49976 11.7422 5.49976C11.8803 5.49976 11.9922 5.61169 11.9922 5.74976Z"/>
+      <path d="M16.3672 7.74976H16.2422M16.4922 7.74976C16.4922 7.88783 16.3803 7.99976 16.2422 7.99976C16.1041 7.99976 15.9922 7.88783 15.9922 7.74976C15.9922 7.61169 16.1041 7.49976 16.2422 7.49976C16.3803 7.49976 16.4922 7.61169 16.4922 7.74976Z"/>
+      <path d="M18.3672 11.7498H18.2422M18.4922 11.7498C18.4922 11.8878 18.3803 11.9998 18.2422 11.9998C18.1041 11.9998 17.9922 11.8878 17.9922 11.7498C17.9922 11.6117 18.1041 11.4998 18.2422 11.4998C18.3803 11.4998 18.4922 11.6117 18.4922 11.7498Z"/>
+      <path d="M5.86719 11.7498H5.74219M5.99219 11.7498C5.99219 11.8878 5.88026 11.9998 5.74219 11.9998C5.60412 11.9998 5.49219 11.8878 5.49219 11.7498C5.49219 11.6117 5.60412 11.4998 5.74219 11.4998C5.88026 11.4998 5.99219 11.6117 5.99219 11.7498Z"/>
     </symbol>
     <symbol id="tag-alife" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 21v-8.4"/>
-      <path d="M12 12.6C8.9 12.6 6.4 10.1 6.4 7 9.5 7 12 9.5 12 12.6z"/>
-      <path d="M12 12.6c0-3.7 3-6.7 6.7-6.7 0 3.7-3 6.7-6.7 6.7z"/>
+      <path d="M12 12V20"/>
+      <path d="M12 12V13H15C18.3137 13 21 10.3137 21 7V6H18C14.6863 6 12 8.68629 12 12Z"/>
+      <path d="M12 10V11H9C5.68629 11 3 8.31371 3 5V4H6C9.31371 4 12 6.68629 12 10Z"/>
     </symbol>
     <symbol id="tag-educational" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 7.2C10.3 5.9 8.1 5.2 6 5.2H3v12h3c2.1 0 4.3.7 6 2"/>
-      <path d="M12 7.2c1.7-1.3 3.9-2 6-2h3v12h-3c-2.1 0-4.3.7-6 2"/>
-      <path d="M12 7.2v12"/>
+      <path d="M7.99978 3.5H6.60021C4.43183 3.5 3.34764 3.5 2.67399 4.17362C2.00034 4.84724 2.00029 5.93144 2.00021 8.09982L2 13.3998C1.99992 15.5684 1.99987 16.6526 2.67353 17.3263C3.34719 18 4.43146 18 6.6 18H8.95042C10.4329 18 11.7092 19.0464 11.9999 20.5V5.5C11.0556 4.24097 9.99989 3.5 7.99978 3.5Z"/>
+      <path d="M16.0001 3.5H17.3997C19.5681 3.5 20.6523 3.5 21.3259 4.17362C21.9996 4.84724 21.9996 5.93144 21.9997 8.09982L21.9999 13.3998C22 15.5684 22 16.6526 21.3264 17.3263C20.6527 18 19.5684 18 17.3999 18H15.0495C13.567 18 12.2907 19.0464 12 20.5V5.5C12.9443 4.24097 14 3.5 16.0001 3.5Z"/>
     </symbol>
     <symbol id="tag-game" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M7 8h10a4.6 4.6 0 0 1 4.6 4.6v.7a3.7 3.7 0 0 1-6.7 2.2l-.7-1H9.8l-.7 1A3.7 3.7 0 0 1 2.4 13.3v-.7A4.6 4.6 0 0 1 7 8z"/>
-      <path d="M7.1 11.1v2.6M5.8 12.4h2.6"/>
-      <circle cx="16.3" cy="11.7" r="1" fill="currentColor" stroke="none"/>
-      <circle cx="18.3" cy="13.5" r="1" fill="currentColor" stroke="none"/>
+      <path d="M2.00825 15.8092C2.23114 12.3161 2.88737 9.7599 3.44345 8.27511C3.72419 7.5255 4.32818 6.96728 5.10145 6.78021C9.40147 5.73993 14.5986 5.73993 18.8986 6.78021C19.6719 6.96728 20.2759 7.5255 20.5566 8.27511C21.1127 9.7599 21.7689 12.3161 21.9918 15.8092C22.1251 17.8989 20.6148 19.0503 18.9429 19.8925C17.878 20.4289 17.0591 18.8457 16.5155 17.6203C16.2185 16.9508 15.5667 16.5356 14.8281 16.5356H9.17196C8.43331 16.5356 7.78158 16.9508 7.48456 17.6203C6.94089 18.8457 6.122 20.4289 5.05711 19.8925C3.40215 19.0588 1.87384 17.9157 2.00825 15.8092Z"/>
+      <path d="M5 4.5L6.96285 4M19 4.5L17 4"/>
+      <path d="M9 13L7.5 11.5M7.5 11.5L6 10M7.5 11.5L6 13M7.5 11.5L9 10"/>
+      <path d="M15.9881 10H15.9971" stroke-width="2.27"/>
+      <path d="M17.9881 13H17.9971" stroke-width="2.27"/>
     </symbol>
     <symbol id="tag-research" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9.3 3h5.4"/>
-      <path d="M10.2 3v6.3l-4.9 8A2 2 0 0 0 7 20.4h10a2 2 0 0 0 1.7-3.1l-4.9-8V3"/>
-      <path d="M7.6 15.2h8.8"/>
+      <path d="M14.4973 2V8.25401C14.4973 8.72617 14.7093 9.1734 15.0747 9.47239L15.7421 10.0184C18.4717 12.2518 20.2277 15.4577 20.6397 18.9604C20.8301 20.5784 19.5659 22 17.9368 22H6.05789C4.42876 22 3.16459 20.5784 3.35494 18.9604C3.76702 15.4577 5.52295 12.2518 8.25261 10.0184L8.91998 9.47239C9.28541 9.1734 9.49734 8.72617 9.49734 8.25401V2"/>
+      <path d="M7.99707 2H15.9971"/>
+      <path d="M5.49707 14.0183C5.74095 14.0063 5.99072 14 6.24707 14C9.99707 14 13.7471 17 17.4971 17C18.2729 17 18.9332 16.9384 19.4971 16.8334"/>
     </symbol>
     <symbol id="tag-tool" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20.8 5.1l-3.3 3.3-2.4-2.4 3.3-3.3a5.4 5.4 0 0 0-6.9 6.6l-7.3 7.3a2.2 2.2 0 0 0 3.1 3.1l7.3-7.3a5.4 5.4 0 0 0 6.2-7.3z"/>
+      <path d="M20.3584 13.3567C19.1689 14.546 16.9308 14.4998 13.4992 14.4998C11.2914 14.4998 9.50138 12.7071 9.50024 10.4993C9.50024 7.07001 9.454 4.83065 10.6435 3.64138C11.8329 2.45212 12.3583 2.50027 17.6274 2.50027C18.1366 2.49809 18.3929 3.11389 18.0329 3.47394L15.3199 6.18714C14.6313 6.87582 14.6294 7.99233 15.3181 8.68092C16.0068 9.36952 17.1234 9.36959 17.8122 8.68109L20.5259 5.96855C20.886 5.60859 21.5019 5.86483 21.4997 6.37395C21.4997 11.6422 21.5479 12.1675 20.3584 13.3567Z"/>
+      <path d="M13.5 14.5L7.32842 20.6716C6.22386 21.7761 4.433 21.7761 3.32843 20.6716C2.22386 19.567 2.22386 17.7761 3.32843 16.6716L9.5 10.5"/>
+      <path d="M5.50896 18.5H5.5" stroke-width="2.27"/>
     </symbol>
     <symbol id="tag-webgl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 3.2l9 16.4H3z"/>
-      <path d="M7.5 11.4h9L12 19.6z"/>
+      <path d="M2.79289 21.2071C3.08579 21.5 3.55719 21.5 4.5 21.5H14.5C15.4428 21.5 15.9142 21.5 16.2071 21.2071M2.79289 21.2071C2.5 20.9142 2.5 20.4428 2.5 19.5V9.5C2.5 8.55719 2.5 8.08579 2.79289 7.79289M2.79289 21.2071L8.79289 15.2071M16.2071 21.2071C16.5 20.9142 16.5 20.4428 16.5 19.5V9.5C16.5 8.55719 16.5 8.08579 16.2071 7.79289M16.2071 21.2071L21.2071 16.2071C21.5 15.9142 21.5 15.4428 21.5 14.5V4.5C21.5 3.55719 21.5 3.08579 21.2071 2.79289M16.2071 7.79289C15.9142 7.5 15.4428 7.5 14.5 7.5H4.5C3.55719 7.5 3.08579 7.5 2.79289 7.79289M16.2071 7.79289L21.2071 2.79289M2.79289 7.79289L7.79289 2.79289C8.08579 2.5 8.55719 2.5 9.5 2.5H19.5C20.4428 2.5 20.9142 2.5 21.2071 2.79289M8.79289 15.2071C9.08579 15.5 9.55719 15.5 10.5 15.5H14M8.79289 15.2071C8.5 14.9142 8.5 14.4428 8.5 13.5V10.5"/>
     </symbol>
     <symbol id="tag-webgpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5.2" y="5.2" width="13.6" height="13.6" rx="2.2"/>
-      <rect x="9.4" y="9.4" width="5.2" height="5.2" rx="0.8"/>
-      <path d="M9.4 5.2V2.4M14.6 5.2V2.4M9.4 21.6v-2.8M14.6 21.6v-2.8M5.2 9.4H2.4M5.2 14.6H2.4M21.6 9.4h-2.8M21.6 14.6h-2.8"/>
+      <path d="M4 12C4 8.22876 4 6.34315 5.17157 5.17157C6.34315 4 8.22876 4 12 4C15.7712 4 17.6569 4 18.8284 5.17157C20 6.34315 20 8.22876 20 12C20 15.7712 20 17.6569 18.8284 18.8284C17.6569 20 15.7712 20 12 20C8.22876 20 6.34315 20 5.17157 18.8284C4 17.6569 4 15.7712 4 12Z"/>
+      <path d="M7.73223 16.2678C8.46447 17 9.64298 17 12 17C12.7898 17 13.4473 17 14 16.9724L16.9724 14C17 13.4473 17 12.7898 17 12C17 9.64298 17 8.46447 16.2678 7.73223C15.5355 7 14.357 7 12 7C9.64298 7 8.46447 7 7.73223 7.73223C7 8.46447 7 9.64298 7 12C7 14.357 7 15.5355 7.73223 16.2678Z"/>
+      <path d="M8 2V4M16 2V4M12 2V4M8 20V22M12 20V22M16 20V22M22 16H20M4 8H2M4 16H2M4 12H2M22 8H20M22 12H20"/>
     </symbol>
     <symbol id="tag-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
-      <rect x="13.4" y="3.4" width="7.2" height="7.2" rx="1.6"/>
-      <rect x="3.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
-      <rect x="13.4" y="13.4" width="7.2" height="7.2" rx="1.6"/>
+      <path d="M13.6903 19.4567C13.5 18.9973 13.5 18.4149 13.5 17.25C13.5 16.0851 13.5 15.5027 13.6903 15.0433C13.944 14.4307 14.4307 13.944 15.0433 13.6903C15.5027 13.5 16.0851 13.5 17.25 13.5C18.4149 13.5 18.9973 13.5 19.4567 13.6903C20.0693 13.944 20.556 14.4307 20.8097 15.0433C21 15.5027 21 16.0851 21 17.25C21 18.4149 21 18.9973 20.8097 19.4567C20.556 20.0693 20.0693 20.556 19.4567 20.8097C18.9973 21 18.4149 21 17.25 21C16.0851 21 15.5027 21 15.0433 20.8097C14.4307 20.556 13.944 20.0693 13.6903 19.4567Z" stroke-linecap="square"/>
+      <path d="M13.6903 8.95671C13.5 8.49728 13.5 7.91485 13.5 6.75C13.5 5.58515 13.5 5.00272 13.6903 4.54329C13.944 3.93072 14.4307 3.44404 15.0433 3.1903C15.5027 3 16.0851 3 17.25 3C18.4149 3 18.9973 3 19.4567 3.1903C20.0693 3.44404 20.556 3.93072 20.8097 4.54329C21 5.00272 21 5.58515 21 6.75C21 7.91485 21 8.49728 20.8097 8.95671C20.556 9.56928 20.0693 10.056 19.4567 10.3097C18.9973 10.5 18.4149 10.5 17.25 10.5C16.0851 10.5 15.5027 10.5 15.0433 10.3097C14.4307 10.056 13.944 9.56928 13.6903 8.95671Z" stroke-linecap="square"/>
+      <path d="M3.1903 19.4567C3 18.9973 3 18.4149 3 17.25C3 16.0851 3 15.5027 3.1903 15.0433C3.44404 14.4307 3.93072 13.944 4.54329 13.6903C5.00272 13.5 5.58515 13.5 6.75 13.5C7.91485 13.5 8.49728 13.5 8.95671 13.6903C9.56928 13.944 10.056 14.4307 10.3097 15.0433C10.5 15.5027 10.5 16.0851 10.5 17.25C10.5 18.4149 10.5 18.9973 10.3097 19.4567C10.056 20.0693 9.56928 20.556 8.95671 20.8097C8.49728 21 7.91485 21 6.75 21C5.58515 21 5.00272 21 4.54329 20.8097C3.93072 20.556 3.44404 20.0693 3.1903 19.4567Z" stroke-linecap="square"/>
+      <path d="M3.1903 8.95671C3 8.49728 3 7.91485 3 6.75C3 5.58515 3 5.00272 3.1903 4.54329C3.44404 3.93072 3.93072 3.44404 4.54329 3.1903C5.00272 3 5.58515 3 6.75 3C7.91485 3 8.49728 3 8.95671 3.1903C9.56928 3.44404 10.056 3.93072 10.3097 4.54329C10.5 5.00272 10.5 5.58515 10.5 6.75C10.5 7.91485 10.5 8.49728 10.3097 8.95671C10.056 9.56928 9.56928 10.056 8.95671 10.3097C8.49728 10.5 7.91485 10.5 6.75 10.5C5.58515 10.5 5.00272 10.5 4.54329 10.3097C3.93072 10.056 3.44404 9.56928 3.1903 8.95671Z" stroke-linecap="square"/>
     </symbol>
-    <symbol id="icon-github" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+    <symbol id="icon-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6.51734 17.1132C6.91177 17.6905 8.10883 18.9228 9.74168 19.2333M9.86428 22C8.83582 21.8306 2 19.6057 2 12.0926C2 5.06329 8.0019 2 12.0008 2C15.9996 2 22 5.06329 22 12.0926C22 19.6057 15.1642 21.8306 14.1357 22C14.1357 22 13.9267 18.5826 14.0487 17.9969C14.1706 17.4113 13.7552 16.4688 13.7552 16.4688C14.7262 16.1055 16.2043 15.5847 16.7001 14.1874C17.0848 13.1032 17.3268 11.5288 16.2508 10.0489C16.2508 10.0489 16.5318 7.65809 15.9996 7.56548C15.4675 7.47287 13.8998 8.51192 13.8998 8.51192C13.4432 8.38248 12.4243 8.13476 12.0018 8.17939C11.5792 8.13476 10.5568 8.38248 10.1002 8.51192C10.1002 8.51192 8.53249 7.47287 8.00036 7.56548C7.46823 7.65809 7.74917 10.0489 7.74917 10.0489C6.67316 11.5288 6.91516 13.1032 7.2999 14.1874C7.79575 15.5847 9.27384 16.1055 10.2448 16.4688C10.2448 16.4688 9.82944 17.4113 9.95135 17.9969C10.0733 18.5826 9.86428 22 9.86428 22Z"/>
     </symbol>
-    <symbol id="icon-linkedin" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+    <symbol id="icon-linkedin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 10V17"/>
+      <path d="M11 13V17M11 13C11 11.3431 12.3431 10 14 10C15.6569 10 17 11.3431 17 13V17M11 13V10"/>
+      <path d="M7.125 6.75H7M7.25 6.75C7.25 6.88807 7.13807 7 7 7C6.86193 7 6.75 6.88807 6.75 6.75C6.75 6.61193 6.86193 6.5 7 6.5C7.13807 6.5 7.25 6.61193 7.25 6.75Z"/>
+      <path d="M3 12C3 7.75736 3 5.63604 4.31802 4.31802C5.63604 3 7.75736 3 12 3C16.2426 3 18.364 3 19.682 4.31802C21 5.63604 21 7.75736 21 12C21 16.2426 21 18.364 19.682 19.682C18.364 21 16.2426 21 12 21C7.75736 21 5.63604 21 4.31802 19.682C3 18.364 3 16.2426 3 12Z"/>
     </symbol>
-    <symbol id="icon-scholar" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5.242 13.769 0 9.5 12 0l12 9.5-5.242 4.269C17.548 11.249 14.978 9.5 12 9.5c-2.977 0-5.548 1.748-6.758 4.269zM12 10a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/>
+    <symbol id="icon-scholar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.54155 4.65208L6.98306 5.92425C3.66102 7.57609 2 8.40201 2 9.75C2 11.098 3.66102 11.9239 6.98306 13.5757L9.54155 14.8479C10.751 15.4493 11.3557 15.75 12 15.75C12.6443 15.75 13.249 15.4493 14.4584 14.8479L17.0169 13.5757C20.339 11.9239 22 11.098 22 9.75C22 8.40201 20.339 7.57609 17.0169 5.92425L14.4584 4.65208C13.249 4.05069 12.6443 3.75 12 3.75C11.3557 3.75 10.751 4.05069 9.54155 4.65208Z"/>
+      <path d="M6 13.25V17.057C6 17.1486 6 17.1944 6.00176 17.2369C6.03098 17.9434 6.42116 18.5835 7.03141 18.926C7.06808 18.9466 7.10848 18.967 7.18928 19.008C7.51967 19.1755 7.68487 19.2592 7.84453 19.3332C10.4837 20.5556 13.5163 20.5556 16.1555 19.3332C16.3151 19.2592 16.4803 19.1755 16.8107 19.008C16.8915 18.967 16.9319 18.9466 16.9686 18.926C17.5788 18.5835 17.969 17.9434 17.9982 17.2369C18 17.1944 18 17.1486 18 17.057V13.25"/>
+      <path d="M22 9.75V16.2506"/>
     </symbol>
-    <symbol id="icon-orcid" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947s-.422.947-.947.947a.95.95 0 0 1-.947-.947c0-.525.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.016-5.325 5.016h-3.919V7.416zm1.444 1.303v7.444h2.297c3.272 0 3.872-2.484 3.872-3.722 0-2.016-1.284-3.722-3.862-3.722h-2.307z"/>
+    <symbol id="icon-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7.64584 15.7108C7.23279 14.8966 7 13.9755 7 13C7 9.78484 9.5 7.5 13 7C17.0817 6.4169 18.8333 4.16667 20 3C23.5 16 17 19 13 19C11.9071 19 10.8825 18.7078 10 18.1973"/>
+      <path d="M3 21C3.5 18 5.45791 16.1355 10 15C13.2167 14.1958 15.4634 12.1791 17 10.0549"/>
+    </symbol>
+    <!-- at nine pixels 1.7 on a 24-grid is two thirds of a pixel: a smudge
+         rather than a chevron, so this one mark carries its own weight -->
+    <symbol id="icon-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"/>
+    </symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.99969 17.0002C2.99969 17.9302 2.99969 18.3952 3.10192 18.7767C3.37932 19.8119 4.18796 20.6206 5.22324 20.898C5.60474 21.0002 6.06972 21.0002 6.99969 21.0002L16.9997 21.0002C17.9297 21.0002 18.3947 21.0002 18.7762 20.898C19.8114 20.6206 20.6201 19.8119 20.8975 18.7767C20.9997 18.3952 20.9997 17.9302 20.9997 17.0002"/>
+      <path d="M16.4998 11.5002C16.4998 11.5002 13.1856 16.0002 11.9997 16.0002C10.8139 16.0002 7.49976 11.5002 7.49976 11.5002M11.9997 15.0002V3.00016"/>
     </symbol>
   </svg>
 
@@ -2678,13 +3024,190 @@
                leaving a gap where it was -->
           <span><span class="wide-only">Google </span>Scholar</span>
         </a>
-        <a class="about-link" href="https://orcid.org/0000-0001-8114-3617" target="_blank" rel="noopener">
-          <svg width="14" height="14" aria-hidden="true"><use href="#icon-orcid" /></svg>
-          ORCID
-        </a>
+        <!-- Three of these go somewhere else. This one does not: it opens the
+             section below, in the page, and closes it again. -->
+        <button class="about-link cv-toggle" type="button" aria-expanded="false" aria-controls="cv">
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-leaf" /></svg>
+          <span>Résumé</span>
+        </button>
       </div>
     </div>
   </header>
+
+
+  <!-- THE RÉSUMÉ -->
+  <!-- Opened by the fourth pill in the hero, and opened in place: nothing is
+       downloaded and the page does not go anywhere. What unfolds is the plain
+       record — where he has worked, what he read, what he can do, what he was
+       given — set in two columns and hung on a stem. The stem is the only
+       ornament, and it is the one this page already owns: a hairline of the
+       same ink as the flourish, drawn from the top down as the section opens,
+       with a bud at every post. Open a post and the bud puts out a leaf. -->
+  <section id="cv" class="cv" aria-label="Résumé">
+    <div>
+      <div class="cv-inner">
+        <div class="cv-grid">
+
+          <div class="cv-col">
+            <p class="section-label cv-in" style="--d:0ms">Experience</p>
+            <ol class="cv-list">
+          <li class="cv-item" style="--d:60ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">Caterpillar</span><span class="cv-when">2024 &ndash; now</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Chief AI Architect, Global Finance &middot; Irving, TX</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-also">
+                <li><span>Senior Principal Data Scientist, Global Finance</span><span>2025 &ndash; 2026</span></li>
+                <li><span>Senior Engineering Fellow, CAT Tech</span><span>2024 &ndash; 2025</span></li>
+              </ul>
+              <ul class="cv-notes">
+                <li>Founding technical hire of the CAT Tech AI team &mdash; four engineers, twelve applications, eight thousand users, $8.7M in measured value.</li>
+                <li><em>Penman</em>, an enterprise multi-agent system that reads earnings calls and regulatory filings.</li>
+                <li>An adversarial pipeline that tests a disclosure against simulated high-frequency traders before it is published.</li>
+                <li>A prototype hub for Global Finance, and an internal curriculum that has reached 300+ engineers across ten teams.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:106ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">BrainCo</span><span class="cv-when">2021 &ndash; 2024</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Head of Research &middot; Somerville, MA</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li>Eleven researchers on wearable AI and high-bandwidth brain&ndash;computer interfaces.</li>
+                <li>Real-time biosignal processing and intent recognition, running on the device.</li>
+                <li>Lead inventor on five provisional patents; principal investigator on two publications.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:152ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">MIT Media Lab</span><span class="cv-when">2021 &ndash; 2022</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Postdoctoral Research Scientist &middot; Cambridge, MA</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li>A memory prosthesis that records continuously, and the multimodal pipeline behind it.</li>
+                <li>Self-experiments validating self-supervised retrieval, covered by <em>MIT Technology Review</em> and <em>Quartz</em>.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:198ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">Apple</span><span class="cv-when">2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">AI / ML Research Intern &middot; Cupertino, CA</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li>Parameter-efficient transformers for on-device biosignal event detection.</li>
+                <li>A mechanistic-interpretability framework for attention heads on continuous time series.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:244ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">Cortico</span><span class="cv-when">2017</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Information Design &amp; Data Visualisation &middot; Cambridge, MA</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li>A WebGL engine for very large dynamic social graphs, on permanent display at the MIT Media Lab.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:290ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">Brain Research Centre, UBC</span><span class="cv-when">2013 &ndash; 2014</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Data Scientist &middot; Vancouver</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li>An open-source library for retrieving, composing and rendering Allen Brain Atlas data in three dimensions.</li>
+              </ul>
+            </div></div>
+          </li>
+            </ol>
+
+            <p class="section-label cv-in" style="--d:150ms">Education</p>
+            <ol class="cv-list">
+          <li class="cv-item" style="--d:198ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">MIT</span><span class="cv-when">2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">PhD, Human&ndash;AI Interaction &middot; Media Lab</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li><em>Classifying and Displaying Brain-waves through Self-supervised Learning.</em></li>
+                <li>Advised by Pattie Maes, Tomaso Poggio and Ed Boyden.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:244ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <button class="cv-post" type="button" aria-expanded="false">
+              <span class="cv-top"><span class="cv-org">University of Oxford</span><span class="cv-when">2013</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">MSc, Mathematical Modelling &amp; Scientific Computing</span>
+            </button>
+            <div class="cv-body"><div>
+              <ul class="cv-notes">
+                <li><em>Sparse-Signal Recovery and Compressive Sensing for Optical Functional Brain Imaging.</em></li>
+                <li>Advised by Jared Tanner and Mason Porter.</li>
+              </ul>
+            </div></div>
+          </li>
+          <li class="cv-item" style="--d:290ms">
+            <i class="cv-bud" aria-hidden="true"></i>
+            <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
+            <div class="cv-post is-plain">
+              <span class="cv-top"><span class="cv-org">Tehran Polytechnic</span><span class="cv-when">2011</span></span>
+              <span class="cv-role">BSc Biomedical Engineering &middot; BSc Electrical Engineering</span>
+            </div>
+          </li>
+            </ol>
+          </div>
+
+          <div class="cv-col">
+            <p class="section-label cv-in" style="--d:80ms">Skills</p>
+            <dl class="cv-skills">
+              <div class="cv-in" style="--d:110ms"><dt>Machine learning</dt><dd>PyTorch &middot; JAX &middot; LLM and VLM architecture &middot; distributed training (FSDP, DeepSpeed, Ray) &middot; inference optimisation (vLLM, WebGPU) &middot; agentic orchestration &middot; alignment (SFT, PEFT, RLHF, PPO/DPO) &middot; mechanistic interpretability &middot; evaluation</dd></div>
+              <div class="cv-in" style="--d:156ms"><dt>Building</dt><dd>Python &middot; TypeScript &middot; React &middot; Svelte &middot; Three.js &middot; GLSL &middot; WGSL</dd></div>
+              <div class="cv-in" style="--d:202ms"><dt>Scientific computing</dt><dd>MATLAB &middot; Mathematica &middot; signal processing</dd></div>
+              <div class="cv-in" style="--d:248ms"><dt>Leading &amp; teaching</dt><dd>ML infrastructure strategy &middot; cross-functional R&amp;D &middot; AI system architecture &middot; curriculum design and workshops &middot; mentoring &middot; technical recruiting</dd></div>
+              <div class="cv-in" style="--d:294ms"><dt>Languages</dt><dd>English &middot; Turkish &middot; Persian &middot; Mandarin</dd></div>
+            </dl>
+
+            <p class="section-label cv-in" style="--d:230ms">Honours</p>
+            <ul class="cv-awards">
+              <li class="cv-in" style="--d:260ms"><time>2020</time><span><b>NTT Data Fellowship</b> &mdash; MIT, for <em>Rhizome</em>, a smart memory book</span></li>
+              <li class="cv-in" style="--d:306ms"><time>2017</time><span><b>First place and the Koch AI Prize</b> &mdash; MIT Grand Hack, for <em>Memoroom</em>, VR for Alzheimer&rsquo;s</span></li>
+              <li class="cv-in" style="--d:352ms"><time>2014</time><span><b>Bill Mitchell Design Award</b> &mdash; MIT Media Lab</span></li>
+              <li class="cv-in" style="--d:398ms"><time>2006</time><span><b>Khwarizmi Prize</b> &mdash; first in mathematics and physics, and third the year before</span></li>
+              <li class="cv-in" style="--d:444ms"><time>2004</time><span><b>Semifinalist</b> &mdash; national mathematics and physics olympiads</span></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+      <div class="rule" aria-hidden="true"></div>
+    </div>
+  </section>
 
   <!-- GALLERY -->
   <main class="gallery-wrap">
@@ -3851,7 +4374,7 @@
       <button class="room-more" type="button" hidden>Read the whole abstract</button>
       <div class="room-actions">
         <a class="about-link room-pdf" href="#" download>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 19h16"/></svg>
+          <svg width="14" height="14" aria-hidden="true"><use href="#icon-download" /></svg>
           Download PDF
         </a>
         <span class="room-count"></span>
@@ -10357,6 +10880,50 @@
     const watch = () => strips.forEach(s => io.observe(s));
     if (document.readyState === 'complete') watch();
     else window.addEventListener('load', watch, { once: true });
+  })();
+  </script>
+
+  <script>
+  // ─── The résumé: the fourth pill, and what is under it ───
+  // Two nested disclosures, and the stylesheet does all the moving: this only
+  // sets classes and keeps the ARIA honest. The one thing worth doing here is
+  // the scroll — the section opens below the fold on a tall window, so
+  // opening it while nothing changes on screen would read as a dead button.
+  (() => {
+    const btn = document.querySelector('.cv-toggle');
+    const cv  = document.getElementById('cv');
+    if (!btn || !cv) return;
+
+    // Shut, it is not merely invisible: nothing inside it takes focus or is
+    // read out. `inert` does both, and unlike `display:none` it leaves the
+    // content laid out, which is what lets the height animate at all.
+    cv.inert = true;
+
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+
+    btn.addEventListener('click', () => {
+      const open = !cv.classList.contains('open');
+      cv.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      cv.inert = !open;
+      if (!open) return;
+      // its top edge does not move while it opens, so this can be measured
+      // on the same frame
+      requestAnimationFrame(() => {
+        const top = cv.getBoundingClientRect().top + (window.scrollY || 0) - 18;
+        if (top < (window.scrollY || 0) - 4 || top > (window.scrollY || 0) + 4)
+          window.scrollTo({ top, behavior: still.matches ? 'auto' : 'smooth' });
+      });
+    });
+
+    for (const post of cv.querySelectorAll('.cv-post[aria-expanded]')) {
+      post.addEventListener('click', () => {
+        const item = post.closest('.cv-item');
+        const open = !item.classList.contains('open');
+        item.classList.toggle('open', open);
+        post.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
   })();
   </script>
 
