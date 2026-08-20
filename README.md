@@ -4,7 +4,7 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 
 **Live site:** https://neovand.github.io
 
-![The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf beside a short bio, above the demo gallery](media/screenshot.jpg)
+![The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo at one end of it with a harp inside, beside a short bio and above the demo gallery](media/screenshot.jpg)
 
 ## Structure
 
@@ -43,8 +43,39 @@ flat `--bg` underneath is all you get, and nothing else changes.
 
 ## The grove
 
-The header is a canvas of five L-system trees over a thicket of smaller ones,
-each grammar giving a different silhouette. They bend under a shared wind field
+The header is a canvas of five or six L-system trees over a thicket of smaller
+ones, each grammar giving a different silhouette, standing in two clearings
+either side of a brick pavilion.
+
+Everything built on this canvas is cut to **one brick**. The shelf and the
+gazebo standing on it are the same wall in the end, out of the same three
+kilns, and a brick is a brick: it does not get larger because the thing built
+out of it is. The shelf's used to be laid four courses to a button's height
+whatever that came to — twenty-eight pixels long against the pavilion's
+eighteen — and the two read as different masonry standing on top of each
+other. One course height is fixed on the screen now, and both of them derive
+everything from it: how many courses the shelf takes to reach the thickness it
+has to be, how many bricks go in a course, and how wide the joints are. The
+shelf gained a bed of mortar with it, which it never needed at the old size
+and cannot do without at this one — a joint with the sky showing through it is
+not a joint.
+
+What that brick is made of comes out of one table, and there are two entries
+in it. Fired clay is what the grove is built of, both of them, always. Marble
+is the other, tried and not kept: by day it is a beautiful thing, and by night
+it goes the same grey everything else does and gives back nothing for what the
+red was worth. Its first cut was worse than that — it had a blue-grey bed and
+a darker one, which is what a real quarry gives you and what an elevation this
+size cannot take, since at six pixels a block a cool grey reads as a hole and a
+dark one as a patch. It is kept because the swapping is the interesting part,
+and it is not a recolour: a
+pale stone needs a pale mortar or every joint reads as a black grid ruled over
+the front of it; a cooler, lighter edge, or the blocks come out lined in soot;
+almost no grit, because a dressed stone has none; a vein instead of a firing
+blotch, a vein being the one mark only marble has; and a far steeper night
+curve. `?stone=marble` has a look at it.
+
+The trees bend under a shared wind field
 built from layered value noise, sampled a little later at each branching level
 so a gust travels up the plant instead of swinging every part at once. Moving
 the pointer pushes them aside; pressing a tree makes it withdraw into itself,
@@ -66,6 +97,216 @@ The moon is the CC0 "full moon" drawing by gnokii (Open Clipart, via Wikimedia
 Commons), which requires no attribution. It is also the favicon, rendered over
 a night ground with the same glow it has on the page.
 
+### The gazebo
+
+In the middle of the shelf, with the stand around it, there is a garden
+pavilion, and the harp stands in it. It is a brick building of three bays on a
+levelled plinth — an entrance in the middle with a keystone over it, a window
+either side of it, a pier between each — under a dentilled cornice and a brick
+dome, with ivy over the whole of it and a few pale roses
+in the ivy. It is laid in the same fired clay as the shelf it stands on, out
+of the same three kilns; a third of the size, since a brick is a brick and
+what changes with the building is how many of them there are.
+
+**It is drawn flat, in elevation, exactly as the trees beside it are.** It was
+not at first. It was an octagon in perspective, seven plan-radii from the eye,
+every course dealt round a circle, and that version was more faithful and much
+worse. Perspective was the author of every fault it had: bricks foreshortened
+to slivers along the edge of the dome; walls and piers meeting at planes that
+would not reconcile, leaving a wedge of daylight down each corner; courses
+whose left half could not agree with their right; a footprint whose near
+corners sat lower in the picture than its far ones, so the building stood on a
+rocker over a shelf that is a straight line. None of those are drawing faults.
+They are what a third dimension costs, and the picture it stands in does not
+have one.
+
+Flat, they all go away, and they go away by construction rather than by care.
+Every course is a horizontal band. Every band is dealt an exact number of
+bricks that fill it corner to corner, with a half-bat at each end on the
+alternate courses — real bond, and its own mirror. Every joint is centred in
+its own pitch rather than taken off one side. Every arch has an odd number of
+voussoirs, so there is a keystone on the centre line and the two halves match.
+And every measurement in the file is a function of |x|. So the left of the
+building is the mirror of the right, brick for brick, and no joint can open
+anywhere — not because anything checks, but because there is nothing for a gap
+to come from.
+
+Four things then had to be got right.
+
+**One course.** A brick wall has one bed joint height and every course in it
+lines up right across the front. This one did not: the piers were coursed on
+their own height and the walls beside them on theirs, so wherever the two met
+the joints ran past each other by a pixel or two, all the way up — the kind of
+fault you cannot name but can see. The course is worked out once now, from the
+size the pavilion has been given (bricks about six pixels tall whatever that
+size is, so a small one is not a model of a large one — it is the same brick,
+and there are fewer of them), and then every height in the building is rounded
+to a whole number of them: the plinth, the balustrade, its coping, the impost
+the arches spring from, the cap on the piers, and each band of the
+entablature. Nothing moves more than half a course from where it was drawn,
+and every bed joint on the facade becomes one line. The entablature is given
+a floor in courses as well as a proportion, because an architrave one course
+deep is an architrave and one half a course deep is a line.
+
+**Mortar.** The shelf can do without it — its bricks lie on a solid course and
+the gaps between them read as shadow — but a wall standing in the sky cannot:
+every joint was a slot of daylight. Every course now goes on a bed of mortar
+cut to its own outline, laid a little proud at the top so the band above
+covers the overshoot.
+
+**Cutting.** A wall with an arch in it, and a dome, are the two places where
+brick has to meet a curve. Both are cut exactly: the spandrel over each arch
+is clipped to its own opening — a rectangle with the arch taken out of it,
+even-odd — and each course of the dome is clipped to the strip of the dome's
+outline it belongs to. The dome's courses are equal steps along its profile,
+which is what a course on a dome is — but never thinner on the page than a
+third of a course: a dome turns over at the crown, so equal brick up there
+means equal *width*, and the last few courses were collapsing to hairlines,
+half a pixel of brick with fourteen pixels of it either side. Any step that
+comes out thinner than that is rolled into the one above, which is what a
+bricklayer does with it too. So the arch sits cleanly in the wall and the dome's
+edge is a smooth curve of cut brick, with no stepping and nothing sticking
+out.
+
+**The clay.** Which kiln a brick came out of used to be its own running
+number modulo the number of clays — and a running number laid in rows is a
+lattice: the same clay came back every seven bricks along a diagonal, and the
+wall had faint stripes across it that no wall has. The number goes through the
+hash first now, so neighbours are unrelated and a scatter is a scatter.
+
+**Light.** Flat, the building has no shaded side of its own to give it away,
+so the modelling has to be painted — and painted from wherever the sun
+actually is, which is the subject of the next part. One wash across the whole
+facade is the sun: everything under it, plinth and piers and arches and
+entablature and drum and dome alike, is lit from the same quarter and shaded
+on the same side, which is the whole of what makes a row of separate pieces
+read as one building standing in one light. On top of that, every round thing
+gets its own turn: a gradient across each pier, across the drum, and across
+each arch ring — an arch ring being a half cylinder lying on its side, one
+haunch in the sun and the other in shade — and a sphere of light over the
+dome, which is the only thing that says a dome is a dome and not a semicircle
+with a wall pattern on it, and which does the work three hundred foreshortened
+bricks were doing badly. One dark band under the cornice says the roof is a
+roof. The facade wash is cut to the building's own outline *and to the three
+holes in it*, or it would hang in the sky behind the arches like weather.
+
+The modelling on the round parts is only ever a refinement of the wash, and
+the balance between them matters: while the wash was faint, the dome was the
+one part of the building that appeared to know where the sun was, and the rest
+of it sat there evenly lit and contradicted the dome.
+
+There is no far side, and nothing behind the harp but sky. A pavilion is a
+roof on legs, and what is behind it is the garden. The two side bays are open
+to the floor for the same reason: they had a low balustrade across the bottom
+of each, which is what a garden building usually has and which read as two
+panels of brick bricked into two windows. What a window wants under it is a
+sill and daylight.
+
+The stand is planted around it in the two clearings either side, with a margin
+of shelf between, and no tree stands behind it.
+
+None of the masonry is drawn per frame. The whole building is compiled once
+per layout into a list of stamps in canvas points, and that list is painted
+into a day sheet and a night one, so a change of light costs a pair of blits
+rather than a thousand transforms, and a resize costs a few milliseconds. The
+ivy goes into the same sheets: clinging ivy does not sway, being stuck to the
+wall, and only the ends that hang free off the cornice are drawn again each
+frame, on the shelf's own vines and the shelf's own wind.
+
+### Where the sun is
+
+There is a body up in that sky and it does not hold still. The sun sits low on
+the right through the evening; the moon crosses the whole width of the picture
+over a night; and either of them will back away into a corner if you put the
+pointer near it and keep it there.
+
+Nothing standing on the shelf used to know any of that. The pavilion carried
+one fixed wash from the upper left and its shadow lay under it in a tidy
+ellipse whatever the hour — so on the one evening the page actually shows, sun
+far right and half way down the canopy, the building was lit from the wrong
+side of its own picture, and chasing the sun across to the other side changed
+nothing at all.
+
+So the masonry is baked and the light is not. The two sheets hold the
+brickwork, which never changes. The half dozen coats that model it — the wash
+across the front, the light down each pier and across the drum, the light
+across each arch ring, the sphere over the dome, the ball on the finial, and
+the shadow the whole of it throws along the shelf — are kept out of the sheets
+and laid over the top fresh every frame, from wherever the body has got to.
+Each of them is a closure that puts its own gradient where the light is; the
+opening still fades them in with the course they belong to, so it never lights
+a wall that is not up yet. It costs about a dozen gradients a frame, and it
+buys a building lit by the thing in its own sky rather than by a memory of
+one. Chase the sun to the far side and the dome's highlight crosses over, the
+piers turn the other way, the lit haunch of every arch swaps ends, and the
+shadow on the ledge swings round with them.
+
+Two numbers do the whole of it: which way the light comes from, as a unit
+vector from the middle of the pavilion, and how far a shadow runs for every
+pixel of the height that throws it — which is just the horizontal component
+over the vertical one, held to about a length and a half. A sun this low would
+otherwise run the pavilion's shadow clean off the end of the shelf, and a
+shadow that long has gone too soft to see anyway.
+
+**The shadow itself.** Drawn flat, the grove has no ground to lay one on: the
+shelf is a wall seen straight on and its top is a line, and the old ellipse
+sitting under the plinth was a convention, not a shadow. So it does what a
+shadow does to a parapet in any picture painted from the front — it starts at
+the top edge of the ledge and comes down the face of it, deep where the
+building stands and thinning to nothing by the far end. The near end is the
+plinth's own footing and the far end is the dome's; the outline is the smooth
+greater of the two, so the tongue swells out of the footing instead of being
+stuck on the side of it. It stops where the ledge does, because past that
+there is nothing for it to fall on. The harp's own shadow on the floor leans
+the same way for the same reason, and so does the little shade under each
+trunk — nothing like as far, that being the dark where a trunk meets the ledge
+and not the shadow of a whole tree, which would be off the page.
+
+**And the shelf.** A brick wall seen straight on has no lit side and no shaded
+side: every face in it points the same way. But a light this low and this near
+does fall off along a wall, and the end of the shelf under the sun stands
+warmer and brighter than the far end does. Without that the pavilion turned to
+follow the light and the ledge it stands on did not, and that join was the one
+place in the picture where the two could be seen disagreeing. It is a pool
+centred where the light stands rather than a ramp from one end to the other:
+a ramp has to decide which end is the near one, and it changes its mind all at
+once when the sun is chased past the middle.
+
+### How it is built
+
+It is not revealed, it is built. Every brick and every leaf is dealt a moment
+to arrive in, and arrives by swelling out of nothing and dropping the last few
+pixels, which is exactly what the shelf's own bricks do when the page opens.
+It used to be a wipe up the sheet from the ground, and a wipe is a curtain
+going up, not a wall.
+
+The list is already in the order it would be built in — plinth, balustrades,
+piers, the imposts on the piers, the walls over the openings, the rings that
+turn the arches, the entablature, the dome course by course, and the ivy over
+it once there is something to climb — because that is also the order it has to
+be *painted* in for nothing to be drawn in front of something that is not
+there yet. One order does both jobs, so the wave simply runs along the list
+from one end. (It is the order the parts have to go up in for their own sake,
+too: a pier is set against the wall beside it, an impost sits on the pier, and
+the ring of an arch lands on the impost. Anything laid the other way round has
+to be cut to fit, and cutting to fit is where gaps come from.)
+
+Only the handful still in the air is drawn per frame. Everything that has
+landed is stamped once into the two sheets and never drawn again, so the
+opening costs a pair of blits and a few dozen stamps rather than two thousand.
+
+The one thing that needed care is the coats — the bed under a course, the
+shadow the cornice throws, and the coats of light that are no longer baked at
+all. A coat has to be painted
+with the course it belongs to, not a moment either side of it. On its own
+clock a bed arrived before its bricks and the opening showed a grey ghost of
+the whole pavilion running a beat ahead of the brickwork; a gradient arrived
+over bricks still half in the air and hazed them over. A bed is a solid shape
+and its bricks are a scatter of small ones, so it does not fade up with them
+either: it waits for the last of them to be down and then goes in at once, and
+what shows of it after that is the joints, which is all a bed is ever meant to
+show.
+
 ### How it fits together
 
 Everything below lives in one script in `index.html`, under the heading
@@ -82,11 +323,13 @@ flowchart TB
     G["Five species<br/>axiom + rules"] -->|"expand()"| S["symbol string<br/>+ maxDepth"]
     S -->|"reseed()"| J["a reading of the grammar<br/>per-symbol jitter: turn, length,<br/>lean, limb scale"]
     J -->|"walk() dry run"| BB["bounding box"]
-    LY["layout()<br/>canvas size, band beside the words,<br/>slots for 5–8 trees, ground line"] --> FT
+    LY["layout()<br/>canvas size, band beside the words,<br/>the gazebo in the middle of the shelf,<br/>tree slots dealt to the clearings either side"] --> FT
     BB --> FT["fitTrees()<br/>sx sy ox oy · trunk width"]
     FT --> PF["planFoliage()<br/>leaf budget · leafFrom per species"]
     LY --> SC["scrub scattered by rejection<br/>sampling away from trunks"]
     LY --> BR["bricks laid · ivy planned"]
+    LY --> GZ["planGazebo()<br/>the pavilion compiled to a list of stamps,<br/>flat, in the order it would be built<br/>plinth · piers · imposts · arches · cornice · dome · ivy<br/>each stamp dealt a moment to arrive in"]
+    GZ --> HP["the archway and the crown of the dome,<br/>handed to the harp; the line of the roof,<br/>handed to the air"]
     SP["sprites baked once<br/>leaves × variants · bricks · moon/sun · spark"]
   end
 
@@ -109,6 +352,7 @@ flowchart TB
     SEG --> DRAW["stroke branches by depth<br/>twig-end highlight<br/>leaves stamped, scaled by reach³ (day)"]
     SEG --> EXP["window.__grove<br/>trees[i].tips · canvas left/top<br/>handed to the air, then tick()"]
     SHF["shelf sheet · ivy · footings<br/>drawn under the plants"] --> DRAW
+    DRAW --> GZD["the gazebo over the plants<br/>what has landed → stamped into the day and night sheets,<br/>two blits cross-faded · what is still in the air, drawn<br/>· its free vines on the wind"]
     DRAW --> FALL["falling leaves<br/>on the same wind"]
   end
 
@@ -118,7 +362,7 @@ flowchart TB
     WHERE --> SHEETS["#air over the page · #air-room over the room<br/>page coords − scroll · dirty rects"]
     RM["reading room<br/>open → seat a party on the page tops<br/>close → send it home"] --> FLK
     ESC["escort<br/>grove scrolled away → card tops, flourish<br/>grove back → home"] --> FLK
-    RAD["the fixtures<br/>harp · the lamp's bead · the profile buttons · the decks<br/>now and then, then home; a hand on one puts them up"] --> FLK
+    RAD["the fixtures<br/>harp · the gazebo's roof · the lamp's bead<br/>the profile buttons · the decks<br/>now and then, then home; a hand on one puts them up"] --> FLK
   end
 
   PTR --> PE
@@ -414,22 +658,31 @@ have ended, it starts anyway. Nothing in the header is worth a blank page.
 
 ## The harp
 
-A harp in the top left of the window: the page's other switch, in the other
-top corner from the lamp and put there off the same measurement — out into the
-gutter, half way across it, where the window is wider than the page; in as
-close to the corner as it can get where it is not. Where there is no gutter
-there is also no corner that is not the page, so there — as with the cord, for
-the same reason — it is pinned to the top of the *document* and scrolls away
-with the grove rather than riding down over the gallery.
+A harp standing in the gazebo, at the near end of the shelf: the page's other
+switch, and a thing in the grove rather than a fitting on the window. The grove
+works out the clear width of the archway and the floor inside it and hands both
+over as a box on the page; the harp is set to that width, stood on its own
+base, and goes down the page with everything else it stands among.
 
-Off, it is a line drawing. The artwork paints its colour over a dark compound
-path, and that path on its own — which is what is left when the colour is
-turned off — is a proper line drawing of the whole instrument, strings and
-all. So the two states are one copy of the file with the paint turned off and
-on, and nothing has to be reordered to get there: the colour is painted over
-the ink exactly as it was drawn, and the rim left showing around each shape is
-the line. Played, it takes the colour back, the strings warm, and notes come
-off them.
+For a long time it hung in the top left of the window instead — the other top
+corner from the lamp, put there off the same measurement: out into the gutter,
+half way across it, where the window was wider than the page; in as close to
+the corner as it could get where it was not, and there pinned to the top of the
+*document* rather than the window, since a corner that is also the page would
+have carried it down over the gallery. That corner is still where it goes if
+there is no grove to stand in, and the measurement that finds it is still in
+the script, but nothing ordinary reaches it any more.
+
+It used to be a line drawing until you played it. The artwork paints its
+colour over a dark compound path, and that path on its own — which is what is
+left when the colour is turned off — is a proper line drawing of the whole
+instrument, strings and all, so the two states were one copy of the file with
+the paint turned off and on. That reading belonged to the corner of a window,
+where a line is the polite thing to put. Standing in the gazebo it is a thing
+in a garden and not a mark on the glass, so it keeps its brass — and it has to,
+because what is behind it now is an open pavilion with the sky in it, and a
+line drawing against the sky is nothing at all. What says it is playing is the
+light on the strings and the notes coming off the roof.
 
 The lines are thin ribbons of fill rather than strokes, which is how the
 artwork was drawn — and a ribbon two units across in a viewBox 930 units wide
@@ -510,14 +763,19 @@ a naive round accumulates along each one and walks the drawing apart — the
 error has to be carried into the next segment, and then a tenth of a unit is a
 fiftieth of a pixel at the size it is drawn.
 
-While it plays, notes come off the strings and go up and out to the right.
-They come on the music rather than on a timer — the bottom of the spectrum is
-read off an `AnalyserNode` each frame and spent as a budget, so the stream
-thins and thickens with the piece instead of ticking — and each is drawn, a
-head and a stem and either a flag or a beam, rather than set at U+266A in
-whatever the system happens to have. They go sideways more than up, since the
-harp is in the corner of the window and a note that only rose would be off the
-top of the page in a second and a half. Under `prefers-reduced-motion` there
+While it plays, notes come off the crown of the dome and go up and out to the
+right. Not off the strings: the harp is inside a brick pavilion and a note that
+started on the strings would have to come out through a foot of brickwork to be
+seen, so the music leaves the way it would — through the top of the roof. The
+sheet they are drawn on is hung over the dome rather than over the instrument,
+and since it is a child of the harp it goes wherever the harp goes without
+either of them being told twice. They come on the music rather than on a timer
+— the bottom of the spectrum is read off an `AnalyserNode` each frame and spent
+as a budget, so the stream thins and thickens with the piece instead of
+ticking — and each is drawn, a head and a stem and either a flag or a beam,
+rather than set at U+266A in whatever the system happens to have. They go
+sideways more than up, or the picture would empty out of the top of itself in
+a second and a half. Under `prefers-reduced-motion` there
 are none, it does not breathe, and the music still plays.
 
 It is also somewhere to sit. It hands the air two perches — the cap on the top
@@ -526,8 +784,9 @@ as boxes in the page rather than numbers, so they are measured exactly as a
 card is and follow the drawing at whatever width it is given. Two at a time at
 the most, and not often: a bird leaves the trees for it now and then, hops
 along the base the way it would along a windowsill, and goes back; after dark
-it is a firefly blinking on the finial. A hand on it puts up whatever was
-sitting there.
+it is a firefly blinking on the cap. A hand on it puts up whatever was sitting
+there. The building around it hands over one more, and of a different kind:
+the roof.
 
 ## The fixtures
 
@@ -536,13 +795,35 @@ stood on, and for a long time it was the only one, which made the rest of the
 furniture look strangely untouchable: a bird would sit on the top of a project
 card but not on a button an inch away from it. Anything a real sparrow would
 land on now takes one — the bead on the end of the lamp's cord, the four
-profile buttons under the bio, and the top edge of every deck of papers — and
-they are all the same kind of thing to the air: a box in the page, measured
-each frame, with a fraction along its top saying where the feet go.
+profile buttons under the bio, the roof of the gazebo and the sills of its two
+windows, and the top edge of every deck of papers — and they are nearly all the same kind of thing to the
+air: a box in the page, measured each frame, with a fraction along its top
+saying where the feet go.
 
-Two of them needed a box drawn for them. The lamp's is an empty marker pinned
+Some of them needed a box drawn for them. The lamp's is an empty marker pinned
 to the middle of the grip, since the cord script keeps the grip centred on the
-bead and it therefore rides the swing for nothing. The deck's are the two top
+bead and it therefore rides the swing for nothing.
+
+The gazebo's roof needed something else again, and so did its windows. A dome is not a ledge with a
+place on it — a bird stands anywhere along the curve of it, and hops up it and
+over the crown — and it is a drawing on a canvas rather than a box in the page,
+so no marker would follow it. The grove hands it over as a *line* instead: the
+outline of the dome from one springing over the crown to the other, in page
+points, worked out per layout by finding, at each course, the bearing at which
+the surface turns away from the eye. A perch on it is a fraction along that
+line, measured exactly as a fraction along the top of a card is, and a hop is a
+step in that fraction, so everything the air already knew about walking along
+something works on it unchanged. The two window sills go over the same way,
+as short runs — a sill is two or three hops end to end, which is what a
+windowsill is. And the flock grew: a roof and two sills went into the middle
+of the grove and eighteen birds left them empty most of the time.
+
+Grabbing a tree scatters its party, and not all of them go to another tree
+now. A branch moving under a bird sends it to whatever is standing, and what
+is standing in the middle of this grove is a building nobody can pull over, so
+about a third of them break for the roof and the sills instead. Only when they
+were grabbed: a party crossing in its own time crosses together, which is the
+whole of what makes it a party. The deck's are the two top
 corners of the page in front. A bird stands on the corner of a stack of paper,
 not out in the middle of the top sheet, and not walking along it — put on the
 one page of the fan whose top edge is level it read as standing on the paper
@@ -554,14 +835,14 @@ a box with no width measures as one place rather than as a run to walk along,
 which is what stops the hopping without anything having to be told not to.
 
 Who reaches what depends on where they live. The parties in the trees will go
-to anything standing in view — which, from the grove, means the harp, the lamp
-and the buttons — for the same reason they went to the harp: birds do this
-with whatever is left out in a garden. The decks are screens below the grove,
+to anything standing in view — which, from the grove, means the harp, the
+gazebo it stands in, the lamp and the buttons — for the same reason they went
+to the harp: birds do this with whatever is left out in a garden. The decks are screens below the grove,
 so those belong to the escort, the few that come down the page after the
 reader. An escort bird may stay on a fixture when the grove comes back into
-view, but only one that is still in the window: the harp and the lamp are
-pinned there, while a button or a deck goes up with the scroll, and a bird
-left on one of those is a bird sitting where nobody can see it.
+view, but only one that is still in the window: the lamp is pinned there, while
+the harp, a button or a deck goes up with the scroll, and a bird left on one of
+those is a bird sitting where nobody can see it.
 
 A hand on any of them puts up whatever is standing there — the deck that is
 about to fly open into the reading room, the cord that is about to be pulled.

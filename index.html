@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://neovand.github.io/media/og.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf beside a short bio, above the gallery of interactive demos." />
+  <meta property="og:image:alt" content="The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo at one end of it with a harp inside, beside a short bio and above the gallery of interactive demos." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Neo Mohsenvand" />
   <meta name="twitter:description" content="Interactive simulations, visualizations, and tools built for the browser." />
@@ -986,8 +986,12 @@
       #harp { --h-lit: var(--knob); --h-deep: var(--cord); }
     }
 
-    /* it comes up with the rest of the opening, as the cord does */
-    .has-intro #harp { opacity: 0; transition: opacity 900ms var(--ease); }
+    /* It comes up with the rest of the opening, as the cord does — but well
+       behind it, because it has somewhere to be now: the shelf is laid
+       first, the gazebo goes up on it course by course, the dome closes over
+       it, and only then is there a room for the instrument to be standing
+       in. Arriving on time it hung in mid-air over a building site. */
+    .has-intro #harp { opacity: 0; transition: opacity 900ms var(--ease) 2300ms; }
     .is-lit #harp { opacity: 1; }
 
     /* it stands on its base, so the breathing below grows from there */
@@ -1005,31 +1009,45 @@
     #harp .h-ink { fill: var(--h-ink); transition: fill 420ms var(--ease); }
     #harp .h-ink {
       stroke: var(--h-ink);
-      stroke-width: 0.7px;
       vector-effect: non-scaling-stroke;
       stroke-linejoin: round;
       transition: fill 420ms var(--ease), stroke 420ms var(--ease);
     }
     /* one line drives both, so a hand over it darkens the whole drawing */
     #harp:hover, #harp:focus-visible { --h-ink: var(--text); }
+    /* A box drawn round it would be a box drawn round a picture, which is
+       not what this page does with a thing it has drawn — the deck of papers
+       opens its fan instead. So a keyboard on the harp lights it: a halo of
+       its own brass, which is the page's own way of saying a thing is live,
+       and which no amount of hovering gives you. */
     #harp:focus-visible { outline: none; }
+    #harp:focus-visible .harp-art {
+      filter: drop-shadow(0 0 2px var(--knob)) drop-shadow(0 0 6px var(--knob));
+    }
     #harp:active { transform: scale(0.985); }
 
-    /* The paint, off until it is playing. It is painted over the ink rather
-       than under it, so this is the artwork exactly as it was drawn — and the
-       relief and the shadow ride on it rather than on the whole drawing, so
-       that off, what is left is a line and not a line with a shadow. */
+    /* The paint. It is painted over the ink rather than under it, so this is
+       the artwork exactly as it was drawn — and the relief and the shadow
+       ride on it rather than on the whole drawing.
+
+       This used to be the switch: off, the paint went and what was left was
+       a line drawing of the whole instrument. That reading belonged to the
+       corner of a window, where a line was the polite thing to put. Standing
+       in the gazebo it is a thing in a garden and not a mark on the glass, so
+       it keeps its brass — and it has to, because what is behind it now is
+       an open pavilion with the sky in it, and a line drawing against the
+       sky is nothing at all. What says it is playing is the light on the
+       strings and the notes coming off the roof. */
     #harp .h-hue {
-      opacity: 0;
-      transition: opacity 900ms var(--ease);
+      opacity: 1;
       filter: url(#harp-relief) drop-shadow(0.8px 1.2px 1.2px var(--cast));
     }
-    #harp.on .h-hue { opacity: 1; }
 
-    /* Playing, the metal carries the shape, so the line thins by half — but
-       it stays --cord, which is the rim the lamp's bead is given for exactly
-       the same reason: a brass thing against a bright sky has no edge at all
-       without one. */
+    /* Playing, the metal carries more of the shape, so the line thins a
+       little — but it stays --cord, which is the rim the lamp's bead is
+       given for exactly the same reason: a brass thing against a bright sky
+       has no edge at all without one. */
+    #harp .h-ink { stroke-width: 0.6px; }
     #harp.on .h-ink { stroke-width: 0.45px; }
 
     /* Nothing has to be drained after dark any more: --knob is already
@@ -1081,6 +1099,16 @@
        scrolls away with the grove — which is what the cord does on a narrow
        window, for the same reason. The script puts the class on. */
     #harp.at-page { position: absolute; }
+
+    /* Standing in the gazebo, which is the ordinary case: it is a thing in
+       the grove now rather than a fitting on the window, so it is pinned to
+       the document and its width comes from the archway it stands in rather
+       than from the window (see place() in the script). */
+    #harp.in-grove {
+      position: absolute;
+      width: auto;
+      z-index: 54;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       /* no notes and no breathing (see the script) */
@@ -3869,41 +3897,57 @@
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
     const BLEED_X = 14, BLEED_Y = 34, BLEED_BOTTOM = 64;
-    // The shelf under the grove: four courses of bricks, together exactly as
-    // thick as one of the buttons they line up with. The course heights are
-    // dealt out from a button's measured height — a button, not the row,
-    // which is taller whenever the row wraps — so the stack stays flush with
-    // the buttons whatever size the page gives them. The top course runs a
-    // little past the outermost slots and is LEDGE_ACROSS bricks wide; each
-    // course below has one brick fewer, the same size, centred, so the
-    // courses step in by half a brick and bond.
+
+    // ONE BRICK, for everything on this canvas. The shelf and the gazebo
+    // standing on it are the same wall in the end, out of the same three
+    // kilns, and a brick is a brick: it does not get larger because the thing
+    // built out of it is. The shelf's used to be laid four courses to a
+    // button's height whatever that came to — twenty-eight pixels long
+    // against the pavilion's eighteen — and the two read as different
+    // masonry standing on top of each other. Every course in the grove is
+    // cut to this now, and everything else follows from it: how many courses
+    // the shelf takes, how many bricks to a course, and how wide the joints
+    // between them are.
+    const BRICK_PX = 5.7;                       // a course, on the screen
+    const BRICK_LONG = 3.1;                     // and how many of those long
+    const BRICK_XGAP = 0.09, BRICK_YGAP = 0.11; // the joints, as a share of each
+
+    // The shelf under the grove: courses of brick, together exactly as thick
+    // as one of the buttons they line up with. The thickness is dealt from a
+    // button's measured height — a button, not the row, which is taller
+    // whenever the row wraps — so the stack stays flush with the buttons
+    // whatever size the page gives them, and the number of courses is
+    // whatever fits in it at the size a brick is. The top course runs a
+    // little past the outermost slots; each course below has one brick fewer,
+    // the same size, centred, so the courses step in by half a brick and
+    // bond.
     // A long slab with straight edges reads heavier than a pill of the same
     // height beside it, so the stack is drawn in from the button's top and
     // bottom by a few pixels, and sits a little higher besides.
-    //
-    // LEDGE_H is the whole thickness and does not change: the courses and the
-    // joints between them are dealt out of it, so going from three courses to
-    // four makes smaller bricks rather than a deeper shelf. Eighteen across a
-    // typical span puts a brick at about three times as long as it is tall,
-    // which is roughly a real one.
-    const LEDGE_N = 4, LEDGE_ACROSS = 18, LEDGE_GAP = 1.6, LEDGE_PAD = 8, LEDGE_TRIM = 3;
-    const LEDGE_VGAP = 1.6;       // the bed joint between courses
+    const LEDGE_PAD = 8, LEDGE_TRIM = 3;
     const LEDGE_LIFT = 3;
     const LEDGE_DEFAULT_H = 41;   // when there is no button row beside the grove
     let LEDGE_H = LEDGE_DEFAULT_H;
-    const ledgeCourses = rowH => {
-      // the courses share what the bed joints leave, so the stack still
-      // measures exactly rowH from the top of the first to the bottom of the
-      // last
-      const h = (rowH - LEDGE_VGAP * (LEDGE_N - 1)) / LEDGE_N;
+    let LEDGE_N = 6, LEDGE_ACROSS = 28, LEDGE_GAP = 1.6, LEDGE_VGAP = 0.6;
+    // Set the shelf out on the same brick: as many courses as go into its
+    // thickness, and as many bricks to a course as go across it.
+    function ledgeCourses(rowH, span) {
+      LEDGE_N = Math.max(3, Math.min(10, Math.round(rowH / BRICK_PX)));
+      LEDGE_VGAP = 0;
+      let h = rowH / LEDGE_N;
+      LEDGE_VGAP = h * BRICK_YGAP;
+      h = (rowH - LEDGE_VGAP * (LEDGE_N - 1)) / LEDGE_N;
+      LEDGE_ACROSS = Math.max(6, Math.round(span / (h * BRICK_LONG)));
+      LEDGE_GAP = h * BRICK_LONG * BRICK_XGAP;
       return Array.from({ length: LEDGE_N }, () => h);
-    };
+    }
 
     // Lay the bricks: work out where each one goes. Every brick also gets
     // its turn in the opening — bottom course first, each course from the
     // middle outward, with a little jitter so it is laid, not printed.
     function layBricks(x0, x1, top, courses) {
       bricks.length = 0;
+      ledgeRows.length = 0;
       shelfKey = '';
       const span = x1 - x0;
       const brick = (span - LEDGE_GAP * (LEDGE_ACROSS - 1)) / LEDGE_ACROSS;
@@ -3919,6 +3963,7 @@
           const turn = (rows - 1 - c) * 0.32 + out * 0.5 + hash(k, 131) * 0.08;
           bricks.push({ x: rx + i * step, y, w: brick, h: courses[c], bd: 0.12 + turn * 0.64, k });
         }
+        ledgeRows.push({ x0: rx, x1: rx + rowW, y0: y, y1: y + courses[c] });
         y += courses[c] + LEDGE_VGAP;
       }
     }
@@ -3943,6 +3988,7 @@
     // when the bricks are still arriving one at a time, they are stamped
     // straight onto the canvas.
     let shelfSheet = null, shelfKey = '', shelfBox = null;
+    const ledgeRows = [];    // each course, as a run, for the light to be cut to
     const RR = (g, x, y, w, h, r) => {
       g.moveTo(x + r, y);
       g.arcTo(x + w, y, x + w, y + h, r);
@@ -3952,38 +3998,100 @@
       g.closePath();
     };
     const BRICK_PAD = 3;        // room in the sprite for the cast beneath
-    // A brick's own clay. Three kilns' worth: the common red, a sandy buff,
-    // and one fired too hard. The odd ones are rare enough to be a surprise
-    // in the wall rather than a pattern in it. The whole range is kept below
-    // about 60% lightness — a brick lighter than that stops reading as fired
-    // clay and starts reading as a gap in the wall.
+
+    // ── what the wall is made of ──────────────────────────────────
+    // Two quarries, and the shelf and the pavilion are always cut from the
+    // same one. Fired clay is three kilns' worth — the common red, a sandy
+    // buff, and one fired too hard — with the whole range kept below about
+    // 60% lightness, because a brick lighter than that stops reading as
+    // fired clay and starts reading as a gap in the wall. Marble is three
+    // beds off one quarry — a white, a warmer cream, and a grey with more of
+    // the mineral in it — and it is not the clay recipe with the red taken
+    // out. A pale stone needs a pale mortar, or every joint reads as a black
+    // grid ruled over the front of it; a cooler and lighter edge, or the
+    // blocks come out lined in soot; barely any grit, because a dressed
+    // stone has none; a vein instead of a firing blotch, a vein being the
+    // one mark that only marble has; and a much steeper night curve, or a
+    // white building is the brightest thing under the night sky by a street.
+    // All of it lives in this one table, so nothing else on the page has to
+    // ask what it is building with.
+    const STONES = {
+      brick: {
+        mortar: ['rgb(21,23,27)', 'rgb(78,66,56)'],   // night, day
+        cast:   ['rgba(0,0,0,0.62)', 'rgba(30,20,14,0.34)'],
+        edge:   ['rgba(0,0,0,0.48)', 'rgba(46,29,19,0.26)'],
+        night:  { l: 0.46, lift: 4, h: 0, s: 0 },
+        grit: 0.20, blotch: 3, mottle: 1, arris: 1, vein: 0,
+        shade: ['0,0,0', '26,18,12'],                 // what it throws, night and day
+        clay(a, s, pick) {
+          if (pick < 0.13) return { h: 26 + a * 14, s: 21 + s * 12, l: 47 + a * 7 };
+          if (pick > 0.87) return { h:  6 + a * 11, s: 27 + s * 14, l: 33 + a * 7 };
+          return                   { h: 10 + a * 16, s: 33 + s * 18, l: 41 + s * 11 };
+        },
+      },
+      marble: {
+        mortar: ['rgb(26,28,33)', 'rgb(168,159,143)'],
+        cast:   ['rgba(2,3,6,0.56)', 'rgba(62,56,46,0.26)'],
+        edge:   ['rgba(6,6,9,0.44)', 'rgba(99,89,73,0.30)'],
+        night:  { l: 0.26, lift: 3, h: 34, s: 5 },
+        grit: 0.06, blotch: 2, mottle: 0.5, arris: 0.75, vein: 2,
+        shade: ['0,0,2', '44,38,32'],
+        // Warm white through to cream and no further. It had a blue-grey bed
+        // and a darker one, which is what a real quarry gives you and what an
+        // elevation this size cannot take: at six pixels a block a cool grey
+        // reads as a hole and a dark one as a patch, and a wall of them came
+        // out mottled. One family, three temperatures of it.
+        clay(a, s, pick) {
+          if (pick < 0.20) return { h: 40 + a *  8, s: 15 + s * 8, l: 76 + a * 6 };
+          if (pick > 0.86) return { h: 34 + a *  8, s:  6 + s * 5, l: 71 + a * 6 };
+          return                   { h: 42 - a *  6, s:  8 + s * 6, l: 81 + a * 6 };
+        },
+      },
+    };
+    // Fired clay is what it is built of, both of them, always. Marble was
+    // tried and not kept: by day it is a beautiful thing, and by night it
+    // goes the same grey everything else does and gives back nothing for what
+    // the red was worth. It stays here because the swapping is the part worth
+    // keeping. ?stone=marble has a look, and so does __grove.stone('marble')
+    // from the console, which re-cuts the wall where it stands.
+    let STONE = STONES.brick;
+    try {
+      const q = new URLSearchParams(location.search).get('stone');
+      if (q && STONES[q]) STONE = STONES[q];
+    } catch (e) {}
     function brickClay(k) {
-      const a = hash(k, 17), s = hash(k, 53), pick = hash(k, 91);
-      if (pick < 0.13) return { h: 26 + a * 14, s: 21 + s * 12, l: 47 + a * 7 };
-      if (pick > 0.87) return { h:  6 + a * 11, s: 27 + s * 14, l: 33 + a * 7 };
-      return                   { h: 10 + a * 16, s: 33 + s * 18, l: 41 + s * 11 };
+      return STONE.clay(hash(k, 17), hash(k, 53), hash(k, 91));
     }
-    function brickSprite(b, clay, day) {
-      const P = BRICK_PAD, w = b.w, h = b.h, k = b.k;
+    // `fine` is for the gazebo's bricks, which are a third the size of these.
+    // The cast and the corner radius here are proportioned for a slab of
+    // shelf; at six pixels across they came out as half the brick, and a wall
+    // of them read as a heap of pebbles with grouting between. Fine bricks
+    // get a tighter corner, a shorter cast and a lighter edge.
+    function brickSprite(w, h, k, clay, day, fine) {
+      const P = BRICK_PAD;
       const cv = document.createElement('canvas');
       cv.width = Math.ceil((w + P * 2) * dpr);
       cv.height = Math.ceil((h + P * 2) * dpr);
       const g = cv.getContext('2d');
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // By night the clay keeps its lightness in proportion but loses its
-      // colour, and the whole range is pulled down to where a night sky can
-      // sit behind it without the shelf glowing.
-      const sat = day ? clay.s : 0;
-      const L = day ? clay.l : clay.l * 0.46 + 4;
+      // By night the stone keeps its lightness in proportion and all but
+      // loses its colour, and the whole range is pulled down to where a night
+      // sky can sit behind it without the shelf glowing. Clay goes to a flat
+      // grey; marble keeps a little blue in it, which is what a pale stone
+      // does under a moon.
+      const N = STONE.night;
+      const sat = day ? clay.s : N.s;
+      const L = day ? clay.l : clay.l * N.l + N.lift;
+      const H = day || !N.s ? clay.h : N.h;
       const col = (dl, a) =>
-        `hsla(${clay.h}, ${sat}%, ${Math.max(0, Math.min(100, L + dl))}%, ${a})`;
+        `hsla(${H}, ${sat}%, ${Math.max(0, Math.min(100, L + dl))}%, ${a})`;
 
       // A brick is not a machined block: the corner radius and the seating in
       // its slot are dealt per brick, so no two sit quite alike. The radius
       // is a share of the short side, or a small brick comes out a lozenge.
       const m = Math.min(w, h);
-      const r = m * (0.13 + hash(k, 7) * 0.10);
+      const r = m * (fine ? 0.055 + hash(k, 7) * 0.045 : 0.13 + hash(k, 7) * 0.10);
       const x = P + (hash(k, 23) - 0.5) * 0.7;
       const y = P + (hash(k, 41) - 0.5) * 0.5;
 
@@ -3991,9 +4099,9 @@
       // separates one course from the next, and it is what keeps the shelf
       // from reading as one slab with lines scored across it.
       g.save();
-      g.shadowColor = day ? 'rgba(30,20,14,0.34)' : 'rgba(0,0,0,0.62)';
-      g.shadowBlur = Math.min(2.4, h * 0.26);
-      g.shadowOffsetY = Math.min(1, h * 0.09);
+      g.shadowColor = STONE.cast[day ? 1 : 0];
+      g.shadowBlur = fine ? h * 0.055 : Math.min(2.4, h * 0.26);
+      g.shadowOffsetY = fine ? h * 0.03 : Math.min(1, h * 0.09);
       g.fillStyle = col(-14, 1);
       g.beginPath(); RR(g, x, y, w, h, r); g.fill();
       g.restore();
@@ -4011,12 +4119,13 @@
 
       // Firing blotches: soft patches where the clay took the heat
       // differently. Gradients rather than flat discs, or they read as stains
-      // on the brick instead of as the body of it.
-      for (let i = 0; i < 3; i++) {
+      // on the brick instead of as the body of it. On marble the same patches
+      // are half the strength and read as cloud in the stone.
+      for (let i = 0; i < STONE.blotch; i++) {
         const j = k * 7 + i;
         const bx = x + hash(j, 3) * w, by = y + hash(j, 11) * h;
         const br = h * (0.45 + hash(j, 19) * 0.8);
-        const dl = (hash(j, 29) - 0.5) * (day ? 14 : 10);
+        const dl = (hash(j, 29) - 0.5) * (day ? 14 : 10) * STONE.mottle;
         const rg = g.createRadialGradient(bx, by, 0, bx, by, br);
         rg.addColorStop(0, col(dl, 0.55));
         rg.addColorStop(1, col(dl, 0));
@@ -4024,10 +4133,36 @@
         g.fillRect(x, y, w, h);
       }
 
+      // Veining, on the stone that has any. It is the one mark that says
+      // marble rather than pale brick: a seam of the mineral running across
+      // the block at whatever angle the saw happened to take it, wandering
+      // as it goes, and cut off by the face — so a vein runs off the edge of
+      // a block the way it does off the edge of a real one. Not every block
+      // gets one, or the wall comes out scribbled on.
+      for (let i = 0; i < STONE.vein; i++) {
+        const j = k * 17 + i * 5;
+        if (hash(j, 83) < 0.30) continue;
+        const ang = (hash(j, 87) - 0.5) * 1.6;
+        const vx = x + hash(j, 89) * w, vy = y + hash(j, 93) * h;
+        const len = (w + h) * (0.55 + hash(j, 97) * 0.75);
+        const cs = Math.cos(ang), sn = Math.sin(ang);
+        g.strokeStyle = col(-(5 + hash(j, 99) * 8), 0.14 + hash(j, 101) * 0.13);
+        g.lineWidth = 0.30 + hash(j, 103) * 0.45;
+        g.beginPath();
+        for (let v = 0; v <= 8; v++) {
+          const u = (v / 8 - 0.5) * len;
+          const wob = Math.sin(v * 1.7 + hash(j, 107) * 6.3) * h * 0.11;
+          const px = vx + cs * u - sn * wob, py = vy + sn * u + cs * wob;
+          if (v === 0) g.moveTo(px, py); else g.lineTo(px, py);
+        }
+        g.stroke();
+      }
+
       // Grit: speck and pit, dark and light in about equal measure, so the
       // face grains rather than darkens. Baked in, so it costs nothing to
-      // draw and — unlike noise generated per frame — it holds still.
-      const n = Math.round(w * h * 0.20);
+      // draw and — unlike noise generated per frame — it holds still. A
+      // dressed stone gets a third of what a brick gets.
+      const n = Math.round(w * h * STONE.grit);
       for (let i = 0; i < n; i++) {
         const j = k * 131 + i;
         g.fillStyle = col(hash(j, 23) < 0.5 ? -21 : 15, 0.10 + hash(j, 37) * 0.16);
@@ -4039,12 +4174,12 @@
       // line that runs the whole way round is a rim, and a rim is what made
       // these look like panes in the first place.
       g.lineWidth = 0.9;
-      g.strokeStyle = col(day ? 18 : 15, 0.5);
+      g.strokeStyle = col((day ? 18 : 15) * STONE.arris, 0.5 * STONE.arris);
       g.beginPath();
       g.moveTo(x + w * hash(k, 61) * 0.2, y + 0.5);
       g.lineTo(x + w * (0.7 + hash(k, 67) * 0.3), y + 0.5);
       g.stroke();
-      g.strokeStyle = col(-23, 0.42);
+      g.strokeStyle = col(-23 * STONE.arris, 0.42 * STONE.arris);
       g.beginPath();
       g.moveTo(x + w * hash(k, 71) * 0.24, y + h - 0.5);
       g.lineTo(x + w * (0.66 + hash(k, 73) * 0.34), y + h - 0.5);
@@ -4052,26 +4187,43 @@
       g.restore();
 
       // and the outside edge, just enough to hold the brick against the sky
-      g.strokeStyle = day ? 'rgba(46,29,19,0.26)' : 'rgba(0,0,0,0.48)';
-      g.lineWidth = 0.7;
+      g.strokeStyle = STONE.edge[day ? 1 : 0];
+      g.lineWidth = fine ? h * 0.05 : 0.7;
       g.beginPath();
       RR(g, x + 0.35, y + 0.35, w - 0.7, h - 0.7, Math.max(0.4, r - 0.35));
       g.stroke();
       return cv;
     }
+    // The mortar behind a brick, on the shelf as on the pavilion. The shelf
+    // went without one for a long while and could: its bricks were nearly
+    // three times the size and the gaps between them read as shadow at that
+    // scale. Cut to the same brick as the gazebo they are joints, and a joint
+    // with the sky showing through it is not a joint.
+    const MORTAR = i => STONE.mortar[i];
     function paintBrick(g, b, day, night) {
       // baked on first sight and again if the display's density changes; a
       // re-lay makes new bricks, which arrive unbaked
       if (b.baked !== dpr) {
         const clay = brickClay(b.k);
-        b.dayCv = brickSprite(b, clay, true);
-        b.nightCv = brickSprite(b, clay, false);
+        b.dayCv = brickSprite(b.w, b.h, b.k, clay, true, true);
+        b.nightCv = brickSprite(b.w, b.h, b.k, clay, false, true);
         b.baked = dpr;
       }
       const P = BRICK_PAD, dw = b.w + P * 2, dh = b.h + P * 2;
       const x = b.x - P, y = b.y - P;
-      if (night > 0.001) { g.globalAlpha = night; g.drawImage(b.nightCv, x, y, dw, dh); }
-      if (day > 0.001) { g.globalAlpha = day; g.drawImage(b.dayCv, x, y, dw, dh); }
+      const mx = LEDGE_GAP * 0.6, my = LEDGE_VGAP * 0.6;
+      if (night > 0.001) {
+        g.globalAlpha = night;
+        g.fillStyle = MORTAR(0);
+        g.fillRect(b.x - mx, b.y - my, b.w + mx * 2, b.h + my * 2);
+        g.drawImage(b.nightCv, x, y, dw, dh);
+      }
+      if (day > 0.001) {
+        g.globalAlpha = day;
+        g.fillStyle = MORTAR(1);
+        g.fillRect(b.x - mx, b.y - my, b.w + mx * 2, b.h + my * 2);
+        g.drawImage(b.dayCv, x, y, dw, dh);
+      }
       g.globalAlpha = 1;
     }
     function drawShelf(now) {
@@ -4112,6 +4264,37 @@
         for (const b of bricks) paintBrick(g, b, day, night);
       }
       ctx.drawImage(shelfSheet, shelfBox.x, shelfBox.y, shelfBox.w, shelfBox.h);
+      shelfLight();
+    }
+
+    // The sun rakes the ledge, too. A brick wall seen straight on has no lit
+    // side and no shaded side — every face in it points the same way — but a
+    // light this low and this near does fall off along a wall, and the end of
+    // the shelf under the sun stands warmer and brighter than the far end of
+    // it does. Without this the pavilion turned to follow the light and the
+    // ledge it stands on did not, and that join was the one place in the
+    // picture where the two could be seen disagreeing.
+    //
+    // A pool centred where the light stands, not a ramp from one end to the
+    // other: a ramp has to decide which end is the near one, and it changes
+    // its mind all at once when the sun is chased past the middle.
+    function shelfLight() {
+      if (!ledgeRows.length || introing) return;
+      const day = mix, night = 1 - mix;
+      const R = Math.max(40, (ledgeX1 - ledgeX0) * 0.85);
+      // course by course rather than over the whole box: the courses step in
+      // as they go down and the light must stop where the brick does
+      const wash = (inner, outer, alpha) => {
+        const gr = ctx.createRadialGradient(LIGHT.x, ground, 0, LIGHT.x, ground, R);
+        gr.addColorStop(0, inner); gr.addColorStop(1, outer);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = gr;
+        for (const r of ledgeRows) ctx.fillRect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
+      };
+      const q = 0.45 + 0.55 * LIGHT.low;
+      if (night > 0.001) wash('rgba(206,222,255,0.11)', 'rgba(2,4,9,0.16)', night * q);
+      if (day > 0.001) wash('rgba(255,243,212,0.15)', 'rgba(18,10,6,0.15)', day * q);
+      ctx.globalAlpha = 1;
     }
     // whether an opening is expected; if none arrives the grove grows itself in
     const INTRO = !!window.__intro && !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -4277,15 +4460,16 @@
       return { minX, maxX, minY, maxY };
     }
 
-    // A stand rather than a row: five to eight trees, each a species drawn
-    // at random, so no two loads plant the same grove. More than about ten
+    // A stand rather than a row: five or six trees, each a species drawn at
+    // random, so no two loads plant the same grove. They are dealt into the
+    // two clearings either side of the gazebo, so a handful to each. More than about ten
     // and the frame budget goes — every tree is walked and leafed each
     // frame — and a phone's column has room for fewer still: four or five
     // across a canvas under 400px keeps each crown about as wide, against
     // its height, as the wide screen's do. ?trees=N sets the count for a
     // look. leafSpec keys into FOLIAGE, so each species keeps its own leaf
     // and green.
-    let NTREES = PHONE ? 4 + Math.floor(Math.random() * 2) : 5 + Math.floor(Math.random() * 4);
+    let NTREES = PHONE ? 4 : 5 + Math.floor(Math.random() * 2);
     try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
     const shapes = TREES.map(expand);
     // every species at least once, the rest drawn at random, in a shuffled
@@ -4554,6 +4738,22 @@
     // fresh each frame it draws, where the canvas sits on the page, and a
     // word when a tree is pressed or the opening begins.
     const G = window.__grove = { trees: trees.map(() => ({ tips: null })), left: 0, top: 0, W: 0, H: 0 };
+
+    // Re-cutting the wall out of the other quarry. Nothing about the building
+    // moves — a course is a course whatever it is cut from — so it is only a
+    // matter of throwing away every sprite and both sheets and letting the
+    // next frame bake them again out of the new stone.
+    G.stone = name => {
+      const want = STONES[name];
+      if (!want) return Object.keys(STONES);
+      STONE = want;
+      gzSprites.clear();
+      for (const b of bricks) b.baked = -1;
+      shelfSheet = null; shelfKey = '';
+      gazDay = gazNight = null;
+      return name;
+    };
+
     trees.forEach((t, i) => { t.idx = i; });
 
     // ── night and day ──────────────────────────────────────────────────────
@@ -4976,12 +5176,20 @@
     // It is cut from the scrub's own palette so it always matches the bushes
     // it grows out of, by night as by day, and re-baked as the light changes.
     const IVY_S = IVY_LEAF;     // sprite is 2·IVY_S square
-    let ivySprite = null, ivyKey = '';
-    const ivyTone = (n, d) => `rgb(${Math.round(lerp(n[0], d[0], mix))},${Math.round(lerp(n[1], d[1], mix))},${Math.round(lerp(n[2], d[2], mix))})`;
-    function ivyLeafSprite() {
-      const key = Math.round(mix * 20) + ':' + dpr;
-      if (ivySprite && ivyKey === key) return ivySprite;
-      ivyKey = key;
+    const ivyTone = (n, d, t) => {
+      const m = t === undefined ? mix : t;
+      return `rgb(${Math.round(lerp(n[0], d[0], m))},${Math.round(lerp(n[1], d[1], m))},${Math.round(lerp(n[2], d[2], m))})`;
+    };
+    // The gazebo asks for both lights at once — it bakes a day sheet and a
+    // night one — so the leaf can be had for a light other than the one that
+    // is on, and the cache holds the last of each rather than only the last.
+    const ivyLeaves = new Map();
+    function ivyLeafSprite(t) {
+      const m = t === undefined ? mix : t;
+      const key = Math.round(m * 20) + ':' + dpr;
+      const had = ivyLeaves.get(key);
+      if (had) return had;
+      if (ivyLeaves.size > 6) ivyLeaves.clear();
       const c = document.createElement('canvas');
       const px = Math.round(IVY_S * 2 * dpr);
       c.width = c.height = px;
@@ -4999,24 +5207,35 @@
       // the same greens the scrub is painted in by day (see leaf()), and by
       // night the greys its twigs are drawn in
       const gr = g.createLinearGradient(-s, 0, s, 0);
-      gr.addColorStop(0, ivyTone([66, 66, 66], [48, 88, 38]));
-      gr.addColorStop(0.5, ivyTone([96, 96, 96], [64, 116, 50]));
-      gr.addColorStop(1, ivyTone([66, 66, 66], [48, 88, 38]));
+      gr.addColorStop(0, ivyTone([66, 66, 66], [48, 88, 38], m));
+      gr.addColorStop(0.5, ivyTone([96, 96, 96], [64, 116, 50], m));
+      gr.addColorStop(1, ivyTone([66, 66, 66], [48, 88, 38], m));
       g.fillStyle = gr;
       g.fill();
-      g.strokeStyle = ivyTone([48, 48, 48], [34, 62, 28]);
+      g.strokeStyle = ivyTone([48, 48, 48], [34, 62, 28], m);
       g.lineWidth = 0.6;
       g.beginPath();
       g.moveTo(0, 0);
       g.lineTo(0, s * 0.95);
       g.stroke();
-      return (ivySprite = c);
+      ivyLeaves.set(key, c);
+      return c;
     }
 
-    // Draw order puts this under the plants, so the scrub on the shelf sits
-    // over the heaps the vines come out of.
-    function drawIvy(now, grow) {
-      if (!strands.length || grow <= 0.001) return;
+    // One leaf of it, laid down where it is told
+    const ivyStamp = (sprite, x, y, ang, size) => {
+      const d = IVY_S * 2 * size, hd = d / 2;
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      ctx.setTransform(dpr * c, dpr * sn, -dpr * sn, dpr * c, dpr * x, dpr * y);
+      ctx.drawImage(sprite, -hd, -hd * 0.35, d, d);
+    };
+
+    // A fringe of hanging vines, wherever they are rooted: off the lip of the
+    // shelf, or off the cornice of the gazebo, which is the same plant in the
+    // same wind and so is the same code.
+    const IVY_A = 0.92;
+    function drawStrands(list, now, grow) {
+      if (!list.length || grow <= 0.001) return;
       const breeze = reduced ? 0 : 1;
       const sprite = ivyLeafSprite();
       // the vine is a stalk in the scrub's darker tone; by night, like the
@@ -5025,17 +5244,12 @@
       ctx.lineJoin = 'round';
       ctx.strokeStyle = ivyTone([56, 56, 56], [50, 68, 40]);
       const night = mix < 0.5;
-      const leafA = 0.92;
-      const stamp = (x, y, ang, size) => {
-        const d = IVY_S * 2 * size, hd = d / 2;
-        const c = Math.cos(ang), sn = Math.sin(ang);
-        ctx.setTransform(dpr * c, dpr * sn, -dpr * sn, dpr * c, dpr * x, dpr * y);
-        ctx.drawImage(sprite, -hd, -hd * 0.35, d, d);
-      };
+      const leafA = IVY_A;
+      const stamp = (x, y, ang, size) => ivyStamp(sprite, x, y, ang, size);
       const K = 8;                              // segments per vine
-      for (const s of strands) {
+      for (const s of list) {
         // a runner starts where it left its parent, and hangs from there
-        let x0 = s.x, y0 = ground - 1, len = s.len * grow;
+        let x0 = s.x, y0 = s.y0 === undefined ? ground - 1 : s.y0, len = s.len * grow;
         if (s.parent) {
           const P = s.parent.pts;
           if (!P || s.at > grow) continue;        // parent not there yet
@@ -5092,31 +5306,1131 @@
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.globalAlpha = 1;
       }
+    }
 
+    // Draw order puts this under the plants, so the scrub on the shelf sits
+    // over the heaps the vines come out of.
+    function drawIvy(now, grow) {
+      if (!strands.length || grow <= 0.001) return;
+      drawStrands(strands, now, grow);
       // the heaps on the lip, over the vines' tops so they seem to come out
       // from under the leaves
-      ctx.globalAlpha = leafA * Math.min(1, grow * 1.5);
+      const sprite = ivyLeafSprite(), night = mix < 0.5;
+      ctx.globalAlpha = IVY_A * Math.min(1, grow * 1.5);
       for (const c of crowns) {
         const L = c.leaves;
         for (let j = 0; j < L.length; j += 4) {
           if (night && ((j >> 2) & 1)) continue;
-          stamp(c.x + L[j], ground + L[j + 1], L[j + 2], L[j + 3]);
+          ivyStamp(sprite, c.x + L[j], ground + L[j + 1], L[j + 2], L[j + 3]);
         }
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.globalAlpha = 1;
     }
 
+    // ── The gazebo ─────────────────────────────────────────────────────────
+    // In the middle of the shelf there is a garden pavilion, and the harp
+    // stands in it: a brick building of three bays on a levelled plinth, open
+    // on all of them, under a dentilled cornice and a brick dome, with ivy
+    // over the whole of it and a few pale roses in the ivy. It is laid in the
+    // same fired clay as the shelf it stands on, out of the same three kilns —
+    // a third of the size, since a brick is a brick and what changes with the
+    // building is how many of them there are.
+    //
+    // It is drawn flat, in elevation, exactly as the trees beside it are. It
+    // was not at first: it was an octagon in perspective, seven plan-radii
+    // from the eye, every course dealt round a circle. That was more faithful
+    // and much worse. Perspective was the author of every fault it had —
+    // bricks foreshortened to slivers along the edge of the dome; walls and
+    // piers meeting at planes that would not reconcile, leaving a wedge of
+    // daylight down each corner; courses whose left half could not agree with
+    // their right; a footprint whose near corners sat lower in the picture
+    // than its far ones, so the building stood on a rocker over a shelf that
+    // is a straight line. None of those are drawing faults. They are what a
+    // third dimension costs, and the picture it stands in does not have one.
+    //
+    // Flat, they all go away. Every course is a horizontal band; every band is
+    // dealt an exact number of bricks that fill it corner to corner with a
+    // half-bat at each end; every gap is centred in its own pitch; and every
+    // measurement is a function of |x|. So the left of the building is the
+    // mirror of the right, brick for brick, and no joint can open anywhere.
+    // What roundness it has comes from light instead: a gradient down each
+    // pier, a sphere of it over the dome, a dark soffit under the cornice.
+    // That is how an elevation has always been drawn.
+    // Every height in the building is a whole number of courses. A brick wall
+    // has one bed joint height and every course in it lines up right across
+    // the front — and this one did not: the piers were coursed on their own
+    // height and the walls beside them on theirs, so wherever the two met the
+    // joints ran past each other by a pixel or two, all the way up. So the
+    // course is worked out once, from the size the pavilion has been given,
+    // and then every one of these is rounded to a whole number of them
+    // (setOut(), below). Nothing moves more than half a course from where it
+    // was drawn, and every bed joint on the facade becomes one line.
+    const GZ_CAP = 1.06;            // the top of the piers — the datum, and
+                                    // always an exact number of courses
+    let GZ_PL = 0.22;               // the plinth, below the floor line
+    const GZ_PL_HW = 1.10;
+    let GZ_RAIL = 0.42;             // the balustrade across the side bays
+    let GZ_SPRING = 0.60;           // where the entrance arch springs
+    let GZ_T1 = 1.12;               // architrave
+    let GZ_T2 = 1.21;               // frieze, with the dentils standing on it
+    let GZ_T3 = 1.32;               // and the cornice over them
+    let GZ_T4 = 1.44;               // the drum the dome springs from
+    let GZ_DOME_H = 0.72;
+    let GZ_CROWN = GZ_T4 + GZ_DOME_H;
+    const GZ_FIN = 0.16;
+    let GZ_TIP = GZ_CROWN + GZ_FIN;
+    // Set the building out on a course worked from the size it is drawn at:
+    // bricks about six pixels tall whatever that size is, so a small pavilion
+    // is not a model of a large one — it is the same brick, and there are
+    // fewer of them. Everything is kept in order and at least a course apart.
+    function gzSetOut(unit) {
+      const nc = Math.max(8, Math.round((GZ_CAP * unit) / BRICK_PX));
+      const C = GZ_CAP / nc;
+      const snap = (h, floor) => Math.max(floor || 0, Math.round(h / C)) * C;
+      GZ_PL = snap(0.22, 3);
+      GZ_RAIL = snap(0.42, 3);
+      GZ_SPRING = Math.max(GZ_RAIL + 2 * C, snap(0.60));
+      GZ_SIDE_S = GZ_SPRING;
+      // The entablature is a stack of distinct courses rather than a height,
+      // so each band of it is given a proportion *and* a floor in courses:
+      // an architrave one course deep is an architrave, and one half a course
+      // deep is a line.
+      const band = (h, min) => Math.max(min, Math.round(h / C)) * C;
+      GZ_T1 = GZ_CAP + band(0.060, 1);          // architrave
+      GZ_T2 = GZ_T1 + band(0.100, 2);           // frieze, and its dentils
+      GZ_T3 = GZ_T2 + band(0.110, 2);           // cornice
+      GZ_T4 = GZ_T3 + band(0.120, 2);           // drum
+      GZ_DOME_H = snap(0.72, 5);
+      GZ_CROWN = GZ_T4 + GZ_DOME_H;
+      GZ_TIP = GZ_CROWN + GZ_FIN;
+      return C;
+    }
+    const GZ_CORN_HW = 1.15, GZ_DRUM_HW = 0.97, GZ_DOME_HW = 0.92;
+    // the three bays: an entrance in the middle, a pier, a lesser arch, a pier
+    const GZ_A = 0.38;              // the entrance, half its clear width
+    const GZ_P1 = 0.56;             // the inner piers, 0.38 out to here
+    const GZ_P2 = 0.84;             // the side bays, 0.56 out to here
+    // How much of the clear entrance the harp fills. It is an instrument
+    // standing in a room, not a thing wedged into a doorway, so it wants air
+    // round it on both sides and under the arch.
+    const GZ_HARP = 0.68;
+    const GZ_SIDE_C = 0.70, GZ_SIDE_R = 0.14;
+    let GZ_SIDE_S = GZ_SPRING;
+    // what it all comes to, near enough for the layout to size it by: the
+    // setting-out moves nothing by more than half a course
+    const GZ_H = 0.22 + 2.32;
+    const GZ_W = GZ_CORN_HW * 2;
+
+    // ── the light ─────────────────────────────────────────────────────────
+    // There is a body up in that sky and it does not hold still. The sun sits
+    // low on the right through the evening; the moon crosses the whole width
+    // over a night; and either will back off into a corner if a pointer comes
+    // near it. Nothing standing on the shelf used to know any of that. The
+    // pavilion carried one fixed wash from the upper left and its shadow lay
+    // under it in a tidy ellipse whatever the hour — so on the one evening
+    // the page actually shows, sun far right and half way down the canopy,
+    // the building was lit from the wrong side of its own picture, and
+    // chasing the sun across to the other side changed nothing at all.
+    //
+    // So the masonry is baked and the light is not. Two sheets hold the
+    // brickwork, which never changes. The half dozen coats that model it —
+    // the light down each pier, the sphere over the dome, the wash across the
+    // front, the ball on the finial, and the shadow the whole of it throws
+    // along the shelf — are laid over the top fresh every frame from wherever
+    // the body has got to. It costs six gradients a frame, and it buys a
+    // building lit by the thing in its own sky rather than by a memory of one.
+    const LIGHT = { x: 0, y: 0, dx: -0.66, dy: -0.75, k: -0.88, up: 0.75, low: 0.66 };
+    function readLight(atX, atY) {
+      let dx = moonX - atX, dy = moonY - atY;
+      const n = Math.hypot(dx, dy) || 1;
+      dx /= n; dy /= n;
+      if (dy > -0.06) dy = -0.06;              // never lit from under the ledge
+      LIGHT.x = moonX; LIGHT.y = moonY;
+      LIGHT.dx = dx; LIGHT.dy = dy;
+      LIGHT.up = -dy;                          // 1 straight overhead, 0 on the horizon
+      LIGHT.low = Math.min(1, Math.abs(dx));   // and the other way about
+      // How far a shadow runs for every pixel of the height throwing it. Held
+      // to about a length and a half: a sun this low would otherwise run the
+      // pavilion's shadow clean off the end of the shelf, and a shadow that
+      // long has gone too soft to see anyway.
+      LIGHT.k = Math.max(-1.55, Math.min(1.55, dx / dy));
+    }
+
+    let gaz = null;                 // where it stands, and what it is made of
+    let gazDay = null, gazNight = null;
+    const gazVines = [];            // the trailing ends, which do move
+
+    // The pavilion's bricks are a third the size of the shelf's and there are
+    // better than a thousand of them, so they are not baked one for one the
+    // way the shelf's are. Twenty-eight clays are baked at a handful of shapes
+    // and dealt round the building; at six pixels to a brick nobody can tell
+    // one repeat from another, and what would have been two and a half
+    // thousand little canvases is fifty.
+    const GZ_CLAYS = 28;
+    const gzSprites = new Map();
+    function gzSprite(v, ar, day) {
+      const b = Math.max(1, Math.min(6, Math.round(ar)));
+      const key = v + '|' + b + '|' + (day ? 'd' : 'n') + '|' + dpr;
+      let s = gzSprites.get(key);
+      if (!s) {
+        const h = 20, w = h * b, k = v * 37 + 11, clay = brickClay(k);
+        // After dark the pavilion was the brightest thing in the picture bar
+        // the moon: a hundred small bricks carry proportionally more of their
+        // own lit top edge than the shelf's two dozen large ones do, and the
+        // wall came out a stop over the ledge it stands on.
+        if (!day) clay.l *= 0.82;
+        s = { cv: brickSprite(w, h, k, clay, day, true), w, h };
+        gzSprites.set(key, s);
+      }
+      return s;
+    }
+
+    // ── the model ──────────────────────────────────────────────────────────
+    // Everything is built once into a list of stamps in canvas points, in the
+    // order it is painted — which is also the order it would be built in, the
+    // ground course first and the finial last. That one order does three jobs:
+    // nothing is ever drawn in front of something that is not there yet,
+    // nothing has to be sorted twice, and the opening can walk the list from
+    // one end and lay the building brick by brick.
+    let gzU = 1, gzCX = 0, gzFY = 0, gzOps = [];
+    const gzTAU = Math.PI * 2;
+    const gzX = x => gzCX + x * gzU;             // module units to canvas points
+    const gzY = y => gzFY - y * gzU;             // y counts up from the floor
+    const GZ_BLEED = 2;                          // how far a bed is laid proud
+
+    const gzBed = (pts, sh, cl) => gzOps.push({ t: 'm', pts, sh: sh || 0, cl });
+    const gzFill = (col, pts, colN, cl) => gzOps.push({ t: 'p', col, colN, pts, cl });
+    const gzGrad = (pts, from, to, a, b, cl) => gzOps.push({ t: 'g', pts, from, to, a, b, cl });
+    const gzRad = (pts, stops, c, r0, r1) => gzOps.push({ t: 'r', pts, stops, c, r0, r1 });
+    const gzLeafAt = (x, y, ang, size) => gzOps.push({ t: 'l', x, y, ang, size });
+    const gzBloom = (x, y, r, k) => gzOps.push({ t: 'f', x, y, r, k });
+    const gzStem = (pts, w) => gzOps.push({ t: 's', pts, w });
+    // The coat just pushed is one the light lays, not the bricklayer: keep it
+    // out of the sheets, and let `re` put it where the sun is before each
+    // frame. `under` sends it beneath the building instead of over it, which
+    // is where a shadow goes.
+    function gzSun(re, under) {
+      const op = gzOps[gzOps.length - 1];
+      op.sun = re; op.under = !!under;
+      re(op);
+      return op;
+    }
+    const gzRect = (x0, y0, x1, y1, up) => {
+      const t = gzY(y1) - (up === undefined ? GZ_BLEED : up);
+      return [[gzX(x0), t], [gzX(x1), t], [gzX(x1), gzY(y0)], [gzX(x0), gzY(y0)]];
+    };
+    // Which clay a brick came out of. It used to be the brick's own running
+    // number modulo the number of clays, and a running number laid in rows is
+    // a lattice: the same clay came back every seven bricks along a diagonal,
+    // and the wall had faint stripes running across it that no wall has. The
+    // number goes through the hash first, so neighbours are unrelated and the
+    // scatter is a scatter.
+    const gzClay = v => Math.floor(hash(v, 53) * GZ_CLAYS) % GZ_CLAYS;
+    function gzStamp(v, x0, y0, w, h, sh, cl) {
+      if (w < 0.4 || h < 0.4) return;
+      gzOps.push({ t: 'b', v: gzClay(v), ar: w / h,
+                   ox: x0, oy: y0, ex: w, ey: 0, fx: 0, fy: h, sh: sh || 0, cl });
+    }
+
+    // A band of coursed brick between two heights and two edges. Every course
+    // is dealt an exact number of bricks that fill it corner to corner, every
+    // other course is set half a brick over so both its ends come out as
+    // half-bats, and every joint is centred in its own pitch. Which is to say
+    // the band is its own mirror — and since every band on the building is
+    // laid by this one function about the same centre line, so is the
+    // building. Nothing has to check.
+    function gzBand(x0, x1, y0, y1, ch, len, opt) {
+      const o = opt || {};
+      const sh = o.sh || 0, span = x1 - x0;
+      if (span <= 0 || y1 <= y0) return;
+      const rows = Math.max(1, Math.round((y1 - y0) / ch));
+      const h = (y1 - y0) / rows, vg = h * 0.11;
+      if (!o.bare) gzBed(gzRect(x0, y0, x1, y1, o.up), sh, o.cl);
+      for (let row = 0; row < rows; row++) {
+        const yb = y0 + row * h, yt = yb + h - vg;
+        const n = Math.max(1, Math.round(span / len)), bw = span / n;
+        const gap = bw * (o.gap === undefined ? 0.09 : o.gap);
+        const cuts = [x0];
+        if (row & 1) { cuts.push(x0 + bw / 2); for (let i = 1; i < n; i++) cuts.push(x0 + bw / 2 + i * bw); }
+        else for (let i = 1; i < n; i++) cuts.push(x0 + i * bw);
+        cuts.push(x1);
+        for (let i = 0; i + 1 < cuts.length; i++) {
+          const a = cuts[i] + gap / 2, b = cuts[i + 1] - gap / 2;
+          if (b - a < bw * 0.15) continue;
+          gzStamp((o.salt || 0) + row * 7 + i * 3, gzX(a), gzY(yt),
+                  (b - a) * gzU, (yt - yb) * gzU, sh, o.cl);
+        }
+      }
+    }
+
+    // A ring of arch bricks, on end and radiating, which is how a brick arch
+    // is actually turned. The count is odd, so there is a keystone on the
+    // centre line; the joints are centred in their own pitch, so the two
+    // halves are mirrors.
+    function gzArch(cx, cy, r, depth, ch, salt, sh) {
+      let n = Math.max(9, Math.round((Math.PI * (r + depth / 2)) / (ch * 1.15)));
+      if (!(n & 1)) n++;
+      const P = (a, rr) => [gzX(cx + Math.cos(a) * rr), gzY(cy + Math.sin(a) * rr)];
+      const bed = [];
+      for (let i = 0; i <= 28; i++) bed.push(P(Math.PI - (i / 28) * Math.PI, r + depth));
+      for (let i = 28; i >= 0; i--) bed.push(P(Math.PI - (i / 28) * Math.PI, r));
+      gzBed(bed, sh);
+      // A wider joint than the ring had. The voussoirs were butted almost
+      // edge to edge and ran the full depth of the ring, so there was no
+      // mortar anywhere in it and the whole arch read as one smooth band
+      // while every other brick on the building had a dark line round it.
+      // and the light across the ring. An arch ring is a half cylinder lying
+      // on its side: one haunch takes the sun, the crown takes a little less,
+      // and the far haunch is in shade. Which haunch is which is not settled
+      // here — it is settled by where the sun has got to when the frame is
+      // drawn, and it swaps over when the sun crosses the building.
+      {
+        const ax0 = gzX(cx - r - depth), ax1 = gzX(cx + r + depth);
+        gzGrad(bed, '', '', [0, 0], [0, 0]);
+        gzSun(op => {
+          const q = 0.40 + 0.60 * LIGHT.low;
+          op.a = [LIGHT.dx >= 0 ? ax1 : ax0, 0];
+          op.b = [LIGHT.dx >= 0 ? ax0 : ax1, 0];
+          op.from  = `rgba(255,246,230,${(0.20 * q).toFixed(3)})`;
+          op.to    = `rgba(14,8,5,${(0.30 * q).toFixed(3)})`;
+          op.fromN = `rgba(212,226,255,${(0.13 * q).toFixed(3)})`;
+          op.toN   = `rgba(2,4,9,${(0.34 * q).toFixed(3)})`;
+        });
+      }
+      const step = Math.PI / n, gap = step * 0.13, back = depth * 0.10;
+      for (let i = 0; i < n; i++) {
+        const a0 = Math.PI - i * step - gap / 2;
+        const a1 = Math.PI - (i + 1) * step + gap / 2;
+        const o = P(a0, r + depth - back), inn = P(a0, r), end = P(a1, r + depth - back);
+        const ex = inn[0] - o[0], ey = inn[1] - o[1];
+        const fx = end[0] - o[0], fy = end[1] - o[1];
+        gzOps.push({ t: 'b', v: gzClay(salt + i * 11),
+                     ar: Math.hypot(ex, ey) / Math.max(0.4, Math.hypot(fx, fy)),
+                     ox: o[0], oy: o[1], ex, ey, fx, fy, sh });
+      }
+    }
+
+    // The dome. Its profile is a bell rather than a half-circle — wide at the
+    // springing, drawn in and then over — and its courses are dealt along that
+    // profile by arc length rather than by height, or the bottom one comes out
+    // three times the depth of the top one and the thing is a beehive. Each
+    // course is a horizontal band cut to the curve at both ends, which is what
+    // a cut brick against the edge of a dome looks like.
+    // a half-ellipse: it leaves the drum vertically, turns over evenly, and
+    // is the one profile whose width at a height can be had straight back
+    const gzDomeP = t => Math.sqrt(Math.max(0, 1 - t * t));
+    const gzDomeQ = t => t;
+    const gzDomeW = y =>
+      GZ_DOME_HW * gzDomeP(Math.max(0, Math.min(1, (y - GZ_T4) / GZ_DOME_H)));
+    function gzDomeCourses(ch) {
+      // Courses of equal brick, measured along the profile — which is what a
+      // course on a dome is — and never one thinner than this on the page. A
+      // dome turns over at the crown, so equal brick up there means equal
+      // *width* and the last few courses collapse to hairlines in elevation:
+      // half a pixel of brick with fourteen pixels of it left and right. Any
+      // step that comes out thinner than a third of a course is rolled into
+      // the one above, which is what a bricklayer does with it too.
+      const minH = ch * 0.30;
+      const S = 400, arc = [0];
+      let px = GZ_DOME_HW * gzDomeP(0), py = GZ_DOME_H * gzDomeQ(0), total = 0;
+      for (let i = 1; i <= S; i++) {
+        const t = i / S, x = GZ_DOME_HW * gzDomeP(t), y = GZ_DOME_H * gzDomeQ(t);
+        total += Math.hypot(x - px, y - py);
+        arc.push(total); px = x; py = y;
+      }
+      const rings = Math.max(6, Math.min(22, Math.round(total / (ch * 1.02))));
+      const ys = [GZ_T4];
+      let j = 0, y = GZ_T4;
+      for (let k = 1; k <= rings; k++) {
+        const want = (total * k) / rings;
+        while (j < S && arc[j] < want) j++;
+        const ny = GZ_T4 + GZ_DOME_H * gzDomeQ(j / S);
+        if (ny - y < minH) continue;
+        ys.push(ny); y = ny;
+      }
+      if (GZ_CROWN - y < minH && ys.length > 1) ys[ys.length - 1] = GZ_CROWN;
+      else ys.push(GZ_CROWN);
+      return ys;
+    }
+    // the outline of one course, which is what its bed is cut to and what its
+    // end bricks are clipped by
+    function gzDomeStrip(y0, y1) {
+      const N = 12, p = [];
+      const wt = gzDomeW(y1), top = gzY(y1) - GZ_BLEED;
+      p.push([gzX(-wt), top], [gzX(wt), top]);
+      for (let i = 1; i <= N; i++) {
+        const y = y1 + (y0 - y1) * (i / N);
+        p.push([gzX(gzDomeW(y)), gzY(y)]);
+      }
+      p.push([gzX(-gzDomeW(y0)), gzY(y0)]);
+      for (let i = N - 1; i >= 1; i--) {
+        const y = y1 + (y0 - y1) * (i / N);
+        p.push([gzX(-gzDomeW(y)), gzY(y)]);
+      }
+      return p;
+    }
+    function gzDomeCourse(y0, y1, len, salt) {
+      // Laid out to the widest edge of the course — its bottom — and cut back
+      // to the curve by the clip. Laid to the middle instead, as it was, each
+      // course stopped short of the dome's edge at its foot and left a rind
+      // of bed showing, so the silhouette came out as a staircase of brick
+      // ends rather than a curve.
+      const w = gzDomeW(y0);
+      if (w <= 0.01) return;
+      const strip = gzDomeStrip(y0, y1);
+      const cl = { poly: strip };
+      const sh = -0.02;
+      gzBed(strip, sh);
+      const span = 2 * w, n = Math.max(1, Math.round(span / len)), bw = span / n;
+      const gap = bw * 0.09, vg = (y1 - y0) * 0.11;
+      const cuts = [-w];
+      if (salt & 1) { cuts.push(-w + bw / 2); for (let i = 1; i < n; i++) cuts.push(-w + bw / 2 + i * bw); }
+      else for (let i = 1; i < n; i++) cuts.push(-w + i * bw);
+      cuts.push(w);
+      for (let i = 0; i + 1 < cuts.length; i++) {
+        const a = cuts[i] + gap / 2, b = cuts[i + 1] - gap / 2;
+        if (b - a < bw * 0.15) continue;
+        gzStamp(salt * 13 + i * 5, gzX(a), gzY(y1 - vg), (b - a) * gzU, (y1 - y0 - vg) * gzU, sh, cl);
+      }
+    }
+
+    // ── the ivy on it ──────────────────────────────────────────────────────
+    // Clinging ivy does not sway: it is stuck to the wall. So all of this is
+    // baked into the sheet along with the brick, and only the ends that hang
+    // free off the cornice are drawn again each frame.
+    function gzPlant(ch, unit) {
+      const sz = Math.max(0.5, Math.min(1.05, unit / 118));
+      const leaf = (x, y, ang, k) =>
+        gzLeafAt(gzX(x), gzY(y), ang + (hash(k, 231) - 0.5) * 1.2, sz * (0.66 + hash(k, 232) * 0.5));
+      // Over the dome, in clumps rather than evenly, so the brick shows
+      // through in patches the way it does on a real one — and heaviest at the
+      // crown, which is where it gets the light. There is a great deal of it:
+      // a pavilion in a garden this old is more ivy than brick, and a thin
+      // scatter of leaves over the tiles reads as a stain rather than a plant.
+      // Clumps are dealt along the *surface* of the dome rather than across
+      // its width, so the flanks get their share and the whole of it is
+      // covered — with a bias toward the crown, which is where the light is
+      // and where ivy actually goes.
+      for (let c = 0; c < 84; c++) {
+        // a bearing round the half-ellipse: 0 at the left springing, π at
+        // the right, π/2 at the crown
+        const q = hash(c, 201) * Math.PI;
+        const yy = GZ_T4 + GZ_DOME_H * Math.sin(q);
+        const ww = gzDomeW(yy);
+        const cx0 = Math.max(-ww, Math.min(ww, -ww * Math.cos(q) * (0.55 + hash(c, 202) * 0.5)));
+        if (hash(c, 208) > 0.48 + 0.52 * ((yy - GZ_T4) / GZ_DOME_H)) continue;
+        const n = 12 + Math.floor(hash(c, 203) * 15);
+        for (let i = 0; i < n; i++) {
+          const j = c * 37 + i;
+          const y = Math.max(GZ_T4 - 0.015, Math.min(GZ_CROWN - 0.005, yy + (hash(j, 204) - 0.5) * 0.20));
+          const w = gzDomeW(y);
+          const x = Math.max(-w, Math.min(w, cx0 + (hash(j, 205) - 0.5) * 0.30));
+          leaf(x, y, (hash(j, 207) - 0.5) * 1.0, j);
+          if (hash(j, 206) < 0.035) gzBloom(gzX(x), gzY(y), sz * 2.1, j);
+        }
+      }
+      // and it heaps where the dome comes down onto the drum, which is where
+      // the rain runs off and the leaf litter gathers
+      for (let c = 0; c < 34; c++) {
+        const x0 = (c / 33 * 2 - 1) * GZ_DOME_HW * 0.99 + (hash(c, 211) - 0.5) * 0.05;
+        const n = 3 + Math.floor(hash(c, 216) * 6);
+        for (let i = 0; i < n; i++) {
+          const j = c * 53 + i;
+          const y = GZ_T3 + hash(j, 217) * (GZ_T4 - GZ_T3 + 0.10);
+          const w = y > GZ_T4 ? gzDomeW(y) : GZ_CORN_HW;
+          const x = Math.max(-w, Math.min(w, x0 + (hash(j, 212) - 0.5) * 0.10));
+          leaf(x, y, (hash(j, 213) - 0.5) * 2.2, j);
+          if (hash(j, 246) < 0.05) gzBloom(gzX(x), gzY(y), sz * 2.0, j);
+        }
+      }
+
+      // Each pier is climbed. What makes a stem a plant rather than a cable is
+      // that it wanders and that its leaves come in handfuls, so the wander is
+      // wide and slow and the leaves are dealt in bunches with bare stem
+      // between.
+      for (const c of [{ x: -0.47, s: 311 }, { x: 0.47, s: 733 },
+                       { x: -0.92, s: 517 }, { x: 0.92, s: 971 }, { x: 0.47, s: 233 }]) {
+        const M = 30, top = GZ_T3 + 0.05, pts = [];
+        const wob = 3.2 + hash(c.s, 6) * 2.4, ph = hash(c.s, 5) * 6.2;
+        for (let i = 0; i <= M; i++) {
+          const u = i / M, y = -GZ_PL * 0.6 + (top + GZ_PL * 0.6) * u;
+          const sw = (Math.sin(u * wob + ph) * 0.7 + Math.sin(u * wob * 2.3 + ph * 2) * 0.3) * 0.075;
+          pts.push([gzX(c.x + sw), gzY(y)]);
+        }
+        gzStem(pts, Math.max(0.6, unit * 0.0075));
+        for (let i = 1; i < M; i++) {
+          const a = pts[i], b = pts[i + 1];
+          const slope = Math.atan2(b[1] - a[1], b[0] - a[0]) - Math.PI / 2;
+          if (hash(Math.floor(i / 3) * 13 + c.s, 219) > 0.82) continue;
+          for (const side of [1, -1]) {
+            if (hash(c.s * 3 + i * 7 + (side > 0 ? 1 : 2), 218) > 0.9) continue;
+            const j = c.s + i * (side > 0 ? 1 : 3);
+            gzOps.push({ t: 'l', x: a[0] + (hash(j, 222) - 0.5) * sz * 3,
+                         y: a[1] + (hash(j, 223) - 0.5) * sz * 3,
+                         ang: slope + side * (0.5 + hash(j, 213) * 0.7),
+                         size: sz * (0.6 + hash(j, 214) * 0.5) });
+          }
+          if (hash(c.s + i, 215) < 0.09) gzBloom(a[0], a[1], sz * 2.0, c.s + i);
+        }
+      }
+    }
+
+    // The ends that hang free, off the underside of the cornice: these are the
+    // shelf's own ivy, rooted in the air instead of in a trough, and they
+    // swing on the same wind. Short, leafy and bowed — long, straight and
+    // sparse they read as wire. Nothing hangs across the doorway, where it
+    // would be swinging over the drawing standing behind it.
+    function gzTrail(unit) {
+      for (let c = 0; c < 13; c++) {
+        const x = -1.12 + (c / 12) * 2.24 + (hash(c, 220) - 0.5) * 0.06;
+        if (Math.abs(x) < GZ_A + 0.06) continue;
+        const len = unit * (0.16 + Math.pow(hash(c, 221), 1.3) * 0.42);
+        const s = {
+          x: gzX(x), y0: gzY(GZ_T2), len, lean: (hash(c, 222) - 0.5) * 22, w: 0.75,
+          phase: hash(c, 223) * gzTAU, curl: (hash(c, 224) - 0.5) * 3.2,
+          twist: 0.7 + hash(c, 225) * 0.9, lag: hash(c, 226) * 320, leaves: [],
+        };
+        let t = 0.04 + hash(c, 227) * 0.05;
+        let side = hash(c, 228) > 0.5 ? 1 : -1, j = 0;
+        while (t < 0.98) {
+          s.leaves.push(t, side, 0.62 + hash(c * 7 + j, 229) * 0.5, (hash(c * 7 + j, 230) - 0.5) * 0.7);
+          t += (IVY_LEAF * (0.95 + hash(c * 7 + j, 112) * 0.6)) / Math.max(12, len);
+          side = -side; j++;
+        }
+        gazVines.push(s);
+      }
+    }
+
+    // ── raising it ─────────────────────────────────────────────────────────
+    // Once per layout, from the ground up. Nothing here draws.
+    function planGazebo(cx, base, unit) {
+      gzU = unit; gzOps = []; gazVines.length = 0;
+      gzCX = cx;
+      const ch = gzSetOut(unit);                // one course, for the whole of it
+      gzFY = base - GZ_PL * unit;               // the floor stands a plinth off the shelf
+      const len = ch * BRICK_LONG;              // three times as long
+      const ringD = ch * 1.9;                   // how deep the arch rings are turned
+      let domeOutline = null;
+      // the two piers, and their mirrors, as [x0, x1] pairs
+      const PIERS = [[-GZ_P1, -GZ_A], [GZ_A, GZ_P1], [-1, -GZ_P2], [GZ_P2, 1]];
+      const BAYS = [[-GZ_P2, -GZ_P1], [GZ_P1, GZ_P2]];
+
+      // What it throws on the shelf, before any of it is laid. Not an ellipse
+      // parked underneath it: the building run out along the ledge away from
+      // whatever is up in the sky, and lengthening as that gets lower.
+      //
+      // Drawn flat, the grove has no ground to lay a shadow on — the shelf is
+      // a wall seen straight on and its top is a line. So the shadow does what
+      // a shadow does to a parapet in any picture painted from the front: it
+      // starts at the top edge of the ledge and comes down the face of it,
+      // deep where the building stands and thinning to nothing by the far end.
+      // The near end is the plinth's own footing and the far end is the
+      // dome's; the outline is the smooth greater of the two, so the tongue
+      // swells out of the footing instead of being stuck on the side of it.
+      // It stops where the ledge does, because past that there is nothing for
+      // it to fall on.
+      {
+        const w0 = GZ_PL_HW * 1.04 * unit, t0 = unit * 0.130;
+        const w1 = GZ_DOME_HW * unit * 0.70, t1 = unit * 0.052;
+        const y0 = base + 0.5;
+        gzGrad([], '', '', [0, 0], [0, 0]);
+        gzSun(op => {
+          const reach = LIGHT.k * GZ_TIP * unit;
+          const tipx = Math.max(ledgeX0 + w1 * 0.4,
+                                Math.min(ledgeX1 - w1 * 0.4, cx + reach));
+          const xL = Math.max(ledgeX0, Math.min(cx - w0, tipx - w1));
+          const xR = Math.min(ledgeX1, Math.max(cx + w0, tipx + w1));
+          const N = 40, pts = op.pts;
+          pts.length = 0;
+          pts.push([xL, y0], [xR, y0]);            // the top edge is the ledge
+          for (let i = N; i >= 0; i--) {
+            const x = xL + ((xR - xL) * i) / N;
+            const a = Math.max(0, 1 - ((x - cx) / w0) ** 2);
+            const b = Math.max(0, 1 - ((x - tipx) / w1) ** 2);
+            const ta = t0 * Math.sqrt(a), tb = t1 * Math.sqrt(b);
+            pts.push([x, y0 + Math.cbrt(ta * ta * ta + tb * tb * tb)]);
+          }
+          op.a = [cx - reach * 0.34, y0];
+          op.b = [cx + reach, y0];
+          op.from  = `rgba(${STONE.shade[1]},0.34)`;
+          op.to    = `rgba(${STONE.shade[1]},0)`;
+          op.fromN = `rgba(${STONE.shade[0]},0.46)`;
+          op.toN   = `rgba(${STONE.shade[0]},0)`;
+        }, true);
+      }
+
+      // ── the plinth ─────────────────────────────────────────────────────
+      gzBand(-GZ_PL_HW, GZ_PL_HW, -GZ_PL, -ch, ch, len, { salt: 700, up: 0 });
+      gzBand(-GZ_PL_HW * 1.02, GZ_PL_HW * 1.02, -ch, 0, ch, len, { salt: 730 });
+      // the shadow the plinth's own oversail throws on the course below it
+      gzFill('rgba(20,12,8,0.20)',
+             [[gzX(-GZ_PL_HW), gzY(-ch)], [gzX(GZ_PL_HW), gzY(-ch)],
+              [gzX(GZ_PL_HW), gzY(-ch) + Math.max(1, unit * 0.016)],
+              [gzX(-GZ_PL_HW), gzY(-ch) + Math.max(1, unit * 0.016)]],
+             'rgba(0,0,0,0.34)');
+
+      // and what the harp throws on the floor it stands on, which leans the
+      // same way for the same reason — a little, since it is a slender thing
+      // standing well back under an arch
+      {
+        const w = GZ_A * GZ_HARP * unit, hh = GZ_A * 2 * GZ_HARP * 1.483 * unit;
+        gzFill('', [], '');
+        gzSun(op => {
+          const lean = LIGHT.k * hh * 0.30;
+          const rx = w + Math.abs(lean) * 0.5;
+          const pts = op.pts;
+          pts.length = 0;
+          for (let i = 0; i < 22; i++) {
+            const a = (i / 22) * gzTAU;
+            pts.push([gzX(0) + lean * 0.5 + Math.cos(a) * rx,
+                      gzY(0.004) + Math.sin(a) * unit * 0.022]);
+          }
+          op.col  = `rgba(${STONE.shade[1]},0.30)`;
+          op.colN = `rgba(${STONE.shade[0]},0.40)`;
+        }, true);
+      }
+
+      // ── the balustrades, the piers, the imposts, the arches ─────────────
+      // In that order, which is the order they would go up in and the order
+      // they have to be painted in: a pier is set against the wall beside it,
+      // an impost sits on the pier, and the ring of an arch lands on the
+      // impost. Anything laid the other way round has to be cut to fit, and
+      // cutting to fit is where the gaps came from.
+      // The side bays are open to the floor. They had a low wall across the
+      // bottom of each — a balustrade, which is what a garden building
+      // usually has — and it read as two panels of brick bricked into two
+      // windows. What a window wants under it is a sill and daylight, so the
+      // wall is gone and the plinth is the sill.
+      for (const p of PIERS) {
+        gzBand(p[0], p[1], 0, GZ_CAP - ch, ch, len, { salt: 500 + Math.round(p[0] * 100) });
+        gzBand(p[0] - 0.018, p[1] + 0.018, GZ_CAP - ch, GZ_CAP, ch, len,
+               { salt: 560 + Math.round(p[0] * 100) });          // the cap on it
+        // and the light down it, which is what says a pier is round. Which of
+        // its two edges is the lit one is not settled here — it is settled by
+        // where the sun has got to when the frame is drawn, and it swaps over
+        // when the sun crosses the pavilion.
+        gzGrad([[gzX(p[0]), gzY(GZ_CAP)], [gzX(p[1]), gzY(GZ_CAP)], [gzX(p[1]), gzY(0)], [gzX(p[0]), gzY(0)]],
+               '', '', [0, 0], [0, 0]);
+        {
+          const ea = gzX(p[0]), eb = gzX(p[1]);
+          gzSun(op => {
+            const q = 0.40 + 0.60 * LIGHT.low;
+            op.a = [LIGHT.dx >= 0 ? eb : ea, 0];
+            op.b = [LIGHT.dx >= 0 ? ea : eb, 0];
+            op.from  = `rgba(255,248,236,${(0.21 * q).toFixed(3)})`;
+            op.to    = `rgba(14,8,5,${(0.30 * q).toFixed(3)})`;
+            op.fromN = `rgba(214,228,255,${(0.15 * q).toFixed(3)})`;
+            op.toN   = `rgba(2,4,9,${(0.34 * q).toFixed(3)})`;
+          });
+        }
+      }
+      // The imposts: a block on each pier at the height the arches spring
+      // from, projecting a little either side. It is what a brick arch
+      // actually lands on, and it draws one line right across the front of
+      // the building, which is what holds three bays together as one facade.
+      for (const p of PIERS) {
+        const a = Math.max(-1, p[0] - 0.024), b = Math.min(1, p[1] + 0.024);
+        gzBand(a, b, GZ_SPRING - ch, GZ_SPRING, ch, len, { salt: 470 + Math.round(p[0] * 100) });
+      }
+      // the walls over the openings, each cut round its own arch
+      for (const b of BAYS) {
+        const cxb = (b[0] + b[1]) / 2;
+        const cl = { rect: [gzX(b[0]), gzY(GZ_CAP) - GZ_BLEED, gzX(b[1]), gzY(0)],
+                     arch: [gzX(cxb), gzY(GZ_SIDE_S), (GZ_SIDE_R + ringD) * unit, gzY(0)] };
+        gzBand(b[0], b[1], 0, GZ_CAP, ch, len, { salt: 300 + Math.round(b[0] * 100), cl });
+      }
+      {
+        const cl = { rect: [gzX(-GZ_A), gzY(GZ_CAP) - GZ_BLEED, gzX(GZ_A), gzY(0)],
+                     arch: [gzX(0), gzY(GZ_SPRING), (GZ_A + ringD) * unit, gzY(0)] };
+        gzBand(-GZ_A, GZ_A, GZ_SPRING, GZ_CAP, ch, len, { salt: 380, cl });
+      }
+      // and then the rings that turn them
+      for (const b of BAYS) {
+        gzArch((b[0] + b[1]) / 2, GZ_SIDE_S, GZ_SIDE_R, ringD, ch, 340 + Math.round(b[0] * 100), 0);
+      }
+      gzArch(0, GZ_SPRING, GZ_A, ringD, ch, 420, 0);
+      {
+        // a keystone, which is the one brick in an arch that is allowed to be
+        // bigger than the rest
+        // Its underside is the intrados and not a hair below it: a keystone
+        // that dips into the opening is a brick resting on an arch, which is
+        // the one thing a keystone is not.
+        const kw = ringD * 0.72, kh = ringD * 1.46;
+        gzStamp(455, gzX(-kw), gzY(GZ_SPRING + GZ_A + kh), kw * 2 * unit, kh * unit, 0.07);
+      }
+
+      // ── the entablature ────────────────────────────────────────────────
+      gzBand(-1.02, 1.02, GZ_CAP, GZ_T1, ch, len, { salt: 600 });
+      // the frieze is laid flush and the dentils stand out of it, so what
+      // shows between them is the wall behind and not the sky
+      gzBand(-1.00, 1.00, GZ_T1, GZ_T2, ch, len, { salt: 614, sh: -0.24 });
+      gzBand(-1.06, 1.06, GZ_T1 + (GZ_T2 - GZ_T1) * 0.16, GZ_T2, (GZ_T2 - GZ_T1) * 0.84, len * 0.5,
+             { salt: 620, gap: 0.52, bare: true });
+      // The cornice throws out past the rest, and one dark band under it is
+      // most of what says the roof is a roof and not a hat.
+      gzFill('rgba(14,10,7,0.50)',
+             [[gzX(-GZ_CORN_HW), gzY(GZ_T2)], [gzX(GZ_CORN_HW), gzY(GZ_T2)],
+              [gzX(GZ_CORN_HW), gzY(GZ_T2) + Math.max(1.2, unit * 0.022)],
+              [gzX(-GZ_CORN_HW), gzY(GZ_T2) + Math.max(1.2, unit * 0.022)]],
+             'rgba(0,0,0,0.62)');
+      gzBand(-GZ_CORN_HW, GZ_CORN_HW, GZ_T2, GZ_T3, ch, len, { salt: 640 });
+      gzBand(-GZ_DRUM_HW, GZ_DRUM_HW, GZ_T3, GZ_T4, ch, len, { salt: 660 });
+      // The drum is a cylinder the same as a pier is, and it was the one round
+      // thing on the building that had no light down it: the dome above it
+      // turned and the piers below it turned and the band between them stayed
+      // flat, which is exactly the kind of place the eye stops on.
+      {
+        const da = gzX(-GZ_DRUM_HW), db = gzX(GZ_DRUM_HW);
+        gzGrad([[da, gzY(GZ_T4)], [db, gzY(GZ_T4)], [db, gzY(GZ_T3)], [da, gzY(GZ_T3)]],
+               '', '', [0, 0], [0, 0]);
+        gzSun(op => {
+          const q = 0.40 + 0.60 * LIGHT.low;
+          op.a = [LIGHT.dx >= 0 ? db : da, 0];
+          op.b = [LIGHT.dx >= 0 ? da : db, 0];
+          op.from  = `rgba(255,248,236,${(0.21 * q).toFixed(3)})`;
+          op.to    = `rgba(14,8,5,${(0.32 * q).toFixed(3)})`;
+          op.fromN = `rgba(214,228,255,${(0.14 * q).toFixed(3)})`;
+          op.toN   = `rgba(2,4,9,${(0.36 * q).toFixed(3)})`;
+        });
+      }
+
+      // ── the dome, and what stands on top of it ─────────────────────────
+      const ys = gzDomeCourses(ch);
+      for (let i = 0; i + 1 < ys.length; i++) gzDomeCourse(ys[i], ys[i + 1], len * 0.95, 680 + i);
+      // A sphere of light over the whole of it. Flat, this is the only thing
+      // that says the dome is a dome and not a semicircle with a wall pattern
+      // on it — so it does the work three hundred foreshortened bricks were
+      // doing badly.
+      {
+        const out = [];
+        for (let i = 0; i <= 40; i++) {
+          const y = GZ_T4 + (GZ_CROWN - GZ_T4) * (i / 40);
+          out.push([gzX(-gzDomeW(y)), gzY(y)]);
+        }
+        for (let i = 40; i >= 0; i--) {
+          const y = GZ_T4 + (GZ_CROWN - GZ_T4) * (i / 40);
+          out.push([gzX(gzDomeW(y)), gzY(y)]);
+        }
+        domeOutline = out;
+        gzRad(out, [[0, 'rgba(255,247,230,0.26)'], [0.34, 'rgba(255,242,222,0.05)'],
+                    [0.62, 'rgba(24,14,9,0.10)'], [0.86, 'rgba(18,10,6,0.24)'],
+                    [1, 'rgba(12,7,4,0.40)']],
+              [gzX(0), gzY(GZ_T4 + GZ_DOME_H * 0.7)],
+              GZ_DOME_HW * 0.06 * unit, GZ_DOME_HW * 1.26 * unit);
+        // by night the same sphere, lit by a moon: cooler, and half as bright
+        gzOps[gzOps.length - 1].stopsN =
+          [[0, 'rgba(208,226,255,0.17)'], [0.34, 'rgba(190,210,246,0.04)'],
+           [0.62, 'rgba(6,9,16,0.13)'], [0.86, 'rgba(3,5,10,0.28)'],
+           [1, 'rgba(1,2,6,0.46)']];
+        // and the high point of it stands where the light is: round to the
+        // sun's side of the dome, and down its flank as the sun goes down
+        gzSun(op => {
+          op.c = [gzX(LIGHT.dx * 0.52 * GZ_DOME_HW),
+                  gzY(GZ_T4 + GZ_DOME_H * (0.16 + 0.78 * LIGHT.up))];
+        });
+      }
+      {
+        // A finial: three diminishing courses stepping in, and a ball on top
+        // of them. It was a spike before, and a spike four pixels wide is a
+        // splinter — a ball is legible at any size and it is what actually
+        // sits on the top of a brick dome.
+        let y = GZ_CROWN - ch * 0.4;
+        for (let j = 0; j < 3; j++) {
+          const w = 0.135 - j * 0.030, h = GZ_FIN * 0.235;
+          gzBand(-w, w, y, y + h, h, len * 0.55, { salt: 760 + j * 7, up: 0 });
+          y += h;
+        }
+        const r = Math.max(1.6, 0.046 * unit), cyb = gzY(y) - r * 0.90, cxb = gzX(0);
+        const ball = [];
+        for (let i = 0; i < 22; i++) {
+          const a = (i / 22) * gzTAU;
+          ball.push([cxb + Math.cos(a) * r, cyb + Math.sin(a) * r]);
+        }
+        gzFill('rgba(150,92,60,0.95)', ball, 'rgba(74,76,82,0.95)');
+        gzRad(ball, [[0, 'rgba(255,246,228,0.55)'], [0.55, 'rgba(255,240,216,0.06)'],
+                     [1, 'rgba(14,8,5,0.45)']],
+              [cxb, cyb], r * 0.06, r * 1.5);
+        gzOps[gzOps.length - 1].stopsN =
+          [[0, 'rgba(216,232,255,0.42)'], [0.55, 'rgba(196,214,248,0.05)'],
+           [1, 'rgba(1,3,8,0.50)']];
+        gzSun(op => {
+          op.c = [cxb + LIGHT.dx * r * 0.40, cyb + LIGHT.dy * r * 0.42];
+        });
+      }
+
+      // ── and one light over the whole of it ─────────────────────────────
+      // Flat, the building has no shaded side of its own to give it away, so
+      // this one wash is the sun: everything under it — plinth, piers,
+      // arches, entablature, drum and dome alike — is lit from the same
+      // quarter and shaded on the same side, which is the whole of what makes
+      // a row of separate pieces read as one building standing in one light.
+      // The modelling on the round parts sits on top of this and is only ever
+      // a refinement of it; when the wash was faint the dome was the only
+      // thing on the building that appeared to know where the sun was.
+      // It is cut to the building's own outline and to the three holes in it,
+      // or it would hang in the sky behind the arches like weather.
+      {
+        const P = (x, y) => [gzX(x), gzY(y)];
+        const sil = [P(-GZ_PL_HW, -GZ_PL), P(-GZ_PL_HW, -GZ_PL * 0.30),
+                     P(-GZ_PL_HW * 1.02, -GZ_PL * 0.30), P(-GZ_PL_HW * 1.02, 0),
+                     P(-1, 0), P(-1, GZ_CAP), P(-1.02, GZ_CAP), P(-1.02, GZ_T1),
+                     P(-1.06, GZ_T1), P(-1.06, GZ_T2), P(-GZ_CORN_HW, GZ_T2),
+                     P(-GZ_CORN_HW, GZ_T3), P(-GZ_DRUM_HW, GZ_T3), P(-GZ_DRUM_HW, GZ_T4)];
+        for (let i = 0; i <= 36; i++) {
+          const y = GZ_T4 + (GZ_CROWN - GZ_T4) * (i / 36);
+          sil.push(P(-gzDomeW(y), y));
+        }
+        for (let i = 36; i >= 0; i--) {
+          const y = GZ_T4 + (GZ_CROWN - GZ_T4) * (i / 36);
+          sil.push(P(gzDomeW(y), y));
+        }
+        sil.push(P(GZ_DRUM_HW, GZ_T4), P(GZ_DRUM_HW, GZ_T3), P(GZ_CORN_HW, GZ_T3),
+                 P(GZ_CORN_HW, GZ_T2), P(1.06, GZ_T2), P(1.06, GZ_T1),
+                 P(1.02, GZ_T1), P(1.02, GZ_CAP), P(1, GZ_CAP), P(1, 0),
+                 P(GZ_PL_HW * 1.02, 0), P(GZ_PL_HW * 1.02, -GZ_PL * 0.30),
+                 P(GZ_PL_HW, -GZ_PL * 0.30), P(GZ_PL_HW, -GZ_PL));
+        const hole = (c, r, sill) => {
+          const h = [P(c - r, sill), P(c - r, GZ_SIDE_S)];
+          for (let i = 0; i <= 20; i++) {
+            const a = Math.PI - (i / 20) * Math.PI;
+            h.push(P(c + Math.cos(a) * r, GZ_SIDE_S + Math.sin(a) * r));
+          }
+          h.push(P(c + r, sill));
+          return h;
+        };
+        const cl = { polys: [sil, hole(0, GZ_A, 0),
+                             hole(-GZ_SIDE_C, GZ_SIDE_R, 0),
+                             hole(GZ_SIDE_C, GZ_SIDE_R, 0)] };
+        gzGrad(sil, '', '', [0, 0], [0, 0], cl);
+        {
+          const mx = gzX(0), my = gzY((GZ_TIP - GZ_PL) / 2), R = 1.55 * unit;
+          gzSun(op => {
+            const q = 0.55 + 0.45 * LIGHT.low;
+            op.a = [mx + LIGHT.dx * R, my + LIGHT.dy * R];
+            op.b = [mx - LIGHT.dx * R, my - LIGHT.dy * R];
+            op.from  = `rgba(255,246,226,${(0.26 * q).toFixed(3)})`;
+            op.to    = `rgba(16,9,5,${(0.32 * q).toFixed(3)})`;
+            op.fromN = `rgba(200,219,255,${(0.15 * q).toFixed(3)})`;
+            op.toN   = `rgba(2,4,9,${(0.34 * q).toFixed(3)})`;
+          });
+        }
+      }
+
+      // ── and then it is planted ─────────────────────────────────────────
+      const nFabric = gzOps.length;
+      gzPlant(ch, unit);
+      gzTrail(unit);
+      gzFinish(cx, base, unit, nFabric, domeOutline);
+    }
+
+    // ── where it all landed, and when each of it arrives ───────────────────
+    function gzFinish(cx, base, unit, nFabric, domeOutline) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      const see = (x, y) => { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; };
+      for (const op of gzOps) {
+        if (op.sun) continue;           // a shadow is not part of the building
+        if (op.t === 'b') {
+          see(op.ox, op.oy); see(op.ox + op.ex, op.oy + op.ey);
+          see(op.ox + op.fx, op.oy + op.fy); see(op.ox + op.ex + op.fx, op.oy + op.ey + op.fy);
+        } else if (op.t === 'l' || op.t === 'f') {
+          const r = IVY_S * 2 * (op.size || 1) + (op.r || 0);
+          see(op.x - r, op.y - r); see(op.x + r, op.y + r);
+        } else for (const p of op.pts) see(p[0], p[1]);
+      }
+      const pad = 5;
+
+      // Every stamp is dealt a moment to arrive in. The order is the order
+      // the list is already in, so the building goes up the way it was drawn:
+      // the plinth, the bays, the arches, the piers, the cornice, the dome
+      // course by course, and the ivy over it once there is something to
+      // climb. What holds it together is that the arrival time never runs
+      // backwards along the list — the sheet is baked from one end and a
+      // stamp can be put out of the way for good the moment it has landed.
+      const nIvy = Math.max(1, gzOps.length - nFabric);
+      for (let i = 0; i < gzOps.length; i++) {
+        const op = gzOps[i];
+        op.d = i < nFabric ? (i / nFabric) * GZ_LAY
+                           : GZ_LAY + ((i - nFabric) / nIvy) * GZ_GROW;
+        op.dur = op.t === 'b' ? 0.15 + hash(i, 301) * 0.09 : 0.30;
+      }
+      // Everything that is not a brick or a leaf is a coat of something — a
+      // bed of mortar under a course, a light down a pier, the shadow the
+      // cornice throws — and a coat has to be painted with the course it
+      // belongs to, not a moment either side of it. Left on its own clock, a
+      // bed arrived before its bricks and the opening showed a grey ghost of
+      // the whole pavilion running a beat ahead of the brickwork, and a
+      // gradient arrived over bricks that were still half in the air and
+      // hazed them over. A bed is a solid shape and its bricks are a scatter
+      // of small ones, so it does not fade up with them either: it waits for
+      // the last of them to be down and then goes in at once, and what shows
+      // of it after that is the joints, which is all a bed is ever meant to
+      // show.
+      const solid = op => op.t === 'b' || op.t === 'l' || op.t === 'f';
+      for (let i = 0; i < gzOps.length; i++) {
+        if (solid(gzOps[i])) continue;
+        let j = i;
+        while (j + 1 < gzOps.length && !solid(gzOps[j + 1])) j++;
+        let d = null, snap = false;
+        if (j + 1 < gzOps.length && gzOps[j + 1].t === 'b') {
+          let k = j + 1;
+          while (k + 1 < gzOps.length && gzOps[k + 1].t === 'b') k++;
+          d = gzOps[k].d + gzOps[k].dur;
+          snap = true;
+        } else {
+          let k = i - 1;
+          while (k >= 0 && gzOps[k].t !== 'b') k--;
+          if (k >= 0) d = gzOps[k].d + gzOps[k].dur;
+        }
+        if (d !== null) for (let m = i; m <= j; m++) { gzOps[m].d = d; if (snap) gzOps[m].dur = 0.02; }
+        i = j;
+      }
+
+      gaz = {
+        cx, base, u: unit, nFabric,
+        box: { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 },
+        ops: gzOps,
+        // the coats the sun lays: what goes under the building, and what over
+        under: gzOps.filter(o => o.sun && o.under),
+        over: gzOps.filter(o => o.sun && !o.under),
+        // the footprint a press lands in, so a hand on the pavilion is not a
+        // hand on whichever tree happens to stand behind it
+        hit: { x0: x0 - 2, x1: x1 + 2, y0: y0 - 2, y1: base + 4 },
+      };
+      gazDay = gazNight = null;
+      gazHead = 0;
+
+      // Where the harp stands: the clear width of the entrance, and the floor
+      // it sets its base on.
+      const hw = Math.max(20, Math.round(GZ_A * 2 * GZ_HARP * unit));
+      gaz.harp = { w: hw, h: Math.round(hw * 1379 / 930), cx, bottom: gzY(0.01) };
+      // where the music comes out, which is the top of the roof
+      gaz.crown = { x: gzX(0), y: gzY(GZ_CROWN), w: GZ_DOME_HW * 2 * unit };
+      // and the line a bird walks along it, which the outline already is:
+      // up the left flank, over the crown, down the right
+      gaz.dome = domeOutline || [];
+      // The sills of the two side bays. They are windows with a ledge in
+      // them and an arch over the ledge, which is the most sat-on shape in
+      // any garden — so they are handed to the air as runs, the way the roof
+      // is handed over as a line.
+      gaz.ledges = [
+        { x0: gzX(-GZ_P2), x1: gzX(-GZ_P1), y: gzY(0) },
+        { x0: gzX(GZ_P1), x1: gzX(GZ_P2), y: gzY(0) },
+      ];
+      G.gazebo = gaz;                 // for a look from the console
+      G.light = LIGHT;                // and where the light is coming from
+    }
+
+    // ── painting it ────────────────────────────────────────────────────────
+    // One stamp, in one light. It is the same call whether the stamp is going
+    // into a sheet for good or being drawn for a frame on its way down, which
+    // is what keeps a brick in the air identical to the one beside it that has
+    // landed.
+    const GZ_MORTAR = MORTAR;
+    function gzPath(g, pts) {
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.closePath();
+    }
+    // A stamp may be cut to a shape: to the curve of the dome, or to a wall
+    // with an arch taken out of it. Both are exact, which is what an arch
+    // sitting cleanly in a wall costs when the wall is laid in whole bricks.
+    function gzClip(g, cl) {
+      g.beginPath();
+      if (cl.polys) { for (const p of cl.polys) gzPath(g, p); g.clip('evenodd'); return; }
+      if (cl.poly) { gzPath(g, cl.poly); g.clip(); return; }
+      const r = cl.rect;
+      g.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+      if (cl.arch) {
+        const a = cl.arch;                    // cx, springing y, radius, sill y
+        g.moveTo(a[0] - a[2], a[3]);
+        g.lineTo(a[0] - a[2], a[1]);
+        g.arc(a[0], a[1], a[2], Math.PI, 0, false);
+        g.lineTo(a[0] + a[2], a[3]);
+        g.closePath();
+      }
+      g.clip('evenodd');
+    }
+    function gzDrawOp(g, op, day, alpha) {
+      if (alpha <= 0.002) return;
+      if (op.cl) { g.save(); gzClip(g, op.cl); }
+      g.globalAlpha = alpha;
+      if (op.t === 'b') {
+        const sp = gzSprite(op.v, op.ar, day), P = BRICK_PAD;
+        g.save();
+        g.transform(op.ex / sp.w, op.ey / sp.w, op.fx / sp.h, op.fy / sp.h, op.ox, op.oy);
+        g.drawImage(sp.cv, -P, -P, sp.w + P * 2, sp.h + P * 2);
+        if (op.sh) {
+          g.fillStyle = op.sh < 0 ? `rgba(10,6,4,${Math.min(0.7, -op.sh)})`
+                                  : `rgba(255,246,232,${Math.min(0.7, op.sh)})`;
+          g.fillRect(0, 0, sp.w, sp.h);
+        }
+        g.restore();
+      } else if (op.t === 'm') {
+        g.fillStyle = GZ_MORTAR(day ? 1 : 0);
+        gzPath(g, op.pts); g.fill();
+        if (op.sh) {
+          g.fillStyle = op.sh < 0 ? `rgba(10,6,4,${Math.min(0.7, -op.sh)})`
+                                  : `rgba(255,246,232,${Math.min(0.55, op.sh)})`;
+          g.fill();
+        }
+      } else if (op.t === 'p') {
+        g.fillStyle = (day ? op.col : op.colN) || op.col; gzPath(g, op.pts); g.fill();
+      } else if (op.t === 'g') {
+        const gr = g.createLinearGradient(op.a[0], op.a[1], op.b[0], op.b[1]);
+        gr.addColorStop(0, (day ? op.from : op.fromN) || op.from);
+        gr.addColorStop(1, (day ? op.to : op.toN) || op.to);
+        g.fillStyle = gr; gzPath(g, op.pts); g.fill();
+      } else if (op.t === 'r') {
+        const gr = g.createRadialGradient(op.c[0], op.c[1], op.r0, op.c[0], op.c[1], op.r1);
+        for (const s of (day ? op.stops : op.stopsN) || op.stops) gr.addColorStop(s[0], s[1]);
+        g.fillStyle = gr; gzPath(g, op.pts); g.fill();
+      } else if (op.t === 's') {
+        g.strokeStyle = ivyTone([56, 56, 56], [50, 68, 40], day ? 1 : 0);
+        g.lineWidth = op.w; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath();
+        g.moveTo(op.pts[0][0], op.pts[0][1]);
+        for (let i = 1; i < op.pts.length; i++) g.lineTo(op.pts[i][0], op.pts[i][1]);
+        g.stroke();
+      } else if (op.t === 'l') {
+        const d = IVY_S * 2 * op.size, hd = d / 2;
+        const c = Math.cos(op.ang), s = Math.sin(op.ang);
+        g.save();
+        g.transform(c, s, -s, c, op.x, op.y);
+        g.globalAlpha = alpha * 0.94;
+        g.drawImage(ivyLeafSprite(day ? 1 : 0), -hd, -hd * 0.35, d, d);
+        g.restore();
+      } else if (op.t === 'f') {
+        // a small pale rose, which is what climbs a thing like this
+        const r = op.r;
+        g.fillStyle = day ? 'rgba(250,244,228,0.94)' : 'rgba(154,158,164,0.72)';
+        g.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * gzTAU + hash(op.k, 241) * 2;
+          g.moveTo(op.x, op.y);
+          g.arc(op.x + Math.cos(a) * r * 0.42, op.y + Math.sin(a) * r * 0.42, r * 0.40, 0, gzTAU);
+        }
+        g.fill();
+        g.fillStyle = day ? 'rgba(214,186,120,0.85)' : 'rgba(110,114,120,0.7)';
+        g.beginPath(); g.arc(op.x, op.y, r * 0.18, 0, gzTAU); g.fill();
+      }
+      g.globalAlpha = 1;
+      if (op.cl) g.restore();
+    }
+
+    // ── building it ────────────────────────────────────────────────────────
+    // It is not revealed, it is built: every brick is dealt a moment to arrive
+    // in and arrives by swelling out of nothing and dropping the last few
+    // pixels, which is what the shelf's own bricks do when the page opens.
+    // Only the handful still in the air is drawn per frame. Everything that
+    // has landed is stamped once into the two sheets and never drawn again, so
+    // the opening costs a pair of blits and a few dozen stamps rather than two
+    // thousand.
+    const GZ_WAIT = 0.95;     // s after the opening starts — the shelf goes first
+    const GZ_LAY = 1.40;      // and this long to lay the brickwork
+    const GZ_GROW = 1.05;     // and for the ivy to come over it after
+    let gazDayG = null, gazNightG = null, gazHead = 0, gazT0 = 0;
+
+    function gzOpen() {
+      const b = gaz.box;
+      const make = () => {
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.ceil(b.w * dpr));
+        cv.height = Math.max(1, Math.ceil(b.h * dpr));
+        const g = cv.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, -b.x * dpr, -b.y * dpr);
+        return { cv, g };
+      };
+      const d = make(), n = make();
+      gazDay = d.cv; gazDayG = d.g;
+      gazNight = n.cv; gazNightG = n.g;
+      gazHead = 0;
+    }
+
+    // One coat of light: put where the sun is, then laid over the building.
+    // It fades in with the course it belongs to, the same as everything else,
+    // so the opening never lights a wall that is not up yet.
+    function gzShine(op, t, day, night) {
+      if (op.d > t) return;
+      const a = Math.min(1, ((t - op.d) / op.dur) * 2.4);
+      if (a <= 0.002) return;
+      op.sun(op);
+      if (night > 0.001) gzDrawOp(ctx, op, false, night * a);
+      if (day > 0.001) gzDrawOp(ctx, op, true, day * a);
+    }
+
+    function drawGazebo(now) {
+      if (!gaz) return;
+      if (!gazDay || gazDay.width !== Math.max(1, Math.ceil(gaz.box.w * dpr))) gzOpen();
+      if (!gazT0 && INTRO) {
+        const I = window.__intro;
+        if (I && I.t0) gazT0 = I.t0 + GZ_WAIT * 1000;
+      }
+      const t = INTRO ? (gazT0 ? (now - gazT0) / 1000 : -1) : Infinity;
+      if (t < 0) return;
+      const ops = gaz.ops, n = ops.length;
+      // everything that has landed goes into the sheets, from the front of the
+      // list, and is out of the way for good
+      while (gazHead < n && t >= ops[gazHead].d + ops[gazHead].dur) {
+        const op = ops[gazHead++];
+        if (op.sun) continue;                  // the light is never baked in
+        gzDrawOp(gazDayG, op, true, 1);
+        gzDrawOp(gazNightG, op, false, 1);
+      }
+      const b = gaz.box, day = mix, night = 1 - mix;
+      // what it throws goes down before it does
+      for (const op of gaz.under) gzShine(op, t, day, night);
+      if (night > 0.001) { ctx.globalAlpha = night; ctx.drawImage(gazNight, b.x, b.y, b.w, b.h); }
+      if (day > 0.001) { ctx.globalAlpha = day; ctx.drawImage(gazDay, b.x, b.y, b.w, b.h); }
+      ctx.globalAlpha = 1;
+      // and the ones still coming down. A stamp that has landed but has not
+      // been stamped into the sheet yet — because something ahead of it in the
+      // list is still in the air — is drawn here at rest, which is the same
+      // picture the sheet would give: the pop is identity at u = 1.
+      for (let i = gazHead; i < n; i++) {
+        const op = ops[i];
+        if (op.sun || op.d > t) continue;
+        const u = Math.min(1, (t - op.d) / op.dur);
+        const e = 1 - Math.pow(1 - u, 3);
+        // solid before it has finished settling, which is what a brick being
+        // laid looks like; fading the whole way up reads as the wall
+        // developing rather than being built
+        const a = Math.min(1, u * 2.4);
+        const sc = 0.74 + 0.26 * e, dy = 6 * (1 - e);
+        const ax = op.t === 'b' ? op.ox + op.ex * 0.5 + op.fx : (op.x === undefined ? null : op.x);
+        const ay = op.t === 'b' ? op.oy + op.ey * 0.5 + op.fy : op.y;
+        ctx.save();
+        if (ax !== null) {
+          ctx.translate(ax, ay + dy);
+          ctx.scale(sc, sc);
+          ctx.translate(-ax, -ay);
+        }
+        if (night > 0.001) gzDrawOp(ctx, op, false, night * a);
+        if (day > 0.001) gzDrawOp(ctx, op, true, day * a);
+        ctx.restore();
+      }
+      // and the light over the top of it, from wherever the sun is now
+      for (const op of gaz.over) gzShine(op, t, day, night);
+      const vine = t === Infinity ? 1 : Math.max(0, Math.min(1, (t - GZ_LAY * 0.86) / GZ_GROW));
+      if (vine > 0) drawStrands(gazVines, now, vine);
+    }
+
     // A little shade under each trunk, so the plants stand on the glass
-    // rather than end at it.
+    // rather than end at it. It leans off the trunk the same way the
+    // pavilion's does and for the same reason, though nothing like as far:
+    // this is the dark where a trunk meets the ledge, not the shadow of a
+    // whole tree, and a tree's real shadow would be off the page.
     function drawFootings() {
       ctx.fillStyle = mix > 0.5 ? 'rgba(20,30,20,0.13)' : 'rgba(0,0,0,0.26)';
       for (const t of trees) {
         if (!t.sx || t.grow < 0.05) continue;
         // it comes in with the trunk, and goes with it when the tree is pressed
         const r = Math.max(2.5, t.width * 2.6) * Math.min(1, t.grow * 1.5);
+        const lean = LIGHT.k * r * 1.6;
         ctx.beginPath();
-        ctx.ellipse(t.ox, ground + 0.6, r, 1.1, 0, 0, Math.PI * 2);
+        ctx.ellipse(t.ox + lean * 0.5, ground + 0.6,
+                    r + Math.abs(lean) * 0.5, 1.1, 0, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -5180,8 +6494,9 @@
       });
       const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
 
-      let x = edge;
-      trees.forEach(t => {
+      const xs = fit.xs;
+      trees.forEach((t, i) => {
+        const x = xs ? xs[i] : edge + i * (slot + gap);
         if (!only || t === only) {
           const b = t.box;
           const spanX = Math.max(1e-6, b.maxX - b.minX);
@@ -5203,7 +6518,6 @@
           t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
           planFoliage(t);
         }
-        x += slot + gap;
       });
     }
 
@@ -5233,11 +6547,11 @@
         top = nameEl.getBoundingClientRect().top - rect.top;
         // the whole stack is one button's height less the optical trim,
         // centred on the row
-        LEDGE_H = Math.max(LEDGE_N * 4, Math.round(bh) - LEDGE_TRIM * 2);
+        LEDGE_H = Math.max(16, Math.round(bh) - LEDGE_TRIM * 2);
         treeBase = lr.top - rect.top + LEDGE_TRIM - LEDGE_LIFT;
         ivyEnd = lr.bottom - rect.top + Math.min(46, BLEED_BOTTOM - 14);
       }
-      const courses = ledgeCourses(LEDGE_H);
+      const courses = ledgeCourses(LEDGE_H, W - (BLEED_X + 14) * 2 + LEDGE_PAD * 2);
       const band = Math.max(40, treeBase - top);
       ground = treeBase;
       // the ivy grows on top of the shelf and spills over its front, so it
@@ -5278,16 +6592,57 @@
       const edge = BLEED_X + 14;
       const n = trees.length;
       const gap = Math.max(6, W * 0.012);
-      // The slots are inset from the gutter by as much as a crown may
-      // overhang its slot, so the outermost trees have the same room to
-      // spread as the inner ones and are not cut off at the canvas edge:
-      // slot * (n + 2k) = usable width, with k the overhang each side.
-      const over = (OVERLAP - 1) / 2;
-      const slot = ((W - edge * 2) - gap * (n - 1)) / (n + 2 * over);
-      const inset = edge + slot * over;
 
-      fit = { edge: inset, slot, gap, band, treeBase };
+      // The gazebo stands in the middle of the shelf with the stand around
+      // it, which is where a garden building goes: you come at it down an
+      // avenue, not past the end of one. Its height is a share of the canopy
+      // band, so it keeps its place among the trees at any size — but never
+      // more than a share of the width either, or a narrow column with a
+      // tall block of words beside it is handed a band deep enough to put up
+      // a building there is no room left to plant around.
+      const gazH = Math.max(120, Math.min(band * 0.62, 360));
+      const gazU = Math.min(gazH / GZ_H, (W * 0.44) / GZ_W);   // px to a module (see gzX)
+      const gazW = gazU * GZ_W;          // out to the ends of the cornice
+      const gazCX = Math.round(W / 2);
+      planGazebo(gazCX, treeBase, gazU);
+
+      // The stand is dealt into the two clearings either side of it, in
+      // proportion to how much room each has. The slots are inset from the
+      // gutter by as much as a crown may overhang its slot, so the outermost
+      // trees have the same room to spread as the inner ones and are not cut
+      // off at the canvas edge: slot * (n + 2k) = the room there is, with k
+      // the overhang each side.
+      const over = (OVERLAP - 1) / 2;
+      const keep = gazW * 1.24;                       // its ground, and a margin
+      const gzL = gazCX - keep / 2, gzR = gazCX + keep / 2;
+      const wL = Math.max(0, gzL - edge), wR = Math.max(0, W - edge - gzR);
+      const avail = Math.max(60, wL + wR);
+      const slot = (avail - gap * (n - 1)) / (n + 2 * over);
+      const nL = Math.max(1, Math.min(n - 1, Math.round((n * wL) / avail)));
+      const nR = n - nL;
+      const run = m => m * slot + (m - 1) * gap;
+      const xs = [];
+      for (let i = 0; i < n; i++) {
+        xs.push(i < nL ? edge + (wL - run(nL)) / 2 + i * (slot + gap)
+                       : gzR + (wR - run(nR)) / 2 + (i - nL) * (slot + gap));
+      }
+      fit = { edge: xs[0], slot, gap, band, treeBase, xs };
       fitTrees();
+
+      // and the harp goes to stand in the archway, which the harp's own
+      // script comes and asks for (see place() there)
+      G.harp = { x: groveOX + gaz.harp.cx, y: groveOY + gaz.harp.bottom,
+                 w: gaz.harp.w, h: gaz.harp.h };
+      if (window.__harp && window.__harp.place) window.__harp.place();
+      // The roof, for the air: the outline of the dome from one springing
+      // over the crown to the other, in page points. A dome is not a ledge
+      // with a place on it — a bird stands anywhere along the curve of it —
+      // so this goes over as a line rather than as a box, and the air walks
+      // a fraction along it exactly as it walks a fraction along a card.
+      G.dome = gaz.dome.map(p => [groveOX + p[0], groveOY + p[1]]);
+      G.ledges = gaz.ledges.map(l => ({ x0: groveOX + l.x0, x1: groveOX + l.x1, y: groveOY + l.y }));
+      // and where the music comes out, which is the top of it
+      G.crown = { x: groveOX + gaz.crown.x, y: groveOY + gaz.crown.y, w: gaz.crown.w };
 
       // The shelf runs the width of the row, and the ivy hangs off its front.
       ledgeX0 = edge - LEDGE_PAD;
@@ -5303,8 +6658,12 @@
       const trunks = trees.map(t => t.ox);
       const shade = spanW / (trees.length * 1.15);   // radius a trunk clears
       const spots = [];
+      // and the gazebo clears its own footing, bar the odd clump that has
+      // come up against the bottom step
+      const gz0 = gaz ? gaz.hit.x0 + 6 : 0, gz1 = gaz ? gaz.hit.x1 - 6 : -1;
       for (let seed = 0; spots.length < UNDER_COUNT && seed < UNDER_COUNT * 120; seed++) {
         const px = edge + hash(seed, 7) * spanW;
+        if (px > gz0 && px < gz1 && hash(seed, 10) > 0.06) continue;
         let nearest = Infinity;
         for (const tx of trunks) nearest = Math.min(nearest, Math.abs(px - tx));
         const open = Math.min(1, nearest / shade);
@@ -5450,6 +6809,9 @@
         }
         ctx.globalAlpha = 1;
         window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
+        // and every shadow on the shelf is measured from it, once, here
+        readLight(gaz ? gaz.cx : W / 2,
+                  gaz ? gaz.base - GZ_CROWN * gaz.u * 0.5 : ground - 60);
       }
 
       // ── the opening ──────────────────────────────────────────────────────
@@ -5795,6 +7157,12 @@
         if (p.kind === 'tree') G.trees[p.idx].tips = tipSegs;
         if (leafSegs) p.lastLeafSegs = leafSegs;
       }
+      // The pavilion stands in front of the stand, so it goes on over the
+      // trees: a trunk that happens to be behind it is behind it, and one
+      // that leans over the dome is drawn over the dome. It is built rather
+      // than dropped in — the sheet is uncovered from the ground up, which
+      // is a wall going up — and it waits for the shelf to be laid first.
+      drawGazebo(now);
       stepFallers(now, dt);
       // and a word to the air that the branches have moved
       if (G.tick) G.tick();
@@ -5942,7 +7310,14 @@
       // the canvas bleeds a little way under the name when the page is
       // stacked, and on a phone the lamp cord hangs in front of the trees:
       // a tap on the words, or a hand on the cord, is not a press on a tree
-      if (e.target && e.target.closest && e.target.closest('.hero-about, #pull')) return;
+      if (e.target && e.target.closest && e.target.closest('.hero-about, #pull, #harp')) return;
+      // nor is a hand laid on the gazebo a hand on the tree behind it — but
+      // it is a hand on the gazebo, and whatever was sitting on the roof gets
+      // up at it, the way it does off the harp and off a deck of papers
+      if (gaz && x > gaz.hit.x0 && x < gaz.hit.x1 && y > gaz.hit.y0 && y < gaz.hit.y1) {
+        if (window.__air && window.__air.gazebo) window.__air.gazebo.press();
+        return;
+      }
       let hit = null, best = Infinity;
       for (const t of trees) {
         const d = Math.abs(x - t.ox);
@@ -6092,8 +7467,11 @@
     }
 
     // Two parties, and a few besides who do not stay in the grove once the
-    // visitor has left it (the escort, below).
-    const N = PHONE ? 16 : 24, ESCORT = PHONE ? 3 : 4;
+    // visitor has left it (the escort, below). There are more of them than
+    // there used to be, because there is more for them to sit on: the
+    // pavilion put a roof and two windowsills in the middle of the grove and
+    // a dozen and a half birds left them empty most of the time.
+    const N = PHONE ? 20 : 30, ESCORT = PHONE ? 3 : 5;
     const flock = Array.from({ length: N }, (_, i) => ({
       i, group: i < N - ESCORT ? (i & 1) : 2,
       phase: hash(i, 41) * Math.PI * 2,
@@ -6101,7 +7479,7 @@
       duty: 0.30 + hash(i, 43) * 0.32,       // share of the cycle it is lit
       size: 1.6 + hash(i, 44) * 1.5,         // the glow's size — small, and it stays small
       len: 6.6 + hash(i, 45) * 2.6,          // the bird's, beak to tail, px
-      coat: plumage(i),                       // its own brown, out of the shelf's clays
+      coat: plumage(i),                       // its own brown, and nobody else's
       face: hash(i, 47) < 0.5 ? -1 : 1,      // which way it looks
       x: 0, y: 0, vx: 0, vy: 0,
       head: 0,                                // the heading it is drawn along
@@ -6138,6 +7516,25 @@
     }
     function where(p) {
       if (!p) return null;
+      // The roof of the gazebo. It is not a ledge with a place on it — a
+      // bird stands anywhere along the curve of a dome — so the grove hands
+      // this over as a line rather than as a box, and a perch on it is a
+      // fraction along that line, measured exactly as a fraction along the
+      // top of a card is. The feet sit a hair proud of the brick.
+      if (p.kind === 'dome') {
+        const d = G.dome;
+        if (!d || d.length < 2) return null;
+        const f = Math.max(0, Math.min(0.9999, p.u)) * (d.length - 1);
+        const i = Math.floor(f), t = f - i;
+        const a = d[i], b = d[i + 1] || d[i];
+        return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t - 1 };
+      }
+      // a sill in one of the gazebo's windows
+      if (p.kind === 'ledge') {
+        const l = G.ledges && G.ledges[p.i];
+        if (!l) return null;
+        return { x: l.x0 + (l.x1 - l.x0) * Math.max(0, Math.min(1, p.u)), y: l.y - 1 };
+      }
       if (p.kind === 'tree') {
         const T = G.trees[p.t], tips = T && T.tips;
         const n = tips ? tips.length / 5 : 0;
@@ -6447,7 +7844,7 @@
         // under the bio. Birds do this with anything left out in a garden; a
         // firefly on the antenna is a firefly on a stem, which is where they
         // are anyway.
-        if (onTree && !c.room && rnd() < 0.016) {
+        if (onTree && !c.room && rnd() < 0.030) {
           const s = freeFixtureSpot();
           if (s) { fly(c, s, { lift: 0.2 + rnd() * 0.24, bow: (rnd() - 0.5) * 0.7 }); return; }
         }
@@ -6478,8 +7875,25 @@
     // surface — a hop is a hop, not a stride, whether it is on a card or on
     // a thirty-six-page paper.
     const HOP_RUN = 60;        // px of surface under which there is nowhere to go
+    // how far a bird would walk to cross the whole roof, in page points
+    function domeRun() {
+      const d = G.dome;
+      if (!d || d.length < 2) return 1;
+      let n = 0;
+      for (let i = 1; i < d.length; i++) n += Math.hypot(d[i][0] - d[i - 1][0], d[i][1] - d[i - 1][1]);
+      return Math.max(1, n);
+    }
     function canHop(c) {
       const p = c.perch;
+      // the dome is a run of brick a bird hops along and over, and its
+      // length is the length of the line the grove handed over; a sill is a
+      // shorter run of the same kind — two or three hops end to end, which is
+      // exactly what a windowsill is
+      if (p && p.kind === 'dome') return !!(G.dome && G.dome.length > 1);
+      if (p && p.kind === 'ledge') {
+        const l = G.ledges && G.ledges[p.i];
+        return !!l && l.x1 - l.x0 > 18;
+      }
       if (!p || p.kind !== 'el' || p.dx) return false;   // dx is a point on the flourish, not a run
       const r = rectOf(p.el);
       // The harp's top is a short run by the standards of a card, but it is
@@ -6489,8 +7903,11 @@
     }
     function groundHop(c) {
       if (!canHop(c)) return false;
-      const p = c.perch, r = rectOf(p.el);
-      const step = (6 + rnd() * 8) * (c.len / 8) / r.width;
+      const p = c.perch;
+      const width = p.kind === 'dome' ? domeRun()
+                  : p.kind === 'ledge' ? G.ledges[p.i].x1 - G.ledges[p.i].x0
+                  : rectOf(p.el).width;
+      const step = (6 + rnd() * 8) * (c.len / 8) / width;
       const lo = 0.04, hi = 0.96;
       let to = p.u + step * c.face;
       if (to < lo || to > hi) {          // at the end of the surface it turns round
@@ -6604,7 +8021,14 @@
         // only those on the tree go: not a visitor to the room, nor one of
         // the escort down the page
         if (c.group !== g || c.room || (c.perch && c.perch.kind !== 'tree')) continue;
-        fly(c, { kind: 'tree', t: to, u: pickTwig(to, day ? 6 : 2, null) }, {
+        // Not all of them go to another tree. A branch moving under a bird
+        // scatters it onto whatever is standing, and what is standing in the
+        // middle of this grove is a brick pavilion nobody can pull over — so
+        // a few break for the roof and the window sills instead. Only when
+        // they were grabbed: a party crossing in its own time crosses
+        // together, which is the whole of what makes it a party.
+        const bolt = startled && rnd() < 0.34 ? freeGazeboSpot() : null;
+        fly(c, bolt || { kind: 'tree', t: to, u: pickTwig(to, day ? 6 : 2, null) }, {
           // grabbed, they are off the branch almost together; left to
           // themselves they drift away raggedly
           delay: rnd() * (startled ? 0.11 : 0.45),
@@ -6753,6 +8177,14 @@
         for (const c of flock) if (c.state === 'perched' && c.perch && c.perch.harp) goHome(c);
         wake();
       } },
+      // and a hand on the gazebo puts up whatever was sitting on its roof
+      gazebo: { press() {
+        for (const c of flock) {
+          if (c.state !== 'perched' || !c.perch) continue;
+          if (c.perch.kind === 'dome' || c.perch.kind === 'ledge') goHome(c);
+        }
+        wake();
+      } },
       // and so does a hand on anything else: the deck about to fly open, the
       // cord about to be pulled. Anything standing on that element, or on
       // something inside it, gets up and goes home.
@@ -6895,10 +8327,10 @@
         if (c.group !== 2 || c.state !== 'perched' || c.room) continue;
         if (home) {
           // The grove is back: home, unless it is standing on a fixture that
-          // is still in the window — the harp and the lamp's bead are pinned
-          // there and it may stay on either, but a button or a deck of
-          // papers goes up the page with the scroll, and a bird left on one
-          // of those is a bird sitting somewhere nobody can see.
+          // is still in the window — the lamp's bead is pinned there and it
+          // may stay on that, but the harp, a button or a deck of papers
+          // goes up the page with the scroll, and a bird left on one of
+          // those is a bird sitting somewhere nobody can see.
           if (c.perch.kind !== 'tree' && now >= c.nextMove) {
             const p = c.perch.fixture ? where(c.perch) : null;
             if (p && p.y > sy + 8 && p.y < sy + innerHeight * 0.8) continue;
@@ -6953,9 +8385,32 @@
     // it is drawn on, so it is asked of the things themselves rather than
     // assumed here.
     const isPinned = el =>
-      (el === harpCrown || el === harpPlinth) ? !(harpEl && harpEl.classList.contains('at-page'))
+      (el === harpCrown || el === harpPlinth)
+        ? !!(harpEl && !harpEl.classList.contains('at-page') && !harpEl.classList.contains('in-grove'))
       : el === pullPerch ? !(window.__cord && window.__cord.paged)
       : false;
+    // The pavilion in the middle of the grove: its roof, which is a curve a
+    // bird walks along and over, and the sills of its two windows, which are
+    // short runs of the same kind. Both come over from the grove as lines
+    // rather than as boxes, since what they follow is a drawing on a canvas
+    // and no marker would follow it.
+    function gazeboSpots(band) {
+      const out = [], vh = innerHeight;
+      const ok = p => p && p.y - sy > 8 && p.y - sy < vh * band;
+      if (G.dome && G.dome.length > 1 && ok(where({ kind: 'dome', u: 0.5 })))
+        for (let i = 0; i < 3; i++)
+          out.push({ kind: 'dome', u: 0.08 + rnd() * 0.84, dy: 0, fixture: true, roof: true });
+      if (G.ledges) for (let i = 0; i < G.ledges.length; i++) {
+        if (!ok(where({ kind: 'ledge', i, u: 0.5 }))) continue;
+        out.push({ kind: 'ledge', i, u: 0.18 + rnd() * 0.64, dy: 0, fixture: true, roof: true });
+      }
+      return out;
+    }
+    // one of them that nobody is standing on
+    function freeGazeboSpot() {
+      const free = gazeboSpots(0.82).filter(s => !flock.some(c => sameFixture(c.perch, s)));
+      return free.length ? free[(rnd() * free.length) | 0] : null;
+    }
     function fixtureSpots(band) {
       const out = [], vh = innerHeight, vw = innerWidth;
       const add = (el, u, extra) => {
@@ -6970,6 +8425,11 @@
       add(harpCrown, 0.16 + rnd() * 0.68, { harp: true });
       add(harpPlinth, 0.5, { harp: true });
       add(pullPerch, 0.5);
+      // The roof of the gazebo, which is a run of a different kind: a curve
+      // rather than a straight edge, so a bird may stand anywhere along it
+      // and hop up it and over the crown. Two at a time at the most, or the
+      // dome becomes another tree.
+      for (const s of gazeboSpots(band)) out.push(s);
       for (const pill of document.querySelectorAll('.about-links > .about-link')) add(pill, 0.26 + rnd() * 0.48);
       for (const deck of document.querySelectorAll('.deck')) {
         const corners = deck.querySelectorAll('.deck-perch > i');
@@ -6977,8 +8437,15 @@
       }
       return out;
     }
-    const sameFixture = (a, b) => a && b && a.el === b.el &&
-      (a.el !== harpCrown ? true : Math.abs(a.u - b.u) < 0.3);
+    // Two perches are the same place if they are on the same thing — and,
+    // on anything a bird can walk along, only if they are also within a hop
+    // of each other.
+    const sameFixture = (a, b) => a && b &&
+      (a.kind === 'dome' || b.kind === 'dome'
+        ? a.kind === b.kind && Math.abs(a.u - b.u) < 0.22
+      : a.kind === 'ledge' || b.kind === 'ledge'
+        ? a.kind === b.kind && a.i === b.i
+        : a.el === b.el && (a.el !== harpCrown ? true : Math.abs(a.u - b.u) < 0.3));
     function freeFixtureSpot(band) {
       // Two on the harp at a time at the most, counting one still on its
       // way: more than that and the set is another tree rather than
@@ -7701,15 +9168,47 @@
     });
 
     // ── where it stands ─────────────────────────────────────────────────
-    // The lamp hangs from the top right of the window; this is the same point
-    // on the other side of it, found the same way. Where the window is wider
-    // than the page the set moves out into the gutter, half way across it, as
-    // the cord does; where it is not, it keeps as close in to the corner as
-    // it can — and there, since a corner that is also the page would carry it
-    // down over the gallery, it is pinned to the top of the document and
-    // scrolls away with the grove instead of riding along. Again the cord.
+    // In the gazebo, at the near end of the shelf: the grove works out the
+    // clear width of the archway and the floor inside it, and hands both over
+    // as a box on the page (see planGazebo there). The archway looks straight
+    // at the eye, so nothing about the drawing has to be turned to fit it —
+    // it is set to the width it is given and stood on its own base, and it
+    // goes down the page with the grove, which is where it lives now.
+    //
+    // For years this hung in the top left of the window instead, out in the
+    // gutter, mirroring the lamp's cord in the other corner. That is still
+    // where it goes if there is no grove to stand in — a canvas that never
+    // came up, or a window too small to have laid one out — so the corner
+    // and the measurement that found it are kept below.
     const hero = document.querySelector('.hero');
     function place() {
+      const G = window.__grove;
+      const g = G && G.harp;
+      if (g && g.w > 8) {
+        host.classList.remove('at-page');
+        host.classList.add('in-grove');
+        host.style.width = g.w + 'px';
+        const left = Math.round(g.x - g.w / 2), top = Math.round(g.y - g.h);
+        host.style.left = left + 'px';
+        host.style.top = top + 'px';
+        // The sheet the notes are drawn on is hung over the roof rather than
+        // over the instrument, because that is where they come out: the harp
+        // is inside a brick pavilion and the music leaves it through the top
+        // of the dome. It is a child of the harp, so it goes wherever the
+        // harp goes without either of them being told twice.
+        if (sheet && G.crown) {
+          const c = G.crown;
+          sheet.style.left = Math.round(c.x - c.w * 0.9 - left) + 'px';
+          sheet.style.top = Math.round(c.y - c.w * 1.5 - top) + 'px';
+          sheet.style.width = Math.round(c.w * 3.2) + 'px';
+          sheet.style.height = Math.round(c.w * 2.2) + 'px';
+        }
+        size();
+        return;
+      }
+      host.classList.remove('in-grove');
+      host.style.width = '';
+      if (sheet) { sheet.style.left = ''; sheet.style.top = ''; sheet.style.width = ''; sheet.style.height = ''; }
       const W = innerWidth;
       const hr = hero ? hero.getBoundingClientRect() : null;
       const gutter = hr ? hr.left : 0;          // the mirror of the cord's
@@ -7743,6 +9242,7 @@
     let ctx = null, W = 0, H = 0, dpr = 1, raf = 0, last = 0, budget = 0, tone = '#8a93a0';
     let breathing = false, glow = null, litBase = 0.5;
     let box = { x: 0, y: 0, w: 0, h: 0 };      // the set, in the sheet's frame
+    let src = null;                            // and where its notes come out
 
     const readTone = () => {
       const cs = getComputedStyle(host);
@@ -7755,6 +9255,16 @@
       const s = sheet.getBoundingClientRect(), h = host.getBoundingClientRect();
       W = s.width; H = s.height;
       box = { x: h.left - s.left, y: h.top - s.top, w: h.width, h: h.height };
+      // Where a note starts. Off the strings when the harp is a fitting in
+      // the corner of a window; off the crown of the dome when it is standing
+      // under one, since a note that started on the strings would have to
+      // come out through a foot of brick to be seen.
+      const G = window.__grove;
+      if (G && G.crown) {
+        const c = G.crown;
+        src = { x: c.x - c.w * 0.42 - (s.left + scrollX), y: c.y - c.w * 0.10 - (s.top + scrollY),
+                w: c.w * 0.84, h: c.w * 0.20, up: true };
+      } else src = null;
       dpr = Math.min(devicePixelRatio || 1, 2);
       sheet.width = Math.max(1, Math.round(W * dpr));
       sheet.height = Math.max(1, Math.round(H * dpr));
@@ -7804,16 +9314,18 @@
     function emit() {
       // A little large for the harp, which is small: a note in true
       // proportion to one this size would be four pixels of ink.
-      const s = box.w * (0.072 + rnd() * 0.045);
+      const b = src || box;
+      const s = b.w * (b.up ? 0.072 + rnd() * 0.04 : 0.072 + rnd() * 0.045);
       notes.push({
-        // off the strings, up where they are struck
-        x: box.x + box.w * (0.52 + rnd() * 0.30),
-        y: box.y + box.h * (0.30 + rnd() * 0.25),
-        // Out and across rather than straight up: the harp is in the corner
-        // of the window, and a note that only rises is off the top of the
-        // page in a second and a half. Going sideways it stays in the air.
-        vx: box.w * (0.34 + rnd() * 0.42),
-        vy: -box.h * (0.10 + rnd() * 0.16),
+        // off the crown of the dome, or off the strings where there is no
+        // dome over them
+        x: b.x + b.w * rnd(),
+        y: b.y + b.h * rnd(),
+        // Out and across rather than straight up, or a note is off the top of
+        // the picture in a second and a half. Going sideways it stays in the
+        // air, and a roofful of them drifts the way smoke does.
+        vx: b.w * (b.up ? 0.10 + rnd() * 0.50 : 0.34 + rnd() * 0.42),
+        vy: b.up ? -b.w * (0.34 + rnd() * 0.26) : -b.h * (0.10 + rnd() * 0.16),
         s, t: 0, life: 2.6 + rnd() * 1.8,
         rot: (rnd() - 0.5) * 0.55, spin: (rnd() - 0.5) * 0.9,
         sway: 0.8 + rnd() * 1.4, phase: rnd() * TAU,
@@ -7901,7 +9413,7 @@
 
     // for a look from the console, as the grove and the air have
     window.__harp = {
-      els, gains, notes,
+      els, gains, notes, place,
       dbg: () => ({
         on, band, notes: notes.length,
         playing: Object.keys(els).filter(k => !els[k].paused),
