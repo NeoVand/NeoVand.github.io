@@ -7382,8 +7382,8 @@
 
       // ── the opening ──────────────────────────────────────────────────────
       // Plants push up, the moon slides in off the corner, and the birds or
-      // the fireflies arrive from below (see the air, in the next script),
-      // all on the same clock as the text beside them. If no opening ever
+      // the fireflies come down out of the sky (see the air, in the next
+      // script), all on the same clock as the text beside them. If no opening ever
       // starts, the grove grows itself in rather than sitting invisible.
       if (introing) {
         const I = window.__intro;
@@ -7838,7 +7838,7 @@
       introMoonY = -moonR * 0.9;
       moonX = introMoonX; moonY = introMoonY;
 
-      // and the birds or the fireflies rise from below, each party to its
+      // and the birds or the fireflies come down out of the sky, each party to its
       // tree, landing just before the rest of the opening lands
       if (G.onIntro) G.onIntro(window.__intro.dur / 1000);
     }
@@ -8609,10 +8609,17 @@
     // Nobody is ever put down where they will end up. A bird that is already
     // sitting on the first frame and starts moving on the second is a
     // cardboard cut-out that has been remembered to; one that comes into the
-    // picture has been somewhere. So they come in from off the canvas — the
-    // birds down out of the sky, on an arc that dips below the straight line
-    // so they drop and then flatten into the branch, and the fireflies up
-    // from the grass, which is where fireflies come from.
+    // picture has been somewhere. So they come in from off the canvas, down
+    // out of the sky, on an arc that dips below the straight line so they
+    // drop and then flatten into the branch.
+    //
+    // The fireflies used to rise instead, up from the grass, which is where
+    // fireflies come from — but there is no grass under this grove. The
+    // shelf floats, and below it is more sky, so a swarm coming up through
+    // it did not read as rising out of anything: it read as a cloud of
+    // sparks hanging in the middle of the page and then drifting off it.
+    // They arrive the way the birds do now. What is under the shelf is the
+    // one place on this page nothing can come from.
     function arrive(secs) {
       if (!hosts()) return false;
       const day = mix > 0.5;
@@ -8622,16 +8629,16 @@
         const perch = { kind: 'tree', t, u: day ? pickTwig(t, 6, null) : rnd() };
         if (reduced) { settleAt(c, perch, where(perch) || { x: G.left, y: G.top }); c.vis = 1; continue; }
         c.x = G.left + G.W * (0.12 + rnd() * 0.76) + (rnd() - 0.5) * G.W * 0.5;
-        c.y = day ? G.top - 70 - rnd() * 220 : G.top + G.H + 40 + rnd() * 120;
+        c.y = G.top - 70 - rnd() * 220;
         c.state = 'flying'; c.vis = 1; c.alpha = 0;
         c.pose = 0; c.poseTo = 0;
-        c.head = day ? 1.25 : -1.25;          // pointing the way it is going
+        c.head = 1.25;                        // pointing the way it is going
         const delay = rnd() * (secs ? secs * 0.22 : 1.1);
         fly(c, perch, {
           direct: true, delay,
           dur: secs ? Math.max(0.5, secs * 0.86 - delay) : 1.5 + rnd() * 1.1,
           bow: (rnd() - 0.5) * 0.9,
-          lift: day ? -0.08 - rnd() * 0.16 : 0.18 + rnd() * 0.3,
+          lift: -0.08 - rnd() * 0.16,
         });
         if (c.fl) c.fl.intro = true;
       }

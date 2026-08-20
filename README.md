@@ -618,10 +618,16 @@ that a third of them are adrift at any moment.
 Nobody is ever put down where they will end up. One that is already sitting on
 the first frame and starts moving on the second is a cut-out that has been
 remembered to; one that comes into the picture has been somewhere. So they
-arrive from off the canvas — the birds down out of the sky, on an arc that
-dips below the straight line so they drop and then flatten into the branch,
-the fireflies up from the grass, which is where fireflies come from — either
-on the opening's clock or, where there is no opening, on their own.
+arrive from off the canvas, down out of the sky, on an arc that dips below the
+straight line so they drop and then flatten into the branch — either on the
+opening's clock or, where there is no opening, on their own.
+
+The fireflies used to rise instead, up from the grass, which is where
+fireflies come from. But there is no grass under this grove: the shelf floats,
+and what is below it is more sky, so a swarm coming up through it never read
+as rising out of anything. It read as a cloud of sparks hanging in the middle
+of the page. Under the shelf is the one place here that nothing can come from,
+so the fireflies fall in with the birds and come down.
 
 They live in a script of their own, after the grove's, on a sheet of their own
 rather than the grove's canvas: everything is kept in page coordinates and
