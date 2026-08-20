@@ -8504,11 +8504,36 @@
       const p = c.perch;
       if (!p) return null;
       if (p.kind === 'tree') return crown(p.t);
+      // The pavilion's own places come over from the grove as lines rather
+      // than as boxes — a curve for the roof, a run for each sill — so the
+      // air above them is built here, in the grove's own page coordinates.
+      // Left out, a firefly lifting off the dome asked an element that was
+      // never there for its box, and the throw took the whole loop with it:
+      // the scheduling is the last thing a frame does, so nothing was ever
+      // asked for again and every creature on the page stood where it stood.
+      if (p.kind === 'dome') {
+        const d = G.dome;
+        if (!d || d.length < 2) return null;
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity;
+        for (const q of d) {
+          if (q[0] < x0) x0 = q[0];
+          if (q[0] > x1) x1 = q[0];
+          if (q[1] < y0) y0 = q[1];
+        }
+        return { x0: x0 + 10, x1: x1 - 10, y0: y0 - 56, y1: y0 + 20 };
+      }
+      if (p.kind === 'ledge') {
+        const l = G.ledges && G.ledges[p.i];
+        if (!l) return null;
+        return { x0: l.x0 + 4, x1: l.x1 - 4, y0: l.y - 48, y1: l.y - 2 };
+      }
       if (p.room && room.els) {
         const r = rectOf(room.els.stream);
         return { x0: sx + r.left + 20, x1: sx + r.right - 20, y0: sy + r.top - 30, y1: sy + r.bottom - 24 };
       }
+      if (!p.el) return null;
       const r = rectOf(p.el);
+      if (!r) return null;
       return { x0: sx + r.left - 40, x1: sx + r.right + 40, y0: sy + r.top - 70, y1: sy + r.top + 20 };
     }
     function startDrift(c) {
@@ -9374,8 +9399,24 @@
     // Runs while there is anything to show or anything on the move, and
     // sleeps otherwise — with the grove scrolled away and everyone sitting
     // still on it, there is nothing to draw and nothing to step.
-    let raf = 0, last = 0, still = 0;
+    let raf = 0, last = 0, still = 0, faults = 0;
+    // A frame that throws used to be the last frame there ever was, for the
+    // reason above: asking for the next one is the final thing a frame does.
+    // Now whatever goes wrong inside one, another is still asked for — for a
+    // handful of frames, anyway, since a fault that repeats sixty times a
+    // second is worth stopping for rather than reporting sixty times a
+    // second. It is a net under the drawing, not a licence: anything caught
+    // here is a bug, and it says so in the console.
     function frame(now) {
+      try { step(now); }
+      catch (e) {
+        if (++faults <= 2) console.error('the air: a frame threw —', e);
+        still = 0;
+        if (faults > 8) { raf = 0; last = 0; return; }
+        raf = requestAnimationFrame(frame);
+      }
+    }
+    function step(now) {
       // `raf` keeps the handle that has just fired until the end of the
       // frame, so a wake() from inside it — a flight begun mid-step — does
       // not start a second loop alongside this one

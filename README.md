@@ -615,6 +615,24 @@ spot of paint on a pencil study. What keeps the specks from being lost among
 the white twig ends is not their hue; it is that they sit up on the crown, and
 that a third of them are adrift at any moment.
 
+A firefly adrift is roaming a box, and the box is read from whatever it lifted
+off: the crown of a tree, the stream of pages in the reading room, the box of
+an element. The pavilion's places have no element behind them — the roof comes
+over from the grove as a curve and each sill as a run, drawn on a canvas, with
+no marker to measure — so they need boxes of their own, and for a while they
+did not have them. A firefly that had been sitting on the dome asked an element
+that was never there for its size, and the throw took the whole loop with it:
+asking for the next frame is the last thing a frame does, so nothing was ever
+asked for again and every creature on the page stood exactly where it stood. It
+took a while to show because it took a firefly choosing the dome, and it only
+ever happened at night, because only fireflies drift.
+
+The loop has a net under it now. Whatever goes wrong inside a frame, another is
+still asked for — for a handful of frames, since a fault that repeats sixty
+times a second is worth stopping for rather than reporting sixty times a
+second. It is not a licence: anything caught there is a bug, and it says so in
+the console.
+
 Nobody is ever put down where they will end up. One that is already sitting on
 the first frame and starts moving on the second is a cut-out that has been
 remembered to; one that comes into the picture has been somewhere. So they
