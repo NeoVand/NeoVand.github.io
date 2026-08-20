@@ -1040,6 +1040,14 @@ the names rather than out at the column's right edge: this column is wide and
 the names are short, and the run of empty inches between *Apple* and *2021*
 read as a hole rather than as a column of dates.
 
+Everything in there that names something — the four section heads, the six
+groups of skills — is set in the same white as a company's name. They were a
+step down, on the reasoning that a label over a grid of cards should sit back
+and let the cards carry the weight; but nothing under a section head here is
+louder than a name, so the head has to be at least as loud as one. Left quiet
+they sank into the runs beneath them and took the whole top corner of the page
+down with them at night.
+
 The one ornament is the one the page already owns. A hairline of the same ink
 as the flourish runs down each list, growing from the top as the section opens,
 with a bud at every post. Open a post and the bud does not sit beside a leaf,
@@ -1073,10 +1081,13 @@ reads as a smudge.
 The résumé carries two more sets from the same family. At the head of each of
 its four sections stands one object, drawn at thirty pixels where everything
 else here is drawn at thirteen: a briefcase, a mortarboard, a drafting compass
-and a laurel wreath, with the small caps beside them reading as the caption
-rather than the heading. Those four carry a lighter line — 1.7 on a 24-unit
-grid comes out at better than two pixels once a mark is that size, which is a
-rope rather than a drawing. Each group of skills carries a smaller one at the
+and a laurel wreath, with the small caps beside them on the same centre line.
+Those four carry a lighter line — 1.7 on a 24-unit grid comes out at better
+than two pixels once a mark is that size, which is a rope rather than a
+drawing — and they are drawn in the heading's own colour rather than in
+`--ink`. Ink is meant to sit back, which is right for a flourish and a
+hairline; at thirty pixels it left them as ghosts beside their own labels.
+Drawn that large they are not ornament, they are the heading. Each group of skills carries a smaller one at the
 page's usual weight: a neural net, a pair of angle brackets, a sigma, a figure
 teaching two others, and the translator's 文/A.
 
