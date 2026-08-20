@@ -2023,12 +2023,20 @@
       align-items: center;
       gap: 13px;
       margin: 0 0 12px;
+      /* --muted is right for a label over a grid of cards, where the cards
+         carry the weight. Here the label *is* the weight: nothing under a
+         section head is louder than a name, so the head has to be at least
+         as loud as one. */
+      color: var(--title);
     }
 
+    /* and the mark takes the heading's colour rather than the flourish's:
+       --ink is meant to sit back, which at thirty pixels left these as
+       ghosts beside their own labels */
     .cv-mark {
       flex: 0 0 auto;
-      color: var(--ink);
-      opacity: 0.6;
+      color: var(--title);
+      opacity: 0.82;
     }
 
     .cv-skills dt {
@@ -2251,12 +2259,15 @@
     .cv-skills > div { padding: 9px 0; border-top: 1px solid var(--border); }
     .cv-skills > div:first-child { padding-top: 0; border-top: 0; }
 
+    /* The same white as a company's name: these are the six headings of the
+       column, and left at --muted they sank into the runs beneath them and
+       took the whole corner of the page down with them. */
     .cv-skills dt {
       font-size: 10.5px;
       font-weight: 600;
       letter-spacing: 0.11em;
       text-transform: uppercase;
-      color: var(--muted);
+      color: var(--title);
       margin-bottom: 4px;
     }
 
@@ -2300,12 +2311,14 @@
     .day #cv .cv-also li { color: #22394b; font-weight: 450; }
 
     .day #cv .section-label,
-    .day #cv .cv-skills dt { color: #1a2e3f; font-weight: 680; }
+    .day #cv .cv-skills dt { font-weight: 680; }
 
     /* --border by day is a blue with some body in it, which is right for a
        card's edge and far too much for six rules stacked down a column: they
        read as a table when what they are is a breath between groups. */
     .day #cv .cv-skills > div { border-top-color: rgba(38, 66, 92, 0.11); }
+
+
 
     .day #cv .cv-when,
     .day #cv .cv-awards time,
