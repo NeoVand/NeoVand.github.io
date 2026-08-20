@@ -1070,6 +1070,16 @@ thirteen pixels. The disclosure chevron is heavier still, at 2.5: it is only
 ever drawn at nine pixels, where 1.7 on a 24-grid is two thirds of a pixel and
 reads as a smudge.
 
+The résumé carries two more sets from the same family. At the head of each of
+its four sections stands one object, drawn at thirty pixels where everything
+else here is drawn at thirteen: a briefcase, a mortarboard, a drafting compass
+and a laurel wreath, with the small caps beside them reading as the caption
+rather than the heading. Those four carry a lighter line — 1.7 on a 24-unit
+grid comes out at better than two pixels once a mark is that size, which is a
+rope rather than a drawing. Each group of skills carries a smaller one at the
+page's usual weight: a neural net, a pair of angle brackets, a sigma, a figure
+teaching two others, and the translator's 文/A.
+
 The three profile marks — GitHub, LinkedIn, Scholar — are Hugeicons' renditions
 rather than the official logos. That is the price of having one family, and it
 is one line each to put the real marks back.

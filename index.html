@@ -2014,7 +2014,31 @@
       align-items: start;
     }
 
-    .cv .section-label { margin: 0 0 12px; }
+    /* An object at the head of each section, drawn large. The label is small
+       caps and the mark is thirty pixels, so the two are set on one centre
+       line rather than one baseline: what reads as the heading is the mark,
+       and the word is its caption. */
+    .cv .section-label {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin: 0 0 12px;
+    }
+
+    .cv-mark {
+      flex: 0 0 auto;
+      color: var(--ink);
+      opacity: 0.6;
+    }
+
+    .cv-skills dt {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .cv-gi { flex: 0 0 auto; opacity: 0.85; }
+
     .cv-list + .section-label { margin-top: 30px; }
     .cv-skills + .section-label { margin-top: 30px; }
 
@@ -2962,6 +2986,70 @@
     <symbol id="icon-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"/>
     </symbol>
+    <!-- The résumé's own marks: one object at the head of each section,
+         drawn at thirty pixels where every other icon here is drawn at
+         thirteen, and one at the head of each group of skills. The four big
+         ones carry a lighter line — 1.7 on a 24-grid comes out at better
+         than two pixels once the mark is that size, which is a rope rather
+         than a drawing. -->
+    <symbol id="icon-cv-work" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.00127 8.5L1.99911 13.997C1.99782 17.2979 1.99717 18.9484 3.02235 19.974C4.04754 20.9996 5.69801 20.9996 8.99895 20.9997L15 20.9998C18.2994 20.9999 19.949 21 20.9741 19.9751C21.9992 18.9502 21.9996 17.3005 22.0002 14.0012L22.0013 8.5"/>
+      <path d="M8.49857 6.5C8.49857 5.09554 8.49857 4.39331 8.83563 3.88886C8.98154 3.67048 9.16904 3.48298 9.38743 3.33706C9.89187 3 10.5941 3 11.9986 3C13.403 3 14.1053 3 14.6097 3.33706C14.8281 3.48298 15.0156 3.67048 15.1615 3.88886C15.4986 4.39331 15.4986 5.09554 15.4986 6.5"/>
+      <path d="M19.998 6.50016L3.99885 6.5C2.8944 6.50007 1.99876 7.39568 1.99866 8.50013C1.99876 10.7091 3.79005 12.5004 5.99901 12.5006H17.9978C20.2068 12.5005 21.998 10.7093 21.9981 8.5003C21.998 7.39582 21.1024 6.50023 19.998 6.50016Z"/>
+      <path d="M9.99857 12.5V13.5C9.99857 13.965 9.99857 14.1975 10.0497 14.3882C10.1884 14.9059 10.5927 15.3102 11.1103 15.4489C11.3011 15.5 11.5336 15.5 11.9986 15.5C12.4636 15.5 12.696 15.5 12.8868 15.4489C13.4044 15.3102 13.8088 14.9059 13.9475 14.3882C13.9986 14.1975 13.9986 13.965 13.9986 13.5V12.5"/>
+    </symbol>
+    <symbol id="icon-cv-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1.99805 7.99928C1.99805 9.34126 10.0943 13 11.9857 13C13.8772 13 21.9734 9.34126 21.9734 7.99928C21.9734 6.6573 13.8772 2.99854 11.9857 2.99854C10.0943 2.99854 1.99805 6.6573 1.99805 7.99928Z"/>
+      <path d="M5.99219 11L7.24348 16.8002C7.32919 17.1975 7.52703 17.5687 7.85696 17.8054C10.0787 19.3998 13.8908 19.3998 16.1126 17.8054C16.4426 17.5687 16.6404 17.1975 16.7261 16.8002L17.9774 11"/>
+      <path d="M20.4774 9.49951V16.5006M20.4774 16.5006C19.6864 17.9471 19.3366 18.7221 18.9813 20.0011C18.9042 20.4562 18.9654 20.6855 19.2786 20.8891C19.4059 20.9718 19.5588 21.0012 19.7104 21.0012H21.229C21.3904 21.0012 21.5533 20.9675 21.6863 20.8757C21.9774 20.6747 22.0523 20.4541 21.9734 20.0011C21.662 18.8135 21.2653 18.0016 20.4774 16.5006Z"/>
+    </symbol>
+    <symbol id="icon-cv-skill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 10L5 22M14 10L19 22"/>
+      <path d="M12 4L12 2"/>
+      <circle cx="12" cy="7" r="3"/>
+      <path d="M3 13C4.99073 16.0242 8.27968 18 12 18C15.7203 18 19.0093 16.0242 21 13"/>
+      <path d="M12 17V19"/>
+    </symbol>
+    <symbol id="icon-cv-honour" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6.43614 8C6.15488 8.84221 6 9.76282 6 10.7273C6 14.7439 8.68629 18 12 18C15.3137 18 18 14.7439 18 10.7273C18 9.76282 17.8451 8.84221 17.5639 8"/>
+      <path d="M14.5 21C14.5 21 13.818 18 12 18C10.182 18 9.5 21 9.5 21"/>
+      <path d="M18.5202 5.22967C18.8121 6.89634 17.5004 8 17.5004 8C17.5004 8 15.8969 7.437 15.605 5.77033C15.3131 4.10366 16.6248 3 16.6248 3C16.6248 3 18.2284 3.56301 18.5202 5.22967Z"/>
+      <path d="M21.0942 12.1393C19.8128 13.4061 18.0778 12.9003 18.0778 12.9003C18.0778 12.9003 17.6241 11.1276 18.9055 9.86074C20.1868 8.59388 21.9219 9.09972 21.9219 9.09972C21.9219 9.09972 22.3756 10.8724 21.0942 12.1393Z"/>
+      <path d="M18.2335 18.1896C16.7335 17.614 16.5 16 16.5 16C16.5 16 17.7665 14.9616 19.2665 15.5372C20.7665 16.1128 21 17.7268 21 17.7268C21 17.7268 19.7335 18.7652 18.2335 18.1896Z"/>
+      <path d="M5.76651 18.1895C7.26651 17.6139 7.5 15.9999 7.5 15.9999C7.5 15.9999 6.23349 14.9615 4.73349 15.5371C3.23349 16.1127 3 17.7267 3 17.7267C3 17.7267 4.26651 18.7651 5.76651 18.1895Z"/>
+      <path d="M2.90552 12.1393C4.18688 13.4061 5.92191 12.9003 5.92191 12.9003C5.92191 12.9003 6.37559 11.1276 5.09423 9.86074C3.81288 8.59388 2.07785 9.09972 2.07785 9.09972C2.07785 9.09972 1.62417 10.8724 2.90552 12.1393Z"/>
+      <path d="M5.47987 5.22967C5.18799 6.89634 6.49968 8 6.49968 8C6.49968 8 8.10325 7.437 8.39513 5.77033C8.68701 4.10366 7.37532 3 7.37532 3C7.37532 3 5.77175 3.56301 5.47987 5.22967Z"/>
+    </symbol>
+    <symbol id="icon-cv-ml" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.5 12C21.5 13.3807 20.3807 14.5 19 14.5C17.6193 14.5 16.5 13.3807 16.5 12C16.5 10.6193 17.6193 9.5 19 9.5C20.3807 9.5 21.5 10.6193 21.5 12Z"/>
+      <path d="M13.5 4C13.5 4.82843 12.8284 5.5 12 5.5C11.1716 5.5 10.5 4.82843 10.5 4C10.5 3.17157 11.1716 2.5 12 2.5C12.8284 2.5 13.5 3.17157 13.5 4Z"/>
+      <path d="M12.5 11.5C12.5 12.3284 11.8284 13 11 13C10.1716 13 9.5 12.3284 9.5 11.5C9.5 10.6716 10.1716 10 11 10C11.8284 10 12.5 10.6716 12.5 11.5Z"/>
+      <path d="M6.5 7.5C6.5 8.60457 5.60457 9.5 4.5 9.5C3.39543 9.5 2.5 8.60457 2.5 7.5C2.5 6.39543 3.39543 5.5 4.5 5.5C5.60457 5.5 6.5 6.39543 6.5 7.5Z"/>
+      <path d="M10.5 19.5C10.5 20.6046 9.60457 21.5 8.5 21.5C7.39543 21.5 6.5 20.6046 6.5 19.5C6.5 18.3954 7.39543 17.5 8.5 17.5C9.60457 17.5 10.5 18.3954 10.5 19.5Z"/>
+      <path d="M13.5 5L17.5 10M14.5 15.5L10.5 18.5M8 17.5L5 9.5M6.31298 6.65431L10.5 4.5M12.5 11.5L16.505 11.8443"/>
+      <path d="M12 5.5L11 10"/>
+    </symbol>
+    <symbol id="icon-cv-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 8L18.8398 9.85008C19.6133 10.6279 20 11.0168 20 11.5C20 11.9832 19.6133 12.3721 18.8398 13.1499L17 15"/>
+      <path d="M7 8L5.16019 9.85008C4.38673 10.6279 4 11.0168 4 11.5C4 11.9832 4.38673 12.3721 5.16019 13.1499L7 15"/>
+      <path d="M14.5 4L9.5 20"/>
+    </symbol>
+    <symbol id="icon-cv-math" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18.4922 6.5V6C18.4922 4.58579 18.4922 3.87868 18.0208 3.43934C17.5495 3 16.7909 3 15.2736 3H10.6394C7.556 3 6.01431 3 5.58768 3.88552C5.16105 4.77103 6.18529 5.84505 8.23379 7.99309L10.1543 10.0069C11.0588 10.9554 11.5111 11.4297 11.5111 12C11.5111 12.5703 11.0588 13.0446 10.1543 13.9931L8.23379 16.0069C6.18529 18.1549 5.16105 19.229 5.58768 20.1145C6.01431 21 7.556 21 10.6394 21H15.2736C16.7909 21 17.5495 21 18.0208 20.5607C18.4922 20.1213 18.4922 19.4142 18.4922 18V17.5"/>
+    </symbol>
+    <symbol id="icon-cv-lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22L10 16H2L4 22H12ZM12 22H16"/>
+      <path d="M12 13V12.5C12 10.6144 12 9.67157 11.4142 9.08579C10.8284 8.5 9.88562 8.5 8 8.5C6.11438 8.5 5.17157 8.5 4.58579 9.08579C4 9.67157 4 10.6144 4 12.5V13"/>
+      <path d="M19 13C19 14.1046 18.1046 15 17 15C15.8954 15 15 14.1046 15 13C15 11.8954 15.8954 11 17 11C18.1046 11 19 11.8954 19 13Z"/>
+      <path d="M10 4C10 5.10457 9.10457 6 8 6C6.89543 6 6 5.10457 6 4C6 2.89543 6.89543 2 8 2C9.10457 2 10 2.89543 10 4Z"/>
+      <path d="M14 17.5H20C21.1046 17.5 22 18.3954 22 19.5V20C22 21.1046 21.1046 22 20 22H19"/>
+    </symbol>
+    <symbol id="icon-cv-lang" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.49744 5H7.99744M7.99744 5H13.4974M7.99744 5V3.5M4.99744 13.5C7.49744 11.5 10.4974 7.5 10.9974 5M6.49744 7.5C6.99744 9 8.99744 11.5 9.99744 12"/>
+      <path d="M4.99744 13.5C7.49744 11.5 10.4974 7.5 10.9974 5"/>
+      <path d="M11.4974 20.5005L14.1591 14.2898C14.9451 12.456 15.338 11.5391 15.9974 11.5391C16.6568 11.5391 17.0498 12.456 17.8357 14.2898L20.4974 20.5005"/>
+      <path d="M13.4974 16.5H18.4974"/>
+    </symbol>
     <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2.99969 17.0002C2.99969 17.9302 2.99969 18.3952 3.10192 18.7767C3.37932 19.8119 4.18796 20.6206 5.22324 20.898C5.60474 21.0002 6.06972 21.0002 6.99969 21.0002L16.9997 21.0002C17.9297 21.0002 18.3947 21.0002 18.7762 20.898C19.8114 20.6206 20.6201 19.8119 20.8975 18.7767C20.9997 18.3952 20.9997 17.9302 20.9997 17.0002"/>
       <path d="M16.4998 11.5002C16.4998 11.5002 13.1856 16.0002 11.9997 16.0002C10.8139 16.0002 7.49976 11.5002 7.49976 11.5002M11.9997 15.0002V3.00016"/>
@@ -3075,7 +3163,7 @@
         <div class="cv-grid">
 
           <div class="cv-col">
-            <p class="section-label cv-in" style="--d:0ms">Experience</p>
+            <p class="section-label cv-in" style="--d:0ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-work" /></svg>Experience</p>
             <ol class="cv-list">
           <li class="cv-item" style="--d:60ms">
             <i class="cv-bud" aria-hidden="true"></i>
@@ -3168,7 +3256,7 @@
           </li>
             </ol>
 
-            <p class="section-label cv-in" style="--d:150ms">Education</p>
+            <p class="section-label cv-in" style="--d:150ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-school" /></svg>Education</p>
             <ol class="cv-list">
           <li class="cv-item" style="--d:198ms">
             <i class="cv-bud" aria-hidden="true"></i>
@@ -3210,16 +3298,16 @@
           </div>
 
           <div class="cv-col">
-            <p class="section-label cv-in" style="--d:80ms">Skills</p>
+            <p class="section-label cv-in" style="--d:80ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-skill" /></svg>Skills</p>
             <dl class="cv-skills">
-              <div class="cv-in" style="--d:110ms"><dt>Machine learning</dt><dd>PyTorch &middot; JAX &middot; LLM and VLM architecture &middot; distributed training (FSDP, DeepSpeed, Ray) &middot; inference optimisation (vLLM, WebGPU) &middot; agentic orchestration &middot; alignment (SFT, PEFT, RLHF, PPO/DPO) &middot; mechanistic interpretability &middot; evaluation</dd></div>
-              <div class="cv-in" style="--d:156ms"><dt>Building</dt><dd>Python &middot; TypeScript &middot; React &middot; Svelte &middot; Three.js &middot; GLSL &middot; WGSL</dd></div>
-              <div class="cv-in" style="--d:202ms"><dt>Scientific computing</dt><dd>MATLAB &middot; Mathematica &middot; signal processing</dd></div>
-              <div class="cv-in" style="--d:248ms"><dt>Leading &amp; teaching</dt><dd>ML infrastructure strategy &middot; cross-functional R&amp;D &middot; AI system architecture &middot; curriculum design and workshops &middot; mentoring &middot; technical recruiting</dd></div>
-              <div class="cv-in" style="--d:294ms"><dt>Languages</dt><dd>English &middot; Turkish &middot; Persian &middot; Mandarin</dd></div>
+              <div class="cv-in" style="--d:110ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-ml" /></svg>Machine learning</dt><dd>PyTorch &middot; JAX &middot; LLM and VLM architecture &middot; distributed training (FSDP, DeepSpeed, Ray) &middot; inference optimisation (vLLM, WebGPU) &middot; agentic orchestration &middot; alignment (SFT, PEFT, RLHF, PPO/DPO) &middot; mechanistic interpretability &middot; evaluation</dd></div>
+              <div class="cv-in" style="--d:156ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-code" /></svg>Building</dt><dd>Python &middot; TypeScript &middot; React &middot; Svelte &middot; Three.js &middot; GLSL &middot; WGSL</dd></div>
+              <div class="cv-in" style="--d:202ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-math" /></svg>Scientific computing</dt><dd>MATLAB &middot; Mathematica &middot; signal processing</dd></div>
+              <div class="cv-in" style="--d:248ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lead" /></svg>Leading &amp; teaching</dt><dd>ML infrastructure strategy &middot; cross-functional R&amp;D &middot; AI system architecture &middot; curriculum design and workshops &middot; mentoring &middot; technical recruiting</dd></div>
+              <div class="cv-in" style="--d:294ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lang" /></svg>Languages</dt><dd>English &middot; Turkish &middot; Persian &middot; Mandarin</dd></div>
             </dl>
 
-            <p class="section-label cv-in" style="--d:230ms">Honours</p>
+            <p class="section-label cv-in" style="--d:230ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-honour" /></svg>Honours</p>
             <ul class="cv-awards">
               <li class="cv-in" style="--d:260ms"><time>2020</time><span><b>NTT Data Fellowship</b> &mdash; MIT, for <em>Rhizome</em>, a smart memory book</span></li>
               <li class="cv-in" style="--d:306ms"><time>2017</time><span><b>First place and the Koch AI Prize</b> &mdash; MIT Grand Hack, for <em>Memoroom</em>, VR for Alzheimer&rsquo;s</span></li>
