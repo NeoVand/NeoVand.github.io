@@ -3961,7 +3961,8 @@
         for (let i = 0; i < n; i++, k++) {
           const out = Math.abs(i - (n - 1) / 2) / Math.max(1, (n - 1) / 2);
           const turn = (rows - 1 - c) * 0.32 + out * 0.5 + hash(k, 131) * 0.08;
-          bricks.push({ x: rx + i * step, y, w: brick, h: courses[c], bd: 0.12 + turn * 0.64, k });
+          bricks.push({ x: rx + i * step, y, w: brick, h: courses[c],
+                        bd: 0.12 + turn * 0.64, k, top: c === 0 });
         }
         ledgeRows.push({ x0: rx, x1: rx + rowW, y0: y, y1: y + courses[c] });
         y += courses[c] + LEDGE_VGAP;
@@ -4205,6 +4206,12 @@
       // re-lay makes new bricks, which arrive unbaked
       if (b.baked !== dpr) {
         const clay = brickClay(b.k);
+        // The top course is laid a shade darker than the rest of the shelf.
+        // It is the course the pavilion stands on, and the two are the same
+        // brick out of the same kiln: without something between them the one
+        // grew out of the other. This is half of that something — the
+        // pavilion lays a dark line along the joint for the other half.
+        if (b.top) clay.l *= 0.80;
         b.dayCv = brickSprite(b.w, b.h, b.k, clay, true, true);
         b.nightCv = brickSprite(b.w, b.h, b.k, clay, false, true);
         b.baked = dpr;
@@ -5409,13 +5416,23 @@
     const GZ_CORN_HW = 1.15, GZ_DRUM_HW = 0.97, GZ_DOME_HW = 0.92;
     // the three bays: an entrance in the middle, a pier, a lesser arch, a pier
     const GZ_A = 0.38;              // the entrance, half its clear width
-    const GZ_P1 = 0.56;             // the inner piers, 0.38 out to here
-    const GZ_P2 = 0.84;             // the side bays, 0.56 out to here
+    // The piers, and why they are as wide as they are. An arch ring lands on
+    // the impost and runs its own depth out onto the pier either side — that
+    // is what a turned arch does — so a pier between two arches has to be
+    // wide enough for both rings and a piece of spandrel between them. It was
+    // not: at 0.18 across it took a ring's depth from each side with less than
+    // nothing left over, and the entrance ring and the window ring met and
+    // overlapped inside it. Two rings crossing is the one thing on this
+    // building that could not be read as brickwork at all.
+    const GZ_P1 = 0.606;            // the inner piers, 0.38 out to here
+    const GZ_P2 = 0.845;            // the side bays, 0.606 out to here
     // How much of the clear entrance the harp fills. It is an instrument
     // standing in a room, not a thing wedged into a doorway, so it wants air
     // round it on both sides and under the arch.
     const GZ_HARP = 0.68;
-    const GZ_SIDE_C = 0.70, GZ_SIDE_R = 0.14;
+    // and the window in each bay fills it, so its centre and radius are the
+    // bay's own and nothing has to agree with anything by hand
+    const GZ_SIDE_C = (GZ_P1 + GZ_P2) / 2, GZ_SIDE_R = (GZ_P2 - GZ_P1) / 2;
     let GZ_SIDE_S = GZ_SPRING;
     // what it all comes to, near enough for the layout to size it by: the
     // setting-out moves nothing by more than half a course
@@ -5451,10 +5468,12 @@
       LIGHT.up = -dy;                          // 1 straight overhead, 0 on the horizon
       LIGHT.low = Math.min(1, Math.abs(dx));   // and the other way about
       // How far a shadow runs for every pixel of the height throwing it. Held
-      // to about a length and a half: a sun this low would otherwise run the
-      // pavilion's shadow clean off the end of the shelf, and a shadow that
-      // long has gone too soft to see anyway.
-      LIGHT.k = Math.max(-1.55, Math.min(1.55, dx / dy));
+      // to about a length and a half — a light this low would otherwise run
+      // one clean off the end of the shelf — but eased into that stop rather
+      // than cut off at it: a hard clamp holds still while the sun keeps
+      // moving, and a shadow that stops dead in the middle of a move is worse
+      // than a long one.
+      LIGHT.k = 1.55 * Math.tanh(dx / dy / 1.55);
     }
 
     let gaz = null;                 // where it stands, and what it is made of
@@ -5502,10 +5521,53 @@
     const gzBed = (pts, sh, cl) => gzOps.push({ t: 'm', pts, sh: sh || 0, cl });
     const gzFill = (col, pts, colN, cl) => gzOps.push({ t: 'p', col, colN, pts, cl });
     const gzGrad = (pts, from, to, a, b, cl) => gzOps.push({ t: 'g', pts, from, to, a, b, cl });
+    const gzRamp = (pts, stops, stopsN, a, b, cl) =>
+      gzOps.push({ t: 'g', pts, stops, stopsN, a, b, cl });
     const gzRad = (pts, stops, c, r0, r1) => gzOps.push({ t: 'r', pts, stops, c, r0, r1 });
     const gzLeafAt = (x, y, ang, size) => gzOps.push({ t: 'l', x, y, ang, size });
     const gzBloom = (x, y, r, k) => gzOps.push({ t: 'f', x, y, r, k });
     const gzStem = (pts, w) => gzOps.push({ t: 's', pts, w });
+    // The turn on a round thing — a pier, the drum, the ring of an arch.
+    // Whichever of its two edges takes the light was decided by the sign of
+    // the light, and a sign flips: the instant the sun crossed the middle of
+    // the building every pier, the drum and all three rings swapped their lit
+    // side over in one frame, which in the middle of an otherwise smooth move
+    // reads as the whole building changing texture at once.
+    //
+    // So the gradient always runs the same way, left edge to right edge, and
+    // it is the two end colours that follow the light. Each end runs from lit,
+    // through nothing, to shaded as the light crosses over it, and at the
+    // crossing both ends are nothing — a cylinder lit from straight above has
+    // no lit side, which is also true. There is no step left anywhere in it.
+    // The turn on a round thing is two things, and only one of them moves.
+    // Where the light falls across it moves; that its own two edges are
+    // turning away from whoever is looking at it does not, and holds however
+    // the light is placed — which is why a column stays round at noon. That
+    // half is baked in, symmetric, and is what stops every pier and the drum
+    // going flat when the light comes from straight overhead and the moving
+    // half of it correctly falls to nothing.
+    const gzRound = (x0, x1, inset) => [
+      [[0, 'rgba(12,7,4,0.28)'], [inset, 'rgba(12,7,4,0.02)'],
+       [1 - inset, 'rgba(12,7,4,0.02)'], [1, 'rgba(12,7,4,0.28)']],
+      [[0, 'rgba(1,2,6,0.34)'], [inset, 'rgba(1,2,6,0.03)'],
+       [1 - inset, 'rgba(1,2,6,0.03)'], [1, 'rgba(1,2,6,0.34)']],
+    ];
+    const GZ_LIT = '255,248,236', GZ_SHADE = '14,8,5';
+    const GZ_LIT_N = '214,228,255', GZ_SHADE_N = '2,4,9';
+    function gzTurn(op, x0, x1, up, down) {
+      const u = LIGHT.dx, q = 0.40 + 0.60 * LIGHT.low;
+      op.a = [x0, 0]; op.b = [x1, 0];
+      const face = (side, night) => {
+        const t = side * u;
+        const lit = night ? GZ_LIT_N : GZ_LIT, sh = night ? GZ_SHADE_N : GZ_SHADE;
+        const a = night ? up * 0.68 : up, b = night ? down * 1.10 : down;
+        return t >= 0 ? `rgba(${lit},${(a * q * t).toFixed(3)})`
+                      : `rgba(${sh},${(b * q * -t).toFixed(3)})`;
+      };
+      op.from  = face(-1, false); op.to    = face(1, false);
+      op.fromN = face(-1, true);  op.toN   = face(1, true);
+    }
+
     // The coat just pushed is one the light lays, not the bricklayer: keep it
     // out of the sheets, and let `re` put it where the sun is before each
     // frame. `under` sends it beneath the building instead of over it, which
@@ -5588,15 +5650,7 @@
       {
         const ax0 = gzX(cx - r - depth), ax1 = gzX(cx + r + depth);
         gzGrad(bed, '', '', [0, 0], [0, 0]);
-        gzSun(op => {
-          const q = 0.40 + 0.60 * LIGHT.low;
-          op.a = [LIGHT.dx >= 0 ? ax1 : ax0, 0];
-          op.b = [LIGHT.dx >= 0 ? ax0 : ax1, 0];
-          op.from  = `rgba(255,246,230,${(0.20 * q).toFixed(3)})`;
-          op.to    = `rgba(14,8,5,${(0.30 * q).toFixed(3)})`;
-          op.fromN = `rgba(212,226,255,${(0.13 * q).toFixed(3)})`;
-          op.toN   = `rgba(2,4,9,${(0.34 * q).toFixed(3)})`;
-        });
+        gzSun(op => gzTurn(op, ax0, ax1, 0.22, 0.32));
       }
       const step = Math.PI / n, gap = step * 0.13, back = depth * 0.10;
       for (let i = 0; i < n; i++) {
@@ -5810,59 +5864,45 @@
       const ch = gzSetOut(unit);                // one course, for the whole of it
       gzFY = base - GZ_PL * unit;               // the floor stands a plinth off the shelf
       const len = ch * BRICK_LONG;              // three times as long
-      const ringD = ch * 1.9;                   // how deep the arch rings are turned
+      // How deep the rings are turned. The entrance takes the deeper one, its
+      // window the shallower — a smaller arch gets a shallower ring, which is
+      // true of real ones as well as convenient here. Both are then held to
+      // what the spandrel between them can actually take: a course is a bigger
+      // share of a small pavilion than of a large one, so at the small end the
+      // rings have to give way rather than meet.
+      const GZ_SPANDREL = 0.048;                // brick left between two rings
+      let ringD = ch * 1.6, ringS = ch * 1.3;
+      const room = GZ_SIDE_C - GZ_SIDE_R - GZ_A - GZ_SPANDREL;
+      if (ringD + ringS > room) { const f = room / (ringD + ringS); ringD *= f; ringS *= f; }
+      ringS = Math.min(ringS, 1 - GZ_SIDE_C - GZ_SIDE_R - GZ_SPANDREL);
       let domeOutline = null;
       // the two piers, and their mirrors, as [x0, x1] pairs
       const PIERS = [[-GZ_P1, -GZ_A], [GZ_A, GZ_P1], [-1, -GZ_P2], [GZ_P2, 1]];
       const BAYS = [[-GZ_P2, -GZ_P1], [GZ_P1, GZ_P2]];
 
-      // What it throws on the shelf, before any of it is laid. Not an ellipse
-      // parked underneath it: the building run out along the ledge away from
-      // whatever is up in the sky, and lengthening as that gets lower.
-      //
-      // Drawn flat, the grove has no ground to lay a shadow on — the shelf is
-      // a wall seen straight on and its top is a line. So the shadow does what
-      // a shadow does to a parapet in any picture painted from the front: it
-      // starts at the top edge of the ledge and comes down the face of it,
-      // deep where the building stands and thinning to nothing by the far end.
-      // The near end is the plinth's own footing and the far end is the
-      // dome's; the outline is the smooth greater of the two, so the tongue
-      // swells out of the footing instead of being stuck on the side of it.
-      // It stops where the ledge does, because past that there is nothing for
-      // it to fall on.
-      {
-        const w0 = GZ_PL_HW * 1.04 * unit, t0 = unit * 0.130;
-        const w1 = GZ_DOME_HW * unit * 0.70, t1 = unit * 0.052;
-        const y0 = base + 0.5;
-        gzGrad([], '', '', [0, 0], [0, 0]);
-        gzSun(op => {
-          const reach = LIGHT.k * GZ_TIP * unit;
-          const tipx = Math.max(ledgeX0 + w1 * 0.4,
-                                Math.min(ledgeX1 - w1 * 0.4, cx + reach));
-          const xL = Math.max(ledgeX0, Math.min(cx - w0, tipx - w1));
-          const xR = Math.min(ledgeX1, Math.max(cx + w0, tipx + w1));
-          const N = 40, pts = op.pts;
-          pts.length = 0;
-          pts.push([xL, y0], [xR, y0]);            // the top edge is the ledge
-          for (let i = N; i >= 0; i--) {
-            const x = xL + ((xR - xL) * i) / N;
-            const a = Math.max(0, 1 - ((x - cx) / w0) ** 2);
-            const b = Math.max(0, 1 - ((x - tipx) / w1) ** 2);
-            const ta = t0 * Math.sqrt(a), tb = t1 * Math.sqrt(b);
-            pts.push([x, y0 + Math.cbrt(ta * ta * ta + tb * tb * tb)]);
-          }
-          op.a = [cx - reach * 0.34, y0];
-          op.b = [cx + reach, y0];
-          op.from  = `rgba(${STONE.shade[1]},0.34)`;
-          op.to    = `rgba(${STONE.shade[1]},0)`;
-          op.fromN = `rgba(${STONE.shade[0]},0.46)`;
-          op.toN   = `rgba(${STONE.shade[0]},0)`;
-        }, true);
-      }
-
+      // It throws nothing on the shelf. It used to: the building flattened
+      // onto the ledge and run out away from the sun, which was true enough
+      // in daylight and wrong after dark, where a long soft smear along a
+      // dark ledge is not a shadow, it is a smudge. Drawn flat there is no
+      // ground for one to lie on anyway — the shelf is a wall seen straight
+      // on and its top is a line. What the building actually needs there is
+      // not a shadow but a line, and it gets one below.
       // ── the plinth ─────────────────────────────────────────────────────
       gzBand(-GZ_PL_HW, GZ_PL_HW, -GZ_PL, -ch, ch, len, { salt: 700, up: 0 });
       gzBand(-GZ_PL_HW * 1.02, GZ_PL_HW * 1.02, -ch, 0, ch, len, { salt: 730 });
+      // The line under the whole of it. Every level of this building has a
+      // dark line where it lands on the one below — under the cornice, under
+      // the plinth's oversail — and the one joint that had none was the joint
+      // that most needed one: where the pavilion meets the ledge it stands
+      // on. They are the same brick out of the same kiln, so without a line
+      // between them the building grew out of the shelf rather than standing
+      // on it. The shelf's own top course is laid a shade darker for the same
+      // reason (see the wall, above).
+      gzFill('rgba(14,9,6,0.52)',
+             [[gzX(-GZ_PL_HW * 1.02), gzY(-GZ_PL)], [gzX(GZ_PL_HW * 1.02), gzY(-GZ_PL)],
+              [gzX(GZ_PL_HW * 1.02), gzY(-GZ_PL) + Math.max(1.3, unit * 0.023)],
+              [gzX(-GZ_PL_HW * 1.02), gzY(-GZ_PL) + Math.max(1.3, unit * 0.023)]],
+             'rgba(0,0,0,0.62)');
       // the shadow the plinth's own oversail throws on the course below it
       gzFill('rgba(20,12,8,0.20)',
              [[gzX(-GZ_PL_HW), gzY(-ch)], [gzX(GZ_PL_HW), gzY(-ch)],
@@ -5910,19 +5950,13 @@
         // its two edges is the lit one is not settled here — it is settled by
         // where the sun has got to when the frame is drawn, and it swaps over
         // when the sun crosses the pavilion.
-        gzGrad([[gzX(p[0]), gzY(GZ_CAP)], [gzX(p[1]), gzY(GZ_CAP)], [gzX(p[1]), gzY(0)], [gzX(p[0]), gzY(0)]],
-               '', '', [0, 0], [0, 0]);
         {
           const ea = gzX(p[0]), eb = gzX(p[1]);
-          gzSun(op => {
-            const q = 0.40 + 0.60 * LIGHT.low;
-            op.a = [LIGHT.dx >= 0 ? eb : ea, 0];
-            op.b = [LIGHT.dx >= 0 ? ea : eb, 0];
-            op.from  = `rgba(255,248,236,${(0.21 * q).toFixed(3)})`;
-            op.to    = `rgba(14,8,5,${(0.30 * q).toFixed(3)})`;
-            op.fromN = `rgba(214,228,255,${(0.15 * q).toFixed(3)})`;
-            op.toN   = `rgba(2,4,9,${(0.34 * q).toFixed(3)})`;
-          });
+          const rect = () => [[ea, gzY(GZ_CAP)], [eb, gzY(GZ_CAP)], [eb, gzY(0)], [ea, gzY(0)]];
+          const rd = gzRound(ea, eb, 0.26);
+          gzRamp(rect(), rd[0], rd[1], [ea, 0], [eb, 0]);      // the half that holds still
+          gzGrad(rect(), '', '', [0, 0], [0, 0]);              // and the half that follows
+          gzSun(op => gzTurn(op, ea, eb, 0.23, 0.33));
         }
       }
       // The imposts: a block on each pier at the height the arches spring
@@ -5937,7 +5971,7 @@
       for (const b of BAYS) {
         const cxb = (b[0] + b[1]) / 2;
         const cl = { rect: [gzX(b[0]), gzY(GZ_CAP) - GZ_BLEED, gzX(b[1]), gzY(0)],
-                     arch: [gzX(cxb), gzY(GZ_SIDE_S), (GZ_SIDE_R + ringD) * unit, gzY(0)] };
+                     arch: [gzX(cxb), gzY(GZ_SIDE_S), (GZ_SIDE_R + ringS) * unit, gzY(0)] };
         gzBand(b[0], b[1], 0, GZ_CAP, ch, len, { salt: 300 + Math.round(b[0] * 100), cl });
       }
       {
@@ -5947,7 +5981,7 @@
       }
       // and then the rings that turn them
       for (const b of BAYS) {
-        gzArch((b[0] + b[1]) / 2, GZ_SIDE_S, GZ_SIDE_R, ringD, ch, 340 + Math.round(b[0] * 100), 0);
+        gzArch((b[0] + b[1]) / 2, GZ_SIDE_S, GZ_SIDE_R, ringS, ch, 340 + Math.round(b[0] * 100), 0);
       }
       gzArch(0, GZ_SPRING, GZ_A, ringD, ch, 420, 0);
       {
@@ -5982,18 +6016,23 @@
       // flat, which is exactly the kind of place the eye stops on.
       {
         const da = gzX(-GZ_DRUM_HW), db = gzX(GZ_DRUM_HW);
-        gzGrad([[da, gzY(GZ_T4)], [db, gzY(GZ_T4)], [db, gzY(GZ_T3)], [da, gzY(GZ_T3)]],
-               '', '', [0, 0], [0, 0]);
-        gzSun(op => {
-          const q = 0.40 + 0.60 * LIGHT.low;
-          op.a = [LIGHT.dx >= 0 ? db : da, 0];
-          op.b = [LIGHT.dx >= 0 ? da : db, 0];
-          op.from  = `rgba(255,248,236,${(0.21 * q).toFixed(3)})`;
-          op.to    = `rgba(14,8,5,${(0.32 * q).toFixed(3)})`;
-          op.fromN = `rgba(214,228,255,${(0.14 * q).toFixed(3)})`;
-          op.toN   = `rgba(2,4,9,${(0.36 * q).toFixed(3)})`;
-        });
+        const face = () => [[da, gzY(GZ_T4)], [db, gzY(GZ_T4)], [db, gzY(GZ_T3)], [da, gzY(GZ_T3)]];
+        const dr = gzRound(da, db, 0.17);
+        gzRamp(face(), dr[0], dr[1], [da, 0], [db, 0]);
+        gzGrad(face(), '', '', [0, 0], [0, 0]);
+        gzSun(op => gzTurn(op, da, db, 0.23, 0.35));
       }
+
+      // The dome lands on the drum, and that joint wanted the same dark line
+      // every other joint on the building has. It had one only at the two
+      // ends, where the drum shows past the dome's foot, so the separation
+      // existed at the sides of the building and nowhere across the front of
+      // it. This runs the drum's whole width.
+      gzFill('rgba(14,10,7,0.46)',
+             [[gzX(-GZ_DRUM_HW), gzY(GZ_T4)], [gzX(GZ_DRUM_HW), gzY(GZ_T4)],
+              [gzX(GZ_DRUM_HW), gzY(GZ_T4) + Math.max(1.2, unit * 0.019)],
+              [gzX(-GZ_DRUM_HW), gzY(GZ_T4) + Math.max(1.2, unit * 0.019)]],
+             'rgba(0,0,0,0.58)');
 
       // ── the dome, and what stands on top of it ─────────────────────────
       const ys = gzDomeCourses(ch);
@@ -6279,8 +6318,12 @@
         g.fillStyle = (day ? op.col : op.colN) || op.col; gzPath(g, op.pts); g.fill();
       } else if (op.t === 'g') {
         const gr = g.createLinearGradient(op.a[0], op.a[1], op.b[0], op.b[1]);
-        gr.addColorStop(0, (day ? op.from : op.fromN) || op.from);
-        gr.addColorStop(1, (day ? op.to : op.toN) || op.to);
+        const ramp = (day ? op.stops : op.stopsN) || op.stops;
+        if (ramp) for (const q of ramp) gr.addColorStop(q[0], q[1]);
+        else {
+          gr.addColorStop(0, (day ? op.from : op.fromN) || op.from);
+          gr.addColorStop(1, (day ? op.to : op.toN) || op.to);
+        }
         g.fillStyle = gr; gzPath(g, op.pts); g.fill();
       } else if (op.t === 'r') {
         const gr = g.createRadialGradient(op.c[0], op.c[1], op.r0, op.c[0], op.c[1], op.r1);

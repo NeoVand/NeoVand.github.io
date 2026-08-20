@@ -131,7 +131,22 @@ building is the mirror of the right, brick for brick, and no joint can open
 anywhere — not because anything checks, but because there is nothing for a gap
 to come from.
 
-Four things then had to be got right.
+Six things then had to be got right.
+
+**Room for the rings.** An arch ring lands on the impost and runs its own depth
+out onto the pier either side — that is what a turned arch does, and it is why
+a pier between two arches has to be wide enough to carry both rings with a
+piece of spandrel left between them. It was not. At 0.18 of the half-width
+across it took a ring's depth from each side with less than nothing left over,
+so the entrance ring and the window ring beside it met *inside* the pier and
+overlapped by a few pixels — two rings crossing, which is the one thing on this
+building that cannot be read as brickwork at all. The bays are set out from
+that constraint now: the piers are wider, the windows narrower, the entrance
+takes the deeper ring and its windows the shallower one (a smaller arch gets a
+shallower ring in real work too), and both depths are then held to whatever
+spandrel the pier can actually give them — a course is a larger share of a
+small pavilion than of a large one, so at the small end the rings give way
+rather than meet.
 
 **One course.** A brick wall has one bed joint height and every course in it
 lines up right across the front. This one did not: the piers were coursed on
@@ -195,6 +210,12 @@ the balance between them matters: while the wash was faint, the dome was the
 one part of the building that appeared to know where the sun was, and the rest
 of it sat there evenly lit and contradicted the dome.
 
+And every level of it is separated from the one below by a dark line: under
+the cornice, under the plinth's oversail, where the dome lands on the drum, and
+where the whole building lands on the shelf. Those last two had none, and both
+were joints between two things made of the same brick, which is exactly where
+one is needed most.
+
 There is no far side, and nothing behind the harp but sky. A pavilion is a
 roof on legs, and what is behind it is the garden. The two side bays are open
 to the floor for the same reason: they had a low balustrade across the bottom
@@ -243,24 +264,56 @@ shadow on the ledge swings round with them.
 
 Two numbers do the whole of it: which way the light comes from, as a unit
 vector from the middle of the pavilion, and how far a shadow runs for every
-pixel of the height that throws it — which is just the horizontal component
-over the vertical one, held to about a length and a half. A sun this low would
-otherwise run the pavilion's shadow clean off the end of the shelf, and a
-shadow that long has gone too soft to see anyway.
+pixel of the height that throws it — the horizontal component over the vertical
+one, eased into a stop at about a length and a half rather than cut off at it,
+since a hard clamp holds still while the light keeps moving.
 
-**The shadow itself.** Drawn flat, the grove has no ground to lay one on: the
-shelf is a wall seen straight on and its top is a line, and the old ellipse
-sitting under the plinth was a convention, not a shadow. So it does what a
-shadow does to a parapet in any picture painted from the front — it starts at
-the top edge of the ledge and comes down the face of it, deep where the
-building stands and thinning to nothing by the far end. The near end is the
-plinth's own footing and the far end is the dome's; the outline is the smooth
-greater of the two, so the tongue swells out of the footing instead of being
-stuck on the side of it. It stops where the ledge does, because past that
-there is nothing for it to fall on. The harp's own shadow on the floor leans
-the same way for the same reason, and so does the little shade under each
-trunk — nothing like as far, that being the dark where a trunk meets the ledge
-and not the shadow of a whole tree, which would be off the page.
+**And nothing switches.** Whichever of a pier's two edges took the light was
+decided by the *sign* of the light, and a sign flips: the instant the sun
+crossed the middle of the building, every pier, the drum and all three arch
+rings swapped their lit side over inside one frame, which in the middle of an
+otherwise smooth chase reads as the whole building changing texture at once.
+Measured across a chase, that one frame moved the picture eight times as much
+as the frames either side of it, and it was the largest single change in the
+whole move — including the moment the sun bolts.
+
+So the gradient always runs the same way, left edge to right edge, and it is
+the two end colours that follow the light. Each end runs from lit, through
+nothing, to shaded as the light crosses over it, and at the crossing both ends
+are nothing — which is also true, a cylinder lit from straight overhead having
+no lit side. The same measurement now puts the crossing frame at a fifteenth of
+what it was and level with its neighbours.
+
+That leaves a cylinder flat when the light is overhead, which is right for the
+half of the turn that the light decides and wrong for the other half: a column
+is round at noon too, because its own two edges are turning away from whoever
+is looking at it. So the turn is two things and only one of them moves. The
+symmetric edge falloff is baked into the sheet with the brickwork and holds
+however the light is placed; the directional half rides on top of it and is
+free to fall to nothing.
+
+**No shadow on the shelf, and a line instead.** The pavilion did throw one for
+a while: its silhouette flattened onto the ledge and run out away from the sun,
+lengthening as the sun dropped. It was true enough in daylight and no good at
+all after dark, where a long soft smear along a dark ledge stops reading as a
+shadow and starts reading as a smudge. And drawn flat there is nowhere for it
+to lie in the first place — the shelf is a wall seen straight on and its top is
+a line, so any shadow on it is a convention rather than a projection.
+
+What the joint actually needed was not a shadow but a line, and it now has the
+same one every other level of the building has where it lands on the one below.
+The shelf's top course is laid a shade darker than the rest of it for the other
+half of the same job: the pavilion and the ledge are the same brick out of the
+same kiln, and with nothing between them the one grew out of the other instead
+of standing on it. The dome got the same treatment where it lands on the drum —
+that joint was marked only at the two ends, where the drum shows past the dome's
+foot, so the separation existed at the sides of the building and nowhere across
+the front of it.
+
+The harp's own shadow on the floor it stands on still leans with the light, and
+so does the little shade under each trunk — nothing like as far, that being the
+dark where a trunk meets the ledge and not the shadow of a whole tree, which
+would be off the page.
 
 **And the shelf.** A brick wall seen straight on has no lit side and no shaded
 side: every face in it points the same way. But a light this low and this near
