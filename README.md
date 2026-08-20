@@ -224,7 +224,15 @@ panels of brick bricked into two windows. What a window wants under it is a
 sill and daylight.
 
 The stand is planted around it in the two clearings either side, with a margin
-of shelf between, and no tree stands behind it.
+of shelf between, and no tree stands behind it. The building takes its ground
+out of the *spacing* and not out of the canopy: how wide a crown may be drawn
+is still measured against the whole width, because these trees stand half as
+tall again as the pavilion and what spreads over its roof is sky. Given only
+the clearings to spread in, the broad species could not reach the top of the
+name without being squeezed past the aspect floor, so `fitTrees` shortened
+them instead — and the tallest tree in the stand, whose whole job is to touch
+the title, came up a fifth of the band short, or half of it on a crowded
+stand.
 
 None of the masonry is drawn per frame. The whole building is compiled once
 per layout into a list of stamps in canvas points, and that list is painted

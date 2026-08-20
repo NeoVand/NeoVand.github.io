@@ -2025,6 +2025,12 @@
        items so that it stays whole while the posts underneath it change
        height. */
     .cv-list {
+      /* One number for the axis, and everything on it is placed from that.
+         The hairline and the buds were each given their own left edge, half
+         a pixel apart, so the line ran down the side of every dot instead of
+         through it — a whole device pixel out on a 2× screen, which on a
+         one-pixel rule is the difference between a stem and a seam. */
+      --stem: 7.5px;
       position: relative;
       list-style: none;
       margin: 0;
@@ -2034,7 +2040,7 @@
     .cv-list::before {
       content: '';
       position: absolute;
-      left: 7px;
+      left: calc(var(--stem) - 0.5px);
       top: 12px;
       bottom: 14px;
       width: 1px;
@@ -2053,7 +2059,7 @@
        being parked beside it. */
     .cv-bud {
       position: absolute;
-      left: 4.5px;
+      left: calc(var(--stem) - 2.5px);
       top: 17px;
       width: 5px;
       height: 5px;
@@ -2063,14 +2069,19 @@
       transition: transform 320ms var(--ease), opacity 320ms var(--ease);
     }
 
+    /* Fifteen pixels of a 24-unit drawing, so the foot of the leaf's own
+       stem — which Hugeicons puts at (3, 21) — is at an eighth across and
+       seven eighths down. Place that point on the axis, level with the bud
+       it replaces, and pivot there: the leaf then unrolls out of the joint
+       rather than beside it. */
     .cv-sprout {
       position: absolute;
-      left: 3.5px;
-      top: 8px;
+      left: calc(var(--stem) - 1.875px);
+      top: 6.375px;                        /* the bud's own centre, 19.5, less 13.125 */
       color: var(--ink);
       opacity: 0;
       transform: scale(0.12) rotate(-42deg);
-      transform-origin: 25% 75%;
+      transform-origin: 12.5% 87.5%;
       transition: transform 520ms var(--ease), opacity 300ms var(--ease);
       pointer-events: none;
     }
@@ -7048,6 +7059,9 @@
     function fitTrees(only) {
       if (!fit) return;
       const { edge, slot, gap, band, treeBase } = fit;
+      // how wide a crown may be drawn, which is not how far apart the trunks
+      // stand — see the layout
+      const span = fit.span || slot;
       // How much narrowing the broadest species needs in order to still reach
       // its target height. Deriving this from the band means the row re-fits
       // itself when the text beside it reflows, instead of the widest tree
@@ -7056,7 +7070,7 @@
       trees.forEach(t => {
         const spanX = Math.max(1e-6, t.box.maxX - t.box.minX);
         const spanY = Math.max(1e-6, -t.box.minY);
-        needed = Math.min(needed, (slot * OVERLAP / spanX) / ((band * t.rise) / spanY));
+        needed = Math.min(needed, (span * OVERLAP / spanX) / ((band * t.rise) / spanY));
       });
       const ratio = Math.max(MIN_RATIO, Math.min(0.85, needed));
 
@@ -7069,7 +7083,7 @@
           const spanY = Math.max(1e-6, -b.minY);
 
           let sy = (band * t.rise) / spanY;
-          let sx = Math.min(sy, slot * OVERLAP / spanX);
+          let sx = Math.min(sy, span * OVERLAP / spanX);
           // Rather than let a broad species overlap its neighbour, narrow it.
           if (sx < sy * ratio) sy = sx / ratio;
 
@@ -7179,6 +7193,16 @@
       // off at the canvas edge: slot * (n + 2k) = the room there is, with k
       // the overhang each side.
       const over = (OVERLAP - 1) / 2;
+      // What a slot would be with no building in the way. The pavilion takes
+      // its ground out of the *spacing* — no tree is planted through it — but
+      // not out of the canopy: these trees stand half as tall again as it
+      // does, and what a crown spreads over its roof is sky. Given only the
+      // clearings to spread in, the broad species could not reach the top of
+      // the name without being squeezed past the aspect floor, so fitTrees
+      // shortened them instead, and the tallest tree in the stand — the one
+      // whose whole job is to touch the title — came up short by a fifth of
+      // the band, and by half of it on a crowded stand.
+      const openSlot = ((W - edge * 2) - gap * (n - 1)) / (n + 2 * over);
       const keep = gazW * 1.24;                       // its ground, and a margin
       const gzL = gazCX - keep / 2, gzR = gazCX + keep / 2;
       const wL = Math.max(0, gzL - edge), wR = Math.max(0, W - edge - gzR);
@@ -7192,7 +7216,7 @@
         xs.push(i < nL ? edge + (wL - run(nL)) / 2 + i * (slot + gap)
                        : gzR + (wR - run(nR)) / 2 + (i - nL) * (slot + gap));
       }
-      fit = { edge: xs[0], slot, gap, band, treeBase, xs };
+      fit = { edge: xs[0], slot, gap, band, treeBase, xs, span: Math.max(slot, openSlot) };
       fitTrees();
 
       // and the harp goes to stand in the archway, which the harp's own
