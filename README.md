@@ -36,6 +36,17 @@ than fizz and nothing has to be downloaded — and by night a thin star field
 crossed by the Milky Way, which arrives as a crowding of stars rather than a
 grey smear, with a meteor every half-minute or so.
 
+The day is one fixed hour — a quarter to eight on a summer evening, the sun low
+and the light gone amber — rather than the visitor's own, because most hours of
+a day made a worse picture than this one does. Which means every number in the
+low-sun branch of the shader is a number that always shows: the warmth term
+sits at 0.97 and never moves. Pitched for the mood alone, the zenith came out
+dark enough that the words in front of it were work to read — the bio's own
+grey stood at under two to one against it — and the permanent nine per cent
+taken off the whole scene "toward the ends of the day" was nine per cent taken
+off it always. The evening is still an evening; it is a little further from the
+horizon than it was.
+
 It runs at half the display's rate on a buffer capped well under a retina
 viewport's worth of pixels, stops entirely when the tab is hidden, and draws a
 single still frame under `prefers-reduced-motion`. If WebGL is unavailable the

@@ -2744,8 +2744,15 @@
 
           // Low sun: the horizon goes amber and the zenith a deeper, duller
           // blue, the way the sky does when the light comes through more air.
-          vec3 hor = mix(vec3(0.690, 0.805, 0.905), vec3(0.960, 0.760, 0.560), uWarm);
-          vec3 zen = mix(vec3(0.350, 0.565, 0.780), vec3(0.330, 0.440, 0.660), uWarm * 0.7);
+          // Deeper, though, not dim. The day here is one fixed hour — a
+          // quarter to eight on a summer evening — so uWarm sits at 0.97 all
+          // day and every one of these numbers is the number that shows.
+          // Pitched for the mood alone, the zenith came out dark enough that
+          // the words in front of it were work to read: the bio's own grey
+          // stood at under two to one against it. The evening is still an
+          // evening; it is a little further from the horizon than it was.
+          vec3 hor = mix(vec3(0.690, 0.805, 0.905), vec3(0.975, 0.795, 0.615), uWarm);
+          vec3 zen = mix(vec3(0.350, 0.565, 0.780), vec3(0.378, 0.498, 0.702), uWarm * 0.7);
           vec3 sky = mix(hor, zen, smoothstep(-0.15, 0.95, uv.y));
 
           float sd = length(p - uSun);
@@ -2778,8 +2785,10 @@
           day += s1 * exp(-sd * 19.0) * (2.00 - uWarm * 0.6)
                + s2 * exp(-sd *  5.5) * (0.34 + uWarm * 0.12)
                + s3 * exp(-sd *  1.5) * (0.12 + uWarm * 0.14);
-          // and the whole scene a shade dimmer toward the ends of the day
-          day *= 1.0 - uWarm * 0.09;
+          // and the whole scene a shade dimmer toward the ends of the day —
+          // a shade, now, rather than a tenth: at this hour the multiplier
+          // never lifts, so it was a permanent nine per cent off everything
+          day *= 1.0 - uWarm * 0.04;
           col += day * uMix;
         }
 
