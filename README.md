@@ -868,6 +868,17 @@ That noise, and the click of the switch, are built out of a filtered burst
 rather than fetched, the way the lamp's click is, and both switches share one
 `AudioContext`.
 
+**Double-click puts the needle back at the beginning.** A double-click arrives
+as click, click, dblclick, so by the time the third event runs the switch has
+been thrown twice and is back where it started. Rather than hold every single
+click for a couple of hundred milliseconds to find out whether a second one is
+coming — which would cost the switch the one thing a switch has to have — the
+flipping is left alone and the double-click simply states the end state it
+wants: playing, from the top. That is the right answer from either side, and it
+is the same answer twice, so the intermediate flipping cannot be seen. The hiss
+goes with it, the same one the changeover uses, which is what a needle put back
+down on the lead-in sounds like.
+
 Each piece is an `<audio>` element routed through a gain of its own into a
 shared master, so a fade is scheduled on the audio clock rather than stepped
 from a frame loop — a tab that sleeps half way through one does not wake with

@@ -10003,6 +10003,28 @@
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); flip(); }
     });
 
+    // Double-click puts the needle back at the beginning.
+    //
+    // A double-click arrives as click, click, dblclick, so by the time this
+    // runs the switch has already been thrown twice and is back where it
+    // started — on if it was on, off if it was off. Rather than hold every
+    // single click for a couple of hundred milliseconds to find out whether a
+    // second one is coming, which would cost the switch the one thing a switch
+    // has to have, the flipping is left alone and this simply states the end
+    // state it wants: playing, from the top. That is the right answer from
+    // either side, and it is the same answer twice, so the intermediate
+    // flipping cannot be seen.
+    host.addEventListener('dblclick', e => {
+      e.preventDefault();
+      const a = track(band);
+      clearTimeout(a.__stop);          // the second click scheduled a pause
+      a.currentTime = 0;
+      if (!on) { on = true; host.classList.add('on'); say(); }
+      play(band);
+      hiss();                          // the needle going back down on the lead-in
+      wake();
+    });
+
     // The lights changed under it. `band` follows the lamp whether the set is
     // on or off, so switching it on always gives the station that matches the
     // hour it is switched on in.
