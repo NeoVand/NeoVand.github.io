@@ -292,7 +292,7 @@
       <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 67.6%, var(--g-brass-lo))"/>
     </linearGradient>
     <linearGradient id="linear-gradient57" x1="1748.39" y1="3352.28" x2="2426.89" y2="3352.28" gradientTransform="translate(-1264.6388 5439.9205) rotate(-90)" xlink:href="#linear-gradient56"/></defs>
-  <g class="h-hue">
+  <g class="g-hue">
     <!-- The crank, in three pieces because it has to turn: the arm along
          the axle, which does not move; the throw, which is the whole of
          the turn seen edge-on and so is scaled about the axle rather

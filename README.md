@@ -4,13 +4,13 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 
 **Live site:** https://neovand.github.io
 
-![The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo at one end of it with a harp inside, beside a short bio and above the demo gallery](media/screenshot.jpg)
+![The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo in the middle of it with a gramophone inside, beside a short bio and above the demo gallery](media/screenshot.jpg)
 
 ## Structure
 
 ```
 /               ← gallery homepage
-/media/         ← thumbnails, the moon behind the grove, the harp, and its
+/media/         ← thumbnails, the moon behind the grove, the gramophone, and its
                   two pieces of music
 /media/fonts/   ← Inter, self-hosted (SIL Open Font License, see OFL.txt)
 /media/legacy/  ← figures for the older projects, shown in their modals
@@ -23,7 +23,7 @@ Personal homepage — a gallery of interactive demos, simulations, and tools.
 Every image the page loads is served from this repo. Nothing hotlinks, and
 nothing on the critical path comes from a third-party origin. The two pieces
 of music are the only heavy things here, and neither is fetched until somebody
-plays the harp.
+plays the gramophone.
 
 ## The sky
 
@@ -111,7 +111,7 @@ a night ground with the same glow it has on the page.
 ### The gazebo
 
 In the middle of the shelf, with the stand around it, there is a garden
-pavilion, and the harp stands in it. It is a brick building of three bays on a
+pavilion, and the gramophone stands in it. It is a brick building of three bays on a
 levelled plinth — an entrance in the middle with a keystone over it, a window
 either side of it, a pier between each — under a dentilled cornice and a brick
 dome, with ivy over the whole of it and a few pale roses
@@ -227,7 +227,7 @@ where the whole building lands on the shelf. Those last two had none, and both
 were joints between two things made of the same brick, which is exactly where
 one is needed most.
 
-There is no far side, and nothing behind the harp but sky. A pavilion is a
+There is no far side, and nothing behind the machine but sky. A pavilion is a
 roof on legs, and what is behind it is the garden. The two side bays are open
 to the floor for the same reason: they had a low balustrade across the bottom
 of each, which is what a garden building usually has and which read as two
@@ -340,7 +340,7 @@ that joint was marked only at the two ends, where the drum shows past the dome's
 foot, so the separation existed at the sides of the building and nowhere across
 the front of it.
 
-The harp's own shadow on the floor it stands on still leans with the light, and
+The machine's own shadow on the floor it stands on still leans with the light, and
 so does the little shade under each trunk — nothing like as far, that being the
 dark where a trunk meets the ledge and not the shadow of a whole tree, which
 would be off the page.
@@ -412,7 +412,7 @@ flowchart TB
     LY --> SC["scrub scattered by rejection<br/>sampling away from trunks"]
     LY --> BR["bricks laid · ivy planned"]
     LY --> GZ["planGazebo()<br/>the pavilion compiled to a list of stamps,<br/>flat, in the order it would be built<br/>plinth · piers · imposts · arches · cornice · dome · ivy<br/>each stamp dealt a moment to arrive in"]
-    GZ --> HP["the archway and the crown of the dome,<br/>handed to the harp; the line of the roof,<br/>handed to the air"]
+    GZ --> HP["the archway and the crown of the dome,<br/>handed to the gramophone; the line of the roof,<br/>handed to the air"]
     SP["sprites baked once<br/>leaves × variants · bricks · moon/sun · spark"]
   end
 
@@ -445,7 +445,7 @@ flowchart TB
     WHERE --> SHEETS["#air over the page · #air-room over the room<br/>page coords − scroll · dirty rects"]
     RM["reading room<br/>open → seat a party on the page tops<br/>close → send it home"] --> FLK
     ESC["escort<br/>grove scrolled away → card tops, flourish<br/>grove back → home"] --> FLK
-    RAD["the fixtures<br/>harp · the gazebo's roof · the lamp's bead<br/>the profile buttons · the decks<br/>now and then, then home; a hand on one puts them up"] --> FLK
+    RAD["the fixtures<br/>gramophone · the gazebo's roof · the lamp's bead<br/>the profile buttons · the decks<br/>now and then, then home; a hand on one puts them up"] --> FLK
   end
 
   PTR --> PE
@@ -697,7 +697,7 @@ worth of canvas plus a margin above and below, carried down the document on a
 transform, and kept inside the page's own height at the foot so its overhang
 adds nothing to what there is to scroll.
 
-Which leaves the things the window holds still — the harp, and the lamp's cord
+Which leaves the things the window holds still — the gramophone, and the lamp's cord
 where it hangs in the corner — since a bird on one of those has the mismatch
 the other way about. They get a short sheet of their own, pinned to the window
 over the corners those keep, and every creature is drawn on the sheet whose
@@ -763,88 +763,104 @@ Both ends are fixed: the count is clamped at zero, and the gallery no longer
 waits on trust. If word has not come by the time the opening should long since
 have ended, it starts anyway. Nothing in the header is worth a blank page.
 
-## The harp
+## The gramophone
 
-A harp standing in the gazebo, at the near end of the shelf: the page's other
-switch, and a thing in the grove rather than a fitting on the window. The grove
-works out the clear width of the archway and the floor inside it and hands both
-over as a box on the page; the harp is set to that width, stood on its own
-base, and goes down the page with everything else it stands among.
+A gramophone standing in the pavilion in the middle of the shelf: the page's
+other switch, and a thing in the grove rather than a fitting on the window. The
+grove works out the clear width of the archway and the floor inside it and
+hands both over as a box on the page; the machine is set to that width, stood
+on its own base, and goes down the page with everything else it stands among.
 
-For a long time it hung in the top left of the window instead — the other top
-corner from the lamp, put there off the same measurement: out into the gutter,
-half way across it, where the window was wider than the page; in as close to
-the corner as it could get where it was not, and there pinned to the top of the
-*document* rather than the window, since a corner that is also the page would
-have carried it down over the gallery. That corner is still where it goes if
-there is no grove to stand in, and the measurement that finds it is still in
-the script, but nothing ordinary reaches it any more.
+It fills a little over four fifths of the clear entrance, and sits a little
+left of the middle of the room. It is not symmetrical — the crank stands off
+the right-hand side of the cabinet and the drawing's box is centred on the pair
+of them — so centring the box walked the crank into the ivy growing up the near
+pier. The horn leans the other way and takes the weight back.
 
-It used to be a line drawing until you played it. The artwork paints its
-colour over a dark compound path, and that path on its own — which is what is
-left when the colour is turned off — is a proper line drawing of the whole
-instrument, strings and all, so the two states were one copy of the file with
-the paint turned off and on. That reading belonged to the corner of a window,
-where a line is the polite thing to put. Standing in the gazebo it is a thing
-in a garden and not a mark on the glass, so it keeps its brass — and it has to,
-because what is behind it now is an open pavilion with the sky in it, and a
-line drawing against the sky is nothing at all. What says it is playing is the
-light on the strings and the notes coming off the roof.
-
-The lines are thin ribbons of fill rather than strokes, which is how the
-artwork was drawn — and a ribbon two units across in a viewBox 930 units wide
-is a seventh of a pixel at this size: a rumour of a harp, not a drawing of
-one. So the ink is stroked as well as filled, with `vector-effect:
-non-scaling-stroke`, which puts the width in screen pixels and ignores the
-viewBox entirely. Playing, that line halves but keeps its colour, because at
-this size the line is most of what you can see of the thing and it has to hold
-its edge against a bright sky.
+A harp stood here first, and much of what follows is the harp's, kept because
+it was right. For a long time that harp hung in the top left of the window
+instead — the other top corner from the lamp, put there off the same
+measurement: out into the gutter, half way across it, where the window was
+wider than the page; in as close to the corner as it could get where it was
+not, and there pinned to the top of the *document* rather than the window,
+since a corner that is also the page would have carried it down over the
+gallery. That corner is still where the machine goes if there is no grove to
+stand in, and the measurement that finds it is still in the script, but nothing
+ordinary reaches it any more.
 
 ### The material
 
-It is made of what the lamp's knob is made of. That bead is a gradient from
-`--knob` to `--cord` lit from the upper left, with a rim in `--cord` so a brass
-thing still has an edge against daylight; the harp is the same two colours,
-the same light, the same rim. Which means it needs no drain after dark: the
-pair is brass by day and pewter by night already, so the instrument turns with
-the lamp the way the lamp's own bead does, and this page's rule about colour in
-a pencil study is kept by the material rather than by a filter. The two top
-corners of the window are then the same small metal thing, hanging in the same
-sky.
+The drawing arrived as an Illustrator export: ninety shapes, fifty-eight
+gradients, two hundred and forty stops. That is a great deal of modelling — the
+fall of light down a horn petal, the turn of a tube, the sheen along the edge
+of a platter — and the first attempt at bringing it into the page threw all of
+it away, flattening every shape to one ramp per material. The horn's twelve
+petals became one blob.
 
-One gradient runs across the whole instrument rather than one per shape, so
-there is a single light in the scene — but a flat gradient still leaves every
-column and every scroll a stripe of it. Over the top of it goes a specular
-pass: the alpha blurred, lit by one distant light from the upper left, and
-*added* to the fill rather than replacing it, since at full strength it washes
-the brass out to white. That lights each form on its own, which is what turns
-a drawing of a harp into a harp. It rides on the paint and not on the whole
-drawing, so what is left when the paint is off is a line and not a line with a
-shadow on it.
+So nothing is flattened. Every original stop is kept exactly where it was, and
+only its *colour* is rewritten: to its own lightness within its material's
+range, to a tenth of a per cent, mixed between two ends the page supplies as
+custom properties. `color-mix(in srgb, var(--g-brass-hi) 73.4%, var(--g-brass-lo))`,
+two hundred and fifty-six times. The modelling is the artwork's; the material
+is the page's. `media/gramophone.build.py` is what puts the two together, and
+it runs against the untouched export, so the mapping can be changed and the
+file rebuilt without anything being lost.
 
-What says it is playing, after dark, is the light on the strings — and light is
-something the page already allows itself at night in the lamp's bloom.
+Five materials, two ends each: the horn and the tone arm and the plate on the
+front; the plated fittings; the cabinet; the record; its label. By day the
+metal is **copper** rather than brass — the lamp's bead is already the page's
+brass and there is no sense in two of them, and a horn of this age is spun from
+copper anyway. After dark every one of the ten ends is a grey, and all of them
+are darker than the brick behind them: a machine that glows in a moonlit
+pavilion is the one thing it must not be.
 
-### What can move, and what cannot
+Over the paint goes a specular pass — the alpha blurred, lit by one distant
+light from the upper left, and *added* to the fill rather than replacing it.
+That lights each form on its own, which is most of what stops a flat drawing
+reading as flat. It is set to a fifth rather than the harp's two fifths: the
+harp was a slender thing with a lot of edge, where such a pass mostly catches
+the rims, and a horn is one broad smooth surface. At the harp's strength it
+laid a sheet of white light across the whole bell, and after dark the one thing
+in the pavilion that glowed was the machine.
 
-The drawing is two compound paths whose subpaths cut each other's holes. Pull
-the strings out of theirs to animate them one by one and the drawing changes
-under you — eight per cent of its pixels — because the shapes left behind were
-relying on the ones taken away to be holes rather than fills. So there is no
-rig here: a string cannot be plucked without its line staying behind, and
-nothing short of redrawing the harp would change that.
+Sixty pixels of machine in an archway is not much to hold twelve petals apart —
+the seams between them land a third of a pixel from each other — so every
+painted form carries a hairline round it. `vector-effect: non-scaling-stroke`
+puts the width in screen pixels and ignores the viewBox entirely, so a petal is
+articulated at sixty pixels and at six hundred by a line of the same weight.
+The line is black in both lights: `--cord`, which is what the harp used, is a
+blue-grey by day that read as a wash over the copper rather than as a drawn
+line, and a grey line on a grey machine after dark left it flat.
 
-What is left is enough. The whole of it breathes with the piece, rising and
-falling from its base, a little deeper where the music is loud. The light on
-the strings leans on the same reading, so the harp brightens as it plays —
-which at this size says *sounding* far better than a wobble of half a pixel on
-three of twenty strings would, and that wobble is all the file actually
-affords. And the notes come off the strings themselves.
+A hand over it turns that line to `--text`, which after dark is very nearly
+white — a machine drawn in black on a dark pavilion comes forward all at once,
+as a white line drawing of itself. By day `--text` is already the black it was,
+so what a hand does there is press the line a little harder, which is all a
+black line on a bright sky has left to give.
+
+### The crank
+
+It turns while the machine plays, and it is the only thing on it that moves.
+
+A hand crank turns in a plane at right angles to this one, so what there is to
+see of the turn is foreshortening and not rotation. The throw is at full length
+with the handle at the bottom; nothing at all when the handle is level with the
+axle and coming at you; full length again the other way with the handle at the
+top. So the throw is *scaled* about the axle — through zero and out the far
+side, which is what carries it over the top — and the handle rides the end of
+it, translating by the same amount and swinging a little across as well, so it
+goes round rather than merely up and down. The two are one motion cut into
+eight; they share a duration and a linear ease, so they cannot drift apart.
+
+Nothing else rises or falls. The harp swelled and settled with the music,
+because a harp is a thing that resonates and the drawing could not move a
+string on its own. A gramophone is a box of wood with a motor in it: what moves
+on one is the crank, and it moves whether the music swells or not.
 
 ### The two pieces
 
 There is a piece of music for each half of the day. Pull the cord while it is
-playing and it changes piece: what was on fades down and *pauses* — keeping
+playing and it changes record: what was on fades down and *pauses* — keeping
 its place, so the other half of the day picks up where it left off rather than
 starting over — there is a moment of the noise between, and the other comes
 up. Not a crossfade; two pieces of music over each other is neither of them.
@@ -859,45 +875,53 @@ the music stuck at half volume. `preload="none"` is set before the `src`, and
 the element for the other half of the day is not built at all until the lights
 change under it: a visitor who never plays it pays for nothing.
 
-The drawing is fetched too, for the same reason in miniature. It is a hundred
+The drawing is fetched too, for the same reason in miniature. It is sixty
 kilobytes of path data for something sixty pixels across, so it is not written
-into the document; it comes from `media/harp.svg` and lands well inside the
-opening, and until it does there is simply nothing in the corner — which is
-what the grove already does with the moon. What is served there is the export
-with its invisible shapes dropped and its coordinates rounded to a tenth of a
-unit, which cuts it by half. Rounding needs care: the paths are *relative*, so
-a naive round accumulates along each one and walks the drawing apart — the
-error has to be carried into the next segment, and then a tenth of a unit is a
-fiftieth of a pixel at the size it is drawn.
+into the document; it comes from `media/gramophone.svg` and lands well inside
+the opening, and until it does there is simply nothing standing there — which
+is what the grove already does with the moon.
 
-While it plays, notes come off the crown of the dome and go up and out to the
-right. Not off the strings: the harp is inside a brick pavilion and a note that
-started on the strings would have to come out through a foot of brickwork to be
-seen, so the music leaves the way it would — through the top of the roof. The
-sheet they are drawn on is hung over the dome rather than over the instrument,
-and since it is a child of the harp it goes wherever the harp goes without
-either of them being told twice. They come on the music rather than on a timer
-— the bottom of the spectrum is read off an `AnalyserNode` each frame and spent
-as a budget, so the stream thins and thickens with the piece instead of
-ticking — and each is drawn, a head and a stem and either a flag or a beam,
-rather than set at U+266A in whatever the system happens to have. They go
-sideways more than up, or the picture would empty out of the top of itself in
-a second and a half. Under `prefers-reduced-motion` there
-are none, it does not breathe, and the music still plays.
+### The notes
 
-It is also somewhere to sit. It hands the air two perches — the cap on the top
-of its column, and the front edge of its base, which is a run to hop along —
-as boxes in the page rather than numbers, so they are measured exactly as a
-card is and follow the drawing at whatever width it is given. Two at a time at
-the most, and not often: a bird leaves the trees for it now and then, hops
-along the base the way it would along a windowsill, and goes back; after dark
-it is a firefly blinking on the cap. A hand on it puts up whatever was sitting
-there. The building around it hands over one more, and of a different kind:
-the roof.
+They come out of the horn, and go up and out to the left, which is the way the
+bell is pointed. The harp's came off the crown of the dome instead: a harp
+string has no mouth, the harp was inside a brick pavilion, and a note that
+started on the strings would have had to come out through a foot of brickwork
+to be seen — so its music left the way it could, through the top of the roof.
+A horn *is* a mouth, and it is pointed up and out of the archway already.
+
+The sheet they are drawn on is hung over the machine and well up and to the
+left of it, since that is where they go; hung over the roof, where the harp's
+was, it cut every note off within a few pixels of the bell. It is a child of
+the machine, so it goes wherever the machine goes without either of them being
+told twice. They are sized off the machine rather than off the mouth they come
+out of, so a note keeps its size whatever the horn is doing — and they are
+smaller than the harp's were, which were struck off the whole roof of a
+building and scaled to it.
+
+They come on the music rather than on a timer — the bottom of the spectrum is
+read off an `AnalyserNode` each frame and spent as a budget, so the stream thins
+and thickens with the piece instead of ticking — and each is drawn, a head and
+a stem and either a flag or a beam, rather than set at U+266A in whatever the
+system happens to have. They go sideways more than up, or the picture would
+empty out of the top of itself in a second and a half. Under
+`prefers-reduced-motion` there are none, the crank stands still, and the music
+still plays.
+
+### Somewhere to sit
+
+It hands the air two perches — the top of the horn's rim, and the front edge of
+the cabinet lid, which is a run to hop along — as boxes in the page rather than
+numbers, so they are measured exactly as a card is and follow the drawing at
+whatever width it is given. Two at a time at the most, and not often: a bird
+leaves the trees for it now and then, hops along the lid the way it would along
+a windowsill, and goes back; after dark it is a firefly blinking on the rim. A
+hand on it puts up whatever was sitting there. The building around it hands
+over one more, and of a different kind: the roof.
 
 ## The fixtures
 
-The harp was the first thing on the page that was not a tree and could be
+The gramophone's predecessor was the first thing on the page that was not a tree and could be
 stood on, and for a long time it was the only one, which made the rest of the
 furniture look strangely untouchable: a bird would sit on the top of a project
 card but not on a button an inch away from it. Anything a real sparrow would
@@ -942,13 +966,13 @@ a box with no width measures as one place rather than as a run to walk along,
 which is what stops the hopping without anything having to be told not to.
 
 Who reaches what depends on where they live. The parties in the trees will go
-to anything standing in view — which, from the grove, means the harp, the
+to anything standing in view — which, from the grove, means the gramophone, the
 gazebo it stands in, the lamp and the buttons — for the same reason they went
-to the harp: birds do this with whatever is left out in a garden. The decks are screens below the grove,
+to the machine: birds do this with whatever is left out in a garden. The decks are screens below the grove,
 so those belong to the escort, the few that come down the page after the
 reader. An escort bird may stay on a fixture when the grove comes back into
 view, but only one that is still in the window: the lamp is pinned there, while
-the harp, a button or a deck goes up with the scroll, and a bird left on one of
+the machine, a button or a deck goes up with the scroll, and a bird left on one of
 those is a bird sitting where nobody can see it.
 
 A hand on any of them puts up whatever is standing there — the deck that is
@@ -1016,7 +1040,7 @@ The lamp cord hangs from the top of the *page* on a stacked layout, over the
 grove, and scrolls away with it — fixed to the window it rode down over the
 right end of every line. A tap on the knob switches the lights on a touch
 screen; dragging still works, but a short drag on a phone is how the page
-scrolls. The harp in the other corner does the same thing for the same
+scrolls. The machine in the other corner does the same thing for the same
 reason, and by the same test: a window no wider than the page has no corner
 to stand in that is not the page. The four profile links stay one row, a size down, with Google Scholar
 going by its surname; the filter chips are one strip that scrolls, and the one

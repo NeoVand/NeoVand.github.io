@@ -21,7 +21,7 @@
   <meta property="og:image" content="https://neovand.github.io/media/og.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo at one end of it with a harp inside, beside a short bio and above the gallery of interactive demos." />
+  <meta property="og:image:alt" content="The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo in the middle of it with a gramophone inside, beside a short bio and above the gallery of interactive demos." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Neo Mohsenvand" />
   <meta name="twitter:description" content="Interactive simulations, visualizations, and tools built for the browser." />
@@ -893,8 +893,8 @@
       pointer-events: none;
       will-change: transform;
     }
-    /* and the window's own sheet, over the corners the harp and the lamp
-       keep, for the birds that stand on those: they are pinned to the window
+    /* and the window's own sheet, over the corners the gramophone and the
+       lamp keep, for the birds that stand on those: they are pinned to the window
        and so is this, so the two take a scroll the same way — which is to
        say not at all */
     #air-pin {
@@ -944,20 +944,19 @@
     .has-intro #pull-canvas { opacity: 0; transition: opacity 700ms var(--ease); }
     .is-lit #pull-canvas { opacity: 1; }
 
-    /* ─── THE HARP ─── */
-    /* A harp in the top left of the window: the page's other switch, in the
-       other top corner from the lamp, and put there the same way — out in the
-       gutter where the window is wider than the page, and in at the corner
-       where it is not (see place() in the script).
+    /* ─── THE GRAMOPHONE ─── */
+    /* It stands in the pavilion in the middle of the shelf, and it is the
+       page's other switch: press it and it plays, press it again and it
+       stops. A harp stood here before it, and where there is no grove to
+       stand in — a window no wider than the page — it falls back on the
+       harp's old place, the top corner opposite the lamp, put there off the
+       same measurement (see place() in the script).
 
-       Off, it is a line drawing. The artwork paints its colour over a dark
-       compound path, and that path on its own — which is what is left when
-       the colour is turned off — is a proper line drawing of the whole
-       instrument, strings and all. Played, it takes the colour back, the
-       strings warm, and notes come off them. Nothing on the page is moved to
-       make room for it; it is laid over the top of whatever is there, and it
-       takes no clicks outside its own box. */
-    #harp {
+       Played, the crank turns, the light comes up in the horn and notes come
+       out of it. Nothing on the page is moved to make room for it; it is laid
+       over the top of whatever is there, and it takes no clicks outside its
+       own box. */
+    #gramophone {
       /* the corner it stands in is worked out in the script, off the same
          measurement the cord uses on the other side; these are only what it
          has before that runs */
@@ -969,8 +968,8 @@
          fractions of the box and land where they are drawn — and so the box
          holds its shape in the moment before the drawing arrives */
       aspect-ratio: 3499.57 / 3989.09;
-      /* over the page and under the air, so a bird sits on the harp rather
-         than behind it, and under the cord and the modals besides */
+      /* over the page and under the air, so a bird sits on the machine
+         rather than behind it, and under the cord and the modals besides */
       z-index: 54;
       cursor: pointer;
       touch-action: manipulation;
@@ -984,16 +983,13 @@
          they carry the lights with them — brass by day, pewter by night. The
          highlight and the shade are that same pair pushed further apart, so a
          column reads as round rather than as a stripe. */
-      --h-lit:  color-mix(in srgb, var(--knob) 78%, #fff);
-      --h-mid:  var(--knob);
-      --h-deep: color-mix(in srgb, var(--knob) 42%, var(--cord));
       /* The outline is black, and black in both lights. --cord is the rim
          the lamp's bead is given and it is a blue-grey by day: on a copper
          horn that read as a wash over the whole machine rather than as a
          drawn line, and after dark a grey line on a grey machine left it
          flat. A black line is the only one that separates a form from the
          form behind it at sixty pixels, whatever the hour. */
-      --h-ink:  #0e0e0e;
+      --g-line:  #0e0e0e;
       --note: #aab2bc;
       /* Five materials, and two ends each. The drawing came with a gradient
          on every one of its ninety shapes and a hundred and forty stops of
@@ -1016,7 +1012,7 @@
     /* and by day it is copper rather than brass — the lamp's bead is the
        page's brass and there is no sense in two of them, and copper is what
        a horn of this age is actually spun from */
-    .day #harp {
+    .day #gramophone {
       --note: #3b566f;
       --g-brass-hi: #f2c69c;  --g-brass-lo: #6b3316;
       --g-steel-hi: #eef2f5;  --g-steel-lo: #40525e;
@@ -1024,57 +1020,36 @@
       --g-ink-hi:   #22242a;  --g-ink-lo:   #0c0d10;
       --g-label-hi: #c05a4e;  --g-label-lo: #6d2620;
     }
-    /* where color-mix is not understood, the pair alone still models it */
-    @supports not (color: color-mix(in srgb, red 50%, blue)) {
-      #harp { --h-lit: var(--knob); --h-deep: var(--cord); }
-    }
-
     /* It comes up with the rest of the opening, as the cord does — but well
        behind it, because it has somewhere to be now: the shelf is laid
        first, the gazebo goes up on it course by course, the dome closes over
        it, and only then is there a room for the instrument to be standing
        in. Arriving on time it hung in mid-air over a building site. */
-    .has-intro #harp { opacity: 0; transition: opacity 900ms var(--ease) 2300ms; }
-    .is-lit #harp { opacity: 1; }
+    .has-intro #gramophone { opacity: 0; transition: opacity 900ms var(--ease) 2300ms; }
+    .is-lit #gramophone { opacity: 1; }
 
-    #harp .harp-art { display: block; width: 100%; height: auto; }
+    #gramophone .gram-art { display: block; width: 100%; height: auto; }
 
-    /* The drawing itself: one colour, and the same drawn-not-set grey the
-       section flourishes are in, so it is in the page's own hand. The lines
-       are thin ribbons of fill rather than strokes — that is how the artwork
-       was drawn — and a ribbon two units across in a viewBox 930 units wide
-       is a seventh of a pixel at this size, which is a rumour of a harp and
-       not a drawing of one. So the ink is stroked as well as filled, with a
-       non-scaling stroke: the width is in screen pixels and does not care
-       what the viewBox does, so the line holds its weight whether it is
-       drawn at sixty pixels or six hundred. */
-    #harp .h-ink { fill: var(--h-ink); transition: fill 420ms var(--ease); }
-    #harp .h-ink {
-      stroke: var(--h-ink);
-      vector-effect: non-scaling-stroke;
-      stroke-linejoin: round;
-      transition: fill 420ms var(--ease), stroke 420ms var(--ease);
-    }
     /* A hand over it lights the line rather than merely thickening it: at
        night --text is very nearly white, and a machine drawn in black on a
        dark pavilion comes forward all at once when its outline turns. By day
        --text is already the black it was, so what a hand does there is press
        the line a little harder — which is all a black line on a bright sky
        has left to give. */
-    #harp:hover, #harp:focus-visible { --h-ink: var(--text); }
-    #harp:hover .g-brass, #harp:hover .g-steel, #harp:hover .g-wood,
-    #harp:focus-visible .g-brass, #harp:focus-visible .g-steel,
-    #harp:focus-visible .g-wood { stroke-width: 0.62px; }
+    #gramophone:hover, #gramophone:focus-visible { --g-line: var(--text); }
+    #gramophone:hover .g-brass, #gramophone:hover .g-steel, #gramophone:hover .g-wood,
+    #gramophone:focus-visible .g-brass, #gramophone:focus-visible .g-steel,
+    #gramophone:focus-visible .g-wood { stroke-width: 0.62px; }
     /* A box drawn round it would be a box drawn round a picture, which is
        not what this page does with a thing it has drawn — the deck of papers
-       opens its fan instead. So a keyboard on the harp lights it: a halo of
-       its own brass, which is the page's own way of saying a thing is live,
-       and which no amount of hovering gives you. */
-    #harp:focus-visible { outline: none; }
-    #harp:focus-visible .harp-art {
+       opens its fan instead. So a keyboard on it lights it: a halo of the
+       lamp's own brass, which is the page's own way of saying a thing is
+       live, and which no amount of hovering gives you. */
+    #gramophone:focus-visible { outline: none; }
+    #gramophone:focus-visible .gram-art {
       filter: drop-shadow(0 0 2px var(--knob)) drop-shadow(0 0 6px var(--knob));
     }
-    #harp:active { transform: scale(0.985); }
+    #gramophone:active { transform: scale(0.985); }
 
     /* The paint. It is painted over the ink rather than under it, so this is
        the artwork exactly as it was drawn — and the relief and the shadow
@@ -1088,9 +1063,9 @@
        an open pavilion with the sky in it, and a line drawing against the
        sky is nothing at all. What says it is playing is the light on the
        strings and the notes coming off the roof. */
-    #harp .h-hue {
+    #gramophone .g-hue {
       opacity: 1;
-      filter: url(#harp-relief) drop-shadow(0.8px 1.2px 1.2px var(--cast));
+      filter: url(#gram-relief) drop-shadow(0.8px 1.2px 1.2px var(--cast));
     }
 
     /* Playing, the metal carries more of the shape, so the line thins a
@@ -1099,35 +1074,34 @@
        has no edge at all without one. */
 
 
-    /* Nothing has to be drained after dark any more: --knob is already
-       pewter by night and brass by day, so the instrument turns with the lamp
-       exactly as the lamp's own bead does, and this page's rule about colour
-       in a pencil study is kept by the material rather than by a filter. */
-
-    /* The harp warms while it is played — light, which this page already
-       allows itself at night in the lamp's bloom, and not paint. */
-    #harp { --lit: 0.6; }
-    .day #harp { --lit: 0.22; }
-    #harp:hover, #harp:focus-visible { --lit: 0.78; }
-    .day #harp:hover, .day #harp:focus-visible { --lit: 0.38; }
-    #harp .h-lit { opacity: 0; transition: opacity 1100ms var(--ease); }
-    #harp.on .h-lit { opacity: var(--lit); }
+    /* The horn warms while it plays — light, which this page already allows
+       itself at night in the lamp's bloom, and not paint. Nothing has to be
+       drained after dark either: the machine's five materials are declared
+       twice, once for each half of the day, so it turns with the lamp and
+       this page's rule about colour in a pencil study is kept by the
+       material rather than by a filter. */
+    #gramophone { --lit: 0.6; }
+    .day #gramophone { --lit: 0.22; }
+    #gramophone:hover, #gramophone:focus-visible { --lit: 0.78; }
+    .day #gramophone:hover, .day #gramophone:focus-visible { --lit: 0.38; }
+    #gramophone .g-glow { opacity: 0; transition: opacity 1100ms var(--ease); }
+    #gramophone.on .g-glow { opacity: var(--lit); }
 
     /* Where a bird stands: the top of the horn's rim, and the front edge of
        the cabinet lid — two runs. Boxes rather than numbers,
        so the air can measure them exactly as it measures a card, and so a
        sparrow hops along the base, which is what it does with a run of
        anything flat. */
-    #harp-crown, #harp-plinth, #pull-perch { position: absolute; display: block; height: 0; pointer-events: none; }
-    #harp-crown  { left: 27.2%; top: 4.1%; width: 14.3%; }
-    #harp-plinth { left: 31.8%; top: 72.2%; width: 55.7%; }
+    #gram-crown, #gram-plinth, #pull-perch { position: absolute; display: block; height: 0; pointer-events: none; }
+    #gram-crown  { left: 27.2%; top: 4.1%; width: 14.3%; }
+    #gram-plinth { left: 31.8%; top: 72.2%; width: 55.7%; }
 
     /* The notes come out of the horn and go up and out to the left, which is
        the way the bell is pointed, so the sheet reaches further that way than
        any other. These are only what it has before place() sizes it off the
        machine's own box; the sheet takes no clicks either way, so the whole
        of the drawing stays the button. */
-    #harp-notes {
+    #gram-notes {
       position: absolute;
       left: -40%;
       top: -70%;
@@ -1141,7 +1115,7 @@
        and the fittings are lit by it together — which is most of what stops
        a flat drawing reading as flat. They are built where the drawing is
        put together, in the script. */
-    #harp .g-none { fill: none; }
+    #gramophone .g-none { fill: none; }
 
     /* Sixty pixels of machine in an archway: the seams between the horn's
        twelve petals are a third of a pixel apart there, and the modelling
@@ -1149,8 +1123,8 @@
        the same ink the flourishes are drawn in — non-scaling, so a petal is
        articulated at sixty pixels and at six hundred by a line of the same
        weight. */
-    #harp .g-brass, #harp .g-steel, #harp .g-wood {
-      stroke: var(--h-ink);
+    #gramophone .g-brass, #gramophone .g-steel, #gramophone .g-wood {
+      stroke: var(--g-line);
       vector-effect: non-scaling-stroke;
       stroke-width: 0.4px;
       stroke-linejoin: round;
@@ -1170,12 +1144,12 @@
        ease, so they cannot drift apart.
 
        456 is the throw itself, axle to handle, in the drawing's own units. */
-    #harp .g-crank-throw, #harp .g-crank-grip {
+    #gramophone .g-crank-throw, #gramophone .g-crank-grip {
       transform-box: view-box;
       transform-origin: 3197px 2987px;
     }
-    #harp.on .g-crank-throw { animation: crank-throw 2.6s linear infinite; }
-    #harp.on .g-crank-grip  { animation: crank-grip  2.6s linear infinite; }
+    #gramophone.on .g-crank-throw { animation: crank-throw 2.6s linear infinite; }
+    #gramophone.on .g-crank-grip  { animation: crank-grip  2.6s linear infinite; }
 
     @keyframes crank-throw {
       0%     { transform: scaleY(1); }
@@ -1203,17 +1177,17 @@
     }
 
     /* Where the window is no wider than the page there is no corner that is
-       not also the page, and a harp fixed in it would ride down over the
+       not also the page, and a fitting fixed in it would ride down over the
        gallery. So there it is pinned to the top of the document instead and
        scrolls away with the grove — which is what the cord does on a narrow
        window, for the same reason. The script puts the class on. */
-    #harp.at-page { position: absolute; }
+    #gramophone.at-page { position: absolute; }
 
     /* Standing in the gazebo, which is the ordinary case: it is a thing in
        the grove now rather than a fitting on the window, so it is pinned to
        the document and its width comes from the archway it stands in rather
        than from the window (see place() in the script). */
-    #harp.in-grove {
+    #gramophone.in-grove {
       position: absolute;
       width: auto;
       z-index: 54;
@@ -1221,7 +1195,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       /* no notes (see the script), and the crank stands still */
-      #harp.on .g-crank-throw, #harp.on .g-crank-grip { animation: none; }
+      #gramophone.on .g-crank-throw, #gramophone.on .g-crank-grip { animation: none; }
     }
 
     /* ─── SECTION FLOURISH ─── */
@@ -3180,7 +3154,7 @@
   <!-- the air: birds by day, fireflies by night, drawn over the whole page.
        Two sheets: one that stands in the page and goes down it with the
        scroll, which is where nearly everyone is drawn, and a short one
-       pinned to the window for whoever is standing on the harp or the lamp,
+       pinned to the window for whoever is standing on the machine or the lamp,
        which are pinned to the window themselves. Each thing is drawn in the
        frame it lives in, so no scroll can slide a bird off what it is
        sitting on. -->
@@ -3195,26 +3169,25 @@
     <i id="pull-perch" aria-hidden="true"></i>
   </div>
 
-  <!-- The harp: the other top corner of the window from the lamp, and the
-       page's other switch. Off it is a line drawing; played it takes its
-       colour back, the strings warm, notes come off them, and the birds have
+  <!-- The gramophone: it stands in the pavilion in the middle of the grove,
+       and it is the page's other switch. Played, the crank turns, the light
+       comes up in the horn, notes come out of it, and the birds have
        somewhere to sit that is not a tree.
 
-       The drawing is fetched rather than written in here. It is two hundred
-       kilobytes of path data for something a hundred pixels across, and the
-       grove already fetches the moon this way; it lands well inside the
-       opening, and until it does there is simply nothing in the corner. The
-       two states are one copy of it with the paint turned off and on: the
-       ink is a compound path that reads as a line drawing on its own, which
-       is what the colour is painted over. -->
-  <div id="harp" role="button" tabindex="0" aria-pressed="false"
-       aria-label="Play the harp" title="Play the harp">
-    <svg class="harp-art" viewBox="0 0 3499.57 3989.09" aria-hidden="true" focusable="false"></svg>
-    <!-- where a bird stands: the cap on the harp's column, and the front
-         edge of its base, which is a run to hop along -->
-    <i id="harp-crown" aria-hidden="true"></i>
-    <i id="harp-plinth" aria-hidden="true"></i>
-    <canvas id="harp-notes" aria-hidden="true"></canvas>
+       The drawing is fetched rather than written in here. It is sixty
+       kilobytes of path data for something sixty pixels across, and the grove
+       already fetches the moon this way; it lands well inside the opening,
+       and until it does there is simply nothing standing there. What arrives
+       is the artwork's own modelling with the page's own materials in it —
+       see media/gramophone.build.py, which is what puts the two together. -->
+  <div id="gramophone" role="button" tabindex="0" aria-pressed="false"
+       aria-label="Play the gramophone" title="Play the gramophone">
+    <svg class="gram-art" viewBox="0 0 3499.57 3989.09" aria-hidden="true" focusable="false"></svg>
+    <!-- where a bird stands: the top of the horn's rim, and the front edge
+         of the cabinet lid, which is a run to hop along -->
+    <i id="gram-crown" aria-hidden="true"></i>
+    <i id="gram-plinth" aria-hidden="true"></i>
+    <canvas id="gram-notes" aria-hidden="true"></canvas>
   </div>
 
   <!-- HERO + ABOUT -->
@@ -6094,8 +6067,8 @@
     }
 
     // ── The gazebo ─────────────────────────────────────────────────────────
-    // In the middle of the shelf there is a garden pavilion, and the harp
-    // stands in it: a brick building of three bays on a levelled plinth, open
+    // In the middle of the shelf there is a garden pavilion, and the
+    // gramophone stands in it: a brick building of three bays on a levelled plinth, open
     // on all of them, under a dentilled cornice and a brick dome, with ivy
     // over the whole of it and a few pale roses in the ivy. It is laid in the
     // same fired clay as the shelf it stands on, out of the same three kilns —
@@ -6190,7 +6163,7 @@
     // because it is a squat object where the harp was a tall one: at the
     // harp's own fraction it came out two thirds the height and sat in the
     // opening like a paperweight.
-    const GZ_HARP = 0.82;
+    const GZ_GRAM = 0.82;
     // and the window in each bay fills it, so its centre and radius are the
     // bay's own and nothing has to agree with anything by hand
     const GZ_SIDE_C = (GZ_P1 + GZ_P2) / 2, GZ_SIDE_R = (GZ_P2 - GZ_P1) / 2;
@@ -6675,7 +6648,7 @@
       // the same way for the same reason — a little, since it stands well
       // back under an arch
       {
-        const w = GZ_A * GZ_HARP * unit, hh = GZ_A * 2 * GZ_HARP * 1.140 * unit;
+        const w = GZ_A * GZ_GRAM * unit, hh = GZ_A * 2 * GZ_GRAM * 1.140 * unit;
         gzFill('', [], '');
         gzSun(op => {
           const lean = LIGHT.k * hh * 0.30;
@@ -7000,15 +6973,15 @@
       gazDay = gazNight = null;
       gazHead = 0;
 
-      // Where the harp stands: the clear width of the entrance, and the floor
-      // it sets its base on.
-      const hw = Math.max(20, Math.round(GZ_A * 2 * GZ_HARP * unit));
+      // Where the machine stands: the clear width of the entrance, and the
+      // floor it sets its base on.
+      const hw = Math.max(20, Math.round(GZ_A * 2 * GZ_GRAM * unit));
       // and a little left of the middle of the room, because it is not
       // symmetrical: the crank stands off the right-hand side of the cabinet
       // and the drawing's box is centred on the pair of them, which walked
       // the crank into the ivy on the near pier. The horn leans the other
       // way and takes the weight back.
-      gaz.harp = { w: hw, h: Math.round(hw * 3989.09 / 3499.57),
+      gaz.gram = { w: hw, h: Math.round(hw * 3989.09 / 3499.57),
                    cx: cx - Math.round(hw * 0.05), bottom: gzY(0.01) };
       // where the music comes out, which is the top of the roof
       gaz.crown = { x: gzX(0), y: gzY(GZ_CROWN), w: GZ_DOME_HW * 2 * unit };
@@ -7457,11 +7430,11 @@
               span: Math.max(slot, Math.min(openSlot, fits)) };
       fitTrees();
 
-      // and the harp goes to stand in the archway, which the harp's own
+      // and the gramophone goes to stand in the archway, which its own
       // script comes and asks for (see place() there)
-      G.harp = { x: groveOX + gaz.harp.cx, y: groveOY + gaz.harp.bottom,
-                 w: gaz.harp.w, h: gaz.harp.h };
-      if (window.__harp && window.__harp.place) window.__harp.place();
+      G.gram = { x: groveOX + gaz.gram.cx, y: groveOY + gaz.gram.bottom,
+                 w: gaz.gram.w, h: gaz.gram.h };
+      if (window.__gramophone && window.__gramophone.place) window.__gramophone.place();
       // The roof, for the air: the outline of the dome from one springing
       // over the crown to the other, in page points. A dome is not a ledge
       // with a place on it — a bird stands anywhere along the curve of it —
@@ -8138,10 +8111,10 @@
       // the canvas bleeds a little way under the name when the page is
       // stacked, and on a phone the lamp cord hangs in front of the trees:
       // a tap on the words, or a hand on the cord, is not a press on a tree
-      if (e.target && e.target.closest && e.target.closest('.hero-about, #pull, #harp')) return;
+      if (e.target && e.target.closest && e.target.closest('.hero-about, #pull, #gramophone')) return;
       // nor is a hand laid on the gazebo a hand on the tree behind it — but
       // it is a hand on the gazebo, and whatever was sitting on the roof gets
-      // up at it, the way it does off the harp and off a deck of papers
+      // up at it, the way it does off the gramophone and off a deck of papers
       if (gaz && x > gaz.hit.x0 && x < gaz.hit.x1 && y > gaz.hit.y0 && y < gaz.hit.y1) {
         if (window.__air && window.__air.gazebo) window.__air.gazebo.press();
         return;
@@ -8668,7 +8641,7 @@
           }
         }
         // and now and then one goes over to whatever else is standing in
-        // view — the harp, the bead on the lamp's cord, one of the buttons
+        // view — the machine, the bead on the lamp's cord, one of the buttons
         // under the bio. Birds do this with anything left out in a garden; a
         // firefly on the antenna is a firefly on a stem, which is where they
         // are anyway.
@@ -8724,7 +8697,7 @@
       }
       if (!p || p.kind !== 'el' || p.dx) return false;   // dx is a point on the flourish, not a run
       const r = rectOf(p.el);
-      // The harp's top is a short run by the standards of a card, but it is
+      // The horn's rim is a short run by the standards of a card, but it is
       // still three or four hops of a bird that size — which is what the
       // constant is really asking about.
       return !!r && r.width > (p.fixture ? 30 : HOP_RUN);
@@ -9032,9 +9005,9 @@
     }
     const api = window.__air = {
       flock, groups,       // for a look from the console
-      // a hand on the harp puts up whatever was sitting on it
-      harp: { press() {
-        for (const c of flock) if (c.state === 'perched' && c.perch && c.perch.harp) goHome(c);
+      // a hand on the machine puts up whatever was sitting on it
+      gram: { press() {
+        for (const c of flock) if (c.state === 'perched' && c.perch && c.perch.gram) goHome(c);
         wake();
       } },
       // and a hand on the gazebo puts up whatever was sitting on its roof
@@ -9188,7 +9161,7 @@
         if (home) {
           // The grove is back: home, unless it is standing on a fixture that
           // is still in the window — the lamp's bead is pinned there and it
-          // may stay on that, but the harp, a button or a deck of papers
+          // may stay on that, but the machine, a button or a deck of papers
           // goes up the page with the scroll, and a bird left on one of
           // those is a bird sitting somewhere nobody can see.
           if (c.perch.kind !== 'tree' && now >= c.nextMove) {
@@ -9219,7 +9192,7 @@
     // ── the fixtures ───────────────────────────────────────────────────
     // Everything on the page that is not a tree, a card or a page of a paper
     // and that a bird would stand on if any of it were real: the cap on the
-    // harp's column and the front edge of its base, the bead on the end of
+    // horn's rim and the front edge of the cabinet lid, the bead on the end of
     // the lamp's cord, the four buttons under the bio, and the top edge of
     // every deck of papers. They are boxes in the page rather than numbers
     // here, so each is measured exactly as a card is and follows the layout
@@ -9233,20 +9206,20 @@
     // and it does not move when the fan opens under a pointer. So that is
     // where a bird stands, out along the right of it where nothing leans
     // across.
-    const harpEl = document.getElementById('harp');
+    const gramEl = document.getElementById('gramophone');
     const pullEl = document.getElementById('pull');
-    const harpCrown = document.getElementById('harp-crown');
-    const harpPlinth = document.getElementById('harp-plinth');
+    const gramCrown = document.getElementById('gram-crown');
+    const gramPlinth = document.getElementById('gram-plinth');
     const pullPerch = document.getElementById('pull-perch');
     // Is this thing held still by the window, or does it go down the page
     // with everything else? Both of them are one or the other depending on
-    // the layout — the harp comes into the page where the columns stack, and
-    // so does the lamp — and it decides which sheet whoever is standing on
+    // the layout — the machine comes into the page where the columns stack,
+    // and so does the lamp — and it decides which sheet whoever is standing on
     // it is drawn on, so it is asked of the things themselves rather than
     // assumed here.
     const isPinned = el =>
-      (el === harpCrown || el === harpPlinth)
-        ? !!(harpEl && !harpEl.classList.contains('at-page') && !harpEl.classList.contains('in-grove'))
+      (el === gramCrown || el === gramPlinth)
+        ? !!(gramEl && !gramEl.classList.contains('at-page') && !gramEl.classList.contains('in-grove'))
       : el === pullPerch ? !(window.__cord && window.__cord.paged)
       : false;
     // The pavilion in the middle of the grove: its roof, which is a curve a
@@ -9282,8 +9255,8 @@
         if (r.top < 8 || r.top > vh * band || r.right < 40 || r.left > vw - 40) return;
         out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true, pin: isPinned(el) }, extra));
       };
-      add(harpCrown, 0.16 + rnd() * 0.68, { harp: true });
-      add(harpPlinth, 0.5, { harp: true });
+      add(gramCrown, 0.16 + rnd() * 0.68, { gram: true });
+      add(gramPlinth, 0.5, { gram: true });
       add(pullPerch, 0.5);
       // The roof of the gazebo, which is a run of a different kind: a curve
       // rather than a straight edge, so a bird may stand anywhere along it
@@ -9305,15 +9278,15 @@
         ? a.kind === b.kind && Math.abs(a.u - b.u) < 0.22
       : a.kind === 'ledge' || b.kind === 'ledge'
         ? a.kind === b.kind && a.i === b.i
-        : a.el === b.el && (a.el !== harpCrown ? true : Math.abs(a.u - b.u) < 0.3));
+        : a.el === b.el && (a.el !== gramCrown ? true : Math.abs(a.u - b.u) < 0.3));
     function freeFixtureSpot(band) {
-      // Two on the harp at a time at the most, counting one still on its
+      // Two on the machine at a time at the most, counting one still on its
       // way: more than that and the set is another tree rather than
       // somewhere one of them has gone to sit. Everything else takes one.
-      let onHarp = 0;
-      for (const c of flock) if (c.perch && c.perch.harp) onHarp++;
+      let onGram = 0;
+      for (const c of flock) if (c.perch && c.perch.gram) onGram++;
       const spots = fixtureSpots(band === undefined ? 0.78 : band)
-        .filter(s => !(s.harp && onHarp >= 2))
+        .filter(s => !(s.gram && onGram >= 2))
         .filter(s => !flock.some(c => sameFixture(c.perch, s)));
       return spots.length ? spots[(rnd() * spots.length) | 0] : null;
     }
@@ -9581,10 +9554,10 @@
       W = innerWidth; H = innerHeight; HP = H + PAD * 2;
       dpr = Math.min(devicePixelRatio || 1, 2);
       // The window's sheet is only as tall as the furniture pinned to it —
-      // the harp's foot and the lamp's bead are both up near the top — since
+      // the machine's foot and the lamp's bead are both up near the top — since
       // nobody is ever drawn on it who is not standing on one of those.
       const bottomOf = el => { const r = el && el.getBoundingClientRect(); return r ? r.bottom : 0; };
-      PH = Math.round(Math.min(H, Math.max(240, bottomOf(harpEl), bottomOf(pullEl)) + 70));
+      PH = Math.round(Math.min(H, Math.max(240, bottomOf(gramEl), bottomOf(pullEl)) + 70));
       for (const [cv, cx, d, h] of [[sheet, ctxP, dirtyP, HP], [roomSheet, ctxR, dirtyR, H], [pinSheet, ctxN, dirtyN, PH]]) {
         if (!cv) continue;
         cv.width = Math.round(W * dpr); cv.height = Math.round(h * dpr);
@@ -9779,7 +9752,7 @@
     addEventListener('scroll', wake, { passive: true });
     addEventListener('resize', () => {
       size();
-      // the harp and the lamp change which frame they belong to when the
+      // the machine and the lamp change which frame they belong to when the
       // columns stack, so whoever is on one changes sheets with them
       for (const c of flock) if (c.perch && c.perch.fixture && c.perch.el) c.perch.pin = isPinned(c.perch.el);
       wake();
@@ -9791,28 +9764,28 @@
   </script>
 
   <script>
-  // ─── The harp ───
-  // A harp in the top left of the window, with one piece for each half of the
-  // day. It is the page's other switch and stands in the other top corner from
-  // the lamp, put there off the same measurement (see place, below). Until it
-  // is played it is a line drawing — the artwork with its paint turned off,
-  // which is one file and not two. Played, it takes the colour back, the
-  // strings warm, and notes start coming off them.
+  // ─── The gramophone ───
+  // It stands in the pavilion in the middle of the grove, with one record for
+  // each half of the day, and it is the page's other switch. Played, the crank
+  // turns, the light comes up in the horn and notes come out of it. A harp
+  // stood here before it, and where there is no grove at all the machine falls
+  // back on the harp's old place — the top corner opposite the lamp, off the
+  // same measurement (see place, below).
   //
-  // Pull the lamp cord while it is playing and it changes piece: what was on
-  // fades down, there is a moment of the strings settling, and the other half
-  // of the day comes up where it left off. Not a crossfade — two pieces of
-  // music over each other is neither of them.
+  // Pull the lamp cord while it is playing and it changes record: what was on
+  // fades down, there is a moment of quiet, and the other half of the day
+  // comes up where it left off. Not a crossfade — two pieces of music over
+  // each other is neither of them.
   //
   // Nothing is fetched until someone asks for it. The two pieces are five and
   // six megabytes; a visitor who never plays it pays for neither, and the one
   // it is not playing is not fetched until the lights change under it. The
-  // drawing itself is fetched too, for the same reason in miniature: it is a
-  // hundred kilobytes of path data, and it can arrive during the opening.
+  // drawing itself is fetched too, for the same reason in miniature: it is
+  // sixty kilobytes of path data, and it can arrive during the opening.
   (() => {
-    const host = document.getElementById('harp');
+    const host = document.getElementById('gramophone');
     if (!host) return;
-    const sheet = document.getElementById('harp-notes');
+    const sheet = document.getElementById('gram-notes');
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rnd = Math.random, TAU = Math.PI * 2;
 
@@ -9830,7 +9803,7 @@
     // for something a visitor may never look at. The light on the strings is
     // added here rather than in the file: it belongs to the playing and not
     // to the artwork.
-    const art = host.querySelector('.harp-art');
+    const art = host.querySelector('.gram-art');
     let drawn = false;
     if (art) fetch('media/gramophone.svg')
       .then(r => r.ok ? r.text() : Promise.reject(r.status))
@@ -9855,11 +9828,11 @@
           // and the relief. A flat fill of one gradient models the instrument
           // as a whole but leaves every column and every scroll a stripe of
           // it; a specular pass over the blurred alpha lights each form on
-          // its own, which is what turns a drawing of a harp into a harp.
+          // its own, which is what turns a drawing of a machine into one.
           // Added to the fill rather than replacing it — at full strength it
           // washes the brass out to white — and only ever over the paint, so
           // the line drawing underneath stays a line drawing.
-          '<filter id="harp-relief" x="-15%" y="-15%" width="130%" height="130%">' +
+          '<filter id="gram-relief" x="-15%" y="-15%" width="130%" height="130%">' +
             '<feGaussianBlur in="SourceAlpha" stdDeviation="48" result="b"/>' +
             '<feSpecularLighting in="b" surfaceScale="5" specularConstant="0.30"' +
             ' specularExponent="26" lighting-color="#fff6e4" result="s">' +
@@ -9875,17 +9848,17 @@
             '<feComposite in="SourceGraphic" in2="sc" operator="arithmetic"' +
             ' k1="0" k2="1" k3="0.20" k4="0"/>' +
           '</filter>' +
-          '<radialGradient id="harp-lit" cx="0.5" cy="0.5" r="0.5">' +
+          '<radialGradient id="gram-glow" cx="0.5" cy="0.5" r="0.5">' +
             '<stop offset="0" stop-color="#ffe6b4" stop-opacity="0.95"/>' +
             '<stop offset="0.55" stop-color="#ffc978" stop-opacity="0.34"/>' +
             '<stop offset="1" stop-color="#ffb347" stop-opacity="0"/>' +
           '</radialGradient>';
         art.insertBefore(defs, art.firstChild);
         glow = document.createElementNS(NS, 'ellipse');
-        glow.setAttribute('class', 'h-lit');
+        glow.setAttribute('class', 'g-glow');
         glow.setAttribute('cx', '1170'); glow.setAttribute('cy', '1120');
         glow.setAttribute('rx', '760'); glow.setAttribute('ry', '980');
-        glow.setAttribute('fill', 'url(#harp-lit)');
+        glow.setAttribute('fill', 'url(#gram-glow)');
         // over the whole machine rather than under the ink: what is lit here
         // is the mouth of the horn, and the mouth is the front-most thing
         art.appendChild(glow);
@@ -10011,7 +9984,7 @@
 
     // ── the switch ──────────────────────────────────────────────────────
     function say() {
-      const t = on ? 'Stop the harp' : 'Play the harp';
+      const t = on ? 'Stop the gramophone' : 'Play the gramophone';
       host.setAttribute('aria-pressed', on ? 'true' : 'false');
       host.setAttribute('aria-label', t);
       host.title = t;
@@ -10023,7 +9996,7 @@
       clack(on);
       if (on) { play(band); wake(); } else hush(band, DOWN);
       // a hand on the set puts up whatever was sitting on it
-      if (window.__air && window.__air.harp) window.__air.harp.press();
+      if (window.__air && window.__air.gram) window.__air.gram.press();
     }
     host.addEventListener('click', flip);
     host.addEventListener('keydown', e => {
@@ -10060,7 +10033,7 @@
     const hero = document.querySelector('.hero');
     function place() {
       const G = window.__grove;
-      const g = G && G.harp;
+      const g = G && G.gram;
       if (g && g.w > 8) {
         host.classList.remove('at-page');
         host.classList.add('in-grove');
@@ -10242,9 +10215,9 @@
       // each other's holes, so a string cannot be moved on its own without
       // the line staying behind. The whole of it can.
       if (art && drawn) {
-        // and the harp answers: the light on the strings leans on the music,
-        // which at this size reads as the strings sounding where a wobble of
-        // half a pixel on three of twenty strings would only read as a fault
+        // and the machine answers: the light in the horn leans on the music,
+        // which at this size reads as the horn sounding where anything
+        // smaller would only read as a fault
         if (glow) {
           if (live) glow.style.opacity = (litBase * (0.72 + 0.5 * Math.min(1, lvl))).toFixed(3);
           else if (glow.style.opacity) glow.style.opacity = '';
@@ -10288,7 +10261,7 @@
     }
 
     // for a look from the console, as the grove and the air have
-    window.__harp = {
+    window.__gramophone = {
       els, gains, notes, place,
       dbg: () => ({
         on, band, notes: notes.length,
@@ -10537,7 +10510,7 @@
     let actx = null;
     function click(down) {
       try {
-        // one context for the page, shared with the harp's switch
+        // one context for the page, shared with the gramophone's switch
         actx = actx || (window.__audio = window.__audio || new (window.AudioContext || window.webkitAudioContext)());
         if (actx.state === 'suspended') actx.resume();
         const t = actx.currentTime;

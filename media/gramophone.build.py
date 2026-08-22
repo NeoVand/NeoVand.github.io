@@ -4,9 +4,15 @@
 # stop is rewritten: to its own lightness within its material's range, mixed
 # between two ends the page supplies as custom properties. So the machine can
 # be copper by day and pewter after dark without losing a single highlight.
-import io, re, collections
-S='/private/tmp/claude-501/-Users-neo-repos-NeoVand-github-io/45e0640c-d462-4dd2-ba1c-89c4d822d9d5/scratchpad'
-src = io.open(S+'/gramophone-original.svg', encoding='utf-8').read()
+#
+#     python3 media/gramophone.build.py
+#
+# reads media/gramophone.source.svg — the untouched Illustrator export, kept so
+# the mapping below can be changed and the drawing rebuilt without anything
+# being lost — and writes media/gramophone.svg.
+import io, os, re, collections
+HERE = os.path.dirname(os.path.abspath(__file__))
+src = io.open(os.path.join(HERE, 'gramophone.source.svg'), encoding='utf-8').read()
 
 BRASS = 'st76 st25 st29 st26 st31 st32 st33 st34 st35 st37 st39 st23 st14 st16 st22 st17 st19 st24 st59 st27 st75 st28 st30 st79 st36 st67 st38 st13 st12 st15 st20 st66 st60'.split()
 STEEL = 'st8 st7 st21 st18 st48 st44 st47 st43 st50 st45 st46 st4 st51 st42 st40 st41 st57 st54 st58 st52 st53 st65 st78 st61 st3 st2 st5 st10'.split()
@@ -96,6 +102,6 @@ crank = ('\n    <!-- The crank, in three pieces because it has to turn: the arm 
 svg = ('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
        ' viewBox="0 0 3499.57 3989.09" aria-hidden="true" focusable="false">\n'
        '  <defs>' + defs.strip() + '</defs>\n'
-       '  <g class="h-hue">' + crank + body.rstrip() + '\n  </g>\n</svg>\n')
-io.open('/Users/neo/repos/NeoVand.github.io/media/gramophone.svg', 'w', encoding='utf-8').write(svg)
+       '  <g class="g-hue">' + crank + body.rstrip() + '\n  </g>\n</svg>\n')
+io.open(os.path.join(HERE, 'gramophone.svg'), 'w', encoding='utf-8').write(svg)
 print('bytes', len(svg), '| stops', svg.count('color-mix'), '| ranges', {k:(round(a,3),round(b,3)) for k,(a,b) in RANGE.items()})
