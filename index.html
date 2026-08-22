@@ -1055,9 +1055,13 @@
       stroke-linejoin: round;
       transition: fill 420ms var(--ease), stroke 420ms var(--ease);
     }
-    /* a hand over it presses the line a little harder rather than changing
-       its colour: the drawing is not made of ink any more, it is a machine
-       with an outline round it */
+    /* A hand over it lights the line rather than merely thickening it: at
+       night --text is very nearly white, and a machine drawn in black on a
+       dark pavilion comes forward all at once when its outline turns. By day
+       --text is already the black it was, so what a hand does there is press
+       the line a little harder — which is all a black line on a bright sky
+       has left to give. */
+    #harp:hover, #harp:focus-visible { --h-ink: var(--text); }
     #harp:hover .g-brass, #harp:hover .g-steel, #harp:hover .g-wood,
     #harp:focus-visible .g-brass, #harp:focus-visible .g-steel,
     #harp:focus-visible .g-wood { stroke-width: 0.62px; }
@@ -6186,7 +6190,7 @@
     // because it is a squat object where the harp was a tall one: at the
     // harp's own fraction it came out two thirds the height and sat in the
     // opening like a paperweight.
-    const GZ_HARP = 0.88;
+    const GZ_HARP = 0.82;
     // and the window in each bay fills it, so its centre and radius are the
     // bay's own and nothing has to agree with anything by hand
     const GZ_SIDE_C = (GZ_P1 + GZ_P2) / 2, GZ_SIDE_R = (GZ_P2 - GZ_P1) / 2;
@@ -6999,7 +7003,13 @@
       // Where the harp stands: the clear width of the entrance, and the floor
       // it sets its base on.
       const hw = Math.max(20, Math.round(GZ_A * 2 * GZ_HARP * unit));
-      gaz.harp = { w: hw, h: Math.round(hw * 3989.09 / 3499.57), cx, bottom: gzY(0.01) };
+      // and a little left of the middle of the room, because it is not
+      // symmetrical: the crank stands off the right-hand side of the cabinet
+      // and the drawing's box is centred on the pair of them, which walked
+      // the crank into the ivy on the near pier. The horn leans the other
+      // way and takes the weight back.
+      gaz.harp = { w: hw, h: Math.round(hw * 3989.09 / 3499.57),
+                   cx: cx - Math.round(hw * 0.05), bottom: gzY(0.01) };
       // where the music comes out, which is the top of the roof
       gaz.crown = { x: gzX(0), y: gzY(GZ_CROWN), w: GZ_DOME_HW * 2 * unit };
       // and the line a bird walks along it, which the outline already is:
