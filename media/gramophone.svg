@@ -1,0 +1,450 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 3499.57 3989.09" aria-hidden="true" focusable="false">
+  <defs><linearGradient id="linear-gradient" x1="3382.58" y1="3410.96" x2="3382.58" y2="3475.17" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 0%, var(--g-steel-lo))"/>
+      <stop offset=".32" stop-color="color-mix(in srgb, var(--g-steel-hi) 6.3%, var(--g-steel-lo))"/>
+      <stop offset=".37" stop-color="color-mix(in srgb, var(--g-steel-hi) 6.6%, var(--g-steel-lo))"/>
+      <stop offset=".41" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.3%, var(--g-steel-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-steel-hi) 11.7%, var(--g-steel-lo))"/>
+      <stop offset=".46" stop-color="color-mix(in srgb, var(--g-steel-hi) 17.7%, var(--g-steel-lo))"/>
+      <stop offset=".48" stop-color="color-mix(in srgb, var(--g-steel-hi) 27.8%, var(--g-steel-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-steel-hi) 43.6%, var(--g-steel-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-steel-hi) 52.8%, var(--g-steel-lo))"/>
+      <stop offset=".52" stop-color="color-mix(in srgb, var(--g-steel-hi) 42.1%, var(--g-steel-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-steel-hi) 24.1%, var(--g-steel-lo))"/>
+      <stop offset=".57" stop-color="color-mix(in srgb, var(--g-steel-hi) 13.4%, var(--g-steel-lo))"/>
+      <stop offset=".6" stop-color="color-mix(in srgb, var(--g-steel-hi) 7.6%, var(--g-steel-lo))"/>
+      <stop offset=".63" stop-color="color-mix(in srgb, var(--g-steel-hi) 4.6%, var(--g-steel-lo))"/>
+      <stop offset=".66" stop-color="color-mix(in srgb, var(--g-steel-hi) 3.2%, var(--g-steel-lo))"/>
+      <stop offset=".7" stop-color="color-mix(in srgb, var(--g-steel-hi) 2.8%, var(--g-steel-lo))"/>
+      <stop offset=".83" stop-color="color-mix(in srgb, var(--g-steel-hi) 2.5%, var(--g-steel-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-steel-hi) 1.6%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-steel-hi) 0.8%, var(--g-steel-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="3287.99" y1="3419.68" x2="3245.68" y2="3463.85" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 6.3%, var(--g-steel-lo))"/>
+      <stop offset=".15" stop-color="color-mix(in srgb, var(--g-steel-hi) 6.6%, var(--g-steel-lo))"/>
+      <stop offset=".24" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.3%, var(--g-steel-lo))"/>
+      <stop offset=".31" stop-color="color-mix(in srgb, var(--g-steel-hi) 11.7%, var(--g-steel-lo))"/>
+      <stop offset=".38" stop-color="color-mix(in srgb, var(--g-steel-hi) 17.7%, var(--g-steel-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-steel-hi) 27.8%, var(--g-steel-lo))"/>
+      <stop offset=".48" stop-color="color-mix(in srgb, var(--g-steel-hi) 43.6%, var(--g-steel-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-steel-hi) 52.8%, var(--g-steel-lo))"/>
+      <stop offset=".53" stop-color="color-mix(in srgb, var(--g-steel-hi) 42.1%, var(--g-steel-lo))"/>
+      <stop offset=".6" stop-color="color-mix(in srgb, var(--g-steel-hi) 24.1%, var(--g-steel-lo))"/>
+      <stop offset=".67" stop-color="color-mix(in srgb, var(--g-steel-hi) 13.4%, var(--g-steel-lo))"/>
+      <stop offset=".74" stop-color="color-mix(in srgb, var(--g-steel-hi) 7.6%, var(--g-steel-lo))"/>
+      <stop offset=".81" stop-color="color-mix(in srgb, var(--g-steel-hi) 4.6%, var(--g-steel-lo))"/>
+      <stop offset=".9" stop-color="color-mix(in srgb, var(--g-steel-hi) 3.2%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-steel-hi) 2.8%, var(--g-steel-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="3125.64" y1="2972.69" x2="3125.64" y2="3001.61" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 15.0%, var(--g-steel-lo))"/>
+      <stop offset=".13" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.9%, var(--g-steel-lo))"/>
+      <stop offset=".3" stop-color="color-mix(in srgb, var(--g-steel-hi) 78.1%, var(--g-steel-lo))"/>
+      <stop offset=".38" stop-color="color-mix(in srgb, var(--g-steel-hi) 100%, var(--g-steel-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-steel-hi) 73.4%, var(--g-steel-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.4%, var(--g-steel-lo))"/>
+      <stop offset=".63" stop-color="color-mix(in srgb, var(--g-steel-hi) 18.2%, var(--g-steel-lo))"/>
+      <stop offset=".7" stop-color="color-mix(in srgb, var(--g-steel-hi) 10.5%, var(--g-steel-lo))"/>
+      <stop offset=".75" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.4%, var(--g-steel-lo))"/>
+      <stop offset=".76" stop-color="color-mix(in srgb, var(--g-steel-hi) 9.0%, var(--g-steel-lo))"/>
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-steel-hi) 16.2%, var(--g-steel-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-steel-hi) 21.9%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="gray"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="3225.43" y1="3428.6" x2="3225.43" y2="3457.53" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient4" x1="3182.79" y1="3215.11" x2="3211.71" y2="3215.11" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient5" x1="2087.64" y1="3953.22" x2="2087.64" y2="3827.12" gradientUnits="userSpaceOnUse">
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))"/>
+      <stop offset=".88" stop-color="color-mix(in srgb, var(--g-wood-hi) 29.4%, var(--g-wood-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-wood-hi) 54.7%, var(--g-wood-lo))"/>
+      <stop offset=".97" stop-color="color-mix(in srgb, var(--g-wood-hi) 90.3%, var(--g-wood-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-wood-hi) 73.8%, var(--g-wood-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-wood-hi) 60.2%, var(--g-wood-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-wood-hi) 52.5%, var(--g-wood-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-wood-hi) 51.2%, var(--g-wood-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient6" x1="2087.64" y1="3771.74" x2="2087.64" y2="3680.18" gradientUnits="userSpaceOnUse">
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))"/>
+      <stop offset=".88" stop-color="color-mix(in srgb, var(--g-wood-hi) 29.4%, var(--g-wood-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-wood-hi) 54.7%, var(--g-wood-lo))"/>
+      <stop offset=".97" stop-color="color-mix(in srgb, var(--g-wood-hi) 90.3%, var(--g-wood-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-wood-hi) 73.4%, var(--g-wood-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-wood-hi) 65.0%, var(--g-wood-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-wood-hi) 63.5%, var(--g-wood-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient7" x1="2549.01" y1="2479.12" x2="2549.01" y2="2184.82" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 15.0%, var(--g-steel-lo))"/>
+      <stop offset=".18" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.9%, var(--g-steel-lo))"/>
+      <stop offset=".4" stop-color="color-mix(in srgb, var(--g-steel-hi) 78.1%, var(--g-steel-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-steel-hi) 100%, var(--g-steel-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-steel-hi) 73.4%, var(--g-steel-lo))"/>
+      <stop offset=".61" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.4%, var(--g-steel-lo))"/>
+      <stop offset=".67" stop-color="color-mix(in srgb, var(--g-steel-hi) 18.2%, var(--g-steel-lo))"/>
+      <stop offset=".72" stop-color="color-mix(in srgb, var(--g-steel-hi) 10.5%, var(--g-steel-lo))"/>
+      <stop offset=".75" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.4%, var(--g-steel-lo))"/>
+      <stop offset=".76" stop-color="color-mix(in srgb, var(--g-steel-hi) 9.0%, var(--g-steel-lo))"/>
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-steel-hi) 16.2%, var(--g-steel-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-steel-hi) 21.9%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="gray"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient8" x1="2599.25" y1="2516.69" x2="2529.6" y2="2021.08" xlink:href="#linear-gradient7"/>
+    <linearGradient id="linear-gradient9" x1="2732.98" y1="2470.5" x2="2841.05" y2="2470.5" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient10" x1="2732.98" y1="2455.36" x2="2841.05" y2="2455.36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 100%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-steel-hi) 52.8%, var(--g-steel-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient11" x1="2968.12" y1="2070.42" x2="2917.69" y2="2088.59" gradientTransform="translate(240.55 -89.25) rotate(9.02)" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient12" x1="2969.69" y1="2074.8" x2="2933.51" y2="2087.84" gradientTransform="translate(240.55 -89.25) rotate(9.02)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 61.5%, var(--g-steel-lo))"/>
+      <stop offset=".27" stop-color="color-mix(in srgb, var(--g-steel-hi) 35.9%, var(--g-steel-lo))"/>
+      <stop offset=".6" stop-color="color-mix(in srgb, var(--g-steel-hi) 18.2%, var(--g-steel-lo))"/>
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-steel-hi) 10.5%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.4%, var(--g-steel-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient13" x1="2754.07" y1="2450.12" x2="2819.96" y2="2450.12" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient14" x1="2754.07" y1="2440.89" x2="2819.96" y2="2440.89" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient15" x1="2654.02" y1="2448.92" x2="2757.68" y2="2448.92" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient16" x1="2654.02" y1="2442.78" x2="2756.56" y2="2442.78" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient17" x1="2087.64" y1="3032.76" x2="2087.64" y2="2941.14" gradientUnits="userSpaceOnUse">
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-wood-hi) 51.2%, var(--g-wood-lo))"/>
+      <stop offset=".94" stop-color="color-mix(in srgb, var(--g-wood-hi) 40.3%, var(--g-wood-lo))"/>
+      <stop offset=".95" stop-color="color-mix(in srgb, var(--g-wood-hi) 29.0%, var(--g-wood-lo))"/>
+      <stop offset=".96" stop-color="color-mix(in srgb, var(--g-wood-hi) 23.2%, var(--g-wood-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient18" x1="1349.94" y1="2595.02" x2="2825.34" y2="2595.02" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient19" x1="1349.94" y1="2545.15" x2="2825.34" y2="2545.15" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient20" x1="2087.64" y1="2283.88" x2="2087.64" y2="2730.3" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient21" x1="2087.64" y1="2480.66" x2="2087.64" y2="2537" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-label-hi) 0%, var(--g-label-lo))"/>
+      <stop offset=".23" stop-color="color-mix(in srgb, var(--g-label-hi) 0.5%, var(--g-label-lo))"/>
+      <stop offset=".31" stop-color="color-mix(in srgb, var(--g-label-hi) 5.6%, var(--g-label-lo))"/>
+      <stop offset=".37" stop-color="color-mix(in srgb, var(--g-label-hi) 14.7%, var(--g-label-lo))"/>
+      <stop offset=".41" stop-color="color-mix(in srgb, var(--g-label-hi) 29.6%, var(--g-label-lo))"/>
+      <stop offset=".45" stop-color="color-mix(in srgb, var(--g-label-hi) 52.5%, var(--g-label-lo))"/>
+      <stop offset=".49" stop-color="color-mix(in srgb, var(--g-label-hi) 85.5%, var(--g-label-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-label-hi) 100%, var(--g-label-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-label-hi) 85.5%, var(--g-label-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-label-hi) 52.5%, var(--g-label-lo))"/>
+      <stop offset=".58" stop-color="color-mix(in srgb, var(--g-label-hi) 29.6%, var(--g-label-lo))"/>
+      <stop offset=".63" stop-color="color-mix(in srgb, var(--g-label-hi) 14.7%, var(--g-label-lo))"/>
+      <stop offset=".69" stop-color="color-mix(in srgb, var(--g-label-hi) 5.6%, var(--g-label-lo))"/>
+      <stop offset=".77" stop-color="color-mix(in srgb, var(--g-label-hi) 0.5%, var(--g-label-lo))"/>
+      <stop offset=".99" stop-color="color-mix(in srgb, var(--g-label-hi) 0%, var(--g-label-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient22" x1="2105.51" y1="2500.73" x2="2075.42" y2="2500.73" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient23" x1="2105.51" y1="2489.85" x2="2075.42" y2="2489.85" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient24" x1="2099.46" y1="2465.47" x2="2066.44" y2="2477.52" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient25" x1="1984.68" y1="2813.69" x2="2190.6" y2="2813.69" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient26" x1="1984.68" y1="2784.83" x2="2190.6" y2="2784.83" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient27" x1="2069.17" y1="2754.74" x2="2106.11" y2="2754.74" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient28" x1="2026.42" y1="2725.08" x2="2148.87" y2="2725.08" xlink:href="#linear-gradient2"/>
+    <linearGradient id="linear-gradient29" x1="2026.42" y1="2707.92" x2="2148.87" y2="2707.92" xlink:href="#linear-gradient10"/>
+    <linearGradient id="linear-gradient30" x1="1554.54" y1="2407.76" x2="1567.34" y2="2407.76" gradientTransform="translate(87.78 -31.11)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".1" stop-color="color-mix(in srgb, var(--g-brass-hi) 14.3%, var(--g-brass-lo))"/>
+      <stop offset=".19" stop-color="color-mix(in srgb, var(--g-brass-hi) 18.3%, var(--g-brass-lo))"/>
+      <stop offset=".27" stop-color="color-mix(in srgb, var(--g-brass-hi) 26.3%, var(--g-brass-lo))"/>
+      <stop offset=".35" stop-color="color-mix(in srgb, var(--g-brass-hi) 39.8%, var(--g-brass-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-brass-hi) 61.3%, var(--g-brass-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-brass-hi) 94.2%, var(--g-brass-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".57" stop-color="color-mix(in srgb, var(--g-brass-hi) 80.4%, var(--g-brass-lo))"/>
+      <stop offset=".64" stop-color="color-mix(in srgb, var(--g-brass-hi) 63.1%, var(--g-brass-lo))"/>
+      <stop offset=".72" stop-color="color-mix(in srgb, var(--g-brass-hi) 54.2%, var(--g-brass-lo))"/>
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+      <stop offset=".89" stop-color="color-mix(in srgb, var(--g-brass-hi) 55.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 67.6%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient31" x1="1549.12" y1="2429.69" x2="1572.76" y2="2429.69" gradientTransform="translate(-96.15 98.66) rotate(-4.5)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient32" x1="1572.92" y1="2432.25" x2="1544.82" y2="2441.87" gradientTransform="translate(-96.15 98.66) rotate(-4.5)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".2" stop-color="color-mix(in srgb, var(--g-brass-hi) 14.3%, var(--g-brass-lo))"/>
+      <stop offset=".38" stop-color="color-mix(in srgb, var(--g-brass-hi) 18.3%, var(--g-brass-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-brass-hi) 26.2%, var(--g-brass-lo))"/>
+      <stop offset=".69" stop-color="color-mix(in srgb, var(--g-brass-hi) 39.4%, var(--g-brass-lo))"/>
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+      <stop offset=".89" stop-color="color-mix(in srgb, var(--g-brass-hi) 55.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 67.6%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient33" x1="1555.46" y1="2450.93" x2="1566.42" y2="2450.93" gradientTransform="translate(-96.15 98.66) rotate(-4.5)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient34" x1="2134.83" y1="2250.58" x2="2125.86" y2="2079.33" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient35" x1="2605.01" y1="2125.45" x2="2422.07" y2="2069.52" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient36" x1="2424.82" y1="1986.68" x2="2619.55" y2="1986.68" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 15.0%, var(--g-steel-lo))"/>
+      <stop offset=".18" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.9%, var(--g-steel-lo))"/>
+      <stop offset=".4" stop-color="color-mix(in srgb, var(--g-steel-hi) 78.1%, var(--g-steel-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-steel-hi) 100%, var(--g-steel-lo))"/>
+      <stop offset=".54" stop-color="color-mix(in srgb, var(--g-steel-hi) 73.4%, var(--g-steel-lo))"/>
+      <stop offset=".61" stop-color="color-mix(in srgb, var(--g-steel-hi) 36.4%, var(--g-steel-lo))"/>
+      <stop offset=".67" stop-color="color-mix(in srgb, var(--g-steel-hi) 18.2%, var(--g-steel-lo))"/>
+      <stop offset=".72" stop-color="color-mix(in srgb, var(--g-steel-hi) 10.5%, var(--g-steel-lo))"/>
+      <stop offset=".75" stop-color="color-mix(in srgb, var(--g-steel-hi) 8.4%, var(--g-steel-lo))"/>
+      <stop offset=".76" stop-color="color-mix(in srgb, var(--g-steel-hi) 9.0%, var(--g-steel-lo))"/>
+      <stop offset=".85" stop-color="color-mix(in srgb, var(--g-steel-hi) 16.2%, var(--g-steel-lo))"/>
+      <stop offset=".93" stop-color="color-mix(in srgb, var(--g-steel-hi) 21.9%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="gray"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient37" x1="2619.32" y1="1925.44" x2="2426.15" y2="1925.44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-steel-hi) 61.5%, var(--g-steel-lo))"/>
+      <stop offset=".45" stop-color="color-mix(in srgb, var(--g-steel-hi) 78.1%, var(--g-steel-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-steel-hi) 100%, var(--g-steel-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient38" x1="2266.57" y1="1651.34" x2="2355.64" y2="1406.63" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient39" x1="2435.36" y1="1802.69" x2="2609.91" y2="1802.69" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient40" x1="2398.19" y1="1667.01" x2="2566.99" y2="1544.37" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".09" stop-color="color-mix(in srgb, var(--g-brass-hi) 14.3%, var(--g-brass-lo))"/>
+      <stop offset=".16" stop-color="color-mix(in srgb, var(--g-brass-hi) 18.3%, var(--g-brass-lo))"/>
+      <stop offset=".23" stop-color="color-mix(in srgb, var(--g-brass-hi) 26.3%, var(--g-brass-lo))"/>
+      <stop offset=".3" stop-color="color-mix(in srgb, var(--g-brass-hi) 39.8%, var(--g-brass-lo))"/>
+      <stop offset=".36" stop-color="color-mix(in srgb, var(--g-brass-hi) 61.3%, var(--g-brass-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-brass-hi) 94.2%, var(--g-brass-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-brass-hi) 80.4%, var(--g-brass-lo))"/>
+      <stop offset=".6" stop-color="color-mix(in srgb, var(--g-brass-hi) 63.1%, var(--g-brass-lo))"/>
+      <stop offset=".7" stop-color="color-mix(in srgb, var(--g-brass-hi) 54.2%, var(--g-brass-lo))"/>
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+      <stop offset=".89" stop-color="color-mix(in srgb, var(--g-brass-hi) 55.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 67.6%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient41" x1="1667.21" y1="2030.77" x2="2101.92" y2="692.89" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient42" x1="1626.59" y1="2380.08" x2="1626.59" y2="2014.97" gradientTransform="translate(2029.8504 -506.7175) rotate(45)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".15" stop-color="color-mix(in srgb, var(--g-brass-hi) 21.7%, var(--g-brass-lo))"/>
+      <stop offset=".73" stop-color="color-mix(in srgb, var(--g-brass-hi) 71.4%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <radialGradient id="radial-gradient" cx="1626.59" cy="2196.89" fx="1626.59" fy="2196.89" r="173.81" gradientTransform="translate(2029.8504 -506.7175) rotate(45)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".25" stop-color="color-mix(in srgb, var(--g-brass-hi) 95.1%, var(--g-brass-lo))"/>
+      <stop offset=".53" stop-color="color-mix(in srgb, var(--g-brass-hi) 82.3%, var(--g-brass-lo))"/>
+      <stop offset=".82" stop-color="color-mix(in srgb, var(--g-brass-hi) 64.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+    </radialGradient>
+    <linearGradient id="linear-gradient43" x1="1626.59" y1="2332.69" x2="1626.59" y2="2061.04" gradientTransform="translate(2029.8504 -506.7175) rotate(45)" xlink:href="#linear-gradient42"/>
+    <radialGradient id="radial-gradient1" cx="1626.59" fx="1626.59" r="132.49" gradientTransform="translate(2029.8504 -506.7175) rotate(45)" xlink:href="#radial-gradient"/>
+    <linearGradient id="linear-gradient44" y1="2251.13" y2="2184.4" gradientTransform="translate(964.53 -455.24) rotate(22.5)" xlink:href="#linear-gradient42"/>
+    <linearGradient id="linear-gradient45" x1="1626.59" y1="2228.55" x2="1626.59" y2="2166" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".25" stop-color="color-mix(in srgb, var(--g-brass-hi) 95.1%, var(--g-brass-lo))"/>
+      <stop offset=".53" stop-color="color-mix(in srgb, var(--g-brass-hi) 82.3%, var(--g-brass-lo))"/>
+      <stop offset=".82" stop-color="color-mix(in srgb, var(--g-brass-hi) 64.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <radialGradient id="radial-gradient2" cx="1683.77" cy="1145.16" fx="1683.77" fy="1145.16" r="976.19" gradientTransform="translate(278.32 174.21) scale(.84 .92)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".2" stop-color="color-mix(in srgb, var(--g-brass-hi) 14.3%, var(--g-brass-lo))"/>
+      <stop offset=".37" stop-color="color-mix(in srgb, var(--g-brass-hi) 18.3%, var(--g-brass-lo))"/>
+      <stop offset=".53" stop-color="color-mix(in srgb, var(--g-brass-hi) 26.3%, var(--g-brass-lo))"/>
+      <stop offset=".69" stop-color="color-mix(in srgb, var(--g-brass-hi) 39.8%, var(--g-brass-lo))"/>
+      <stop offset=".84" stop-color="color-mix(in srgb, var(--g-brass-hi) 61.3%, var(--g-brass-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-brass-hi) 94.2%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+    </radialGradient>
+    <linearGradient id="linear-gradient46" x1="1616.72" y1="916.58" x2="1954.5" y2="705.51" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 13.3%, var(--g-brass-lo))"/>
+      <stop offset=".1" stop-color="color-mix(in srgb, var(--g-brass-hi) 14.3%, var(--g-brass-lo))"/>
+      <stop offset=".19" stop-color="color-mix(in srgb, var(--g-brass-hi) 18.3%, var(--g-brass-lo))"/>
+      <stop offset=".27" stop-color="color-mix(in srgb, var(--g-brass-hi) 26.3%, var(--g-brass-lo))"/>
+      <stop offset=".35" stop-color="color-mix(in srgb, var(--g-brass-hi) 39.8%, var(--g-brass-lo))"/>
+      <stop offset=".43" stop-color="color-mix(in srgb, var(--g-brass-hi) 61.3%, var(--g-brass-lo))"/>
+      <stop offset=".5" stop-color="color-mix(in srgb, var(--g-brass-hi) 94.2%, var(--g-brass-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".57" stop-color="color-mix(in srgb, var(--g-brass-hi) 80.4%, var(--g-brass-lo))"/>
+      <stop offset=".64" stop-color="color-mix(in srgb, var(--g-brass-hi) 63.1%, var(--g-brass-lo))"/>
+      <stop offset=".72" stop-color="color-mix(in srgb, var(--g-brass-hi) 54.2%, var(--g-brass-lo))"/>
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+      <stop offset=".84" stop-color="color-mix(in srgb, var(--g-brass-hi) 55.5%, var(--g-brass-lo))"/>
+      <stop offset=".91" stop-color="color-mix(in srgb, var(--g-brass-hi) 68.4%, var(--g-brass-lo))"/>
+      <stop offset=".98" stop-color="color-mix(in srgb, var(--g-brass-hi) 92.6%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 99.4%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient47" x1="1504.35" y1="1019.38" x2="1748.52" y2="310.24" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient48" x1="1486.92" y1="1369.2" x2="1060.34" y2="2162.43" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient49" x1="1660.94" y1="1425.6" x2="680.13" y2="1937.93" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient50" x1="1697.5" y1="1359.1" x2="454.69" y2="1486.88" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient51" x1="1733.47" y1="1276.98" x2="490.81" y2="890.34" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient52" x1="1776.66" y1="1183.55" x2="773.2" y2="390.86" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient53" x1="1625.96" y1="1213.06" x2="1221.31" y2="140.32" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient54" x1="1435.32" y1="1544.73" x2="1547.87" y2="2018.66" gradientTransform="matrix(1,0,0,1,0,0)" xlink:href="#linear-gradient30"/>
+    <linearGradient id="linear-gradient55" x1="1732.39" y1="1325.81" x2="1796.02" y2="1347.71" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 19.9%, var(--g-brass-lo))"/>
+      <stop offset=".23" stop-color="color-mix(in srgb, var(--g-brass-hi) 22.6%, var(--g-brass-lo))"/>
+      <stop offset=".55" stop-color="color-mix(in srgb, var(--g-brass-hi) 31.5%, var(--g-brass-lo))"/>
+      <stop offset=".92" stop-color="color-mix(in srgb, var(--g-brass-hi) 49.4%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 54.8%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient56" x1="1735.33" y1="3352.28" x2="2439.95" y2="3352.28" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="color-mix(in srgb, var(--g-brass-hi) 29.4%, var(--g-brass-lo))"/>
+      <stop offset=".09" stop-color="color-mix(in srgb, var(--g-brass-hi) 32.0%, var(--g-brass-lo))"/>
+      <stop offset=".21" stop-color="color-mix(in srgb, var(--g-brass-hi) 41.1%, var(--g-brass-lo))"/>
+      <stop offset=".33" stop-color="color-mix(in srgb, var(--g-brass-hi) 58.4%, var(--g-brass-lo))"/>
+      <stop offset=".47" stop-color="color-mix(in srgb, var(--g-brass-hi) 86.8%, var(--g-brass-lo))"/>
+      <stop offset=".51" stop-color="color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))"/>
+      <stop offset=".57" stop-color="color-mix(in srgb, var(--g-brass-hi) 80.4%, var(--g-brass-lo))"/>
+      <stop offset=".64" stop-color="color-mix(in srgb, var(--g-brass-hi) 63.1%, var(--g-brass-lo))"/>
+      <stop offset=".72" stop-color="color-mix(in srgb, var(--g-brass-hi) 54.2%, var(--g-brass-lo))"/>
+      <stop offset=".79" stop-color="color-mix(in srgb, var(--g-brass-hi) 51.5%, var(--g-brass-lo))"/>
+      <stop offset=".89" stop-color="color-mix(in srgb, var(--g-brass-hi) 55.0%, var(--g-brass-lo))"/>
+      <stop offset="1" stop-color="color-mix(in srgb, var(--g-brass-hi) 67.6%, var(--g-brass-lo))"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient57" x1="1748.39" y1="3352.28" x2="2426.89" y2="3352.28" gradientTransform="translate(-1264.6388 5439.9205) rotate(-90)" xlink:href="#linear-gradient56"/></defs>
+  <g class="h-hue">
+    <!-- The crank, in three pieces because it has to turn: the arm along
+         the axle, which does not move; the throw, which is the whole of
+         the turn seen edge-on and so is scaled about the axle rather
+         than rotated; and the handle, which rides the end of it. -->
+    <g class="g-crank-arm"><polygon class="g-steel g-crank" style="fill:url(#linear-gradient2)" points="3182.79 3001.61 3039.57 3001.61 3039.57 2972.69 3211.71 2972.69 3182.79 3001.61"/></g>
+    <g class="g-crank-throw"><polygon class="g-steel g-crank" style="fill:url(#linear-gradient4)" points="3211.71 3428.6 3182.79 3457.53 3182.79 3001.61 3211.71 2972.69 3211.71 3428.6"/></g>
+    <g class="g-crank-grip"><path class="g-steel g-crank" style="fill:url(#linear-gradient)" d="M3492.42,3410.96h-226.83v64.2h226.83c3.95,0,7.15-14.37,7.15-32.1s-3.2-32.1-7.15-32.1Z"/><ellipse class="g-steel g-crank" style="fill:url(#linear-gradient1)" cx="3265.59" cy="3443.07" rx="7.15" ry="32.1"/><ellipse class="g-ink g-crank" style="fill:var(--g-ink-lo)" cx="3265.59" cy="3443.07" rx="3.77" ry="16.91"/><path class="g-steel g-crank" style="fill:url(#linear-gradient3)" d="M3264.85,3428.6h-53.14l-28.93,28.93h82.06c1.78,0,3.22-6.48,3.22-14.46s-1.44-14.46-3.22-14.46Z"/></g>
+  <g>
+    
+    
+    
+    
+    
+    
+  </g>
+  <rect class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 0%, var(--g-wood-lo))" x="954.06" y="3911.51" width="2267.17" height="77.58"/>
+  <polygon class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 51.2%, var(--g-wood-lo))" points="3040.04 3261.08 2087.64 3261.08 1135.24 3261.08 905.35 3827.12 2087.64 3827.12 3269.93 3827.12 3040.04 3261.08"/>
+  <rect class="g-wood" style="fill:url(#linear-gradient5)" x="905.35" y="3827.12" width="2364.58" height="126.1"/>
+  <polygon class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 63.5%, var(--g-wood-lo))" points="2936.01 3175.97 2087.64 3175.97 1239.28 3175.97 1034.5 3680.18 2087.64 3680.18 3140.78 3680.18 2936.01 3175.97"/>
+  <rect class="g-wood" style="fill:url(#linear-gradient6)" x="1034.5" y="3680.18" width="2106.28" height="91.56"/>
+  <rect class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))" x="1088.78" y="3004.61" width="1997.72" height="642.79"/>
+  <rect class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" x="1088.78" y="3004.61" width="1997.72" height="56.54"/>
+  <polygon class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 22.2%, var(--g-wood-lo))" points="2936.58 2436.59 2087.64 2436.59 1238.7 2436.59 1033.78 2941.14 2087.64 2941.14 3141.5 2941.14 2936.58 2436.59"/>
+  <g>
+    <path class="g-steel" style="fill:url(#linear-gradient7)" d="M2606.87,1961.22l6.44,269.87c.49,20.72-3.7,41.29-12.27,60.17l-5.55,12.23c-10.77,23.71-16.74,49.32-17.58,75.35l-2.97,92.26-90.27,1.22,17.62-274.76,104.57-236.34Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient8)" d="M2618.2,1961.22l6.44,269.87c.49,20.72-3.7,41.29-12.27,60.17l-5.55,12.23c-10.77,23.71-16.74,49.32-17.58,75.35l-2.97,92.26-90.27,1.22,17.62-274.76,104.57-236.34Z"/>
+  </g>
+  <polygon class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 51.2%, var(--g-wood-lo))" points="2872.96 2413.08 2087.64 2413.08 1302.32 2413.08 1112.76 2879.82 2087.64 2879.82 3062.52 2879.82 2872.96 2413.08"/>
+  <g>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2819.69,2451.59c-2.09-3.2-15.92-4.94-32.67-4.94s-30.11,1.59-32.2,4.79l-.25.12-.49-.62v2.2h0s0,.02,0,.03c0,3.6,14.75,6.52,32.94,6.52s32.94-2.92,32.94-6.52v-2.23l-.27.65Z"/>
+    <polygon class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" points="2795.79 2463.18 2834.97 2439.14 2848.66 2438.9 2811.23 2462.36 2795.79 2463.18"/>
+    <g>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2787.02,2476.04c-27.47,0-54.04-8.91-54.04-8.91v19.55h0s0,.03,0,.05c0,5.9,24.19,10.69,54.04,10.69s54.04-4.79,54.04-10.69v-19.6s-26.56,8.91-54.04,8.91Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2840.6,2472.91c-3.43-5.25-26.11-8.1-53.59-8.1s-49.38,2.61-52.81,7.86l-.41.2-.81-1.02v3.61h0s0,.03,0,.05c0,5.9,24.19,10.69,54.04,10.69s54.04-4.79,54.04-10.69v-3.65l-.45,1.06Z"/>
+      <path class="g-steel" style="fill:url(#linear-gradient9)" d="M2787.02,2464.27c-27.47,0-54.04-8.91-54.04-8.91v19.55h0s0,.03,0,.05c0,5.9,24.19,10.69,54.04,10.69s54.04-4.79,54.04-10.69v-19.6s-26.56,8.91-54.04,8.91Z"/>
+      <ellipse class="g-steel" style="fill:url(#linear-gradient10)" cx="2787.02" cy="2455.36" rx="54.04" ry="10.69"/>
+    </g>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2756.56,2453.16v2.49l-22.4,1.94v20.13h-80.14l7.52-5.27h71.44v-17.1l21.09-2.2s1.44-.77,2.49,0Z"/>
+    <polygon class="g-steel" style="fill:url(#linear-gradient11)" points="2795.79 2437.32 2833.97 2414.69 2845.96 2414.28 2811.23 2436.5 2795.79 2437.32"/>
+    <polygon class="g-steel" style="fill:url(#linear-gradient12)" points="2845.96 2414.28 2844.68 2422.31 2812.45 2443.86 2811.23 2436.5 2845.96 2414.28"/>
+    <path class="g-steel" style="fill:url(#linear-gradient13)" d="M2787.02,2446.32c-16.75,0-32.94-5.43-32.94-5.43v11.92h0s0,.02,0,.03c0,3.6,14.75,6.52,32.94,6.52s32.94-2.92,32.94-6.52v-11.95s-16.19,5.43-32.94,5.43Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient14)" d="M2819.96,2440.89c0,3.6-14.75,6.52-32.94,6.52s-32.94-2.92-32.94-6.52,14.75-6.52,32.94-6.52,32.94,2.92,32.94,6.52Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient15)" d="M2756.56,2453.16h-102.54v-8.49h102.54s2.52,4.57,0,8.49Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient16)" d="M2654.02,2444.67l9.37-3.78h90.69s-.23,2.53,2.49,3.78h-102.54Z"/>
+  </g>
+  <rect class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 5.8%, var(--g-wood-lo))" x="1112.76" y="2879.82" width="1949.76" height="16.87"/>
+  <polygon class="g-wood" style="fill:color-mix(in srgb, var(--g-wood-hi) 100%, var(--g-wood-lo))" points="3061.19 2876.53 1114.1 2876.53 1112.76 2879.82 3062.52 2879.82 3061.19 2876.53"/>
+  <rect class="g-wood" style="fill:url(#linear-gradient17)" x="1033.78" y="2941.14" width="2107.72" height="91.62"/>
+  <g>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2807.59,2545.28c-18.39-75.51-333.68-135.61-719.95-135.61s-701.56,60.1-719.95,135.61c-11.61,10.28-17.75,20.97-17.75,31.95,0,.08,0,.15,0,.23v49.42c0,.08,0,.15,0,.23s0,.15,0,.23v6.51h.01c0,.21-.02.41-.02.61,0,80.59,330.28,145.93,737.7,145.93s737.7-65.33,737.7-145.93v-57.23c0-10.97-6.14-21.67-17.75-31.95Z"/>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2819.23,2567.02c-46.77-71.68-356.48-110.57-731.58-110.57s-674.14,35.58-721.01,107.24l-5.66,2.75-11.01-13.94v49.26h.01c0,.21-.02.41-.02.61,0,80.59,330.28,145.93,737.7,145.93s737.7-65.33,737.7-145.93v-49.88l-6.11,14.52Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient18)" d="M2819.23,2559.67c-46.77-71.68-356.48-110.57-731.58-110.57s-674.14,35.58-721.01,107.24l-5.66,2.75-11.01-13.94v49.26h.01c0,.21-.02.41-.02.61,0,80.59,330.28,145.93,737.7,145.93s737.7-65.33,737.7-145.93v-49.88l-6.11,14.52Z"/>
+    <ellipse class="g-steel" style="fill:url(#linear-gradient19)" cx="2087.64" cy="2545.15" rx="737.7" ry="145.93"/>
+    <path d="M2802.47,2510.41c-45.7-70.04-348.32-124.15-714.83-124.15s-669,54.09-714.8,124.11l-.83-.55-5.17,10.37v8.06h.01c0,.21-.02.4-.02.6,0,78.75,322.72,142.59,720.81,142.59s720.81-63.84,720.81-142.59v-8.82l-5.97-9.61Z"/>
+    <g>
+      <ellipse class="g-ink" style="fill:url(#linear-gradient20)" cx="2087.64" cy="2520.17" rx="720.81" ry="144.21"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2656.37c-91.9,0-181.05-3.6-264.97-10.7-40.34-3.41-79.24-7.64-115.63-12.56-36.05-4.87-69.94-10.47-100.75-16.63-30.8-6.16-58.77-12.94-83.12-20.16-24.59-7.28-45.7-15.06-62.76-23.13-35.5-16.79-53.5-34.63-53.5-53.01s18-36.22,53.5-53.01c17.06-8.07,38.18-15.85,62.76-23.13,24.35-7.21,52.32-13.99,83.12-20.16,30.8-6.16,64.7-11.76,100.75-16.63,36.39-4.92,75.3-9.14,115.63-12.56,83.93-7.1,173.08-10.7,264.97-10.7s181.05,3.6,264.97,10.7c40.34,3.41,79.24,7.64,115.63,12.56,36.05,4.87,69.94,10.47,100.75,16.63,30.8,6.16,58.77,12.94,83.12,20.16,24.59,7.28,45.7,15.06,62.76,23.13,35.5,16.79,53.5,34.63,53.5,53.01s-18,36.22-53.5,53.01c-17.06,8.07-38.18,15.85-62.76,23.13-24.35,7.21-52.32,13.99-83.12,20.16-30.8,6.16-64.7,11.76-100.75,16.63-36.39,4.92-75.3,9.14-115.63,12.56-83.93,7.1-173.08,10.7-264.97,10.7ZM2087.64,2384.4c-374.2,0-678.63,60.91-678.63,135.77s304.43,135.77,678.63,135.77,678.63-60.91,678.63-135.77-304.43-135.77-678.63-135.77Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2641.18c-81.65,0-160.86-3.2-235.42-9.51-35.84-3.03-70.4-6.79-102.74-11.16-32.03-4.33-62.14-9.3-89.51-14.78-27.37-5.48-52.22-11.5-73.85-17.91-21.84-6.47-40.61-13.38-55.76-20.55-31.54-14.92-47.53-30.77-47.53-47.1s15.99-32.18,47.53-47.1c15.16-7.17,33.92-14.09,55.76-20.55,21.64-6.41,46.48-12.43,73.85-17.91,27.37-5.48,57.48-10.45,89.51-14.78,32.33-4.37,66.9-8.12,102.74-11.16,74.57-6.31,153.77-9.51,235.42-9.51s160.86,3.2,235.42,9.51c35.84,3.03,70.4,6.79,102.74,11.16,32.03,4.33,62.14,9.3,89.51,14.78,27.37,5.48,52.22,11.5,73.85,17.91,21.84,6.47,40.61,13.38,55.76,20.55,31.54,14.92,47.53,30.77,47.53,47.1s-15.99,32.18-47.53,47.1c-15.16,7.17-33.92,14.09-55.76,20.55-21.64,6.41-46.48,12.43-73.85,17.91-27.37,5.48-57.48,10.45-89.51,14.78-32.33,4.37-66.9,8.12-102.74,11.16-74.57,6.31-153.77,9.51-235.42,9.51ZM2087.64,2399.59c-332.33,0-602.71,54.09-602.71,120.58s270.37,120.58,602.71,120.58,602.71-54.09,602.71-120.58-270.37-120.58-602.71-120.58Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2627.69c-72.54,0-142.92-2.84-209.17-8.45-63.99-5.42-121.46-13.17-170.81-23.04-49.35-9.87-88.1-21.37-115.16-34.17-28.02-13.25-42.23-27.33-42.23-41.85s14.21-28.59,42.23-41.85c27.07-12.8,65.81-24.3,115.16-34.17,49.35-9.87,106.82-17.63,170.81-23.04,66.25-5.61,136.63-8.45,209.17-8.45s142.92,2.84,209.17,8.45c63.99,5.42,121.46,13.17,170.81,23.04,49.35,9.87,88.1,21.37,115.16,34.17,28.02,13.25,42.23,27.33,42.23,41.85s-14.21,28.59-42.23,41.85c-27.07,12.8-65.81,24.3-115.16,34.17-49.35,9.87-106.82,17.63-170.81,23.04-66.25,5.61-136.63,8.45-209.17,8.45ZM2087.64,2413.08c-295.15,0-535.27,48.04-535.27,107.09s240.12,107.09,535.27,107.09,535.27-48.04,535.27-107.09-240.12-107.09-535.27-107.09Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2614.01c-63.32,0-124.74-2.48-182.57-7.37-55.85-4.73-106.01-11.49-149.09-20.11-43.07-8.62-76.89-18.65-100.52-29.83-24.46-11.57-36.86-23.86-36.86-36.53s12.4-24.96,36.86-36.53c23.62-11.17,57.44-21.21,100.52-29.83,43.07-8.62,93.24-15.38,149.09-20.11,57.83-4.89,119.25-7.37,182.57-7.37s124.74,2.48,182.57,7.37c55.85,4.73,106.01,11.49,149.09,20.11,43.07,8.62,76.89,18.65,100.52,29.83,24.46,11.57,36.86,23.86,36.86,36.53s-12.4,24.96-36.86,36.53c-23.62,11.17-57.44,21.21-100.52,29.83-43.08,8.62-93.24,15.38-149.09,20.11-57.83,4.89-119.25,7.37-182.57,7.37ZM2087.64,2426.76c-257.46,0-466.92,41.91-466.92,93.42s209.46,93.42,466.92,93.42,466.92-41.91,466.92-93.42-209.46-93.42-466.92-93.42Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2599.15c-53.29,0-104.98-2.09-153.64-6.21-47-3.98-89.22-9.67-125.47-16.92-36.25-7.25-64.71-15.7-84.59-25.1-20.58-9.74-31.02-20.08-31.02-30.74s10.44-21,31.02-30.74c19.88-9.4,48.34-17.85,84.59-25.1,36.25-7.25,78.46-12.95,125.47-16.92,48.66-4.12,100.36-6.21,153.64-6.21s104.98,2.09,153.65,6.21c47,3.98,89.22,9.67,125.47,16.92,36.25,7.25,64.71,15.7,84.59,25.1,20.58,9.74,31.02,20.08,31.02,30.74s-10.44,21-31.02,30.74c-19.88,9.4-48.34,17.85-84.59,25.1-36.25,7.25-78.46,12.95-125.47,16.92-48.66,4.12-100.36,6.21-153.65,6.21ZM2087.64,2441.62c-216.49,0-392.62,35.24-392.62,78.55s176.13,78.55,392.62,78.55,392.62-35.24,392.62-78.55-176.13-78.55-392.62-78.55Z"/>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2584.5c-43.4,0-85.51-1.7-125.15-5.06-38.29-3.24-72.67-7.88-102.2-13.79-29.53-5.91-52.71-12.79-68.9-20.45-16.77-7.93-25.27-16.36-25.27-25.04s8.5-17.11,25.27-25.04c16.19-7.66,39.38-14.54,68.9-20.45,29.53-5.91,63.91-10.55,102.2-13.79,39.64-3.35,81.75-5.06,125.15-5.06s85.51,1.7,125.15,5.06c38.29,3.24,72.67,7.88,102.2,13.79,29.53,5.91,52.71,12.79,68.9,20.45,16.77,7.93,25.27,16.36,25.27,25.04s-8.5,17.11-25.27,25.04c-16.19,7.66-39.38,14.54-68.9,20.45-29.53,5.91-63.91,10.55-102.2,13.79-39.64,3.35-81.75,5.06-125.15,5.06ZM2087.64,2456.27c-176.12,0-319.41,28.67-319.41,63.91s143.29,63.91,319.41,63.91,319.41-28.67,319.41-63.91-143.29-63.91-319.41-63.91Z"/>
+    </g>
+    <ellipse class="g-label" style="fill:url(#linear-gradient21)" cx="2087.64" cy="2507.59" rx="153.67" ry="30.4"/>
+    <g>
+      <path class="g-steel" style="fill:url(#linear-gradient22)" d="M2072.6,2480.66v37.59c0,1.4,6.74,2.54,15.04,2.54s15.04-1.14,15.04-2.54v-37.59h-30.09Z"/>
+      <g>
+        <path class="g-steel" style="fill:color-mix(in srgb, var(--g-steel-hi) 3.0%, var(--g-steel-lo))" d="M2072.6,2470.66v37.59c0,1.4,6.74,2.54,15.04,2.54s15.04-1.14,15.04-2.54v-37.59h-30.09Z"/>
+        <path class="g-steel" style="fill:url(#linear-gradient23)" d="M2072.6,2469.78v37.59c0,1.4,6.74,2.54,15.04,2.54s15.04-1.14,15.04-2.54v-37.59h-30.09Z"/>
+        <path class="g-steel" style="fill:url(#linear-gradient24)" d="M2102.68,2469.78c0,1.4-6.74,2.54-15.04,2.54s-15.04-1.14-15.04-2.54,6.74-2.54,15.04-2.54,15.04,1.14,15.04,2.54Z"/>
+      </g>
+    </g>
+  </g>
+  <g>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2087.64,2824.23c-52.34,0-102.96-16.97-102.96-16.97v37.25h0s0,.06,0,.09c0,11.25,46.1,20.37,102.96,20.37s102.96-9.12,102.96-20.37v-37.34s-50.61,16.97-102.96,16.97Z"/>
+    <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2189.74,2818.26c-6.53-10-49.75-15.43-102.1-15.43s-94.09,4.97-100.63,14.97l-.79.38-1.54-1.95v6.88h0s0,.06,0,.09c0,11.25,46.1,20.37,102.96,20.37s102.96-9.12,102.96-20.37v-6.96l-.85,2.03Z"/>
+    <path class="g-steel" style="fill:url(#linear-gradient25)" d="M2087.64,2801.81c-52.34,0-102.96-16.97-102.96-16.97v37.25h0s0,.06,0,.09c0,11.25,46.1,20.37,102.96,20.37s102.96-9.12,102.96-20.37v-37.34s-50.61,16.97-102.96,16.97Z"/>
+    <ellipse class="g-steel" style="fill:url(#linear-gradient26)" cx="2087.64" cy="2784.83" rx="102.96" ry="20.37"/>
+    <path class="g-steel" style="fill:url(#linear-gradient27)" d="M2069.17,2723.51v58.81c0,2.02,8.27,3.65,18.47,3.65s18.47-1.64,18.47-3.65v-58.81h-36.94Z"/>
+    <g>
+      <path class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" d="M2148.36,2727.8c-3.88-5.95-29.59-9.18-60.72-9.18s-55.95,2.95-59.84,8.9l-.47.23-.91-1.16v4.09h0s0,.03,0,.05c0,6.69,27.41,12.11,61.22,12.11s61.22-5.42,61.22-12.11v-4.14l-.51,1.21Z"/>
+      <path class="g-steel" style="fill:url(#linear-gradient28)" d="M2087.64,2718.01c-31.12,0-61.22-10.09-61.22-10.09v22.15h0s0,.03,0,.05c0,6.69,27.41,12.11,61.22,12.11s61.22-5.42,61.22-12.11v-22.2s-30.09,10.09-61.22,10.09Z"/>
+      <ellipse class="g-steel" style="fill:url(#linear-gradient29)" cx="2087.64" cy="2707.92" rx="61.22" ry="12.11"/>
+    </g>
+  </g>
+  <g>
+    <rect class="g-brass" style="fill:url(#linear-gradient30)" x="1642.32" y="2358.26" width="12.8" height="36.63" transform="translate(-181.22 136.55) rotate(-4.5)"/>
+    <path class="g-brass" style="fill:url(#linear-gradient31)" d="M1649.92,2391.79c-6.51.51-11.67,2.29-11.54,3.98l.81,10.24,23.56-1.85-.81-10.24c-.13-1.69-5.51-2.64-12.02-2.12Z"/>
+    <path class="g-brass" style="fill:url(#linear-gradient32)" d="M1662.74,2404.15c.13,1.68-5.03,3.47-11.54,3.98-6.51.51-11.89-.44-12.02-2.12s5.03-3.47,11.54-3.98c6.51-.51,11.89.44,12.02,2.12Z"/>
+    <path class="g-brass" style="fill:url(#linear-gradient33)" d="M1656.48,2404.77s.02-.09.01-.13c-.06-.79-2.59-1.24-5.64-1-3.05.24-5.48,1.08-5.42,1.87,0,.04.02.09.03.13l7.89,29.94,3.12-30.8Z"/>
+  </g>
+  <path class="g-brass" style="fill:url(#linear-gradient34)" d="M2404.95,2070.82l-704.11,65.2,6.84,106.04,792.86-10.71c22.68-.31,43.56-8.23,60.16-21.36l-136.85-146.26c-5.39,3.9-11.84,6.45-18.9,7.11Z"/>
+  <path class="g-brass" style="fill:url(#linear-gradient35)" d="M2598.29,2137.14l5.56-110.11-164.18-10.73v16.44c0,12.67-6.19,23.99-15.82,30.97l136.85,146.26c21.7-17.16,36.09-43.22,37.59-72.84Z"/>
+  <path class="g-steel" style="fill:url(#linear-gradient36)" d="M2424.82,1925.44v93.76c0,15.86,43.59,28.72,97.37,28.72s97.37-12.86,97.37-28.72v-93.76h-194.74Z"/>
+  <ellipse class="g-steel" style="fill:url(#linear-gradient37)" cx="2522.19" cy="1925.44" rx="97.37" ry="28.72"/>
+  <path class="g-brass" style="fill:url(#linear-gradient38)" d="M2435.91,1438.96l-209.15-79.25-67.31,252.63,231.07,55.06c3.63.87,7.12,2.03,10.46,3.45l80.66-209.42c-14.32-8.81-29.61-16.36-45.74-22.47Z"/>
+  <path class="g-brass" style="fill:url(#linear-gradient39)" d="M2438.91,1715.49c1.37,5.6,2.02,11.46,1.85,17.46l-5.39,187.08c0,14.29,39.07,25.88,87.27,25.88s87.27-11.59,87.27-25.88v-229.06c0-10.61-.66-21.11-1.87-31.47l-169.13,56Z"/>
+  <path class="g-brass" style="fill:url(#linear-gradient40)" d="M2481.65,1461.44l-80.66,209.42c19.05,8.1,33.06,24.76,37.93,44.63l169.13-56c-9.63-82.14-56.52-155.08-126.39-198.05Z"/>
+  <ellipse class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 8.9%, var(--g-brass-lo))" cx="2191.41" cy="1485.61" rx="130.81" ry="49.1" transform="translate(187.5727 3215.9165) rotate(-74.9449)"/>
+  <path class="g-brass" style="fill:url(#linear-gradient41)" d="M2219.68,1363.67v-.02c-.13-.06-.26-.11-.39-.17-.03-.01-.05-.02-.08-.03-417.36-180.58-469.43-784.97-469.43-784.97-104.59,459.06-209.19,918.12-313.78,1377.18,121.99-188.28,248.94-263.48,346.95-296.16,140.77-46.94,368.07-54.94,368.09-54.94v-.03c.27.08.52.19.79.27,25.1,6.75,60.02-41.98,78-108.84,17.31-64.35,12.61-122.02-10.15-132.28Z"/>
+  <circle class="g-brass" style="fill:url(#linear-gradient42)" cx="1626.59" cy="2196.89" r="183.65" transform="translate(-1077.0176 1793.6244) rotate(-45)"/>
+  <circle class="g-brass" style="fill:url(#radial-gradient)" cx="1626.59" cy="2196.89" r="173.81" transform="translate(-1077.0176 1793.6244) rotate(-45)"/>
+  <circle class="g-brass" style="fill:url(#linear-gradient43)" cx="1626.59" cy="2196.89" r="138.7" transform="translate(-1077.0176 1793.6243) rotate(-45)"/>
+  <circle class="g-brass" style="fill:url(#radial-gradient1)" cx="1626.59" cy="2196.89" r="132.49" transform="translate(-1077.0176 1793.6244) rotate(-45)"/>
+  <g>
+    <circle class="g-brass" style="fill:url(#linear-gradient44)" cx="1626.59" cy="2196.89" r="33.66" transform="translate(-716.9 789.7) rotate(-22.5)"/>
+    <circle class="g-brass" style="fill:url(#linear-gradient45)" cx="1626.59" cy="2196.89" r="31.87"/>
+  </g>
+  <circle class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" cx="1626.59" cy="2196.89" r="10.65"/>
+  <path class="g-none" style="fill:none" d="M1475.99,1429.96l-18.27,37.26s6.97-12.87,18.27-37.26Z"/>
+  
+  <g>
+    <path class="g-brass" style="fill:url(#radial-gradient2)" d="M1784.21,496.35c-67.87-299.86-284.6-304.07-284.6-304.07-295.54-163.78-488.2,53.64-488.2,53.64,0,0-337.14,23.43-337.14,396.75,0,0-298.28,77.24-160.36,560.66,0,0-165.83,254.01,78.81,548.45,0,0-39.41,285.41,300.47,328.76,0,0,261.06,128.25,421.97-50.58,0,0,215.09-52.38,384.21-391.98,105.08-189.67,172.4-588.88,172.4-588.88,65.68-332.37-87.57-552.75-87.57-552.75Z"/>
+    <g>
+      <path class="g-brass" style="fill:url(#linear-gradient46)" d="M1778.24,1124.27c-27.46-94.83-44.64-185.89-51.1-270.86-5.39-71.02-3.35-137.95,6.08-198.94,12.43-80.41,34.49-128.9,43.81-146.7,11.13,18.16,39.39,68.25,62.42,142.87,17.15,55.58,28.1,113.7,32.54,172.75,5.47,72.73,1.02,147.1-13.22,221.1-41.51,19.25-68.78,59.37-80.54,79.77Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient47)" d="M1761.68,1107.99c-69.57-100.74-126.55-208.39-169.62-320.45-37.62-97.9-64.76-199.37-80.66-301.59-23.7-152.41-15.04-261.41-12.4-287,14.71,1.38,59.29,7.95,108.81,38.75,35.37,22,66.33,51.89,92.03,88.85,31.77,45.69,55.56,102.41,70.74,168.62-6.75,11.56-34,62.64-48.61,157.17-14.3,92.53-18.32,245.15,39.71,455.65Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient48)" d="M1088.28,2118.75c-88.78,0-166.83-31.65-188.46-41.25,15.93-29.43,88.99-159.15,205.04-287.33,77-85.04,157.58-152.78,239.5-201.32,91.83-54.41,185.59-84.72,279.2-90.3-4.6,2.09-9.59,4.47-14.9,7.16-27.28,13.8-68.82,38.78-111.77,79.42-75.53,71.48-169.95,206.14-191.59,441.97-55.13,60.81-128.13,91.65-216.99,91.65h-.02Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient49)" d="M888.52,2073.78c-111.6-15.04-192.87-58.4-241.59-128.92-32.03-46.37-43.45-96.05-47.38-129.56-3.49-29.75-1.88-52.4-1.14-59.9,16.04-11.99,122.9-90.05,286.12-167.16,103.62-48.96,209.36-87.96,314.26-115.93,131.06-34.94,261.19-52.66,386.77-52.66,32.46,0,65.09,1.19,97.09,3.55-3.63,9.19-7.26,18.12-10.82,26.64l-15.55,35.13c-.36,0-.73,0-1.09,0-239.9,0-436.18,161.23-558.59,296.48-120.8,133.48-195.41,268.65-208.08,292.34Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient50)" d="M593.96,1743.48c-53-65.14-90.03-133.45-110.11-203.11-16.36-56.76-21.56-114.57-15.48-171.84,9.24-86.96,42.13-146.56,49.54-159.06,16.12-1.03,100.63-6.01,220.75-6.01,168.77,0,328.28,9.33,474.1,27.74,199.6,25.2,366.16,66.84,495.2,123.8-6.71,19.22-13.58,37.98-20.49,55.9-33.55-2.58-67.81-3.88-101.9-3.88-286.5,0-541.94,92.31-705.78,169.74-158.35,74.84-264.06,150.64-285.83,166.74Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient51)" d="M1712.04,1343.17c-300.38-132.51-738.23-152.37-973.37-152.37-116.74,0-200.04,4.71-219.77,5.93-26.02-93.25-37.45-177.8-33.98-251.36,2.93-61.95,16.43-116.73,40.14-162.82,29.02-56.42,68.46-89.81,96.43-107.89,24.99-16.15,45.33-23.22,51.77-25.22,20.36,13.09,188.96,121.16,395.63,245,200.81,120.33,479.32,280.38,670.57,362.56-8.66,29.3-17.86,58.23-27.41,86.16Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient52)" d="M1742.97,1244.96c-190.66-82-468.32-241.58-668.63-361.61-204.04-122.27-370.93-229.14-394.55-244.31.49-82.29,17.74-153.68,51.3-212.23,27.21-47.49,65.2-86.78,112.91-116.78,71.95-45.25,144.88-55.58,161.74-57.44,269.43,558.32,668.03,865.71,754.83,928.12-5.58,21.58-11.49,43.15-17.6,64.25Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient53)" d="M1763.83,1167.96c-40.72-29.54-156.02-117.88-294.08-264.18-83.11-88.06-160.94-182.81-231.33-281.6-84.93-119.2-159.73-245.35-222.35-375.03,7.9-8.18,31.3-30.87,67.56-53.32,26.44-16.36,54.44-29.4,83.24-38.74,35.96-11.67,73.28-17.58,110.92-17.58,68.73,0,139.36,19.65,210.02,58.4-1.11,10.15-3.57,36.74-3.97,77.01-.47,47.18,1.97,122.71,16.22,214.61,25.08,161.68,92.37,406.08,270.41,653.48-2.12,8.82-4.35,17.86-6.65,26.94Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient54)" d="M1317.31,2021.42c9.78-99.13,33.34-188.01,70.05-264.29,30.24-62.82,69.43-117.32,116.49-161.97,67.85-64.37,132.93-89.61,151.85-95.99l30.68,137.93c-37.76,75.95-80.92,143.47-128.31,200.71-38.25,46.2-79.32,85.84-122.08,117.84-56.62,42.37-101.36,59.98-118.69,65.77Z"/>
+      <path class="g-brass" style="fill:url(#linear-gradient55)" d="M1665.9,1492.13c2.25-4.75,8.01-17.18,16.27-36.92,4.66-11.15,9.44-22.99,14.18-35.2l.27-.69c8.1-20.87,16.17-42.91,23.98-65.52l.04-.12c10.97-31.78,21.52-64.9,31.34-98.46l.31-1.06c7.13-24.39,14-49.46,20.42-74.49l.97-3.82c2.92-11.46,5.75-22.88,8.4-33.96,2.93-5.98,29.1-57.41,73.97-82.11-5.34,30-20.84,113.56-44.35,211.09-25.86,107.27-66.73,252.89-117.05,350.53l-28.75-129.28Z"/>
+    </g>
+  </g>
+  <g>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1626.84,2153.39c-2.02-5.89-9.65-29.25-9.39-44.49.21-12.67,5.94-23.51,9.11-28.56l.03.14,2.33.36-.29-3.54-2.74-.02s-10.57,14.29-10.47,31.85c.1,17.56,10.91,45.65,10.91,45.65,0,0,.19-.5.5-1.39Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1626.34,2243.48c2.02,5.89,9.65,29.25,9.39,44.49-.21,12.59-5.86,23.36-9.05,28.45l-.1-.51h-2.18l.14,3.66h2.74s10.57-14.28,10.47-31.84c-.1-17.56-10.91-45.65-10.91-45.65,0,0-.19.5-.5,1.39Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1715.89,2187.26c-17.56.1-45.65,10.91-45.65,10.91,0,0,.5.19,1.39.5,5.89-2.02,29.25-9.65,44.49-9.39,12.25.21,22.78,5.56,28.03,8.79l-.59.06.4,1.81,3.76.54.02-2.74s-14.29-10.57-31.85-10.47Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1581.54,2198.18c-5.89,2.02-29.25,9.65-44.49,9.39-12.5-.21-23.21-5.79-28.35-8.98l.85-1.5-.73-.81-3.38.1v2.74s14.28,10.57,31.84,10.47c17.56-.1,45.65-10.91,45.65-10.91,0,0-.5-.19-1.39-.5Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1683.43,2128.65c9.33-9.02,21.37-12.59,27.04-13.84l.62,2.22,2.61-2.83-1.94-1.94s-17.58,2.64-29.93,15.12c-12.34,12.49-24.56,40-24.56,40,0,0,.48-.22,1.34-.63,2.74-5.59,13.86-27.51,24.82-38.1Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1569.74,2268.21c-9.28,8.98-21.27,12.56-26.96,13.82l.62-1.16h-1.55l-2.36,1.78,1.93,1.95s17.58-2.63,29.92-15.12c12.34-12.49,24.56-40,24.56-40,0,0-.48.22-1.34.63-2.74,5.59-13.86,27.51-24.82,38.1Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1657.63,2229.12s.22.49.63,1.34c5.59,2.74,27.51,13.86,38.1,24.82,8.83,9.14,12.44,20.89,13.76,26.69l-1.97-1.23-.51,1.91,3.15,2.89,1.95-1.93s-2.63-17.58-15.12-29.93c-12.49-12.34-40-24.56-40-24.56Z"/>
+    <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 100%, var(--g-brass-lo))" d="M1595.54,2167.74s-.22-.49-.63-1.34c-5.59-2.74-27.51-13.86-38.1-24.82-8.72-9.02-12.34-20.57-13.71-26.45l1.03-.49-1.76-3.32-1.95,1.93s2.63,17.58,15.12,29.92c12.49,12.34,40,24.56,40,24.56Z"/>
+  </g>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1628.63,2077.29s-.54.7-1.38,1.97c-2.94,4.45-9.57,15.98-9.8,29.64-.26,15.24,7.38,38.6,9.39,44.49.31.89.49,1.4.49,1.4,0,0,11.12-27.97,11.42-45.53.3-17.56-10.11-31.97-10.11-31.97Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1626.34,2243.48c-.31-.89-.49-1.4-.49-1.4,0,0-11.12,27.97-11.42,45.53-.3,17.56,10.11,31.97,10.11,31.97,0,0,.54-.7,1.38-1.97,2.94-4.45,9.58-15.98,9.8-29.64.26-15.24-7.38-38.6-9.39-44.49Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1745.76,2199.09c-4.45-2.94-15.98-9.57-29.64-9.8-15.24-.26-38.6,7.38-44.49,9.39-.89.31-1.4.49-1.4.49,0,0,27.97,11.12,45.53,11.42,17.56.3,31.97-10.11,31.97-10.11,0,0-.7-.54-1.97-1.38Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1537.41,2186.28c-17.56-.3-31.97,10.11-31.97,10.11,0,0,.7.54,1.97,1.38,4.45,2.94,15.98,9.57,29.64,9.8,15.24.26,38.6-7.38,44.49-9.39.89-.31,1.4-.49,1.4-.49,0,0-27.97-11.12-45.53-11.42Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1711.32,2114.63c-5.23,1.07-18.07,4.53-27.89,14.02-10.96,10.6-22.08,32.51-24.82,38.1-.42.85-.64,1.33-.64,1.33,0,0,27.65-11.91,40.27-24.12,12.62-12.2,15.45-29.76,15.45-29.76,0,0-.88.11-2.37.42Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1554.93,2252.9c-12.62,12.2-15.45,29.76-15.45,29.76,0,0,.88-.11,2.37-.42,5.23-1.07,18.07-4.53,27.89-14.02,10.96-10.6,22.08-32.51,24.82-38.1.42-.85.64-1.33.64-1.33,0,0-27.65,11.91-40.27,24.12Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1710.39,2283.17c-1.07-5.23-4.53-18.07-14.02-27.89-10.6-10.96-32.51-22.08-38.1-24.82-.85-.42-1.33-.64-1.33-.64,0,0,11.91,27.65,24.12,40.27,12.2,12.62,29.76,15.45,29.76,15.45,0,0-.11-.88-.42-2.37Z"/>
+  <path class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 0%, var(--g-brass-lo))" d="M1572.12,2126.78c-12.2-12.62-29.76-15.45-29.76-15.45,0,0,.11.88.42,2.37,1.07,5.23,4.53,18.07,14.02,27.89,10.6,10.96,32.51,22.08,38.1,24.82.85.42,1.33.64,1.33.64,0,0-11.91-27.65-24.12-40.27Z"/>
+  <g>
+    <rect class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" x="1735.33" y="3223.4" width="704.62" height="287.41"/>
+    <rect class="g-brass" style="fill:url(#linear-gradient56)" x="1735.33" y="3208.58" width="704.62" height="287.41"/>
+    <rect class="g-brass" style="fill:url(#linear-gradient57)" x="1957" y="3013.03" width="261.28" height="678.5" transform="translate(5439.9205 1264.6388) rotate(90)"/>
+    <polygon class="g-brass" style="fill:color-mix(in srgb, var(--g-brass-hi) 97.9%, var(--g-brass-lo))" points="1748.39 3221.64 1735.33 3208.58 2439.95 3208.58 2428.24 3221.17 1748.39 3221.64"/>
+    <polygon class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" points="1735.33 3495.98 1748.39 3482.92 2426.89 3482.92 2439.95 3495.98 1735.33 3495.98"/>
+    <polygon class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" points="1748.39 3221.64 1748.39 3482.92 1735.33 3495.98 1735.33 3208.58 1748.39 3221.64"/>
+    <polygon class="g-ink" style="fill:color-mix(in srgb, var(--g-ink-hi) 50.0%, var(--g-ink-lo))" points="2428.24 3221.17 2439.95 3208.58 2439.95 3495.98 2426.89 3482.92 2428.24 3221.17"/>
+  </g>
+  </g>
+</svg>

@@ -968,7 +968,7 @@
       /* the artwork's own proportions, so the perches below can be given as
          fractions of the box and land where they are drawn — and so the box
          holds its shape in the moment before the drawing arrives */
-      aspect-ratio: 930 / 1379;
+      aspect-ratio: 3499.57 / 3989.09;
       /* over the page and under the air, so a bird sits on the harp rather
          than behind it, and under the cord and the modals besides */
       z-index: 54;
@@ -987,10 +987,43 @@
       --h-lit:  color-mix(in srgb, var(--knob) 78%, #fff);
       --h-mid:  var(--knob);
       --h-deep: color-mix(in srgb, var(--knob) 42%, var(--cord));
-      --h-ink:  var(--cord);
+      /* The outline is black, and black in both lights. --cord is the rim
+         the lamp's bead is given and it is a blue-grey by day: on a copper
+         horn that read as a wash over the whole machine rather than as a
+         drawn line, and after dark a grey line on a grey machine left it
+         flat. A black line is the only one that separates a form from the
+         form behind it at sixty pixels, whatever the hour. */
+      --h-ink:  #0e0e0e;
       --note: #aab2bc;
+      /* Five materials, and two ends each. The drawing came with a gradient
+         on every one of its ninety shapes and a hundred and forty stops of
+         modelling in them — the fall of light down a horn petal, the turn of
+         a tube — and flattening that to one ramp per material threw all of
+         it away. So every original stop is kept exactly where it was, and
+         only its *colour* is rewritten: each one is now its own lightness,
+         to a tenth of a per cent, mixed between the two ends below. The
+         modelling is the artwork's; the material is the page's.
+
+         Night first, because night is this page's default and because a
+         machine lit like a lamp in a moonlit pavilion is the one thing it
+         must not be: everything here is darker than the brick behind it. */
+      --g-brass-hi: #5e5e5e;  --g-brass-lo: #191919;
+      --g-steel-hi: #6a6a6a;  --g-steel-lo: #1e1e1e;
+      --g-wood-hi:  #414141;  --g-wood-lo:  #141414;
+      --g-ink-hi:   #171717;  --g-ink-lo:   #090909;
+      --g-label-hi: #4e4e4e;  --g-label-lo: #242424;
     }
-    .day #harp { --note: #3b566f; }
+    /* and by day it is copper rather than brass — the lamp's bead is the
+       page's brass and there is no sense in two of them, and copper is what
+       a horn of this age is actually spun from */
+    .day #harp {
+      --note: #3b566f;
+      --g-brass-hi: #f2c69c;  --g-brass-lo: #6b3316;
+      --g-steel-hi: #eef2f5;  --g-steel-lo: #40525e;
+      --g-wood-hi:  #a9713f;  --g-wood-lo:  #35200f;
+      --g-ink-hi:   #22242a;  --g-ink-lo:   #0c0d10;
+      --g-label-hi: #c05a4e;  --g-label-lo: #6d2620;
+    }
     /* where color-mix is not understood, the pair alone still models it */
     @supports not (color: color-mix(in srgb, red 50%, blue)) {
       #harp { --h-lit: var(--knob); --h-deep: var(--cord); }
@@ -1004,8 +1037,7 @@
     .has-intro #harp { opacity: 0; transition: opacity 900ms var(--ease) 2300ms; }
     .is-lit #harp { opacity: 1; }
 
-    /* it stands on its base, so the breathing below grows from there */
-    #harp .harp-art { display: block; width: 100%; height: auto; transform-origin: 50% 97%; }
+    #harp .harp-art { display: block; width: 100%; height: auto; }
 
     /* The drawing itself: one colour, and the same drawn-not-set grey the
        section flourishes are in, so it is in the page's own hand. The lines
@@ -1023,8 +1055,12 @@
       stroke-linejoin: round;
       transition: fill 420ms var(--ease), stroke 420ms var(--ease);
     }
-    /* one line drives both, so a hand over it darkens the whole drawing */
-    #harp:hover, #harp:focus-visible { --h-ink: var(--text); }
+    /* a hand over it presses the line a little harder rather than changing
+       its colour: the drawing is not made of ink any more, it is a machine
+       with an outline round it */
+    #harp:hover .g-brass, #harp:hover .g-steel, #harp:hover .g-wood,
+    #harp:focus-visible .g-brass, #harp:focus-visible .g-steel,
+    #harp:focus-visible .g-wood { stroke-width: 0.62px; }
     /* A box drawn round it would be a box drawn round a picture, which is
        not what this page does with a thing it has drawn — the deck of papers
        opens its fan instead. So a keyboard on the harp lights it: a halo of
@@ -1057,8 +1093,7 @@
        little — but it stays --cord, which is the rim the lamp's bead is
        given for exactly the same reason: a brass thing against a bright sky
        has no edge at all without one. */
-    #harp .h-ink { stroke-width: 0.6px; }
-    #harp.on .h-ink { stroke-width: 0.45px; }
+
 
     /* Nothing has to be drained after dark any more: --knob is already
        pewter by night and brass by day, so the instrument turns with the lamp
@@ -1074,34 +1109,94 @@
     #harp .h-lit { opacity: 0; transition: opacity 1100ms var(--ease); }
     #harp.on .h-lit { opacity: var(--lit); }
 
-    /* Where a bird stands: the cap on the top of the harp's column, and the
-       front edge of its base — a point and a run. Boxes rather than numbers,
+    /* Where a bird stands: the top of the horn's rim, and the front edge of
+       the cabinet lid — two runs. Boxes rather than numbers,
        so the air can measure them exactly as it measures a card, and so a
        sparrow hops along the base, which is what it does with a run of
        anything flat. */
     #harp-crown, #harp-plinth, #pull-perch { position: absolute; display: block; height: 0; pointer-events: none; }
-    #harp-crown  { left: 85.3%; top: 2.3%; width: 3.1%; }
-    #harp-plinth { left: 47.4%; top: 93.5%; width: 51.0%; }
+    #harp-crown  { left: 27.2%; top: 4.1%; width: 14.3%; }
+    #harp-plinth { left: 31.8%; top: 72.2%; width: 55.7%; }
 
-    /* The notes come off the strings and go up and out to the right. The
-       sheet takes no clicks, so the whole of the drawing stays the button;
-       and it is flush with its own left edge and never past it, since a
-       sheet hanging off to the left would be a page that scrolls sideways. */
+    /* The notes come out of the horn and go up and out to the left, which is
+       the way the bell is pointed, so the sheet reaches further that way than
+       any other. These are only what it has before place() sizes it off the
+       machine's own box; the sheet takes no clicks either way, so the whole
+       of the drawing stays the button. */
     #harp-notes {
       position: absolute;
-      left: 0;
-      top: -22%;
-      width: 235%;
-      height: 130%;
+      left: -40%;
+      top: -70%;
+      width: 260%;
+      height: 200%;
       pointer-events: none;
     }
 
-    /* The metal. One gradient across the whole instrument rather than one
-       per shape, so there is a single light in the scene and the columns and
-       the scrollwork are lit by it together — which is most of what stops a
-       flat drawing reading as flat. It is built where the drawing is put
-       together, in the script. */
-    #harp .h-brass { fill: url(#harp-metal); }
+    /* The metal. One gradient across the whole machine rather than one per
+       shape, so there is a single light in the scene and the horn, the arm
+       and the fittings are lit by it together — which is most of what stops
+       a flat drawing reading as flat. They are built where the drawing is
+       put together, in the script. */
+    #harp .g-none { fill: none; }
+
+    /* Sixty pixels of machine in an archway: the seams between the horn's
+       twelve petals are a third of a pixel apart there, and the modelling
+       alone cannot hold them. So every painted form carries a hairline of
+       the same ink the flourishes are drawn in — non-scaling, so a petal is
+       articulated at sixty pixels and at six hundred by a line of the same
+       weight. */
+    #harp .g-brass, #harp .g-steel, #harp .g-wood {
+      stroke: var(--h-ink);
+      vector-effect: non-scaling-stroke;
+      stroke-width: 0.4px;
+      stroke-linejoin: round;
+      transition: stroke 420ms var(--ease);
+    }
+
+
+    /* ── the crank ──
+       A hand crank turns in a plane at right angles to this one, so what
+       there is to see of the turn is foreshortening and not rotation: the
+       throw is at full length with the handle at the bottom, nothing at all
+       when the handle is level with the axle and coming at you, and full
+       length again the other way with the handle at the top. So the throw is
+       scaled about the axle — through zero and out the far side, which is
+       what carries it over the top — and the handle rides the end of it. The
+       two are one motion cut into eight; they share a duration and a linear
+       ease, so they cannot drift apart.
+
+       456 is the throw itself, axle to handle, in the drawing's own units. */
+    #harp .g-crank-throw, #harp .g-crank-grip {
+      transform-box: view-box;
+      transform-origin: 3197px 2987px;
+    }
+    #harp.on .g-crank-throw { animation: crank-throw 2.6s linear infinite; }
+    #harp.on .g-crank-grip  { animation: crank-grip  2.6s linear infinite; }
+
+    @keyframes crank-throw {
+      0%     { transform: scaleY(1); }
+      12.5%  { transform: scaleY(0.707); }
+      25%    { transform: scaleY(0); }
+      37.5%  { transform: scaleY(-0.707); }
+      50%    { transform: scaleY(-1); }
+      62.5%  { transform: scaleY(-0.707); }
+      75%    { transform: scaleY(0); }
+      87.5%  { transform: scaleY(0.707); }
+      100%   { transform: scaleY(1); }
+    }
+    /* and a little across as well as up and down, so the handle goes round
+       rather than merely up: it is the same turn, a quarter out of phase */
+    @keyframes crank-grip {
+      0%     { transform: translate(0px, 0px); }
+      12.5%  { transform: translate(18px, -134px); }
+      25%    { transform: translate(26px, -456px); }
+      37.5%  { transform: translate(18px, -778px); }
+      50%    { transform: translate(0px, -912px); }
+      62.5%  { transform: translate(-18px, -778px); }
+      75%    { transform: translate(-26px, -456px); }
+      87.5%  { transform: translate(-18px, -134px); }
+      100%   { transform: translate(0px, 0px); }
+    }
 
     /* Where the window is no wider than the page there is no corner that is
        not also the page, and a harp fixed in it would ride down over the
@@ -1121,8 +1216,8 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      /* no notes and no breathing (see the script) */
-      #harp .harp-art { transform: none !important; }
+      /* no notes (see the script), and the crank stands still */
+      #harp.on .g-crank-throw, #harp.on .g-crank-grip { animation: none; }
     }
 
     /* ─── SECTION FLOURISH ─── */
@@ -3110,7 +3205,7 @@
        is what the colour is painted over. -->
   <div id="harp" role="button" tabindex="0" aria-pressed="false"
        aria-label="Play the harp" title="Play the harp">
-    <svg class="harp-art" viewBox="556 290 930 1379" aria-hidden="true" focusable="false"></svg>
+    <svg class="harp-art" viewBox="0 0 3499.57 3989.09" aria-hidden="true" focusable="false"></svg>
     <!-- where a bird stands: the cap on the harp's column, and the front
          edge of its base, which is a run to hop along -->
     <i id="harp-crown" aria-hidden="true"></i>
@@ -6085,10 +6180,13 @@
     // building that could not be read as brickwork at all.
     const GZ_P1 = 0.606;            // the inner piers, 0.38 out to here
     const GZ_P2 = 0.845;            // the side bays, 0.606 out to here
-    // How much of the clear entrance the harp fills. It is an instrument
-    // standing in a room, not a thing wedged into a doorway, so it wants air
-    // round it on both sides and under the arch.
-    const GZ_HARP = 0.68;
+    // How much of the clear entrance the machine fills. It is a thing
+    // standing in a room, not one wedged into a doorway, so it wants air
+    // round it on both sides and under the arch. Wider than the harp was,
+    // because it is a squat object where the harp was a tall one: at the
+    // harp's own fraction it came out two thirds the height and sat in the
+    // opening like a paperweight.
+    const GZ_HARP = 0.88;
     // and the window in each bay fills it, so its centre and radius are the
     // bay's own and nothing has to agree with anything by hand
     const GZ_SIDE_C = (GZ_P1 + GZ_P2) / 2, GZ_SIDE_R = (GZ_P2 - GZ_P1) / 2;
@@ -6569,11 +6667,11 @@
               [gzX(-GZ_PL_HW), gzY(-ch) + Math.max(1, unit * 0.016)]],
              'rgba(0,0,0,0.34)');
 
-      // and what the harp throws on the floor it stands on, which leans the
-      // same way for the same reason — a little, since it is a slender thing
-      // standing well back under an arch
+      // and what the machine throws on the floor it stands on, which leans
+      // the same way for the same reason — a little, since it stands well
+      // back under an arch
       {
-        const w = GZ_A * GZ_HARP * unit, hh = GZ_A * 2 * GZ_HARP * 1.483 * unit;
+        const w = GZ_A * GZ_HARP * unit, hh = GZ_A * 2 * GZ_HARP * 1.140 * unit;
         gzFill('', [], '');
         gzSun(op => {
           const lean = LIGHT.k * hh * 0.30;
@@ -6901,7 +6999,7 @@
       // Where the harp stands: the clear width of the entrance, and the floor
       // it sets its base on.
       const hw = Math.max(20, Math.round(GZ_A * 2 * GZ_HARP * unit));
-      gaz.harp = { w: hw, h: Math.round(hw * 1379 / 930), cx, bottom: gzY(0.01) };
+      gaz.harp = { w: hw, h: Math.round(hw * 3989.09 / 3499.57), cx, bottom: gzY(0.01) };
       // where the music comes out, which is the top of the roof
       gaz.crown = { x: gzX(0), y: gzY(GZ_CROWN), w: GZ_DOME_HW * 2 * unit };
       // and the line a bird walks along it, which the outline already is:
@@ -9724,7 +9822,7 @@
     // to the artwork.
     const art = host.querySelector('.harp-art');
     let drawn = false;
-    if (art) fetch('media/harp.svg')
+    if (art) fetch('media/gramophone.svg')
       .then(r => r.ok ? r.text() : Promise.reject(r.status))
       .then(t => {
         const doc = new DOMParser().parseFromString(t, 'image/svg+xml');
@@ -9752,21 +9850,21 @@
           // washes the brass out to white — and only ever over the paint, so
           // the line drawing underneath stays a line drawing.
           '<filter id="harp-relief" x="-15%" y="-15%" width="130%" height="130%">' +
-            '<feGaussianBlur in="SourceAlpha" stdDeviation="18" result="b"/>' +
-            '<feSpecularLighting in="b" surfaceScale="5" specularConstant="0.5"' +
-            ' specularExponent="24" lighting-color="#fff6e4" result="s">' +
+            '<feGaussianBlur in="SourceAlpha" stdDeviation="48" result="b"/>' +
+            '<feSpecularLighting in="b" surfaceScale="5" specularConstant="0.30"' +
+            ' specularExponent="26" lighting-color="#fff6e4" result="s">' +
               '<feDistantLight azimuth="225" elevation="58"/>' +
             '</feSpecularLighting>' +
             '<feComposite in="s" in2="SourceAlpha" operator="in" result="sc"/>' +
+            // A fifth rather than two fifths: the harp was a slender thing
+            // with a lot of edge, where a specular pass mostly caught the
+            // rims. A horn is one broad smooth surface, and at the harp's
+            // strength the pass laid a sheet of white light across the whole
+            // bell — which is why, after dark, the one thing in the pavilion
+            // that glowed was the machine.
             '<feComposite in="SourceGraphic" in2="sc" operator="arithmetic"' +
-            ' k1="0" k2="1" k3="0.4" k4="0"/>' +
+            ' k1="0" k2="1" k3="0.20" k4="0"/>' +
           '</filter>' +
-          '<linearGradient id="harp-metal" gradientUnits="userSpaceOnUse"' +
-          ' x1="556" y1="430" x2="1486" y2="1240">' +
-            '<stop offset="0" stop-color="var(--h-lit)"/>' +
-            '<stop offset="0.42" stop-color="var(--h-mid)"/>' +
-            '<stop offset="1" stop-color="var(--h-deep)"/>' +
-          '</linearGradient>' +
           '<radialGradient id="harp-lit" cx="0.5" cy="0.5" r="0.5">' +
             '<stop offset="0" stop-color="#ffe6b4" stop-opacity="0.95"/>' +
             '<stop offset="0.55" stop-color="#ffc978" stop-opacity="0.34"/>' +
@@ -9775,11 +9873,12 @@
         art.insertBefore(defs, art.firstChild);
         glow = document.createElementNS(NS, 'ellipse');
         glow.setAttribute('class', 'h-lit');
-        glow.setAttribute('cx', '1180'); glow.setAttribute('cy', '960');
-        glow.setAttribute('rx', '250'); glow.setAttribute('ry', '450');
+        glow.setAttribute('cx', '1170'); glow.setAttribute('cy', '1120');
+        glow.setAttribute('rx', '760'); glow.setAttribute('ry', '980');
         glow.setAttribute('fill', 'url(#harp-lit)');
-        const firstInk = art.querySelector('.h-ink');
-        art.insertBefore(glow, firstInk || null);
+        // over the whole machine rather than under the ink: what is lit here
+        // is the mouth of the horn, and the mouth is the front-most thing
+        art.appendChild(glow);
         drawn = true;
         place();
         wake();
@@ -9959,17 +10058,19 @@
         const left = Math.round(g.x - g.w / 2), top = Math.round(g.y - g.h);
         host.style.left = left + 'px';
         host.style.top = top + 'px';
-        // The sheet the notes are drawn on is hung over the roof rather than
-        // over the instrument, because that is where they come out: the harp
-        // is inside a brick pavilion and the music leaves it through the top
-        // of the dome. It is a child of the harp, so it goes wherever the
-        // harp goes without either of them being told twice.
-        if (sheet && G.crown) {
-          const c = G.crown;
-          sheet.style.left = Math.round(c.x - c.w * 0.9 - left) + 'px';
-          sheet.style.top = Math.round(c.y - c.w * 1.5 - top) + 'px';
-          sheet.style.width = Math.round(c.w * 3.2) + 'px';
-          sheet.style.height = Math.round(c.w * 2.2) + 'px';
+        // The sheet the notes are drawn on is hung over the machine, and well
+        // up and to the left of it, because that is the way the bell is
+        // pointed and that is where the notes go. It used to hang over the
+        // roof instead — the harp's music left the building through the top
+        // of the dome, having no mouth of its own — and left there it cut
+        // every note off within a few pixels of the horn. It is a child of
+        // the machine, so it goes wherever the machine goes without either
+        // of them being told twice.
+        if (sheet) {
+          sheet.style.left = Math.round(-g.w * 1.15) + 'px';
+          sheet.style.top = Math.round(-g.h * 1.35) + 'px';
+          sheet.style.width = Math.round(g.w * 3.1) + 'px';
+          sheet.style.height = Math.round(g.h * 2.7) + 'px';
         }
         size();
         return;
@@ -10023,16 +10124,15 @@
       const s = sheet.getBoundingClientRect(), h = host.getBoundingClientRect();
       W = s.width; H = s.height;
       box = { x: h.left - s.left, y: h.top - s.top, w: h.width, h: h.height };
-      // Where a note starts. Off the strings when the harp is a fitting in
-      // the corner of a window; off the crown of the dome when it is standing
-      // under one, since a note that started on the strings would have to
-      // come out through a foot of brick to be seen.
-      const G = window.__grove;
-      if (G && G.crown) {
-        const c = G.crown;
-        src = { x: c.x - c.w * 0.42 - (s.left + scrollX), y: c.y - c.w * 0.10 - (s.top + scrollY),
-                w: c.w * 0.84, h: c.w * 0.20, up: true };
-      } else src = null;
+      // Where a note starts: the mouth of the horn, wherever the machine
+      // happens to be standing. The harp's notes used to come off the crown
+      // of the dome instead — a note off a harp string would have had to come
+      // out through a foot of brick to be seen — but a horn is a mouth, it is
+      // pointed up and out of the archway already, and there is nowhere else
+      // a note could honestly come from. The box is the bell's own, in
+      // fractions of the drawing.
+      src = { x: box.x + box.w * 0.10, y: box.y + box.h * 0.05,
+              w: box.w * 0.40, h: box.h * 0.32, horn: true };
       dpr = Math.min(devicePixelRatio || 1, 2);
       sheet.width = Math.max(1, Math.round(W * dpr));
       sheet.height = Math.max(1, Math.round(H * dpr));
@@ -10080,20 +10180,20 @@
     }
 
     function emit() {
-      // A little large for the harp, which is small: a note in true
-      // proportion to one this size would be four pixels of ink.
+      // Sized off the machine rather than off the mouth it comes out of, so
+      // the note keeps its size whatever the horn is doing. Small: these used
+      // to be struck off the whole roof of a building and were scaled to it.
       const b = src || box;
-      const s = b.w * (b.up ? 0.072 + rnd() * 0.04 : 0.072 + rnd() * 0.045);
+      const s = box.w * (0.085 + rnd() * 0.045);
       notes.push({
-        // off the crown of the dome, or off the strings where there is no
-        // dome over them
         x: b.x + b.w * rnd(),
         y: b.y + b.h * rnd(),
-        // Out and across rather than straight up, or a note is off the top of
-        // the picture in a second and a half. Going sideways it stays in the
-        // air, and a roofful of them drifts the way smoke does.
-        vx: b.w * (b.up ? 0.10 + rnd() * 0.50 : 0.34 + rnd() * 0.42),
-        vy: b.up ? -b.w * (0.34 + rnd() * 0.26) : -b.h * (0.10 + rnd() * 0.16),
+        // Up and out the way the bell is pointed, which is up and to the
+        // left — and across rather than straight up, or a note is off the top
+        // of the picture in a second and a half. Going sideways it stays in
+        // the air, and a hornful of them drifts the way smoke does.
+        vx: b.horn ? box.w * (-0.24 + rnd() * 0.40) : b.w * (0.34 + rnd() * 0.42),
+        vy: b.horn ? -box.w * (0.30 + rnd() * 0.30) : -b.h * (0.10 + rnd() * 0.16),
         s, t: 0, life: 2.6 + rnd() * 1.8,
         rot: (rnd() - 0.5) * 0.55, spin: (rnd() - 0.5) * 0.9,
         sway: 0.8 + rnd() * 1.4, phase: rnd() * TAU,
@@ -10139,13 +10239,11 @@
           if (live) glow.style.opacity = (litBase * (0.72 + 0.5 * Math.min(1, lvl))).toFixed(3);
           else if (glow.style.opacity) glow.style.opacity = '';
         }
-        if (live) {
-          const t = now * 0.00115;
-          const g = 1 + (0.006 + lvl * 0.008) * Math.sin(t);
-          const dy = (0.8 + lvl * 1.5) * Math.sin(t - 0.5);
-          art.style.transform = `translateY(${dy.toFixed(2)}px) scale(${g.toFixed(4)})`;
-          breathing = true;
-        } else if (breathing) { art.style.transform = ''; breathing = false; }
+        // The harp used to swell and settle with the music, because a harp is
+        // a thing that resonates and the drawing could not move a string on
+        // its own. A gramophone is a box of wood with a motor in it: what
+        // moves on one is the crank, and it moves whether the music swells
+        // or not. So nothing here rises and falls any more.
       }
 
       ctx.clearRect(0, 0, W, H);
