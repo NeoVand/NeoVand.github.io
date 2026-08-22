@@ -26,6 +26,11 @@ CRANK = set('st61 st3 st2 st5 st10'.split())
 
 style = re.search(r'<style>(.*?)</style>', src, re.S).group(1)
 decl = dict(re.findall(r'\.(st\d+)\s*\{\s*fill:\s*([^;]+);', style))
+# Six of the classes carry an opacity and no fill at all — the record's
+# grooves, and the shadows laid over the cabinet and the brass plate. They are
+# black by default and thin by design, and the first build of this file threw
+# the opacity away with the stylesheet and painted them solid.
+opac = dict(re.findall(r'\.(st\d+)\s*\{\s*opacity:\s*([^;]+);', style))
 gmat = {}
 for cls, val in decl.items():
     m = re.match(r'url\(#([^)]+)\)', val.strip())
@@ -41,6 +46,23 @@ def lum(h):
     return 0.2126*f(r) + 0.7152*f(g) + 0.0722*f(b)
 
 defs = re.sub(r'<style>.*?</style>', '', re.search(r'<defs>(.*?)</defs>', src, re.S).group(1), flags=re.S)
+
+# A gradient with no stops of its own borrows another's through xlink:href.
+# Nearly always the two are used by shapes of the same material and it does not
+# matter — but the record borrows the crank handle's, and a record painted in
+# the crank's steel comes out silver. Where the materials differ the borrower
+# is given a private copy of the stops, so they can be mapped to its own
+# material; where they agree it is left alone.
+def _stops_of(gid):
+    m = re.search(r'<(?:linear|radial)Gradient\b[^>]*id="%s"[^>]*>(.*?)</(?:linear|radial)Gradient>' % re.escape(gid), defs, re.S)
+    return m.group(1) if m else ''
+for _gid, _href in re.findall(r'id="([^"]+)"[^>]*xlink:href="#([^"]+)"', defs):
+    if gmat.get(_gid) and gmat.get(_href) and gmat[_gid] != gmat[_href]:
+        _stops = _stops_of(_href)
+        if not _stops.strip(): continue
+        defs = re.sub(r'(<(?:linear|radial)Gradient\b[^>]*id="%s"[^>]*?)\s*xlink:href="#%s"\s*/>' % (re.escape(_gid), re.escape(_href)),
+                      lambda m: m.group(1) + '>' + _stops + '</linearGradient>', defs, count=1)
+
 tok = re.split(r'(<(?:linear|radial)Gradient\b[^>]*>|<stop\b[^>]*/?>)', defs)
 
 L, cur = collections.defaultdict(list), None
@@ -78,8 +100,11 @@ def swap(m):
     mt = MAT.get(cls, 'steel')
     extra = ' g-crank' if cls in CRANK else ''
     v = decl.get(cls, '').strip()
-    paint = v if v.startswith('url(') else mixed(mt, v)
-    return 'class="g-%s%s" style="fill:%s"' % (mt, extra, paint)
+    # no fill of its own: black is the SVG default and black is what it was
+    paint = v if v.startswith('url(') else (mixed(mt, v) if v else 'var(--g-ink-lo)')
+    style = 'fill:%s' % paint
+    if cls in opac: style += ';opacity:%s' % opac[cls].strip()
+    return 'class="g-%s%s" style="%s"' % (mt, extra, style)
 body = re.sub(r'class="(st\d+)"', swap, body)
 body = body.replace('<ellipse cx=', '<ellipse class="g-ink g-crank" style="fill:var(--g-ink-lo)" cx=', 1)
 

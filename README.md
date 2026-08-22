@@ -814,6 +814,23 @@ copper anyway. After dark every one of the ten ends is a grey, and all of them
 are darker than the brick behind them: a machine that glows in a moonlit
 pavilion is the one thing it must not be.
 
+The record came out silver all the same. A gradient in the export can decline
+to carry stops of its own and borrow another's by reference, which is how
+Illustrator keeps one ramp in one place and uses it twice; thirty-nine of them
+do it here, and thirty-eight borrow from a gradient on their own material,
+where it makes no difference at all which of the two the paint is read from.
+The thirty-ninth is the record, and what it borrows is the crank handle's,
+which is steel. So the build now looks at both materials before it follows a
+reference, and where they differ it hands the borrower a private copy of the
+stops to be mapped as its own. The disc is black in both lights, with the sheen
+swept across it that the export drew.
+
+Six classes in that stylesheet set an opacity and no fill at all — the record's
+grooves, and the shading laid over the cabinet and the plate on its front.
+Black is what a shape with no fill of its own is, and thin is the whole of what
+those six are for; the first build kept neither, and painted all of them solid.
+Both go through now.
+
 Over the paint goes a specular pass — the alpha blurred, lit by one distant
 light from the upper left, and *added* to the fill rather than replacing it.
 That lights each form on its own, which is most of what stops a flat drawing
