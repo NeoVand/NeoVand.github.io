@@ -1002,18 +1002,45 @@
 
          Night first, because night is this page's default and because a
          machine lit like a lamp in a moonlit pavilion is the one thing it
-         must not be: everything here is darker than the brick behind it. */
-      --g-brass-hi: #5e5e5e;  --g-brass-lo: #191919;
-      --g-steel-hi: #6a6a6a;  --g-steel-lo: #1e1e1e;
-      --g-wood-hi:  #414141;  --g-wood-lo:  #141414;
-      --g-ink-hi:   #171717;  --g-ink-lo:   #090909;
-      --g-label-hi: #4e4e4e;  --g-label-lo: #242424;
+         must not be: everything here is darker than the brick behind it.
+
+         The night ends were a neutral grey — hue nothing, saturation
+         nothing — and neutral grey is not what a neutral thing looks like
+         after dark. Everything standing round the machine is under a moon:
+         the pavilion's brick comes out at about a twelfth of a turn of blue
+         in it, and so does the shelf, and so do the trees. Against all of
+         that a grey with no blue in it does not read as grey, it reads as
+         warm — and the one warm object in a cold picture is the object you
+         cannot stop looking at, which for a small brown machine standing in
+         an archway is the wrong kind of attention. So the ramps are pulled
+         onto the same blue the brick is under.
+
+         And opened out. Cooling them alone left the machine flat: the night
+         ends spanned about half the range the day ends do, which on a copper
+         horn in daylight is a bell with twelve petals in it and after dark
+         was one grey pebble. A brick wall may be flat at night — a wall is
+         flat — but this is a turned and spun thing standing in the middle of
+         the picture, and the whole of what says so is the fall of light
+         across the bell and the seams between the petals. So the night ramps
+         carry the day's contrast, set down to a night's lightness: the deep
+         end goes nearly to the ink, the light end stops short of the moonlit
+         brick beside it, and the black line round every form has something
+         to be a line on again. */
+      --g-brass-hi: #687282;  --g-brass-lo: #0b0c0e;
+      --g-steel-hi: #828c9b;  --g-steel-lo: #0d0f11;
+      --g-wood-hi:  #444b55;  --g-wood-lo:  #0b0c0e;
+      --g-ink-hi:   #181b20;  --g-ink-lo:   #090a0c;
+      --g-label-hi: #5b6371;  --g-label-lo: #121417;
+      /* and the light the relief pass is lit by, which is the moon after
+         dark and the evening sun by day (see gram-relief, in the script) */
+      --g-spec: #eaf1ff;
     }
     /* and by day it is copper rather than brass — the lamp's bead is the
        page's brass and there is no sense in two of them, and copper is what
        a horn of this age is actually spun from */
     .day #gramophone {
       --note: #3b566f;
+      --g-spec: #fff6e4;
       --g-brass-hi: #f2c69c;  --g-brass-lo: #6b3316;
       --g-steel-hi: #eef2f5;  --g-steel-lo: #40525e;
       --g-wood-hi:  #a9713f;  --g-wood-lo:  #35200f;
@@ -1067,6 +1094,14 @@
       opacity: 1;
       filter: url(#gram-relief) drop-shadow(0.8px 1.2px 1.2px var(--cast));
     }
+    /* The relief pass lights the machine, and it was lit by a warm cream in
+       both halves of the day. By day that is the evening sun and right. After
+       dark it was the one lamp in the picture that had not been told the sun
+       had gone: a fifth of a warm specular laid over every form, which is
+       most of why the machine came out brown in a blue room. The colour is
+       the theme's now (the attribute in the filter itself stays as a fallback
+       for anything that will not style a filter primitive). */
+    #gramophone feSpecularLighting { lighting-color: var(--g-spec); }
 
     /* Playing, the metal carries more of the shape, so the line thins a
        little — but it stays --cord, which is the rim the lamp's bead is
@@ -1080,7 +1115,7 @@
        twice, once for each half of the day, so it turns with the lamp and
        this page's rule about colour in a pencil study is kept by the
        material rather than by a filter. */
-    #gramophone { --lit: 0.6; }
+    #gramophone { --lit: 0.44; }
     .day #gramophone { --lit: 0.22; }
     #gramophone:hover, #gramophone:focus-visible { --lit: 0.78; }
     .day #gramophone:hover, .day #gramophone:focus-visible { --lit: 0.38; }
@@ -1126,10 +1161,22 @@
     #gramophone .g-brass, #gramophone .g-steel, #gramophone .g-wood {
       stroke: var(--g-line);
       vector-effect: non-scaling-stroke;
-      stroke-width: 0.4px;
+      stroke-width: var(--g-line-w);
       stroke-linejoin: round;
       transition: stroke 420ms var(--ease);
     }
+    /* How heavy that hairline is. A line is only a line by the difference
+       between it and what it is drawn on: by day it is near-black on copper
+       at three quarters lightness, which is as much difference as this page
+       has anywhere, and two fifths of a pixel is plenty. After dark the same
+       near-black is drawn on pewter at under half, a little over half the
+       difference — and at that the seams between the horn's twelve petals
+       stopped being drawn at all and the bell went back to being one grey
+       pebble. Rather than lighten the line, which on a machine standing in a
+       black archway would have outlined it in chalk, it is given the weight
+       it needs to survive the smaller difference. */
+    #gramophone { --g-line-w: 0.6px; }
+    .day #gramophone { --g-line-w: 0.4px; }
 
 
     /* ── the crank ──
@@ -5050,7 +5097,14 @@
       // an unbalanced rule: the trailing branch has no straight continuation,
       // so it grows open and lopsided rather than fractal-neat
       { axiom: 'F', rules: { F: 'F[+F]F[-F][F]' },               angle: 21.0, iters: 4, rise: 0.91, tone: [ 40, 138], tip: 236, girth: 1.00, tipMin: 3, tipShare: 0.34 },
-      { axiom: 'X', rules: { X: 'F[+X][-X]FX', F: 'FF' },        angle: 25.7, iters: 5, rise: 1.00, tone: [ 60, 156], tip: 255, girth: 1.45, vary: 1.4 },
+      // There was a fifth here, X → F[+X][-X]FX, and it was the one grammar
+      // in the set that had no accident in it: a dead straight stem with a
+      // pair of branches off it at every level, each pair the mirror of the
+      // other, all the way up. Every other tree on the shelf is lopsided
+      // somewhere. That one came out as a diagram of a tree rather than a
+      // tree, and being nearly all stem it took a wide slot to hold very
+      // little — so the stand is four species now, and the three that are
+      // left have the room it was using.
       { axiom: 'X', rules: { X: 'F+[[X]-X]-F[-FX]+X', F: 'FF' }, angle: 23.5, iters: 5, rise: 0.94, tone: [ 72, 168], tip: 248, girth: 1.55 },
       // `vary` scales how far a reading may lean and stretch its limbs: the
       // even, self-similar grammars need more of it before two readings look
@@ -5207,7 +5261,14 @@
     // its height, as the wide screen's do. ?trees=N sets the count for a
     // look. leafSpec keys into FOLIAGE, so each species keeps its own leaf
     // and green.
-    let NTREES = PHONE ? 4 : 5 + Math.floor(Math.random() * 2);
+    // Four or five. It was five or six, dealt into two clearings that a wide
+    // pavilion had already taken more than half the row from, so each side got
+    // two or three trunks about forty pixels apart carrying crowns a hundred
+    // and fifty wide: not a stand of trees but one thicket with several stems
+    // in it. One fewer, and the crowns given less room to sprawl (see OVERLAP),
+    // and they read as separate trees again — without losing an inch of
+    // height, which is set from the band and not from the slot.
+    let NTREES = PHONE ? 4 : 4 + Math.floor(Math.random() * 2);
     try { const q = parseInt(new URLSearchParams(location.search).get('trees')); if (q >= 1 && q <= 40) NTREES = q; } catch (e) {}
     const shapes = TREES.map(expand);
     // every species at least once, the rest drawn at random, in a shuffled
@@ -5227,7 +5288,14 @@
     trees.forEach(t => { t.rise /= tallest; });
     // In a stand the crowns may overlap their neighbours' slots by this much
     // rather than being squeezed to fit — ?over= to try another
-    let OVERLAP = 1.9;
+    // It was 1.9, which is to say a crown could be very nearly two slots
+    // wide. Against the spacing the pavilion actually leaves, that came out
+    // at close to four times the distance between one trunk and the next, and
+    // every tree on a side was inside every other one. The height does not
+    // depend on this — it is measured from the canopy band, and a crown drawn
+    // narrower only stops being drawn wider — so it can come down until the
+    // trees are trees again.
+    let OVERLAP = 1.25;
     try { const q = parseFloat(new URLSearchParams(location.search).get('over')); if (q >= 1 && q <= 4) OVERLAP = q; } catch (e) {}
 
     // How far a reading may stray from the letter of the grammar: turns by a
@@ -5534,19 +5602,17 @@
     // spacing knows which is which.
     const LEAF_VAR = 6;
     const FOLIAGE = [
-      // Four of the five carry ordinary leaves and differ in how many, how far
-      // they fan, how long and how broad — which is enough to tell the species
-      // apart without any of them turning into a shape that is not a leaf.
-      // `len` is [base, spread] as a fraction of the cluster radius. `dens`
-      // is how full a canopy this species wants, over and above one leaf on
-      // every twig end.
+      // One entry per species, in the same order, so a tree keeps its own
+      // leaf and its own green. Three of the four carry ordinary leaves and
+      // differ in how many, how far they fan, how long and how broad — which
+      // is enough to tell the species apart without any of them turning into
+      // a shape that is not a leaf. `len` is [base, spread] as a fraction of
+      // the cluster radius. `dens` is how full a canopy this species wants,
+      // over and above one leaf on every twig end.
       { shape: 'blade',  n: 4, fan: 0.78, len: [0.80, 0.24], wide: 0.24,
         rgb: [ 52,  94,  42], size: 2.95, dens: 1.00 },
       // fine and drooping: a tuft of needles rather than a leaf
       { shape: 'needle', rgb: [ 74, 114,  98], size: 2.35, dens: 1.00 },
-      // the big one in the middle: broad, round-ended, deep green
-      { shape: 'blade',  n: 5, fan: 0.62, len: [0.84, 0.22], wide: 0.31,
-        rgb: [ 48,  86,  40], size: 2.90, dens: 0.80 },
       // dense and twiggy, so its leaves are small and narrow
       { shape: 'blade',  n: 5, fan: 0.66, len: [0.74, 0.24], wide: 0.22,
         rgb: [ 78, 104,  42], size: 2.90, dens: 0.34 },
@@ -6118,6 +6184,13 @@
     let GZ_CROWN = GZ_T4 + GZ_DOME_H;
     const GZ_FIN = 0.16;
     let GZ_TIP = GZ_CROWN + GZ_FIN;
+    // How far the impost and the pier cap stand out of the pier: half the
+    // depth of a course, and a third of one. Both are a share of the course
+    // rather than a share of the building, so an oversail is the same
+    // fraction of a brick at every size the pavilion is drawn at — which is
+    // what keeps a small one from looking like a large one with its
+    // mouldings filed off.
+    let GZ_IMP = 0.028, GZ_CAPX = 0.018;
     // Set the building out on a course worked from the size it is drawn at:
     // bricks about six pixels tall whatever that size is, so a small pavilion
     // is not a model of a large one — it is the same brick, and there are
@@ -6142,6 +6215,8 @@
       GZ_DOME_H = snap(0.72, 5);
       GZ_CROWN = GZ_T4 + GZ_DOME_H;
       GZ_TIP = GZ_CROWN + GZ_FIN;
+      GZ_IMP = C * 0.50;
+      GZ_CAPX = C * 0.32;
       return C;
     }
     const GZ_CORN_HW = 1.15, GZ_DRUM_HW = 0.97, GZ_DOME_HW = 0.92;
@@ -6214,20 +6289,30 @@
     let gazDay = null, gazNight = null;
     const gazVines = [];            // the trailing ends, which do move
 
-    // The pavilion's bricks are a third the size of the shelf's and there are
-    // better than a thousand of them, so they are not baked one for one the
-    // way the shelf's are. Twenty-eight clays are baked at a handful of shapes
-    // and dealt round the building; at six pixels to a brick nobody can tell
-    // one repeat from another, and what would have been two and a half
-    // thousand little canvases is fifty.
+    // The pavilion's bricks are shared rather than baked one for one the way
+    // the shelf's are: twenty-eight clays, dealt round the building, and at
+    // six pixels to a brick nobody can tell one repeat from another.
+    //
+    // What they were not, and had to become, is baked at the size they are
+    // drawn. A brick used to be baked once at twenty pixels tall and shrunk
+    // to five wherever it landed, and a canvas minified four to one is
+    // resampled two texels at a time: the arris went, the grain went, the
+    // joint went soft, and the whole building read as though it were behind
+    // glass — which is exactly what it looked like beside the gramophone
+    // standing in it, drawn in lines at the size it is seen. The shelf never
+    // had that fault because its bricks are baked at their own size. So are
+    // these now. The shape is rounded to the display's own pixel, so a few
+    // hundred sprites still cover five hundred bricks and not one of them is
+    // resampled by so much as half of one.
     const GZ_CLAYS = 28;
-    const gzSprites = new Map();
-    function gzSprite(v, ar, day) {
-      const b = Math.max(1, Math.min(6, Math.round(ar)));
-      const key = v + '|' + b + '|' + (day ? 'd' : 'n') + '|' + dpr;
+    let gzSprites = new Map();
+    function gzSprite(v, wpx, hpx, day) {
+      const w = Math.max(1.5, Math.round(wpx * dpr) / dpr);
+      const h = Math.max(1.5, Math.round(hpx * dpr) / dpr);
+      const key = v + '|' + w + '|' + h + '|' + (day ? 'd' : 'n') + '|' + dpr;
       let s = gzSprites.get(key);
       if (!s) {
-        const h = 20, w = h * b, k = v * 37 + 11, clay = brickClay(k);
+        const k = v * 37 + 11, clay = brickClay(k);
         // After dark the pavilion was the brightest thing in the picture bar
         // the moon: a hundred small bricks carry proportionally more of their
         // own lit top edge than the shelf's two dozen large ones do, and the
@@ -6325,7 +6410,7 @@
     const gzClay = v => Math.floor(hash(v, 53) * GZ_CLAYS) % GZ_CLAYS;
     function gzStamp(v, x0, y0, w, h, sh, cl) {
       if (w < 0.4 || h < 0.4) return;
-      gzOps.push({ t: 'b', v: gzClay(v), ar: w / h,
+      gzOps.push({ t: 'b', v: gzClay(v), bw: w, bh: h,
                    ox: x0, oy: y0, ex: w, ey: 0, fx: 0, fy: h, sh: sh || 0, cl });
     }
 
@@ -6394,7 +6479,7 @@
         const ex = inn[0] - o[0], ey = inn[1] - o[1];
         const fx = end[0] - o[0], fy = end[1] - o[1];
         gzOps.push({ t: 'b', v: gzClay(salt + i * 11),
-                     ar: Math.hypot(ex, ey) / Math.max(0.4, Math.hypot(fx, fy)),
+                     bw: Math.hypot(ex, ey), bh: Math.hypot(fx, fy),
                      ox: o[0], oy: o[1], ex, ey, fx, fy, sh });
       }
     }
@@ -6441,20 +6526,27 @@
       else ys.push(GZ_CROWN);
       return ys;
     }
-    // the outline of one course, which is what its bed is cut to and what its
-    // end bricks are clipped by
+    // The outline of one course, which is what its bed is cut to and what its
+    // end bricks are clipped by.
+    //
+    // Every bed on the building is laid a couple of pixels proud of its
+    // course, so the joint shows. On a wall that is free: the wall is the
+    // same width two pixels higher up. On a dome it is not — and the proud
+    // edge was laid flat, at the course's own wider figure, so every course
+    // hung a little tab of mortar out past the curve. Down the flank of the
+    // dome those tabs read as a staircase, which is the one thing the whole
+    // flat elevation is built to avoid. The top of the strip is taken off
+    // the curve at the height it is actually laid to, and the staircase goes.
     function gzDomeStrip(y0, y1) {
-      const N = 12, p = [];
-      const wt = gzDomeW(y1), top = gzY(y1) - GZ_BLEED;
-      p.push([gzX(-wt), top], [gzX(wt), top]);
-      for (let i = 1; i <= N; i++) {
-        const y = y1 + (y0 - y1) * (i / N);
-        p.push([gzX(gzDomeW(y)), gzY(y)]);
-      }
-      p.push([gzX(-gzDomeW(y0)), gzY(y0)]);
-      for (let i = N - 1; i >= 1; i--) {
-        const y = y1 + (y0 - y1) * (i / N);
+      const N = 14, p = [];
+      const yt = Math.min(GZ_CROWN, y1 + GZ_BLEED / gzU);
+      for (let i = N; i >= 0; i--) {
+        const y = y0 + (yt - y0) * (i / N);
         p.push([gzX(-gzDomeW(y)), gzY(y)]);
+      }
+      for (let i = 0; i <= N; i++) {
+        const y = y0 + (yt - y0) * (i / N);
+        p.push([gzX(gzDomeW(y)), gzY(y)]);
       }
       return p;
     }
@@ -6595,6 +6687,10 @@
     function planGazebo(cx, base, unit) {
       gzU = unit; gzOps = []; gazVines.length = 0;
       gzCX = cx;
+      // The sprites are cut to the size the building is drawn at, so a
+      // building drawn at another size wants another set. Kept, they would
+      // pile up a stale pool for every width the window was ever dragged to.
+      gzSprites = new Map();
       const ch = gzSetOut(unit);                // one course, for the whole of it
       gzFY = base - GZ_PL * unit;               // the floor stands a plinth off the shelf
       const len = ch * BRICK_LONG;              // three times as long
@@ -6678,7 +6774,7 @@
       // wall is gone and the plinth is the sill.
       for (const p of PIERS) {
         gzBand(p[0], p[1], 0, GZ_CAP - ch, ch, len, { salt: 500 + Math.round(p[0] * 100) });
-        gzBand(p[0] - 0.018, p[1] + 0.018, GZ_CAP - ch, GZ_CAP, ch, len,
+        gzBand(p[0] - GZ_CAPX, p[1] + GZ_CAPX, GZ_CAP - ch, GZ_CAP, ch, len,
                { salt: 560 + Math.round(p[0] * 100) });          // the cap on it
         // and the light down it, which is what says a pier is round. Which of
         // its two edges is the lit one is not settled here — it is settled by
@@ -6697,9 +6793,30 @@
       // from, projecting a little either side. It is what a brick arch
       // actually lands on, and it draws one line right across the front of
       // the building, which is what holds three bays together as one facade.
+      //
+      // Either side, and that used to mean either side except at the ends of
+      // the building, where it was clipped back to the face. So the two end
+      // piers had an impost that stood out over the side bay and died flat
+      // into the wall on the other hand, and the one course that is supposed
+      // to run right across the front stopped short of both corners. Nothing
+      // else on the building is cut off at the corner — the plinth oversails
+      // there, the cap oversails there, the cornice throws out furthest of
+      // all — and a course that does not is the sort of thing you cannot
+      // name and cannot stop seeing. It oversails now, and the wash over the
+      // building (see the silhouette, below) is cut to a profile that knows
+      // about it.
       for (const p of PIERS) {
-        const a = Math.max(-1, p[0] - 0.024), b = Math.min(1, p[1] + 0.024);
-        gzBand(a, b, GZ_SPRING - ch, GZ_SPRING, ch, len, { salt: 470 + Math.round(p[0] * 100) });
+        gzBand(p[0] - GZ_IMP, p[1] + GZ_IMP, GZ_SPRING - ch, GZ_SPRING, ch, len,
+               { salt: 470 + Math.round(p[0] * 100) });
+        // and the line it throws on the pier under it, which is the same line
+        // the plinth and the cornice get where they oversail: without one a
+        // course that stands two pixels out of the wall reads as two pixels
+        // of mortar rather than as a block.
+        gzFill('rgba(14,9,6,0.40)',
+               [[gzX(p[0] - GZ_IMP), gzY(GZ_SPRING - ch)], [gzX(p[1] + GZ_IMP), gzY(GZ_SPRING - ch)],
+                [gzX(p[1] + GZ_IMP), gzY(GZ_SPRING - ch) + Math.max(1, unit * 0.013)],
+                [gzX(p[0] - GZ_IMP), gzY(GZ_SPRING - ch) + Math.max(1, unit * 0.013)]],
+               'rgba(0,0,0,0.52)');
       }
       // the walls over the openings, each cut round its own arch
       for (const b of BAYS) {
@@ -6808,9 +6925,15 @@
         // of them. It was a spike before, and a spike four pixels wide is a
         // splinter — a ball is legible at any size and it is what actually
         // sits on the top of a brick dome.
+        // Its three steps are a course each. They were a course and a half
+        // between them, which is to say each one was two thirds of a brick —
+        // and a brick course two thirds the depth of every other course on
+        // the building, sitting at the very top of it against the sky, is
+        // the one place a short course cannot hide.
         let y = GZ_CROWN - ch * 0.4;
+        const step = Math.max(1, Math.round(GZ_FIN * 0.235 / ch)) * ch;
         for (let j = 0; j < 3; j++) {
-          const w = 0.135 - j * 0.030, h = GZ_FIN * 0.235;
+          const w = 0.135 - j * 0.030, h = step;
           gzBand(-w, w, y, y + h, h, len * 0.55, { salt: 760 + j * 7, up: 0 });
           y += h;
         }
@@ -6845,9 +6968,20 @@
       // or it would hang in the sky behind the arches like weather.
       {
         const P = (x, y) => [gzX(x), gzY(y)];
+        // Up the left corner of the building, step by step: the plinth, the
+        // pier, the impost that oversails it, the cap that oversails it
+        // again, the entablature, and the drum. Every one of those steps is
+        // brickwork that stands proud of the face, and the wash has to know
+        // about all of them or the corner of the building is lit down to a
+        // line that is not where its corner is.
         const sil = [P(-GZ_PL_HW, -GZ_PL), P(-GZ_PL_HW, -GZ_PL * 0.30),
                      P(-GZ_PL_HW * 1.02, -GZ_PL * 0.30), P(-GZ_PL_HW * 1.02, 0),
-                     P(-1, 0), P(-1, GZ_CAP), P(-1.02, GZ_CAP), P(-1.02, GZ_T1),
+                     P(-1, 0),
+                     P(-1, GZ_SPRING - ch), P(-1 - GZ_IMP, GZ_SPRING - ch),
+                     P(-1 - GZ_IMP, GZ_SPRING), P(-1, GZ_SPRING),
+                     P(-1, GZ_CAP - ch), P(-1 - GZ_CAPX, GZ_CAP - ch),
+                     P(-1 - GZ_CAPX, GZ_CAP),
+                     P(-1.02, GZ_CAP), P(-1.02, GZ_T1),
                      P(-1.06, GZ_T1), P(-1.06, GZ_T2), P(-GZ_CORN_HW, GZ_T2),
                      P(-GZ_CORN_HW, GZ_T3), P(-GZ_DRUM_HW, GZ_T3), P(-GZ_DRUM_HW, GZ_T4)];
         for (let i = 0; i <= 36; i++) {
@@ -6860,7 +6994,11 @@
         }
         sil.push(P(GZ_DRUM_HW, GZ_T4), P(GZ_DRUM_HW, GZ_T3), P(GZ_CORN_HW, GZ_T3),
                  P(GZ_CORN_HW, GZ_T2), P(1.06, GZ_T2), P(1.06, GZ_T1),
-                 P(1.02, GZ_T1), P(1.02, GZ_CAP), P(1, GZ_CAP), P(1, 0),
+                 P(1.02, GZ_T1), P(1.02, GZ_CAP),
+                 P(1 + GZ_CAPX, GZ_CAP), P(1 + GZ_CAPX, GZ_CAP - ch), P(1, GZ_CAP - ch),
+                 P(1, GZ_SPRING), P(1 + GZ_IMP, GZ_SPRING),
+                 P(1 + GZ_IMP, GZ_SPRING - ch), P(1, GZ_SPRING - ch),
+                 P(1, 0),
                  P(GZ_PL_HW * 1.02, 0), P(GZ_PL_HW * 1.02, -GZ_PL * 0.30),
                  P(GZ_PL_HW, -GZ_PL * 0.30), P(GZ_PL_HW, -GZ_PL));
         const hole = (c, r, sill) => {
@@ -6912,6 +7050,18 @@
         } else for (const p of op.pts) see(p[0], p[1]);
       }
       const pad = 5;
+      // And the box is squared off to the display's own pixels. The two
+      // sheets are baked at the display's density and then laid down whole,
+      // one blit each — and a blit that lands between two pixels is resampled
+      // across both of them. The corner of the box fell wherever the widest
+      // brick happened to end, which was never on a pixel, so the entire
+      // building was carrying about a pixel of blur that had nothing to do
+      // with how it was drawn: every joint and every arris in it softened by
+      // the one drawImage that puts it on the page. Landing the box on the
+      // grid costs half a pixel of padding and hands the sheet over one for
+      // one.
+      const snapLo = v => Math.floor(v * dpr) / dpr;
+      const snapHi = v => Math.ceil(v * dpr) / dpr;
 
       // Every stamp is dealt a moment to arrive in. The order is the order
       // the list is already in, so the building goes up the way it was drawn:
@@ -6961,7 +7111,10 @@
 
       gaz = {
         cx, base, u: unit, nFabric,
-        box: { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 },
+        box: (() => {
+          const bx = snapLo(x0 - pad), by = snapLo(y0 - pad);
+          return { x: bx, y: by, w: snapHi(x1 + pad) - bx, h: snapHi(y1 + pad) - by };
+        })(),
         ops: gzOps,
         // the coats the sun lays: what goes under the building, and what over
         under: gzOps.filter(o => o.sun && o.under),
@@ -7006,18 +7159,33 @@
     // is what keeps a brick in the air identical to the one beside it that has
     // landed.
     const GZ_MORTAR = MORTAR;
-    function gzPath(g, pts) {
-      g.beginPath();
+    // One outline, added to whatever path is already open. Kept apart from
+    // gzPath because a clip may be several outlines at once and beginPath
+    // throws away everything before it — see gzClip.
+    function gzSub(g, pts) {
       g.moveTo(pts[0][0], pts[0][1]);
       for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
       g.closePath();
+    }
+    function gzPath(g, pts) {
+      g.beginPath();
+      gzSub(g, pts);
     }
     // A stamp may be cut to a shape: to the curve of the dome, or to a wall
     // with an arch taken out of it. Both are exact, which is what an arch
     // sitting cleanly in a wall costs when the wall is laid in whole bricks.
     function gzClip(g, cl) {
       g.beginPath();
-      if (cl.polys) { for (const p of cl.polys) gzPath(g, p); g.clip('evenodd'); return; }
+      // The building's outline and the three holes in it, as one path.
+      // These went through gzPath, which opens a new one — so each outline
+      // threw away the one before it and all that survived was the last, the
+      // right-hand window. The one coat this clip is for is the sun over the
+      // whole facade, and for as long as that was true the sun fell inside
+      // that window and nowhere else on the building: a soft lit panel
+      // hanging in one opening like a pane of glass, sliding from warm to
+      // cold as the moon crossed the sky, and a pavilion beside it that knew
+      // nothing about where the light was coming from.
+      if (cl.polys) { g.beginPath(); for (const p of cl.polys) gzSub(g, p); g.clip('evenodd'); return; }
       if (cl.poly) { gzPath(g, cl.poly); g.clip(); return; }
       const r = cl.rect;
       g.rect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
@@ -7036,7 +7204,7 @@
       if (op.cl) { g.save(); gzClip(g, op.cl); }
       g.globalAlpha = alpha;
       if (op.t === 'b') {
-        const sp = gzSprite(op.v, op.ar, day), P = BRICK_PAD;
+        const sp = gzSprite(op.v, op.bw, op.bh, day), P = BRICK_PAD;
         g.save();
         g.transform(op.ex / sp.w, op.ey / sp.w, op.fx / sp.h, op.fy / sp.h, op.ox, op.oy);
         g.drawImage(sp.cv, -P, -P, sp.w + P * 2, sp.h + P * 2);
@@ -7300,11 +7468,76 @@
           t.ox = x + (slot - spanX * sx) / 2 - (dir > 0 ? b.minX : -b.maxX) * sx;
           t.oy = treeBase;
           t.width = Math.max(1.1, Math.min(3.4, (sx + sy) * 0.20 * t.girth));
+          // A crown may hang past the end of the shelf — that is what the
+          // overlap is for, and a branch over the edge is a branch over the
+          // edge. A trunk may not: it is standing on something. Whatever the
+          // slot came out as, the foot of the tree is kept on the brick.
+          if (fit.ground) {
+            const keep = Math.max(3, t.width * 2);
+            t.ox = Math.min(Math.max(t.ox, fit.ground[0] + keep), fit.ground[1] - keep);
+          }
           t.tipWidth = Math.max(0.6, t.width * 0.24);
           t.tipTone = `rgb(${t.tip},${t.tip},${t.tip})`;
           planFoliage(t);
         }
       });
+    }
+
+    // ── where the grove is on the page ─────────────────────────────────────
+    // Everything the grove draws it draws in its own coordinates, and it does
+    // not care where on the page the canvas has got to. Four things do: the
+    // gramophone, which is an element and has to be put in the archway; the
+    // air, which perches birds on the roof and on the two sills; the sun,
+    // which the sky behind wants the position of; and the sky's own glow.
+    // Those are handed over in page points, and this is where they are handed
+    // over. It is separate from the layout because a move is not a re-lay —
+    // see anchor(), below.
+    function publish() {
+      if (!gaz) return;
+      G.left = groveOX; G.top = groveOY; G.W = W; G.H = H;
+      // the gramophone goes to stand in the archway, which its own script
+      // comes and asks for (see place() there)
+      G.gram = { x: groveOX + gaz.gram.cx, y: groveOY + gaz.gram.bottom,
+                 w: gaz.gram.w, h: gaz.gram.h };
+      if (window.__gramophone && window.__gramophone.place) window.__gramophone.place();
+      // The roof, for the air: the outline of the dome from one springing
+      // over the crown to the other, in page points. A dome is not a ledge
+      // with a place on it — a bird stands anywhere along the curve of it —
+      // so this goes over as a line rather than as a box, and the air walks
+      // a fraction along it exactly as it walks a fraction along a card.
+      G.dome = gaz.dome.map(p => [groveOX + p[0], groveOY + p[1]]);
+      G.ledges = gaz.ledges.map(l => ({ x0: groveOX + l.x0, x1: groveOX + l.x1, y: groveOY + l.y }));
+      // and where the music comes out, which is the top of it
+      G.crown = { x: groveOX + gaz.crown.x, y: groveOY + gaz.crown.y, w: gaz.crown.w };
+    }
+
+    // A window resize does not always change the size of the canvas. The
+    // column the grove stands in has a maximum width, and past that the page
+    // stops growing and starts centring: drag a wide window wider or narrower
+    // above that point and the canvas keeps its exact size and simply slides
+    // sideways. A ResizeObserver watches size and not position, so it never
+    // fired there — and the grove, which draws in its own coordinates, went on
+    // looking perfectly correct while every page point it had handed out went
+    // on pointing at the place it used to be. The gramophone walked out of the
+    // archway and stood on the shelf a hundred pixels to one side; the birds
+    // flew to a roof and two sills that were no longer under them, and sat in
+    // the air; and the sky put the sun's glow in the wrong cloud. Then the
+    // window crossed the maximum width, the canvas changed size at last, the
+    // observer woke up and the whole thing snapped back — which is why it
+    // looked like a thing that came and went.
+    //
+    // It costs one rectangle to notice. Nothing is re-laid: the building did
+    // not move, the page under it did, and only the four handles have to be
+    // told. A resize that does change the size is left alone — the observer
+    // has that, and does it properly.
+    function anchor() {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      if (Math.abs(rect.width - W) > 0.5 || Math.abs(rect.height - H) > 0.5) return;
+      const ox = rect.left + window.scrollX, oy = rect.top + window.scrollY;
+      if (ox === groveOX && oy === groveOY) return;
+      groveOX = ox; groveOY = oy;
+      publish();
     }
 
     function layout() {
@@ -7409,41 +7642,53 @@
       // whose whole job is to touch the title — came up short by a fifth of
       // the band, and by half of it on a crowded stand.
       const openSlot = ((W - edge * 2) - gap * (n - 1)) / (n + 2 * over);
-      const keep = gazW * 1.24;                       // its ground, and a margin
+      const keep = gazW * 1.15;                       // its ground, and a margin
       const gzL = gazCX - keep / 2, gzR = gazCX + keep / 2;
       const wL = Math.max(0, gzL - edge), wR = Math.max(0, W - edge - gzR);
       const avail = Math.max(60, wL + wR);
       const slot = (avail - gap * (n - 1)) / (n + 2 * over);
-      const nL = Math.max(1, Math.min(n - 1, Math.round((n * wL) / avail)));
-      const nR = n - nL;
       const run = m => m * slot + (m - 1) * gap;
+      // How the stand is split between the two clearings. Each was given at
+      // least one tree whatever the room was, and the row was then centred in
+      // its clearing — so where a wide pavilion on a narrow canvas left one
+      // side barely a slot, the row it was dealt was wider than the ground it
+      // had, the centring pushed it off the near end, and a tree was planted
+      // past the end of the shelf with nothing under it. It stood in the air
+      // with its own little shadow on the sky.
+      //
+      // So the split is chosen rather than assumed: of the n + 1 ways to
+      // divide the stand, take the one that overruns its ground least, and
+      // among those the one nearest each clearing's fair share. A clearing
+      // with no room for a tree gets none, and the whole stand goes to the
+      // other side — which is what you would do with real ones.
+      const want = (n * wL) / avail;
+      let nL = 0, best = Infinity;
+      for (let m = 0; m <= n; m++) {
+        const spill = Math.max(0, run(m) - wL) + Math.max(0, run(n - m) - wR);
+        const score = spill * 1000 + Math.abs(m - want);
+        if (score < best) { best = score; nL = m; }
+      }
+      const nR = n - nL;
+      // and each row starts at its clearing's near end, centred in it only if
+      // there is room to centre it
+      const from = (x0, w, m) => x0 + Math.max(0, w - run(m)) / 2;
       const xs = [];
       for (let i = 0; i < n; i++) {
-        xs.push(i < nL ? edge + (wL - run(nL)) / 2 + i * (slot + gap)
-                       : gzR + (wR - run(nR)) / 2 + (i - nL) * (slot + gap));
+        xs.push(i < nL ? from(edge, wL, nL) + i * (slot + gap)
+                       : from(gzR, wR, nR) + (i - nL) * (slot + gap));
       }
       // A crown is centred on its slot, so the outermost one hangs
       // (crown - slot) / 2 past the end of the row: never wider than the
       // canvas can take, whatever the stand is doing.
       const fits = (slot + 2 * edge) / OVERLAP;
       fit = { edge: xs[0], slot, gap, band, treeBase, xs,
+              // the brick the trunks have to stand on, so none of them can be
+              // set down past the end of it whatever the arithmetic above did
+              ground: [edge - LEDGE_PAD, W - edge + LEDGE_PAD],
               span: Math.max(slot, Math.min(openSlot, fits)) };
       fitTrees();
 
-      // and the gramophone goes to stand in the archway, which its own
-      // script comes and asks for (see place() there)
-      G.gram = { x: groveOX + gaz.gram.cx, y: groveOY + gaz.gram.bottom,
-                 w: gaz.gram.w, h: gaz.gram.h };
-      if (window.__gramophone && window.__gramophone.place) window.__gramophone.place();
-      // The roof, for the air: the outline of the dome from one springing
-      // over the crown to the other, in page points. A dome is not a ledge
-      // with a place on it — a bird stands anywhere along the curve of it —
-      // so this goes over as a line rather than as a box, and the air walks
-      // a fraction along it exactly as it walks a fraction along a card.
-      G.dome = gaz.dome.map(p => [groveOX + p[0], groveOY + p[1]]);
-      G.ledges = gaz.ledges.map(l => ({ x0: groveOX + l.x0, x1: groveOX + l.x1, y: groveOY + l.y }));
-      // and where the music comes out, which is the top of it
-      G.crown = { x: groveOX + gaz.crown.x, y: groveOY + gaz.crown.y, w: gaz.crown.w };
+      publish();
 
       // The shelf runs the width of the row, and the ivy hangs off its front.
       ledgeX0 = edge - LEDGE_PAD;
@@ -8151,6 +8396,9 @@
     const relayout = () => { layout(); render(performance.now()); };
     const ro = new ResizeObserver(relayout);
     ro.observe(canvas);
+    // and the case the observer cannot see: the canvas moving without
+    // changing size (see anchor(), above)
+    addEventListener('resize', anchor);
     // the band tracks the text block, so a reflow has to re-fit the grove
     if (bioEl) ro.observe(bioEl);
     if (linksEl) ro.observe(linksEl);
