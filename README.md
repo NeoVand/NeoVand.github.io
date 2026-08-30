@@ -378,6 +378,20 @@ Only the handful still in the air is drawn per frame. Everything that has
 landed is stamped once into the two sheets and never drawn again, so the
 opening costs a pair of blits and a few dozen stamps rather than two thousand.
 
+The grove as a whole is drawn on the same argument the scrub is walked on. The
+wind turns a tree over about once a second, and a plant drawn every other frame
+leans exactly as far and exactly as slowly: nothing standing in the grove is
+quick enough for the screen's full rate to show. So the loop takes the half
+beat, and gives it up only for the things that have a beginning and an end and
+are watched all the way through — the opening, a tree pressed and springing
+back, the moon bolting from under the pointer, the lamp's flare and the
+changeover behind it. It is by far the most expensive thing on the page, and
+this halves it; the birds over it keep their own sixty either way, and a bird
+perched on a twig is drawn from that twig, so the two move together whichever
+beat the branch is on. The twig ends, which are stroked as wood, as highlight,
+as flare and twice more as the scrub's mass, are held in one `Path2D` and
+walked once rather than handed over again for each stroke.
+
 The one thing that needed care is the coats — the bed under a course, the
 shadow the cornice throws, and the coats of light that are no longer baked at
 all. A coat has to be painted
@@ -423,7 +437,7 @@ flowchart TB
     RS["ResizeObserver<br/>WIDE media query"]
   end
 
-  subgraph frame["Every frame — render(now)"]
+  subgraph frame["Every other frame, or every frame while<br/>something quick is moving — render(now)"]
     direction TB
     DT["dt = min(50 ms, now − last)"] --> GRW
     GRW["per plant: grow → growTarget<br/>front = grow·(maxDepth+SOFT)<br/>shrink, pop spring"] --> WK
@@ -480,7 +494,7 @@ sequenceDiagram
   participant A as the air
 
   Note over R: requestAnimationFrame while the canvas intersects the viewport
-  loop every frame
+  loop every other frame — every frame while the opening, a press,<br/>the moon's bolt or the lamp's changeover is running
     R->>R: dt = min(50 ms, now − last)
     R->>C: clear · shelf sheet · ivy · footings
     loop each plant — scrub first, then trees

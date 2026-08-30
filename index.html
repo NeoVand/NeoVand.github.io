@@ -8034,11 +8034,15 @@
         }
       }
 
-      // slow easing on both the pointer and its strength, so the grove drifts
-      // rather than snaps
-      pointer.amp += (pointer.target - pointer.amp) * 0.035;
-      pointer.x += (pointer.tx - pointer.x) * 0.055;
-      pointer.y += (pointer.ty - pointer.y) * 0.055;
+      // Slow easing on both the pointer and its strength, so the grove drifts
+      // rather than snaps. Taken off the frame's own clock rather than off the
+      // frame, because the loop below does not always run at the screen's
+      // rate: a drift measured per frame would take twice as long on the half
+      // beat, and the lean would go slack the moment the grove went quiet.
+      const settle = a => 1 - Math.pow(1 - a, dt * 60);
+      pointer.amp += (pointer.target - pointer.amp) * settle(0.035);
+      pointer.x += (pointer.tx - pointer.x) * settle(0.055);
+      pointer.y += (pointer.ty - pointer.y) * settle(0.055);
 
       const breeze = reduced ? 0 : 1;
 
@@ -8067,10 +8071,13 @@
         // indistinguishable from sixty. So the scrub is walked on alternate
         // frames — half the clumps on even frames, half on odd — and drawn
         // from its last walk in between. Not while it is growing or
-        // withdrawing, when every frame is a different shape.
+        // withdrawing, when every frame is a different shape; and not when the
+        // loop is already on its half beat (see below), since halving a half
+        // would leave a clump standing on the same shape for a sixteenth of a
+        // second, which is a step and not a sway.
         const settled = p.grow === p.growTarget && p.popT >= POP_LIFE && !introing;
         let levels = [];
-        if (p.kind === 'under' && settled && p.lastWalk && ((frameNo + p.tipSalt) & 1)) {
+        if (p.kind === 'under' && settled && everyFrame && p.lastWalk && ((frameNo + p.tipSalt) & 1)) {
           buckets = p.lastWalk[0]; tipSegs = p.lastWalk[1];
         } else {
         // The wind reads even more weakly on the scrub than the pointer does.
@@ -8160,6 +8167,20 @@
           ctx.stroke();
         }
 
+        // The twig ends are stroked up to four times over — as wood, as the
+        // highlight, as the lamp's flare, and twice more below as the scrub's
+        // mass — and a canvas path cannot be kept, so each of those used to
+        // hand over every segment again. Held, the run is walked once and
+        // stroked as often as it likes: two twig segments in three were being
+        // given a second time to a stroke that had already had them.
+        const tipPath = tipSegs.length ? new Path2D() : null;
+        if (tipPath) {
+          for (let k = 0; k < tipSegs.length; k += 5) {
+            tipPath.moveTo(tipSegs[k], tipSegs[k + 1]);
+            tipPath.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
+          }
+        }
+
         // Twig ends, so the highlight sits over the branches. In daylight the
         // foliage goes over the top of it, which is why it is drawn first now.
         // Under leaves the highlight would only show as bright wire poking
@@ -8170,26 +8191,17 @@
         // highlight is laid over that at whatever strength is left to it.
         if (tipSegs.length) {
           const tipA = p.fol ? 1 - mix * 0.9 : 1;
-          const path = () => {
-            ctx.beginPath();
-            for (let k = 0; k < tipSegs.length; k += 5) {
-              ctx.moveTo(tipSegs[k], tipSegs[k + 1]);
-              ctx.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
-            }
-          };
           if (p.fol && mix > 0.01) {
             ctx.globalAlpha = mix;
             ctx.strokeStyle = shade(tone1, p.under);
             ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, p.maxDepth));
-            path();
-            ctx.stroke();
+            ctx.stroke(tipPath);
           }
           if (tipA > 0.02) {
             ctx.globalAlpha = tipA;
             ctx.strokeStyle = tipShade(p.tip, p.under);
             ctx.lineWidth = p.tipWidth;
-            path();
-            ctx.stroke();
+            ctx.stroke(tipPath);
           }
           if (flare > 0.01 && !p.under) {
             // the last of the lamp's light, caught on the twig ends
@@ -8197,8 +8209,7 @@
             ctx.globalAlpha = f * 0.95;
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = p.tipWidth * (1 + f * 1.4);
-            path();
-            ctx.stroke();
+            ctx.stroke(tipPath);
           }
           ctx.globalAlpha = 1;
         }
@@ -8293,12 +8304,7 @@
             for (const [w, k, dark] of [[2.9, 0.40, true], [1.9, 0.52, false]]) {
               ctx.strokeStyle = leaf(p, k * mix, dark);
               ctx.lineWidth = Math.max(2, p.width * w);
-              ctx.beginPath();
-              for (let k2 = 0; k2 < tipSegs.length; k2 += 5) {
-                ctx.moveTo(tipSegs[k2], tipSegs[k2 + 1]);
-                ctx.lineTo(tipSegs[k2 + 2], tipSegs[k2 + 3]);
-              }
-              ctx.stroke();
+              ctx.stroke(tipPath);
             }
             ctx.lineCap = 'butt';
           }
@@ -8410,6 +8416,10 @@
       ctx.globalAlpha = 1;
     }
 
+    // Whether this frame is one of every frame or one of every other — the
+    // scrub reads it to decide whether it may skip a walk of its own.
+    let everyFrame = true;
+
     // ── opening state ──────────────────────────────────────────────────────
     let introing = INTRO, introStarted = false, introWait = 0, introEase = 0;
     let introMoonX = 0, introMoonY = 0;
@@ -8428,8 +8438,31 @@
       if (G.onIntro) G.onIntro(window.__intro.dur / 1000);
     }
 
-    let running = false, raf = 0;
-    function loop(now) { render(now); raf = requestAnimationFrame(loop); }
+    // ── how often it draws ────────────────────────────────────────────────
+    // The wind turns a tree over about once a second, and a plant drawn every
+    // other frame leans exactly as far and exactly as slowly — nothing in the
+    // grove is quick enough for the screen's full rate to show. What is quick
+    // is anything with a beginning and an end: the opening, where whole plants
+    // come up out of the ground; a tree pressed and springing back; the moon
+    // bolting from under the pointer; the lamp's flare and the changeover
+    // behind it. Those get every frame. The wind, the lean and a leaf on its
+    // way down get every second frame, which is nine tenths of the time the
+    // grove is on screen and was very nearly the whole of its cost — the
+    // grove is by a long way the most expensive thing on the page, and the
+    // hero was missing its frame often enough to fall to half rate anyway.
+    // Everything drawn over the grove keeps its own clock: the birds fly at
+    // sixty either way, and a bird perched on a twig is drawn from that twig,
+    // so the two move together whichever beat the branch is on.
+    let running = false, raf = 0, beat = 0;
+    const quick = () =>
+      introing || flare > 0.01 || mix !== mixTo || moonT >= 0 ||
+      plants.some(p => p.grow !== p.growTarget);
+    function loop(now) {
+      beat ^= 1;
+      const full = quick();
+      if (beat || full) { everyFrame = full; render(now); }
+      raf = requestAnimationFrame(loop);
+    }
     function start() { if (!running) { running = true; raf = requestAnimationFrame(loop); } }
     function stop() { running = false; cancelAnimationFrame(raf); }
 
