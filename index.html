@@ -311,6 +311,24 @@
     }
     #sky.lit { opacity: 1; }
 
+    /* The sun's bloom belongs to the document, like the grove itself. Its
+       retained pixels take the compositor's scroll even between JS frames. */
+    #sun-halo {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      z-index: -1;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      mix-blend-mode: plus-lighter;
+      opacity: 0;
+      transition: opacity 480ms linear;
+    }
+    .day #sun-halo { opacity: 1; }
+    html.theming #sun-halo { transition: opacity 480ms linear !important; }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -2749,6 +2767,7 @@
   <!-- The sky the whole page sits in: drifting cloud by day, stars and the
        occasional meteor by night. Behind everything, and inert. -->
   <canvas id="sky" aria-hidden="true"></canvas>
+  <canvas id="sun-halo" aria-hidden="true"></canvas>
 
   <script>
   // ─── The sky ──────────────────────────────────────────────────────────────
@@ -2932,21 +2951,8 @@
           cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15) * uSunVisible);
           vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
 
-          // The sun itself lives here rather than on the grove canvas: the sky
-          // has the whole viewport to spread over and no edge to be cut off
-          // at. The first term goes well past 1.0, so it blows out to a white
-          // core that no cloud can reach; the other two are the falloff —
-          // wider and redder when the sun is low. They are kept faint enough
-          // that, summed, they clear the clip only right at the core: any
-          // brighter and the sky goes flat white for some way out and the
-          // glow reads as a disc with an edge, rather than a light that
-          // simply thins with distance.
-          vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
-          vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
-          vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
-          day += uSunVisible * (s1 * exp(-sd * 19.0) * (2.00 - uWarm * 0.6)
-               + s2 * exp(-sd *  5.5) * (0.34 + uWarm * 0.12)
-               + s3 * exp(-sd *  1.5) * (0.12 + uWarm * 0.14));
+          // The additive bloom is retained on #sun-halo in document space.
+          // Only the cloud's response to the sun stays on this weather layer.
           // and the whole scene a shade dimmer toward the ends of the day —
           // a shade, now, rather than a tenth: at this hour the multiplier
           // never lifts, so it was a permanent nine per cent off everything
@@ -3020,7 +3026,67 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let mix = window.__theme && window.__theme.day ? 1 : 0;
     let mixTo = mix;
-    document.addEventListener('lights', e => { mixTo = e.detail.day ? 1 : 0; });
+    document.addEventListener('lights', e => {
+      mixTo = e.detail.day ? 1 : 0;
+      paintHalo();                  // prepare daylight even with the grove offscreen
+    });
+
+    // Bake the shader's three exponential falloffs once. This sheet is as
+    // wide as the page and has vertical bleed, so the glow has no visible
+    // canvas edge and cannot create horizontal overflow. It is repainted
+    // only when the sun moves or the viewport changes, never for scrolling.
+    const halo = document.getElementById('sun-halo');
+    const hg = halo.getContext('2d');
+    const bloom = document.createElement('canvas');
+    bloom.width = bloom.height = 768;
+    let bloomWarm = -1, haloW = 0, haloH = 0, haloX = NaN, haloY = NaN;
+    function bakeBloom(warm) {
+      const g = bloom.getContext('2d'), C = bloom.width / 2;
+      const gr = g.createRadialGradient(C, C, 0, C, C, C);
+      const hues = [[1, .98 - .08 * warm, .93 - .17 * warm],
+                    [1, .94 - .18 * warm, .79 - .31 * warm],
+                    [1, .92 - .28 * warm, .75 - .37 * warm]];
+      for (let i = 0; i <= 96; i++) {
+        const r = (i / 96) ** 2, sd = r * 4;
+        const weights = [Math.exp(-sd * 19) * (2 - warm * .6),
+                         Math.exp(-sd * 5.5) * (.34 + warm * .12),
+                         Math.exp(-sd * 1.5) * (.12 + warm * .14)];
+        const rgb = [0, 1, 2].map(k => Math.min(1,
+          hues.reduce((sum, h, j) => sum + h[k] * weights[j], 0) * (1 - warm * .04)));
+        const a = i === 96 ? 0 : Math.max(...rgb);
+        gr.addColorStop(r, a ? `rgba(${rgb.map(v => v / a * 255).join(',')},${a})` : 'rgba(0,0,0,0)');
+      }
+      g.clearRect(0, 0, bloom.width, bloom.height);
+      g.fillStyle = gr;
+      g.fillRect(0, 0, bloom.width, bloom.height);
+      bloomWarm = warm;
+    }
+    function paintHalo() {
+      const s = window.__sun;
+      if (!s) return;              // no detached glow before the entrance
+      const w = innerWidth, radius = innerHeight * 2;
+      const h = Math.ceil(Math.max(innerHeight * 3, s.y + radius));
+      const warm = window.__clock ? window.__clock.sun().warm : 0;
+      const resized = w !== haloW || h !== haloH;
+      const recolor = warm !== bloomWarm;
+      // Broad, soft light needs fewer pixels than the grove's sharp branches.
+      const scale = Math.min(1, Math.sqrt(1.2e6 / (w * h)));
+      if (resized) {
+        haloW = w; haloH = h;
+        halo.width = Math.max(1, Math.round(w * scale));
+        halo.height = Math.max(1, Math.round(h * scale));
+        halo.style.width = w + 'px'; halo.style.height = h + 'px';
+        hg.setTransform(halo.width / w, 0, 0, halo.height / h, 0, 0);
+        haloX = haloY = NaN;
+      }
+      if (mix === 0 && mixTo === 0) return;    // don't repaint an invisible moon halo
+      if (!resized && !recolor && s.x === haloX && s.y === haloY) return;
+      if (recolor) bakeBloom(warm);
+      hg.clearRect(0, 0, w, h);
+      hg.drawImage(bloom, s.x - radius, s.y - radius, radius * 2, radius * 2);
+      haloX = s.x; haloY = s.y;
+    }
+    window.__sky.paintHalo = paintHalo;
 
     // The sky runs at half the display's rate. Cloud drifts over tens of
     // seconds and stars twinkle slowly, so the only thing fast enough to care
@@ -3075,7 +3141,13 @@
     window.__sky.wake = start;
 
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
-    addEventListener('resize', () => { if (reduced) { resize(); draw(performance.now()); } });
+    addEventListener('resize', () => {
+      paintHalo();
+      if (reduced) { resize(); draw(performance.now()); }
+    });
+    // Reduced motion has no weather loop; keep its cloud lighting aligned
+    // too. The visible halo itself needs no scroll callback in either mode.
+    addEventListener('scroll', () => { if (reduced) start(); }, { passive: true });
     document.addEventListener('lights', start);
     cv.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
 
@@ -5777,8 +5849,8 @@
     // disc at least 0.55 moon-radii — three disc radii — from any edge, so
     // anything painted beyond that is cut off in a straight line across the
     // sky. So the sprite holds the body and the corona only, and the wide
-    // atmospheric bloom is left to the sky shader behind, which has the whole
-    // viewport to spread over and no edge to run into.
+    // atmospheric bloom has its own retained sheet behind the grove, with
+    // enough bleed to spread out and the same document scroll as the body.
     const SUN_SPREAD = 1.2;
     const SUN_DISC = 94 / SUN_SPREAD;
     const SUN_REACH = SUN_DISC * 3.0;    // the clip-safe radius, in sprite units
@@ -7874,6 +7946,15 @@
       G.ledges = gaz.ledges.map(l => ({ x0: groveOX + l.x0, x1: groveOX + l.x1, y: groveOY + l.y }));
       // and where the music comes out, which is the top of it
       G.crown = { x: groveOX + gaz.crown.x, y: groveOY + gaz.crown.y, w: gaz.crown.w };
+      if (window.__sun) publishSun();
+    }
+
+    function publishSun() {
+      const previous = window.__sun;
+      window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
+      if (window.__sky?.paintHalo) window.__sky.paintHalo();
+      if ((!previous || (reduced && (previous.x !== window.__sun.x || previous.y !== window.__sun.y))) && window.__sky?.wake)
+        window.__sky.wake();
     }
 
     // A window resize does not always change the size of the canvas. The
@@ -8241,10 +8322,7 @@
           ctx.globalCompositeOperation = 'source-over';
         }
         ctx.globalAlpha = 1;
-        const previousSun = window.__sun;
-        window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
-        if ((!previousSun || (reduced && (previousSun.x !== window.__sun.x || previousSun.y !== window.__sun.y))) && window.__sky?.wake)
-          window.__sky.wake();
+        publishSun();
         // and every shadow on the shelf is measured from it, once, here
         readLight(gaz ? gaz.cx : W / 2,
                   gaz ? gaz.base - GZ_CROWN * gaz.u * 0.5 : ground - 60);

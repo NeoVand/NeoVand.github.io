@@ -65,6 +65,15 @@ viewport's worth of pixels, stops entirely when the tab is hidden, and draws a
 single still frame under `prefers-reduced-motion`. If WebGL is unavailable the
 flat `--bg` underneath is all you get, and nothing else changes.
 
+The sun's broad halo is a retained canvas in document coordinates, underneath
+the grove. It uses the shader's three exponential falloffs, baked once and
+added to the sky with `plus-lighter`; only the cloud's response to the light
+remains in the weather shader. Scrolling carries the halo with the scene
+without waiting for JavaScript or another shader frame. The sheet is capped
+at 1.2 million pixels, repaints only when the sun moves or the viewport
+changes, and stays painted while the grove is offscreen. Its day/night fade
+does not depend on the grove's paused animation loop.
+
 ## The grove
 
 The header is a canvas of five or six L-system trees over a thicket of smaller
