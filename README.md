@@ -107,6 +107,12 @@ twigs first, and releasing grows it back. Two parties of birds — fireflies,
 after dark — sit up on the crowns of two of the trees and cross to another
 when theirs is pressed, or when they feel like it (see [The air](#the-air)).
 
+Let a tree disappear completely and its slot is replanted with a randomly
+chosen different species, including that species' branching pattern and
+foliage. Short presses keep the current tree. Replanting keeps the slot's
+height and bird-party identity, and clears the old leaves' spring state and
+regrowth timers before fitting the new crown.
+
 In daylight each species carries its own foliage: a leaf shape and a green,
 baked into small sprites at twelve angles and three variants, so a branch end
 costs one blit rather than a path. How far in the canopy reaches is measured
@@ -555,7 +561,7 @@ sequenceDiagram
     R->>T: grow −= GROW_RATE·dt · front = grow·(maxDepth+SOFT) · shrink = 0.5 + 0.5·grow
     Note over W: levels past front are skipped, SOFT levels part-grown, leaves shrink with reach³
     opt grow reaches 0
-      R->>T: reseed() + fitTrees(tree) — a new individual of the same species
+      R->>T: replant() — another species, fresh leaf state, reseed() + fitTrees(tree)
     end
   end
 

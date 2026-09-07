@@ -5630,8 +5630,7 @@
     const VARY_TURN = 0.20, VARY_LEN = 0.125, VARY_LEAN = 0.20, VARY_LIMB = 0.20;
 
     // Deal a tree a new reading of its grammar. Called once at load, and
-    // again whenever a tree has been drawn all the way back into the ground,
-    // so what grows back is a fresh individual of the same species. The
+    // again after replant() has chosen the species for a regrowing tree. The
     // tables are keyed by position in the string, which is also how a leaf
     // keeps its state, so nothing else about the tree needs to know.
     function reseed(p) {
@@ -5656,6 +5655,25 @@
       p.front = front; p.shrink = shrink;
     }
     trees.forEach(reseed);
+
+    // Once the whole tree is gone, its slot can grow another species. Keep
+    // the same object and skyline height so its bird-party identity and the
+    // neighbouring trees stay put. A partial press never reaches this step.
+    function replant(p) {
+      const k = (p.leafSpec + 1 + Math.floor(Math.random() * (TREES.length - 1))) % TREES.length;
+      const rise = p.rise;
+      // Optional traits must return to their defaults before switching from
+      // a species that specifies them to one that does not.
+      Object.assign(p, { tipMin: 0, tipShare: 1, vary: 1 }, TREES[k], shapes[k], { leafSpec: k, rise });
+      // Segment indices now belong to another grammar. No old spring state,
+      // missing-leaf timers, or foliage sprites may follow them across.
+      p.leafA = null;
+      p.leafShed = null;
+      p.lastLeafSegs = null;
+      p.fol = p.folDark = null;
+      reseed(p);
+      fitTrees(p);
+    }
 
     // one expansion, reused by every instance — only the transform differs
     const underShape = expand(UNDER_SPEC);
@@ -8228,8 +8246,8 @@
             // so a tap gives a nudge and a long press gives a real bounce
             p.popAmp = POP_MAX * (1 - p.grow);
             // drawn all the way back into the ground, with nothing left
-            // standing: what grows back is a new tree of the same kind
-            if (p.grow <= 0 && p.kind === 'tree') { reseed(p); fitTrees(p); }
+            // standing: choose a different species for what grows back
+            if (p.grow <= 0 && p.kind === 'tree') replant(p);
           }
         }
 
