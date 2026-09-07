@@ -826,7 +826,7 @@
     }
 
     /* ─── REVEAL ─── */
-    /* Papers and earlier work come in as you reach them rather than all being
+    /* Papers, media and earlier work come in as you reach them rather than all being
        painted at once. Items in the same row ripple across rather than landing
        together, which reads as arriving with the divider above them. */
     .reveal { opacity: 0; transform: translateY(14px); }
@@ -1603,6 +1603,41 @@
       cursor: pointer;
       -webkit-appearance: none;
       appearance: none;
+    }
+
+    /* Media borrows the earlier-work tiles, including their arrival and the
+       air's perches. Shallow stills and a short caption keep fifteen links
+       to three rows on a wide page; the sky shows through the same glass. */
+    #media { padding: 24px 0 34px; scroll-margin-top: 24px; }
+    .media-card { min-width: 0; }
+    .media-card .rcard-thumb { aspect-ratio: 2 / 1; }
+    .media-card .rcard-body { padding: 10px 12px 12px; gap: 5px; }
+    .media-card .rcard-title { font-size: 14px; }
+    .media-source {
+      color: var(--muted-2);
+      font-size: 12px;
+      font-weight: calc(450 + var(--wn));
+      line-height: 1.35;
+    }
+    .media-play {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(10,14,18,0.76);
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+      pointer-events: none;
+    }
+    .media-play svg { width: 12px; height: 12px; margin-left: 2px; fill: currentColor; }
+    .media-card:focus-visible { outline: 2px solid var(--leaf); outline-offset: 4px; }
+    @media (prefers-reduced-motion: reduce) {
+      .media-card, .media-card .rcard-thumb img { transition: none; }
+      .media-card:hover, .media-card:hover .rcard-thumb img { transform: none; }
     }
 
     /* ─── PROJECT MODAL ─── */
@@ -4354,6 +4389,181 @@
           </div>
         </a>
 </div>
+    </div>
+  </section>
+
+  <div class="rule" aria-hidden="true"></div>
+
+  <!-- MEDIA -->
+  <section id="media" aria-labelledby="media-title">
+    <div class="research-inner">
+      <div class="research-header">
+        <h2 class="section-label" id="media-title" style="margin-bottom:0">Media</h2>
+      </div>
+      <div class="research-grid">
+
+        <a class="rcard media-card" href="https://www.technologyreview.com/2018/07/17/141437/this-mans-quest-to-understand-memory-starts-with-obsessive-bodycam-recording-and-brain-wave/" target="_blank" rel="noopener" title="This man’s quest to understand memory starts with obsessive bodycam recording and brain-wave tracking">
+          <div class="rcard-thumb">
+            <img src="media/press/mit-tech-review.jpg" alt="" loading="lazy" decoding="async" width="640" height="320" />
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">MIT Tech Review · 2018</span>
+            <span class="rcard-title">A quest to understand memory</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://singularityhub.com/2018/12/09/are-we-made-of-memories-a-researchers-quest-to-record-his-life/" target="_blank" rel="noopener" title="Are We Made of Memories? A Researcher’s Quest to Record His Life">
+          <div class="rcard-thumb">
+            <img src="media/press/singularity-hub.jpg" alt="" loading="lazy" decoding="async" width="640" height="360" />
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">Singularity Hub · 2018</span>
+            <span class="rcard-title">Are we made of memories?</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.fastcompany.com/3066210/in-this-immersive-dataverse-you-can-explore-big-data-using-your-senses" target="_blank" rel="noopener" title="In This Immersive ‘DataVRse,’ You Can Explore Big Data Using Your Senses">
+          <div class="rcard-thumb">
+            <img src="media/press/fast-company.jpg" alt="" loading="lazy" decoding="async" width="640" height="360" />
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">Fast Company · 2016</span>
+            <span class="rcard-title">Exploring data through the senses</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.media.mit.edu/people/mmv/overview/" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/mit-media-lab.jpg" alt="" loading="lazy" decoding="async" width="640" height="520" />
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">MIT Media Lab</span>
+            <span class="rcard-title">Profile &amp; research</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=NpmzZkep5KI" target="_blank" rel="noopener" title="Neuroscience for dummies 1: What are brains and Neurons?!">
+          <div class="rcard-thumb">
+            <img src="media/press/NpmzZkep5KI.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Neuroscience for dummies 1</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=Ms6rhONShAU" target="_blank" rel="noopener" title="Neuroscience for dummies 2: A tour of the brain!">
+          <div class="rcard-thumb">
+            <img src="media/press/Ms6rhONShAU.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Neuroscience for dummies 2</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=2qr0mg4VQHs" target="_blank" rel="noopener" title="Generating Breathing Patterns In Real-Time: Low-Latency Respiratory Phase Tracking From 25Hz PPG">
+          <div class="rcard-thumb">
+            <img src="media/press/2qr0mg4VQHs.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Generating Breathing Patterns</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=hiZTIHOSmFQ" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/hiZTIHOSmFQ.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">SkipNorm</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=mgtM69BTkZE" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/mgtM69BTkZE.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">SeqCLR</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=Tg7A77ls2Fk" target="_blank" rel="noopener" title="JMAP — Journalism Network Analysis">
+          <div class="rcard-thumb">
+            <img src="media/press/Tg7A77ls2Fk.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">JMAP</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=-qt5I43gmBU" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/-qt5I43gmBU.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Rhizome</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=7EcNLl4ujz0" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/7EcNLl4ujz0.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">FoodNet</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=stm4VBpm3Do" target="_blank" rel="noopener" title="DataVRse Network Viewer — Elections">
+          <div class="rcard-thumb">
+            <img src="media/press/stm4VBpm3Do.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">DataVRse</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=IAKn-_H9NkE" target="_blank" rel="noopener">
+          <div class="rcard-thumb">
+            <img src="media/press/IAKn-_H9NkE.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Tragedy in CUDA</span>
+          </div>
+        </a>
+
+        <a class="rcard media-card" href="https://www.youtube.com/watch?v=uTVis8SGdk4" target="_blank" rel="noopener" title="Neural Field Simulator — Pattern Formation">
+          <div class="rcard-thumb">
+            <img src="media/press/uTVis8SGdk4.jpg" alt="" loading="lazy" decoding="async" width="480" height="360" />
+            <span class="media-play" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 1 11 6 2 11Z" /></svg></span>
+          </div>
+          <div class="rcard-body">
+            <span class="media-source">YouTube</span>
+            <span class="rcard-title">Neural Field Simulator</span>
+          </div>
+        </a>
+
+      </div>
     </div>
   </section>
 
@@ -11341,7 +11551,7 @@
   </script>
 
   <script>
-  // ─── Reveal the papers and the earlier work as you reach them ───
+  // ─── Reveal the papers, media and earlier work as you reach them ───
   (() => {
     const items = document.querySelectorAll('.card, .deck, .rcard');
     if (!items.length) return;

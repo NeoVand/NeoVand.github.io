@@ -25,6 +25,19 @@ nothing on the critical path comes from a third-party origin. The two pieces
 of music are the only heavy things here, and neither is fetched until somebody
 plays the gramophone.
 
+## Media
+
+Between Selected Publications and Earlier Work, fifteen small tiles collect
+three press articles, a Media Lab profile, and eleven YouTube videos. They
+borrow Earlier Work's grid and glass, with shallower stills and shorter
+captions: five across on a wide page, down to two on a phone. The shared
+`rcard` class brings them into the image fade, scroll reveal, and bird escort;
+the divider is the same leafy flourish used elsewhere on the page.
+
+The thumbnails live in `media/press/` and load lazily. Videos open on YouTube,
+so the section adds no players or background audio. `media/press/sources.json`
+records the original image and destination URLs.
+
 ## The sky
 
 The page does not have a background colour so much as weather. One full-screen
