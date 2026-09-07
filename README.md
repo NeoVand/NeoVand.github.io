@@ -385,8 +385,9 @@ going up, not a wall.
 The opening has three stages on the shared `window.__intro` clock. The shelf
 is complete at 650 ms and the pavilion at 1,700 ms, including the last bricks
 settling. Only then do the trees, scrub and ivy grow, reaching their full
-height at 2,900 ms. The birds arrive in the final second; at night the same
-sequence brings in the fireflies. The gramophone fades in after the masonry
+height at 2,900 ms. Birds then begin arriving in loose, overlapping parties;
+at night the same sequence brings in the fireflies. Their flights continue
+after the page finishes revealing at 3,900 ms. The gramophone fades in after the masonry
 is complete, and the sun or moon crosses into place during construction.
 The bio retains its original 2,800 ms typing pace.
 
@@ -1072,11 +1073,20 @@ still again, and it gets another shove when the bird pushes off. The speed at
 the moment of landing is no use for that — a bird flares and arrives at a stop
 — so the knock goes by the heading it came in on and how big the bird is.
 
-During the opening, one bird heads straight for the lamp pull while the rest
-land in the trees. It enters nearby, stays for eight seconds before resuming
+During the opening, one bird heads straight for the lamp pull, a few choose
+the pavilion's roof and window sills, and the rest land in the trees. The lamp
+visitor enters nearby, stays for eight seconds before resuming
 its usual visits, and gives the cord a small, naturally damped swing on
 landing. At night a firefly takes that place. Skipping the opening or using
 reduced motion seats it without the flight or the nudge.
+
+The parties arrive over several seconds, with irregular gaps between birds.
+Flight duration follows the distance instead of a shared deadline, and each
+bird enters already moving, then slows into its landing. A delayed arrival
+waits unseen offscreen; it has no departure branch, which is distinct from
+a branch disappearing under a bird about to leave. Arrivals rest before
+exploring, and later visits favour the pavilion often enough to keep the
+brickwork part of their habitat.
 
 ## The glass
 
