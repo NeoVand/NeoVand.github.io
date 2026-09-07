@@ -368,7 +368,7 @@
     /* sized with calc, not opposing insets: a canvas is a replaced element,
        so width:auto would fall back to its intrinsic size and feed back into
        the resize observer */
-    #grove {
+    #grove, #grove-leaves {
       position: absolute;
       top: -34px;
       left: -64px;
@@ -3277,6 +3277,7 @@
     <div class="hero-lead">
       <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
       <canvas id="grove" aria-hidden="true"></canvas>
+      <canvas id="grove-leaves" aria-hidden="true"></canvas>
     </div>
 
     <div class="hero-about">
@@ -4982,6 +4983,10 @@
     const canvas = document.getElementById('grove');
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true });
+    // Falling leaves keep their own small sheet, so a handful of tumbling
+    // sprites can move smoothly without repainting every tree behind them.
+    const fallCanvas = document.getElementById('grove-leaves');
+    const fallCtx = fallCanvas.getContext('2d', { alpha: true });
     const nameEl = document.querySelector('.about-name');
     const bioEl = document.querySelector('.about-bio');
     const linksEl = document.querySelector('.about-links');
@@ -5493,6 +5498,9 @@
       // branches standing at full length until the front arrives.
       const front = p.front ?? Infinity;
       const shrink = p.shrink ?? 1;
+      // Nothing extends above the root; there is no geometry to collect.
+      // Avoid parsing every branch of a tree held under the ground.
+      if (front <= 0) return { minX: ox, maxX: ox, minY: oy, maxY: oy };
       let minX = ox, maxX = ox, minY = oy, maxY = oy;
       const s = p.str;
 
@@ -7866,6 +7874,9 @@
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fallCanvas.width = canvas.width;
+      fallCanvas.height = canvas.height;
+      fallCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Side by side, the canopy spans the block it sits beside: the top of
       // the name down to the row of profile buttons, which the shelf lines
@@ -8032,6 +8043,7 @@
       }
 
       undergrowth.forEach((u, i) => {
+        u.lastWalk = null;                  // cached paths use the previous layout's coordinates
         const b = u.box;
         const spanY = Math.max(1e-6, -b.minY);
         const sy = (band * u.rise) / spanY;
@@ -8270,6 +8282,7 @@
       for (const p of plants) {
         if (!p.sx) continue;
         let buckets = [], tipSegs = [];
+        let branchPaths = null, tipPath = null;
         // leaves are only gathered when there is daylight to draw them by
         const leafSegs = p.fol && mix > 0.01 ? [] : null;
         // The scrub is only tens of pixels tall, so the same bend per segment
@@ -8287,8 +8300,9 @@
         // second, which is a step and not a sway.
         const settled = p.grow === p.growTarget && p.popT >= POP_LIFE && !introing;
         let levels = [];
-        if (p.kind === 'under' && settled && everyFrame && p.lastWalk && ((frameNo + p.tipSalt) & 1)) {
-          buckets = p.lastWalk[0]; tipSegs = p.lastWalk[1];
+        const reuseWalk = p.kind === 'under' && settled && everyFrame && p.lastWalk && ((frameNo + p.tipSalt) & 1);
+        if (reuseWalk) {
+          ({ buckets, tipSegs, branchPaths, tipPath } = p.lastWalk);
         } else {
         // The wind reads even more weakly on the scrub than the pointer does.
         // A gust is spread over the branching levels, and these plants only
@@ -8349,8 +8363,9 @@
           }
           if (pointer.amp > 0.002) {
             const dx = x - pointer.x, dy = y - pointer.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < REACH) {
+            const dist2 = dx * dx + dy * dy;
+            if (dist2 < REACH * REACH) {
+              const dist = Math.sqrt(dist2);
               const f = 1 - dist / REACH;
               const ease = f * f * (3 - 2 * f);                  // smoothstep falloff
               const dir = dx / (dist + 60);                      // eases through zero
@@ -8359,7 +8374,7 @@
           }
           return b;
         }, buckets, tipSegs, leafSegs);
-        if (p.kind === 'under') p.lastWalk = [buckets, tipSegs];
+        if (p.kind === 'under') branchPaths = [];
         }
 
         const [tone0, tone1] = p.tone;
@@ -8369,12 +8384,19 @@
           const g = Math.round(tone0 + (depth / p.maxDepth) * (tone1 - tone0));
           ctx.strokeStyle = shade(g, p.under);
           ctx.lineWidth = Math.max(0.5, p.width * Math.pow(0.72, depth));
-          ctx.beginPath();
-          for (let k = 0; k < seg.length; k += 5) {
-            ctx.moveTo(seg[k], seg[k + 1]);
-            ctx.lineTo(seg[k + 2], seg[k + 3]);
+          // Reusing a shrub's walk also reuses its canvas paths. Trees keep
+          // drawing straight into the context, since their geometry changes.
+          let path = branchPaths ? branchPaths[depth] : null;
+          if (!path) {
+            if (branchPaths) path = branchPaths[depth] = new Path2D();
+            else { ctx.beginPath(); path = ctx; }
+            for (let k = 0; k < seg.length; k += 5) {
+              path.moveTo(seg[k], seg[k + 1]);
+              path.lineTo(seg[k + 2], seg[k + 3]);
+            }
           }
-          ctx.stroke();
+          if (branchPaths) ctx.stroke(path);
+          else ctx.stroke();
         }
 
         // The twig ends are stroked up to four times over — as wood, as the
@@ -8383,12 +8405,15 @@
         // hand over every segment again. Held, the run is walked once and
         // stroked as often as it likes: two twig segments in three were being
         // given a second time to a stroke that had already had them.
-        const tipPath = tipSegs.length ? new Path2D() : null;
-        if (tipPath) {
+        if (!tipPath && tipSegs.length) {
+          tipPath = new Path2D();
           for (let k = 0; k < tipSegs.length; k += 5) {
             tipPath.moveTo(tipSegs[k], tipSegs[k + 1]);
             tipPath.lineTo(tipSegs[k + 2], tipSegs[k + 3]);
           }
+        }
+        if (p.kind === 'under' && !reuseWalk) {
+          p.lastWalk = { buckets, tipSegs, branchPaths, tipPath };
         }
 
         // Twig ends, so the highlight sits over the branches. In daylight the
@@ -8530,7 +8555,6 @@
       // than dropped in — the sheet is uncovered from the ground up, which
       // is a wall going up — and it waits for the shelf to be laid first.
       drawGazebo(now);
-      stepFallers(now, dt);
       // and a word to the air that the branches have moved
       if (G.tick) G.tick();
     }
@@ -8542,6 +8566,7 @@
     // drops out of the bottom of the picture. The leaf it was is missing
     // from the tree for a time. A pressed tree sheds a handful at once.
     const fallers = [];
+    let fallPainted = false;
     let nextFall = 8;                       // seconds until the next leaf lets go
     const FALL_KEEP = 22;                   // seconds a fallen leaf lies on the shelf
 
@@ -8575,6 +8600,7 @@
 
     function stepFallers(now, dt) {
       now0 = now;
+      if (fallPainted) { fallCtx.clearRect(0, 0, W, H); fallPainted = false; }
       if (introing || reduced) return;
       // a leaf lets go now and then, from a random tree, by day only
       if (mix > 0.6 && dt > 0) {
@@ -8618,12 +8644,13 @@
         if (a <= 0.01) continue;
         const z = f.size, hz = z / 2;
         const c = Math.cos(f.a), s = Math.sin(f.a);
-        ctx.globalAlpha = a;
-        ctx.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, dpr * f.x, dpr * f.y);
-        ctx.drawImage(f.sprite, -hz, -hz, z, z);
+        fallCtx.globalAlpha = a;
+        fallCtx.setTransform(dpr * c, dpr * s, -dpr * s, dpr * c, dpr * f.x, dpr * f.y);
+        fallCtx.drawImage(f.sprite, -hz, -hz, z, z);
+        fallPainted = true;
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.globalAlpha = 1;
+      fallCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fallCtx.globalAlpha = 1;
     }
 
     // Whether this frame is one of every frame or one of every other — the
@@ -8655,25 +8682,45 @@
     // is anything with a beginning and an end: the opening, where whole plants
     // come up out of the ground; a tree pressed and springing back; the moon
     // bolting from under the pointer; the lamp's flare and the changeover
-    // behind it. Those get every frame. The wind, the lean and a leaf on its
-    // way down get every second frame, which is nine tenths of the time the
-    // grove is on screen and was very nearly the whole of its cost — the
+    // behind it. Those get up to sixty frames a second. Wind and lean get
+    // thirty, which is nine tenths of the time the grove is on screen and
+    // was very nearly the whole of its cost — the
     // grove is by a long way the most expensive thing on the page, and the
     // hero was missing its frame often enough to fall to half rate anyway.
     // Everything drawn over the grove keeps its own clock: the birds fly at
     // sixty either way, and a bird perched on a twig is drawn from that twig,
     // so the two move together whichever beat the branch is on.
-    let running = false, raf = 0, beat = 0;
+    // Bound the callback cadence by elapsed time: a 120/144 Hz screen must
+    // not double the entire grove's drawing bill. Keep the small falling-leaf
+    // layer at sixty independently, including while a tree is held down.
+    let running = false, raf = 0, groveAt = 0, fallAt = 0, fallLast = 0, beat = 0;
     const quick = () =>
       introing || flare > 0.01 || mix !== mixTo || moonT >= 0 ||
-      plants.some(p => p.grow !== p.growTarget);
+      plants.some(p => p.grow !== p.growTarget || (p.grow >= 1 && p.popT < POP_LIFE));
     function loop(now) {
       beat ^= 1;
       const full = quick();
-      if (beat || full) { everyFrame = full; render(now); }
+      const frame = 1000 / (full ? 60 : 30);
+      // Keep alternate callbacks free when the device is already behind:
+      // chasing thirty paints on a twenty-frame screen starves the birds.
+      if ((full || beat) && (!groveAt || now - groveAt >= frame - 1)) {
+        everyFrame = full;
+        render(now);
+        groveAt = now - Math.max(0, (now - groveAt - frame) % frame);
+      }
+      if (!fallAt || now - fallAt >= 1000 / 60 - 1) {
+        stepFallers(now, fallLast ? Math.min(0.05, (now - fallLast) / 1000) : 0);
+        fallLast = now;
+        fallAt = now - Math.max(0, (now - fallAt - 1000 / 60) % (1000 / 60));
+      }
       raf = requestAnimationFrame(loop);
     }
-    function start() { if (!running) { running = true; raf = requestAnimationFrame(loop); } }
+    function start() {
+      if (!running && inView && !document.hidden) {
+        running = true; groveAt = fallAt = fallLast = lastNow = 0;
+        raf = requestAnimationFrame(loop);
+      }
+    }
     function stop() { running = false; cancelAnimationFrame(raf); }
 
     window.addEventListener('pointermove', e => {
@@ -8741,7 +8788,12 @@
     // the lamp going out: the twig ends catch the last of its light
     document.addEventListener('lamp', e => { if (!e.detail.on) { flare = 1; start(); } });
 
-    const relayout = () => { layout(); render(performance.now()); };
+    const relayout = () => {
+      layout();
+      const now = performance.now();
+      render(now);
+      stepFallers(now, 0);
+    };
     const ro = new ResizeObserver(relayout);
     ro.observe(canvas);
     // and the case the observer cannot see: the canvas moving without
@@ -8753,9 +8805,12 @@
     WIDE.addEventListener('change', relayout);
 
     // don't burn frames when the grove is scrolled out of view
+    let inView = true;
     new IntersectionObserver(entries => {
-      entries[0].isIntersecting ? start() : stop();
+      inView = entries[0].isIntersecting;
+      inView ? start() : stop();
     }, { threshold: 0 }).observe(canvas);
+    document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
 
     layout();
     render(performance.now());

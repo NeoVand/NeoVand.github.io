@@ -394,8 +394,8 @@ opening costs a pair of blits and a few dozen stamps rather than two thousand.
 The grove as a whole is drawn on the same argument the scrub is walked on. The
 wind turns a tree over about once a second, and a plant drawn every other frame
 leans exactly as far and exactly as slowly: nothing standing in the grove is
-quick enough for the screen's full rate to show. So the loop takes the half
-beat, and gives it up only for the things that have a beginning and an end and
+quick enough for the screen's full rate to show. So the loop caps ordinary
+motion at thirty paints a second, and allows sixty for things with a beginning and an end that
 are watched all the way through — the opening, a tree pressed and springing
 back, the moon bolting from under the pointer, the lamp's flare and the
 changeover behind it. It is by far the most expensive thing on the page, and
@@ -403,7 +403,17 @@ this halves it; the birds over it keep their own sixty either way, and a bird
 perched on a twig is drawn from that twig, so the two move together whichever
 beat the branch is on. The twig ends, which are stroked as wood, as highlight,
 as flare and twice more as the scrub's mass, are held in one `Path2D` and
-walked once rather than handed over again for each stroke.
+walked once rather than handed over again for each stroke. The scrub's branch
+paths are cached with its geometry too, so a reused walk no longer rebuilds
+the paths. A tree held completely below ground skips the grammar walk.
+
+The cadence is bounded by elapsed time as well as alternating callbacks, so
+a 120 or 144 Hz display does not double the grove's work, and a slow device
+still leaves alternate callbacks free for the birds. Falling leaves use a
+separate canvas aligned with the grove and a sixty-frame clock: they keep
+tumbling between grove paints, without redrawing every branch to move a few
+sprites. Both layers stop offscreen or in a hidden tab, and restart without
+integrating the time they spent asleep.
 
 The one thing that needed care is the coats — the bed under a course, the
 shadow the cornice throws, and the coats of light that are no longer baked at
@@ -450,7 +460,7 @@ flowchart TB
     RS["ResizeObserver<br/>WIDE media query"]
   end
 
-  subgraph frame["Every other frame, or every frame while<br/>something quick is moving — render(now)"]
+  subgraph frame["Up to 30 fps, or 60 while<br/>something quick is moving — render(now)"]
     direction TB
     DT["dt = min(50 ms, now − last)"] --> GRW
     GRW["per plant: grow → growTarget<br/>front = grow·(maxDepth+SOFT)<br/>shrink, pop spring"] --> WK
@@ -463,8 +473,11 @@ flowchart TB
     SEG --> EXP["window.__grove<br/>trees[i].tips · canvas left/top<br/>handed to the air, then tick()"]
     SHF["shelf sheet · ivy · footings<br/>drawn under the plants"] --> DRAW
     DRAW --> GZD["the gazebo over the plants<br/>what has landed → stamped into the day and night sheets,<br/>two blits cross-faded · what is still in the air, drawn<br/>· its free vines on the wind"]
-    DRAW --> FALL["falling leaves<br/>on the same wind"]
   end
+
+  FALL["falling leaves — up to 60 fps<br/>same wind, separate #grove-leaves canvas"]
+  WD --> FALL
+  VIS --> FALL
 
   subgraph air["The air — its own loop, over the whole page"]
     direction TB
@@ -507,7 +520,7 @@ sequenceDiagram
   participant A as the air
 
   Note over R: requestAnimationFrame while the canvas intersects the viewport
-  loop every other frame — every frame while the opening, a press,<br/>the moon's bolt or the lamp's changeover is running
+  loop up to 30 fps — up to 60 during the opening, a press,<br/>the moon's bolt or the lamp's changeover
     R->>R: dt = min(50 ms, now − last)
     R->>C: clear · shelf sheet · ivy · footings
     loop each plant — scrub first, then trees
