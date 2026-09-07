@@ -1072,6 +1072,12 @@ still again, and it gets another shove when the bird pushes off. The speed at
 the moment of landing is no use for that — a bird flares and arrives at a stop
 — so the knock goes by the heading it came in on and how big the bird is.
 
+During the opening, one bird heads straight for the lamp pull while the rest
+land in the trees. It enters nearby, stays for eight seconds before resuming
+its usual visits, and gives the cord a small, naturally damped swing on
+landing. At night a firefly takes that place. Skipping the opening or using
+reduced motion seats it without the flight or the nudge.
+
 ## The glass
 
 The profile links and the filter chips are panes of glass rather than tinted

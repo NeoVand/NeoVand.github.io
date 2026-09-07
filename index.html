@@ -2791,6 +2791,7 @@
       uniform float uTime;
       uniform float uMix;    // 0 night .. 1 day
       uniform vec2  uSun;    // where the sun is, in p-units, so the cloud lights up under it
+      uniform float uSunVisible; // no solar glow until the grove has drawn its light source
       uniform float uWarm;   // 0 at noon .. 1 with the sun on the horizon
 
       // Gyroid, as explained by Martijn Steinrucken. Two trig calls buy a
@@ -2928,7 +2929,7 @@
           vec3 shade = mix(vec3(0.700, 0.765, 0.845), vec3(0.720, 0.680, 0.780), uWarm);
           vec3 lit   = mix(vec3(1.0, 0.985, 0.945), vec3(1.0, 0.860, 0.700), uWarm);
           vec3 cloud = mix(shade, vec3(0.945, 0.955, 0.970), smoothstep(0.02, 0.34, c));
-          cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15));
+          cloud = mix(cloud, lit, exp(-sd * 1.6) * (0.85 + uWarm * 0.15) * uSunVisible);
           vec3 day = mix(sky, cloud, smoothstep(0.0, 0.16, c));
 
           // The sun itself lives here rather than on the grove canvas: the sky
@@ -2943,9 +2944,9 @@
           vec3 s1 = mix(vec3(1.00, 0.980, 0.930), vec3(1.00, 0.900, 0.760), uWarm);
           vec3 s2 = mix(vec3(1.00, 0.940, 0.790), vec3(1.00, 0.760, 0.480), uWarm);
           vec3 s3 = mix(vec3(1.00, 0.920, 0.750), vec3(1.00, 0.640, 0.380), uWarm);
-          day += s1 * exp(-sd * 19.0) * (2.00 - uWarm * 0.6)
+          day += uSunVisible * (s1 * exp(-sd * 19.0) * (2.00 - uWarm * 0.6)
                + s2 * exp(-sd *  5.5) * (0.34 + uWarm * 0.12)
-               + s3 * exp(-sd *  1.5) * (0.12 + uWarm * 0.14);
+               + s3 * exp(-sd *  1.5) * (0.12 + uWarm * 0.14));
           // and the whole scene a shade dimmer toward the ends of the day —
           // a shade, now, rather than a tenth: at this hour the multiplier
           // never lifts, so it was a permanent nine per cent off everything
@@ -2996,6 +2997,7 @@
     const uTime = gl.getUniformLocation(prog, 'uTime');
     const uMix = gl.getUniformLocation(prog, 'uMix');
     const uSun = gl.getUniformLocation(prog, 'uSun');
+    const uSunVisible = gl.getUniformLocation(prog, 'uSunVisible');
     const uWarm = gl.getUniformLocation(prog, 'uWarm');
 
     // A full-screen shader is billed per pixel, so the buffer is capped well
@@ -3043,6 +3045,7 @@
       // The sun is drawn by the grove, and it wanders when it is bothered, so
       // its glow in the cloud has to follow it rather than sit at a fixed spot.
       const s = window.__sun;
+      gl.uniform1f(uSunVisible, s && H ? 1 : 0);
       if (s && H) {
         // published in document coordinates, so it keeps scrolling away
         // correctly even after the grove has stopped drawing itself
@@ -3050,7 +3053,7 @@
         const py = (innerHeight / 2 - (s.y - window.scrollY)) * 2 / innerHeight;
         gl.uniform2f(uSun, px, py);
       } else {
-        gl.uniform2f(uSun, -0.75, 0.62);
+        gl.uniform2f(uSun, 0, 0);
       }
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -3069,6 +3072,7 @@
 
     function start() { if (!raf && !document.hidden) raf = requestAnimationFrame(loop); }
     function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; prev = 0; } }
+    window.__sky.wake = start;
 
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     addEventListener('resize', () => { if (reduced) { resize(); draw(performance.now()); } });
@@ -8136,6 +8140,24 @@
       }
       if (flare > 0) flare = Math.max(0, flare - dt / 0.55);
 
+      // Position the arriving light before drawing it or publishing its halo.
+      // Both canvases must use this frame's position, including a skipped entry.
+      if (introing) {
+        const I = window.__intro;
+        if (!I.t0) {
+          introWait += dt;
+          if (introWait > 1.4) { I.t0 = now; introBegin(); }
+        } else if (!introStarted) {
+          introBegin();
+        }
+        if (I.t0 && moonR > 0) {
+          const elapsed = I.skipped ? I.dur : Math.max(0, now - I.t0);
+          const sky = 1 - Math.pow(1 - Math.min(1, elapsed / I.plantsAt), 3);
+          moonX = introMoonX + (moonXHome - introMoonX) * sky;
+          moonY = introMoonY + (moonYHome - introMoonY) * sky;
+        }
+      }
+
       // Before the opening begins the canvas stays clear. The sun or moon
       // comes in from the corner on the opening's first beat, and drawn at
       // its home before then it hung alone on an empty ground and then
@@ -8156,7 +8178,7 @@
           homeX = nx; homeY = ny;
           moonXHome = homeX; moonYHome = homeY;
         }
-        if (moonT >= 0) {
+        if (!introing && moonT >= 0) {
           // Bolting: slow off the mark, quickest at the end, then it rocks
           // once and settles.
           moonT += dt;
@@ -8171,7 +8193,7 @@
           }
           moonX = moonFromX + (moonToX - moonFromX) * e;
           moonY = moonFromY + (moonToY - moonFromY) * e;
-        } else {
+        } else if (!introing) {
           let dx = moonX - pointer.tx, dy = moonY - pointer.ty;
           const len = Math.hypot(dx, dy);
           const bothered = pointer.target && len < moonR * MOON_DISC * MOON_GRAB;
@@ -8219,11 +8241,14 @@
           ctx.globalCompositeOperation = 'source-over';
         }
         ctx.globalAlpha = 1;
+        const previousSun = window.__sun;
         window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
+        if ((!previousSun || (reduced && (previousSun.x !== window.__sun.x || previousSun.y !== window.__sun.y))) && window.__sky?.wake)
+          window.__sky.wake();
         // and every shadow on the shelf is measured from it, once, here
         readLight(gaz ? gaz.cx : W / 2,
                   gaz ? gaz.base - GZ_CROWN * gaz.u * 0.5 : ground - 60);
-      }
+      } else window.__sun = null;
 
       // ── the opening ──────────────────────────────────────────────────────
       // The sky and masonry arrive first. Once the last brick has settled,
@@ -8231,12 +8256,6 @@
       // If no opening starts, the grove starts its clock rather than hiding.
       if (introing) {
         const I = window.__intro;
-        if (!I.t0) {
-          introWait += dt;
-          if (introWait > 1.4) { I.t0 = now; introBegin(); }
-        } else if (!introStarted) {
-          introBegin();
-        }
         if (I.t0) {
           const elapsed = I.skipped ? I.dur : Math.max(0, now - I.t0);
           const u = Math.max(0, Math.min(1, (elapsed - I.plantsAt) / (I.birdsAt - I.plantsAt)));
@@ -8245,11 +8264,6 @@
           for (const p of plants) {
             const o = p.introOff;
             p.grow = 1 - Math.pow(1 - Math.max(0, (u - o) / (1 - o)), 3);
-          }
-          if (moonR > 0) {
-            const sky = 1 - Math.pow(1 - Math.min(1, elapsed / I.plantsAt), 3);
-            moonX = introMoonX + (moonXHome - introMoonX) * sky;
-            moonY = introMoonY + (moonYHome - introMoonY) * sky;
           }
           if (elapsed >= I.dur) {
             introing = false;
@@ -9160,10 +9174,12 @@
       // anyone is looking at it — where in a tree it settles for longer.
       c.idle = c.perch && c.perch.kind === 'el' ? 0.5 + rnd() * 1.5 : 2 + rnd() * 5;
       c.out = 0;
-      // Landed from the opening, on whatever twig there was — the tree was
-      // still growing when the flight began: a bird moves up to the crown
-      // in a moment, one after another
-      if (intro) { c.climb = true; c.idle = 0.4 + rnd() * 1.8; }
+      // The first visitor to the lamp stays long enough for its landing's
+      // gentle swing to point out the pull. Tree arrivals explore the crown.
+      if (intro && c.perch) {
+        if (c.perch.el === pullPerch) c.idle = 8;
+        else if (c.perch.kind === 'tree') { c.climb = true; c.idle = 0.4 + rnd() * 1.8; }
+      }
     }
 
     // Send one on its way to a perch. The path is a quadratic bezier whose
@@ -9570,8 +9586,8 @@
         });
       }
     }
-    // Everyone to their tree — the one arrival, whether it is riding the
-    // opening's clock or the page has simply been loaded with none.
+    // One visitor to the lamp, the rest to their trees — the one arrival,
+    // whether it is riding the opening's clock or the page has none.
     //
     // Nobody is ever put down where they will end up. A bird that is already
     // sitting on the first frame and starts moving on the second is a
@@ -9592,17 +9608,31 @@
       if (!G.trees.some(t => t.tips && t.tips.length)) return false;
       if (!hosts()) return false;
       const day = mix > 0.5;
+      const lampBox = pullPerch && rectOf(pullPerch);
+      let lamp = lampBox && lampBox.width && lampBox.top >= 8 && lampBox.bottom < innerHeight - 8
+        && lampBox.left >= 8 && lampBox.right < innerWidth - 8
+        ? { kind: 'el', el: pullPerch, u: 0.5, fixture: true } : null;
       for (const c of flock) {
         if (c.state !== 'hidden') continue;
         const t = groups[c.group].host;
-        const perch = { kind: 'tree', t, u: day ? pickTwig(t, 6, null) : rnd() };
+        const toLamp = !!lamp;
+        const perch = lamp || { kind: 'tree', t, u: day ? pickTwig(t, 6, null) : rnd() };
+        lamp = null;
         if (reduced || window.__intro?.skipped) {
           settleAt(c, perch, where(perch) || { x: G.left, y: G.top });
           c.vis = 1;
+          if (toLamp) c.idle = 8;
           continue;
         }
-        c.x = G.left + G.W * (0.12 + rnd() * 0.76) + (rnd() - 0.5) * G.W * 0.5;
-        c.y = G.top - 70 - rnd() * 220;
+        if (toLamp) {
+          // Enter from the sky beside the lamp, close enough to approach it
+          // leisurely in the same beat as the flock reaches the trees.
+          c.x = where(perch).x - Math.min(180, innerWidth * 0.25);
+          c.y = sy - 70 - rnd() * 50;
+        } else {
+          c.x = G.left + G.W * (0.12 + rnd() * 0.76) + (rnd() - 0.5) * G.W * 0.5;
+          c.y = G.top - 70 - rnd() * 220;
+        }
         c.state = 'flying'; c.vis = 1; c.alpha = 0;
         c.pose = 0; c.poseTo = 0;
         c.head = 1.25;                        // pointing the way it is going
@@ -9970,7 +10000,7 @@
         // they would be sent to a perch nobody can see
         if (!r || (!r.width && !(extra && extra.point))) return;
         if (r.top < 8 || r.top > vh * band || r.right < 40 || r.left > vw - 40) return;
-        out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true, pin: isPinned(el) }, extra));
+        out.push(Object.assign({ kind: 'el', el, u, dy: 0, fixture: true }, extra));
       };
       add(gramCrown, 0.16 + rnd() * 0.68, { gram: true });
       add(gramPlinth, 0.5, { gram: true });
@@ -10307,8 +10337,10 @@
     // where the two sheets agree to a pixel unless the page is moving under
     // it, and a bird that is moving anyway is not a bird you can see a pixel
     // of slip on.
+    // Read the fixture's current anchoring after all resize handlers finish:
+    // the cord changes between page and window coordinates at the breakpoint.
     const sheetFor = c => c.room ? 'room'
-      : (c.state === 'perched' && c.perch && c.perch.pin ? 'pin' : 'page');
+      : (c.state === 'perched' && c.perch && isPinned(c.perch.el) ? 'pin' : 'page');
     function draw(ctx, dirty, which, now) {
       // each sheet is drawn in the frame it is pinned to
       const page = which === 'page';
@@ -10473,9 +10505,6 @@
     addEventListener('scroll', wake, { passive: true });
     addEventListener('resize', () => {
       size();
-      // the machine and the lamp change which frame they belong to when the
-      // columns stack, so whoever is on one changes sheets with them
-      for (const c of flock) if (c.perch && c.perch.fixture && c.perch.el) c.perch.pin = isPinned(c.perch.el);
       wake();
     });
     document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
