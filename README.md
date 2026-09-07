@@ -382,6 +382,20 @@ pixels, which is exactly what the shelf's own bricks do when the page opens.
 It used to be a wipe up the sheet from the ground, and a wipe is a curtain
 going up, not a wall.
 
+The opening has three stages on the shared `window.__intro` clock. The shelf
+is complete at 650 ms and the pavilion at 1,700 ms, including the last bricks
+settling. Only then do the trees, scrub and ivy grow, reaching their full
+height at 2,900 ms. The birds arrive in the final second; at night the same
+sequence brings in the fireflies. The gramophone fades in after the masonry
+is complete, and the sun or moon crosses into place during construction.
+The bio retains its original 2,800 ms typing pace.
+
+Brick and pavilion timings are fitted to their actual last stamp, so changing
+the layout cannot leave a late course hanging below an already grown tree.
+The air waits for the grove to publish fully grown twig tips rather than a
+timeout. Scrolling, clicking or Escape settles the opening immediately;
+reduced motion starts with the scene complete.
+
 The list is already in the order it would be built in — plinth, balustrades,
 piers, the imposts on the piers, the walls over the openings, the rings that
 turn the arches, the entablature, the dome course by course, and the ivy over

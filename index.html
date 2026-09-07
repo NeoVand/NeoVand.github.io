@@ -41,11 +41,16 @@
   <link rel="preload" href="media/fonts/young-serif-400.woff2" as="font" type="font/woff2" crossorigin />
 
   <script>
-    // One clock for the whole opening, so the grove and the text beside it
-    // finish together rather than merely taking a similar length of time. The
+    // One clock, with construction, greenery and arrivals taking turns. The
+    // text keeps its own typing pace while the last scene stage finishes. The
     // class goes on before first paint, or the head of the page would show
     // itself finished and then start over.
-    window.__intro = { dur: 2800, t0: 0, done: false };
+    window.__intro = {
+      dur: 3900, textDur: 2800,
+      shelfEnd: 650, plantsAt: 1700, birdsAt: 2900,
+      t0: 0, done: false, textDone: false, sceneDone: false, skipped: false,
+    };
+    document.documentElement.style.setProperty('--gram-enter-delay', window.__intro.plantsAt + 'ms');
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('has-intro');
 
@@ -1052,8 +1057,9 @@
        first, the gazebo goes up on it course by course, the dome closes over
        it, and only then is there a room for the instrument to be standing
        in. Arriving on time it hung in mid-air over a building site. */
-    .has-intro #gramophone { opacity: 0; transition: opacity 900ms var(--ease) 2300ms; }
+    .has-intro #gramophone { opacity: 0; transition: opacity 900ms var(--ease) var(--gram-enter-delay); }
     .is-lit #gramophone { opacity: 1; }
+    .intro-skipped #gramophone { transition: none; }
 
     #gramophone .gram-art { display: block; width: 100%; height: auto; }
 
@@ -4991,6 +4997,7 @@
     const bioEl = document.querySelector('.about-bio');
     const linksEl = document.querySelector('.about-links');
     const bricks = [];       // the shelf's bricks, as rectangles on the canvas
+    let shelfLast = 0;       // last brick's settling time, before fitting the opening's first stage
 
     // The canvas is inset past its box on every side (see CSS) so branches
     // can sway out of the panel without being clipped.
@@ -5065,6 +5072,7 @@
         ledgeRows.push({ x0: rx, x1: rx + rowW, y0: y, y1: y + courses[c] });
         y += courses[c] + LEDGE_VGAP;
       }
+      shelfLast = Math.max(...bricks.map(b => b.bd + 0.62));
     }
 
     // ── Painting the shelf ─────────────────────────────────────────────────
@@ -5334,10 +5342,11 @@
     function drawShelf(now) {
       if (!bricks.length) return;
       const day = mix, night = 1 - mix;
-      if (introing) {
+      const I = window.__intro;
+      const elapsed = I.t0 ? Math.max(0, now - I.t0) : 0;
+      if (INTRO && !I.skipped && elapsed < I.shelfEnd) {
         // laid one at a time
-        const I = window.__intro;
-        const t = I && I.t0 ? (now - I.t0) / 1000 : 0;
+        const t = elapsed / I.shelfEnd * shelfLast;
         for (const b of bricks) {
           const u = Math.min(1, Math.max(0, (t - b.bd) / 0.62));
           if (u <= 0) continue;
@@ -5384,7 +5393,7 @@
     // other: a ramp has to decide which end is the near one, and it changes
     // its mind all at once when the sun is chased past the middle.
     function shelfLight() {
-      if (!ledgeRows.length || introing) return;
+      if (!ledgeRows.length) return;
       const day = mix, night = 1 - mix;
       const R = Math.max(40, (ledgeX1 - ledgeX0) * 0.85);
       // course by course rather than over the whole box: the courses step in
@@ -7450,6 +7459,20 @@
         i = j;
       }
 
+      // Fit the complete masonry (including its settling) between the
+      // finished shelf and the first plant. Ivy gets the following stage.
+      // Measuring the actual last stamp keeps this true at every layout size.
+      const I = window.__intro;
+      const fabricEnd = Math.max(...gzOps.slice(0, nFabric).map(op => op.d + op.dur));
+      const ivyEnd = Math.max(GZ_LAY, ...gzOps.slice(nFabric).map(op => op.d + op.dur));
+      for (let i = 0; i < gzOps.length; i++) {
+        const op = gzOps[i], fabric = i < nFabric;
+        const scale = fabric ? (I.plantsAt - I.shelfEnd) / 1000 / fabricEnd
+                             : (I.birdsAt - I.plantsAt) / 1000 / Math.max(0.001, ivyEnd - GZ_LAY);
+        op.d = (fabric ? I.shelfEnd : I.plantsAt) / 1000 + (op.d - (fabric ? 0 : GZ_LAY)) * scale;
+        op.dur *= scale;
+      }
+
       gaz = {
         cx, base, u: unit, nFabric,
         box: (() => {
@@ -7619,10 +7642,10 @@
     // has landed is stamped once into the two sheets and never drawn again, so
     // the opening costs a pair of blits and a few dozen stamps rather than two
     // thousand.
-    const GZ_WAIT = 0.95;     // s after the opening starts — the shelf goes first
-    const GZ_LAY = 1.40;      // and this long to lay the brickwork
-    const GZ_GROW = 1.05;     // and for the ivy to come over it after
-    let gazDayG = null, gazNightG = null, gazHead = 0, gazT0 = 0;
+    // Relative stamp timing, fitted to the shared stages by gzFinish().
+    const GZ_LAY = 1.40;
+    const GZ_GROW = 1.05;
+    let gazDayG = null, gazNightG = null, gazHead = 0;
 
     function gzOpen() {
       const b = gaz.box;
@@ -7655,11 +7678,8 @@
     function drawGazebo(now) {
       if (!gaz) return;
       if (!gazDay || gazDay.width !== Math.max(1, Math.ceil(gaz.box.w * dpr))) gzOpen();
-      if (!gazT0 && INTRO) {
-        const I = window.__intro;
-        if (I && I.t0) gazT0 = I.t0 + GZ_WAIT * 1000;
-      }
-      const t = INTRO ? (gazT0 ? (now - gazT0) / 1000 : -1) : Infinity;
+      const I = window.__intro;
+      const t = INTRO && !I.skipped ? (I.t0 ? (now - I.t0) / 1000 : -1) : Infinity;
       if (t < 0) return;
       const ops = gaz.ops, n = ops.length;
       // everything that has landed goes into the sheets, from the front of the
@@ -7704,7 +7724,7 @@
       }
       // and the light over the top of it, from wherever the sun is now
       for (const op of gaz.over) gzShine(op, t, day, night);
-      const vine = t === Infinity ? 1 : Math.max(0, Math.min(1, (t - GZ_LAY * 0.86) / GZ_GROW));
+      const vine = t === Infinity ? 1 : Math.max(0, Math.min(1, (t * 1000 - I.plantsAt) / (I.birdsAt - I.plantsAt)));
       if (vine > 0) drawStrands(gazVines, now, vine);
     }
 
@@ -8206,10 +8226,9 @@
       }
 
       // ── the opening ──────────────────────────────────────────────────────
-      // Plants push up, the moon slides in off the corner, and the birds or
-      // the fireflies come down out of the sky (see the air, in the next
-      // script), all on the same clock as the text beside them. If no opening ever
-      // starts, the grove grows itself in rather than sitting invisible.
+      // The sky and masonry arrive first. Once the last brick has settled,
+      // vegetation grows; only the finished crowns invite the birds below.
+      // If no opening starts, the grove starts its clock rather than hiding.
       if (introing) {
         const I = window.__intro;
         if (!I.t0) {
@@ -8219,7 +8238,8 @@
           introBegin();
         }
         if (I.t0) {
-          const u = Math.max(0, Math.min(1, (now - I.t0) / I.dur));
+          const elapsed = I.skipped ? I.dur : Math.max(0, now - I.t0);
+          const u = Math.max(0, Math.min(1, (elapsed - I.plantsAt) / (I.birdsAt - I.plantsAt)));
           const e = 1 - Math.pow(1 - u, 3);
           introEase = e;
           for (const p of plants) {
@@ -8227,10 +8247,14 @@
             p.grow = 1 - Math.pow(1 - Math.max(0, (u - o) / (1 - o)), 3);
           }
           if (moonR > 0) {
-            moonX = introMoonX + (moonXHome - introMoonX) * e;
-            moonY = introMoonY + (moonYHome - introMoonY) * e;
+            const sky = 1 - Math.pow(1 - Math.min(1, elapsed / I.plantsAt), 3);
+            moonX = introMoonX + (moonXHome - introMoonX) * sky;
+            moonY = introMoonY + (moonYHome - introMoonY) * sky;
           }
-          if (u >= 1) { introing = false; I.done = true; for (const p of plants) p.grow = 1; }
+          if (elapsed >= I.dur) {
+            introing = false;
+            for (const p of plants) { p.grow = 1; p.front = Infinity; p.shrink = 1; }
+          }
         }
       } else for (const p of plants) {
         if (p.grow !== p.growTarget) {
@@ -8288,10 +8312,9 @@
 
       // the ivy and the shade under the trunks go on before the plants, so
       // the wood and the scrub sit over them
-      // the ivy waits for the shelf to have faded in and the first plants
-      // to have broken ground, then spills over during the rest
+      // the ivy joins the greenery stage after the masonry is complete
       drawShelf(now);
-      drawIvy(now, introing ? Math.max(0, (introEase - 0.28) / 0.72) : 1);
+      drawIvy(now, introing ? introEase : 1);
       drawFootings();
 
       ctx.lineCap = 'round';
@@ -8316,9 +8339,9 @@
         // loop is already on its half beat (see below), since halving a half
         // would leave a clump standing on the same shape for a sixteenth of a
         // second, which is a step and not a sway.
-        const settled = p.grow === p.growTarget && p.popT >= POP_LIFE && !introing;
+        const settled = p.grow === p.growTarget && p.popT >= POP_LIFE && (!introing || introEase === 1);
         let levels = [];
-        const reuseWalk = p.kind === 'under' && settled && everyFrame && p.lastWalk && ((frameNo + p.tipSalt) & 1);
+        const reuseWalk = p.kind === 'under' && settled && everyFrame && p.lastWalk && p.lastWalk.grow === p.grow && ((frameNo + p.tipSalt) & 1);
         if (reuseWalk) {
           ({ buckets, tipSegs, branchPaths, tipPath } = p.lastWalk);
         } else {
@@ -8431,7 +8454,7 @@
           }
         }
         if (p.kind === 'under' && !reuseWalk) {
-          p.lastWalk = { buckets, tipSegs, branchPaths, tipPath };
+          p.lastWalk = { buckets, tipSegs, branchPaths, tipPath, grow: p.grow };
         }
 
         // Twig ends, so the highlight sits over the branches. In daylight the
@@ -8573,6 +8596,17 @@
       // than dropped in — the sheet is uncovered from the ground up, which
       // is a wall going up — and it waits for the shelf to be laid first.
       drawGazebo(now);
+      // Publish readiness only after this frame has produced full twig tips.
+      // The air can retry from this flag if its script was not ready yet.
+      if (!G.readyForArrival && plants.every(p => p.grow >= 1)) {
+        G.readyForArrival = true;
+        const I = window.__intro;
+        if (G.onIntro) G.onIntro((I.dur - I.birdsAt) / 1000);
+      }
+      if (!introing && !window.__intro.sceneDone) {
+        window.__intro.sceneDone = true;
+        document.dispatchEvent(new Event('intro:scene-done'));
+      }
       // and a word to the air that the branches have moved
       if (G.tick) G.tick();
     }
@@ -8688,9 +8722,7 @@
       introMoonY = -moonR * 0.9;
       moonX = introMoonX; moonY = introMoonY;
 
-      // and the birds or the fireflies come down out of the sky, each party to its
-      // tree, landing just before the rest of the opening lands
-      if (G.onIntro) G.onIntro(window.__intro.dur / 1000);
+      // The air is invited later, after the greenery has finished growing.
     }
 
     // ── how often it draws ────────────────────────────────────────────────
@@ -8713,7 +8745,7 @@
     // layer at sixty independently, including while a tree is held down.
     let running = false, raf = 0, groveAt = 0, fallAt = 0, fallLast = 0, beat = 0;
     const quick = () =>
-      introing || flare > 0.01 || mix !== mixTo || moonT >= 0 ||
+      (introing && introEase < 1) || flare > 0.01 || mix !== mixTo || moonT >= 0 ||
       plants.some(p => p.grow !== p.growTarget || (p.grow >= 1 && p.popT < POP_LIFE));
     function loop(now) {
       beat ^= 1;
@@ -8832,6 +8864,11 @@
 
     layout();
     render(performance.now());
+    // A scroll can pause the regular loop before it observes the skip. Land
+    // one frame anyway, so the air and reading room receive real twig tips.
+    document.addEventListener('intro:done', () => {
+      if (window.__intro.skipped && introing) render(performance.now());
+    });
   })();
 
   </script>
@@ -9502,6 +9539,7 @@
     // curve the same way, so the bow of the path is shared and only
     // jittered, where fireflies each go their own way.
     function migrate(g, startled) {
+      if (!arrived) return;
       const grp = groups[g];
       grp.timer = MIGRATE_MIN + rnd() * (MIGRATE_MAX - MIGRATE_MIN);
       const n = G.trees.length;
@@ -9550,13 +9588,19 @@
     // They arrive the way the birds do now. What is under the shelf is the
     // one place on this page nothing can come from.
     function arrive(secs) {
+      if (INTRO && !G.readyForArrival) return false;
+      if (!G.trees.some(t => t.tips && t.tips.length)) return false;
       if (!hosts()) return false;
       const day = mix > 0.5;
       for (const c of flock) {
         if (c.state !== 'hidden') continue;
         const t = groups[c.group].host;
         const perch = { kind: 'tree', t, u: day ? pickTwig(t, 6, null) : rnd() };
-        if (reduced) { settleAt(c, perch, where(perch) || { x: G.left, y: G.top }); c.vis = 1; continue; }
+        if (reduced || window.__intro?.skipped) {
+          settleAt(c, perch, where(perch) || { x: G.left, y: G.top });
+          c.vis = 1;
+          continue;
+        }
         c.x = G.left + G.W * (0.12 + rnd() * 0.76) + (rnd() - 0.5) * G.W * 0.5;
         c.y = G.top - 70 - rnd() * 220;
         c.state = 'flying'; c.vis = 1; c.alpha = 0;
@@ -9586,18 +9630,19 @@
     G.tick = () => wake();
     // A tree pressed: the party on it moves on.
     G.onPress = t => {
+      if (!arrived) return;
       for (let g = 0; g < groups.length; g++) if (groups[g].host === t && !groups[g].away) migrate(g, true);
       wake();
     };
-    // The opening: they come in on its clock, landing just before the rest
-    // of it does.
+    // The opening's last act: the grove has published fully grown branches,
+    // so everyone has somewhere to land before they enter the picture.
     let arrived = false;
-    G.onIntro = secs => { if (!arrived && arrive(secs)) arrived = true; };
-    // No opening, or one that never reaches here: they come in on their own
-    // account instead. Not before the grove has been walked once, though —
-    // until it has there are no twigs to aim at.
+    G.onIntro = secs => {
+      if (!arrived && arrive(secs)) { arrived = true; wake(); }
+    };
+    // The frame below retries this handshake if the grove rendered before
+    // these hooks existed. A timeout could send birds into unfinished trees.
     const INTRO = !!window.__intro && !reduced;
-    if (INTRO) setTimeout(() => { if (!arrived && arrive(0)) { arrived = true; wake(); } }, 5000);
 
     // ── the reading room ────────────────────────────────────────────────
     // A paper opened brings a party in — the one that did not go last time —
@@ -9676,11 +9721,13 @@
       flock, groups,       // for a look from the console
       // a hand on the machine puts up whatever was sitting on it
       gram: { press() {
+        if (!arrived) return;
         for (const c of flock) if (c.state === 'perched' && c.perch && c.perch.gram) goHome(c);
         wake();
       } },
       // and a hand on the gazebo puts up whatever was sitting on its roof
       gazebo: { press() {
+        if (!arrived) return;
         for (const c of flock) {
           if (c.state !== 'perched' || !c.perch) continue;
           if (c.perch.kind === 'dome' || c.perch.kind === 'ledge') goHome(c);
@@ -9691,7 +9738,7 @@
       // cord about to be pulled. Anything standing on that element, or on
       // something inside it, gets up and goes home.
       press(el) {
-        if (!el) return;
+        if (!arrived || !el) return;
         let any = false;
         for (const c of flock) {
           const p = c.perch;
@@ -9821,6 +9868,7 @@
     }
     let escortAt = 0;
     function stepEscort(now) {
+      if (!arrived) return;
       if (now - escortAt < 160) return;      // often enough to keep up with a scroll
       escortAt = now;
       const home = G.top + G.H > sy + 40;    // the grove is still in view
@@ -10355,10 +10403,14 @@
       }
 
       let busy = mix !== mixTo || (room.open && (room.timer > 0 || room.resettle > 0));
-      // with no opening to ride, they come in as soon as there is a grove to
-      // come in to
-      if (!arrived && !INTRO && G.trees.some(t => t.tips && t.tips.length) && arrive(0)) arrived = true;
-      if (hosts()) {
+      // Retry after a real grove frame, including when its first ready frame
+      // came before the air script or while this canvas was asleep.
+      if (!arrived && (!INTRO || G.readyForArrival)) {
+        const I = window.__intro;
+        const secs = INTRO ? (I.dur - I.birdsAt) / 1000 : 0;
+        if (arrive(secs)) arrived = true;
+      }
+      if (arrived && hosts()) {
         for (let g = 0; g < groups.length; g++) {
           const grp = groups[g];
           if (grp.away || reduced) continue;
@@ -11564,9 +11616,9 @@
     }
     write(0);
 
-    // The buttons land one after another and the last one lands with everything
-    // else, so the whole head of the page settles on the same beat.
-    const last = I.dur - 480, first = I.dur * 0.42;
+    // The text and its buttons keep their original pace while the scene
+    // finishes its last stage. The gallery follows the completed entrance.
+    const last = I.textDur - 480, first = I.textDur * 0.42;
     links.forEach((b, i) => b.style.setProperty('--bd',
       Math.round(links.length > 1 ? first + i * (last - first) / (links.length - 1) : first) + 'ms'));
     filters.forEach((b, i) => b.style.setProperty('--fd', Math.round(i * 45) + 'ms'));
@@ -11579,19 +11631,20 @@
       // heavy first frame, the next timestamp can land a millisecond or two
       // *before* t0. Unclamped that is a negative character count, and a
       // negative offset into a Range, which throws.
-      const u = Math.max(0, Math.min(1, (now - I.t0) / I.dur));
+      const u = Math.max(0, Math.min(1, (now - I.t0) / I.textDur));
       write(Math.round(u * total));
       if (u < 1) raf = requestAnimationFrame(tick);
       else { bioEl.classList.remove('typing', 'writing'); restore(); finishPhase2(); }
     }
 
     function finishPhase2() {
-      root.classList.add('lit-done', 'filters-in');
-      I.done = true;
-      document.dispatchEvent(new Event('intro:done'));
+      I.textDone = true;
+      if (I.sceneDone) finish();
     }
+    document.addEventListener('intro:scene-done', () => { if (I.textDone) finish(); });
 
     function start() {
+      if (scrollY > 40) { skip(); return; }
       if (I.t0) return;
       I.t0 = performance.now();
       root.classList.add('is-lit');
@@ -11616,10 +11669,19 @@
     } else go();
 
     // Anyone who scrolls or clicks has stopped watching: land it immediately.
-    const skip = () => { if (!I.done) { cancelAnimationFrame(raf); finish(); } };
+    const skip = () => {
+      if (!I.done) {
+        I.skipped = true;
+        root.classList.add('intro-skipped');
+        cancelAnimationFrame(raf);
+        finish();
+      }
+    };
     addEventListener('scroll', () => { if (scrollY > 40) skip(); }, { passive: true });
     addEventListener('pointerdown', skip, { once: true, passive: true });
     addEventListener('keydown', e => { if (e.key === 'Escape') skip(); });
+    // A restored scroll position may already exist before listeners attach.
+    if (scrollY > 40) skip();
   })();
   </script>
 
