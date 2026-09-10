@@ -366,6 +366,15 @@
       position: relative;
       width: var(--S);
       height: var(--S);
+      /* and it grows as it turns — from a point to its full size on the
+         same clock and the same curve as the turning, so the two arrive
+         together: the star is its full size at the moment it comes to rest */
+      will-change: transform;
+      animation: veil-grow 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    @keyframes veil-grow {
+      from { transform: scale(0.08); }
+      to   { transform: scale(1); }
     }
     /* Each square is three boxes deep: the orbit, which the exit scales and
        fades; the ring, which turns; and the frame, which holds the sides.
@@ -427,6 +436,7 @@
     }
     html.veil-full .veil-fl { fill: var(--text); }
     @media (prefers-reduced-motion: reduce) {
+      .veil-stage { animation: none; }
       .veil-ring { animation: none; transform: rotate(var(--to, 0deg)); }
       .veil-fl .fl-part { animation: none; opacity: 1; transform: none; }
       .veil-orbit { transition: opacity 280ms linear; }
