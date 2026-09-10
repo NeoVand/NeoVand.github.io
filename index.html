@@ -355,25 +355,41 @@
       transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);
     }
     html.veil-gone #veil { opacity: 0; pointer-events: none; }
-    html.veil-gone .veil-frame {
-      opacity: 0;
-      transform: scale(1.07);
-      transition: opacity 560ms var(--ease), transform 1000ms var(--ease);
-    }
     /* Once unrolled it breathes, slowly, so a long wait reads as waiting
        rather than as stuck; ready, it brightens and holds still. Both are
        opacity and transform on whole elements — compositor work — because
        the main thread is busy parsing and building the page behind the
        veil for most of the time the veil is up, and that is precisely when
        this has to keep moving. */
-    .veil-frame {
-      --S: min(62vmin, 380px);
+    .veil-stage {
+      --S: min(64vmin, 400px);
       position: relative;
       width: var(--S);
       height: var(--S);
-      will-change: transform, opacity;
-      animation: veil-breathe 2600ms ease-in-out 1700ms infinite alternate;
     }
+    /* Each square is three boxes deep: the orbit, which the exit scales and
+       fades; the ring, which turns; and the frame, which holds the sides.
+       All of it is transforms and opacity on whole elements, which the
+       compositor runs on its own — the main thread is busy building the
+       page behind the veil for most of the time the veil is up, and that
+       is precisely when this has to keep moving. */
+    .veil-orbit, .veil-ring, .veil-frame { position: absolute; inset: 0; }
+    .veil-orbit { will-change: transform, opacity; }
+    .veil-ring {
+      will-change: transform;
+      animation: veil-spin var(--spin, 12s) linear infinite;
+    }
+    @keyframes veil-spin {
+      from { transform: rotate(var(--k0, 0deg)); }
+      to   { transform: rotate(calc(var(--k0, 0deg) + 360deg)); }
+    }
+    /* the inner square: smaller, and its pieces a beat behind the outer */
+    .veil-orbit[data-ring="b"] .veil-frame { transform: scale(0.72); }
+    .veil-orbit[data-ring="b"] .fl-part { animation-delay: calc(var(--d, 0ms) + 240ms); }
+    /* the exit: the outer square opens outward, the inner closes inward */
+    .veil-orbit { transition: transform 1000ms var(--ease), opacity 640ms var(--ease); }
+    html.veil-gone .veil-orbit[data-ring="a"] { transform: scale(1.14); opacity: 0; }
+    html.veil-gone .veil-orbit[data-ring="b"] { transform: scale(0.82); opacity: 0; }
     /* each side is the whole square, turned a quarter at a time about its
        centre, with the ornament laid along its top edge, finial outward */
     .veil-side {
@@ -405,12 +421,11 @@
       from { opacity: 0; transform: scale(0.3) rotate(var(--r, 0deg)); }
       to   { opacity: 1; transform: none; }
     }
-    @keyframes veil-breathe { to { opacity: 0.62; } }
-    html.veil-full .veil-frame { animation: none; opacity: 1; }
     html.veil-full .veil-fl { fill: var(--text); }
     @media (prefers-reduced-motion: reduce) {
-      .veil-frame, .veil-fl .fl-part { animation: none; opacity: 1; }
-      .veil-fl .fl-part { transform: none; }
+      .veil-ring { animation: none; transform: rotate(var(--k0, 0deg)); }
+      .veil-fl .fl-part { animation: none; opacity: 1; transform: none; }
+      .veil-orbit { transition: opacity 280ms linear; }
       html.veiled #veil { transition-duration: 280ms; }
     }
 
@@ -2855,16 +2870,16 @@
        piece, stalling while the rest of it is still being parsed. It is
        first in the body so it is the first thing painted. -->
   <div id="veil" aria-hidden="true">
-    <!-- The flourish from the section dividers, four times, as the sides of
-         a square, each unrolling from its middle out while the page is
-         built. One ornament on its own was a thing with an up and a down;
-         four about a centre have neither. The pieces are the same eleven
-         the divider script cuts the ornament into at runtime, baked here
-         with their places and pivots, since this has to paint before any
-         script has run, and defined once and referenced from each side. It
-         is the only thing on the veil, so that nothing on it can be
-         mistaken for the moon or the sun that arrive with the grove a
-         moment later, somewhere else. -->
+    <!-- The flourish from the section dividers, as the sides of squares,
+         each unrolling from its middle out while the page is built. One
+         ornament on its own was a thing with an up and a down; four about a
+         centre have neither. The pieces are the same eleven the divider
+         script cuts the ornament into at runtime, baked here with their
+         places and pivots, since this has to paint before any script has
+         run, and defined once and referenced from each side. It is the only
+         thing on the veil, so that nothing on it can be mistaken for the
+         moon or the sun that arrive with the grove a moment later,
+         somewhere else. -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
       <g id="vf0">
         <g>
@@ -2946,8 +2961,15 @@
           c-3.5-3.5-1.6-11.2,4.5-10.7c8,0.6,7.9,9.1,1.4,11.7c21.2-5.4,10.7-31.8-2.5-40.3c-15.8-10.2-48.7-0.5-57,15.4L974.7,437.3z" fill-rule="evenodd"></path>
       </g>
     </defs></svg>
-    <div class="veil-frame">
-      <div class="veil-side" style="--k:0"><div class="fl veil-fl">
+    <!-- Two squares of it, one inside the other and a half-turn of a square
+         apart, which together make an eight-pointed star. Both turn, slowly
+         and at different rates, while their pieces unroll; when the page is
+         ready they glide to a stop set exactly into the star, and then the
+         outer one opens outward and the inner one closes inward as the
+         ground clears. -->
+    <div class="veil-stage">
+      <div class="veil-orbit" data-ring="a" style="--k0:0deg;--spin:11s"><div class="veil-ring"><div class="veil-frame">
+        <div class="veil-side" style="--k:0"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
         <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
@@ -2959,8 +2981,8 @@
         <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
         <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
         <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-      </div></div>
-      <div class="veil-side" style="--k:1"><div class="fl veil-fl">
+        </div></div>
+        <div class="veil-side" style="--k:1"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
         <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
@@ -2972,8 +2994,8 @@
         <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
         <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
         <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-      </div></div>
-      <div class="veil-side" style="--k:2"><div class="fl veil-fl">
+        </div></div>
+        <div class="veil-side" style="--k:2"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
         <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
@@ -2985,8 +3007,8 @@
         <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
         <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
         <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-      </div></div>
-      <div class="veil-side" style="--k:3"><div class="fl veil-fl">
+        </div></div>
+        <div class="veil-side" style="--k:3"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
         <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
@@ -2998,7 +3020,62 @@
         <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
         <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
         <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-      </div></div>
+        </div></div>
+      </div></div></div>
+      <div class="veil-orbit" data-ring="b" style="--k0:45deg;--spin:17s"><div class="veil-ring"><div class="veil-frame">
+        <div class="veil-side" style="--k:0"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+        </div></div>
+        <div class="veil-side" style="--k:1"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+        </div></div>
+        <div class="veil-side" style="--k:2"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+        </div></div>
+        <div class="veil-side" style="--k:3"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+        </div></div>
+      </div></div></div>
     </div>
   </div>
   <script>
@@ -3025,6 +3102,27 @@
     function go() {
       if (done) return;
       done = true;
+      // The squares glide to a stop from wherever the turning has them —
+      // a little further round, easing out — and stop set into the star:
+      // the inner one lands a half-turn of a square from the outer.
+      const rings = [...veil.querySelectorAll('.veil-ring')];
+      if (!reduced && rings.length === 2 && window.DOMMatrixReadOnly) {
+        const angle = el => {
+          const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+          return Math.atan2(m.b, m.a) * 180 / Math.PI;
+        };
+        const a = rings.map(angle);
+        rings.forEach((r, i) => { r.style.animation = 'none'; r.style.transform = `rotate(${a[i].toFixed(2)}deg)`; });
+        void veil.offsetHeight;
+        const A = a[0] + 18;
+        let B = a[1] + 8;
+        const want = (((A + 45) % 90) + 90) % 90, have = ((B % 90) + 90) % 90;
+        B += ((want - have) % 90 + 90) % 90;
+        rings.forEach((r, i) => {
+          r.style.transition = 'transform 1100ms cubic-bezier(0.16, 1, 0.3, 1)';
+          r.style.transform = `rotate(${(i ? B : A).toFixed(2)}deg)`;
+        });
+      }
       root.classList.add('veil-full');            // the ornament brightens
       setTimeout(() => {
         // The fade begins. The opening follows a beat later, once the sky
