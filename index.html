@@ -298,6 +298,15 @@
     }
 
     html { scroll-behavior: smooth; }
+    /* Nothing widens the page. The grove's canvas bleeds sixty-four pixels
+       past its column on either side so a crown is never cut off, and on a
+       phone that is wider than the screen: the page could be dragged from
+       side to side, with the ground showing beside it. Clipped here, the
+       bleed still draws to the screen's edge and no further. `clip` keeps
+       the viewport's own scrolling as it is; `hidden` on the root is the
+       same thing for the browsers that have no `clip` yet. */
+    html { overflow-x: hidden; }
+    body { overflow-x: clip; }
 
     /* The sky is painted rather than set: a fixed canvas behind the whole
        document, so scrolling moves the page through the air instead of
@@ -326,6 +335,7 @@
       left: 0;
       display: block;
       width: 100%;
+      max-width: 100%;   /* never wider than the page, whatever the script sets */
       z-index: -1;
       pointer-events: none;
       mix-blend-mode: screen;
@@ -986,6 +996,7 @@
       position: absolute;
       top: 0;
       left: 0;
+      max-width: 100%;   /* never wider than the page, whatever the script sets */
       display: block;
       z-index: 55;
       pointer-events: none;
@@ -999,6 +1010,7 @@
       position: fixed;
       top: 0;
       left: 0;
+      max-width: 100%;
       display: block;
       z-index: 55;
       pointer-events: none;
@@ -4485,8 +4497,11 @@ self._SwissGL = SwissGL;
     function paintHalo() {
       const s = window.__sun;
       if (!s) return;              // no detached glow before the entrance
-      const w = innerWidth, radius = innerHeight * 2;
-      const h = Math.ceil(Math.max(innerHeight * 3, s.y + radius));
+      // the layout viewport, as the air's sheets: see size() there
+      const de = document.documentElement;
+      const vpw = de.clientWidth || innerWidth, vph = de.clientHeight || innerHeight;
+      const w = vpw, radius = vph * 2;
+      const h = Math.ceil(Math.max(vph * 3, s.y + radius));
       const warm = window.__clock ? window.__clock.sun().warm : 0;
       const resized = w !== haloW || h !== haloH;
       const recolor = warm !== bloomWarm;
@@ -11952,7 +11967,13 @@ self._SwissGL = SwissGL;
     const PAD = 140;
     let originX = 0, originY = -1;
     function size() {
-      W = innerWidth; H = innerHeight; HP = H + PAD * 2;
+      // The layout viewport, not innerWidth: on a phone innerWidth follows
+      // the visual viewport, which zooms out to fit any content wider than
+      // the screen — and a sheet given that width is such content. Turned
+      // sideways and back, the sheets kept the wide size, the page zoomed
+      // out to hold them, and it could be dragged from side to side.
+      const de = document.documentElement;
+      W = de.clientWidth || innerWidth; H = de.clientHeight || innerHeight; HP = H + PAD * 2;
       dpr = Math.min(devicePixelRatio || 1, 2);
       // The window's sheet is only as tall as the furniture pinned to it —
       // the machine's foot and the lamp's bead are both up near the top — since
@@ -12831,7 +12852,11 @@ self._SwissGL = SwissGL;
     let ready = false, docAnchored = false;
     const sy = () => docAnchored ? (window.scrollY || 0) : 0;
     function layout() {
-      W = window.innerWidth; H = window.innerHeight;
+      // the layout viewport rather than innerWidth, which on a phone follows
+      // the zoomed visual viewport (see size() in the air): the cord is
+      // hung from the page's own right edge, whatever the zoom
+      const de = document.documentElement;
+      W = de.clientWidth || window.innerWidth; H = de.clientHeight || window.innerHeight;
       if (!W || !H) return;
       restDrawn = false;             // a resized sheet is a blank sheet
       // Where the page is stacked the cord's numbers are page numbers (see
