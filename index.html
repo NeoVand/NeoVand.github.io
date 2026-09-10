@@ -366,15 +366,6 @@
       position: relative;
       width: var(--S);
       height: var(--S);
-      /* and it grows as it turns — from a point to its full size on the
-         same clock and the same curve as the turning, so the two arrive
-         together: the star is its full size at the moment it comes to rest */
-      will-change: transform;
-      animation: veil-grow 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-    @keyframes veil-grow {
-      from { transform: scale(0.08); }
-      to   { transform: scale(1); }
     }
     /* Each square is three boxes deep: the orbit, which the exit scales and
        fades; the ring, which turns; and the frame, which holds the sides.
@@ -396,9 +387,8 @@
       from { transform: rotate(var(--from, 0deg)); }
       to   { transform: rotate(var(--to, 0deg)); }
     }
-    /* the inner square: smaller, and its pieces a beat behind the outer */
+    /* the inner square: smaller */
     .veil-orbit[data-ring="b"] .veil-frame { transform: scale(0.72); }
-    .veil-orbit[data-ring="b"] .fl-part { animation-delay: calc(var(--d, 0ms) + 240ms); }
     /* the exit: the outer square opens outward, the inner closes inward */
     .veil-orbit { transition: transform 1400ms var(--ease), opacity 760ms var(--ease); }
     html.veil-gone .veil-orbit[data-ring="a"] { transform: scale(1.05); opacity: 0; }
@@ -420,10 +410,17 @@
       fill: var(--ink);
       transition: fill 420ms var(--ease);
     }
+    /* The ornament grows as it turns: its pieces come in from the middle
+       of each side outward, spread over the whole of the turn, so that the
+       last spirals land at the moment the turning stops. The delays are
+       baked per piece as --d, on an 800ms scale; stretched here to fit the
+       2400ms turn, with each piece's own 720ms added at the end. The inner
+       square starts a beat behind the outer and catches it up by the end. */
     .veil-fl .fl-part {
       transition: none;
-      animation: veil-unroll 800ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms) both;
+      animation: veil-unroll 720ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--d, 0ms) * 2.1) both;
     }
+    .veil-orbit[data-ring="b"] .fl-part { animation-delay: calc(var(--d, 0ms) * 1.8 + 240ms); }
     /* by day the ornament is the branch it is on the dividers: bark where
        it leaves the middle, green out at the curls — by piece here, since a
        <use> takes its fill from the element that references it */
@@ -436,7 +433,6 @@
     }
     html.veil-full .veil-fl { fill: var(--text); }
     @media (prefers-reduced-motion: reduce) {
-      .veil-stage { animation: none; }
       .veil-ring { animation: none; transform: rotate(var(--to, 0deg)); }
       .veil-fl .fl-part { animation: none; opacity: 1; transform: none; }
       .veil-orbit { transition: opacity 280ms linear; }
