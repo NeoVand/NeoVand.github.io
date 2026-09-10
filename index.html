@@ -165,6 +165,7 @@
          too, and on a phone the fallback has to match it exactly or a strip
          of it shows either side of a sideways screen. */
       --bg:        #000000;
+      --veil:      #000000;
       --surface:   #101010;
       --surface-2: #151515;
       --border:    #1e1e1e;
@@ -233,11 +234,19 @@
       --sal: env(safe-area-inset-left, 0px);
     }
 
-    /* Daylight. The background is the grove's sky, so the page and the canvas
-       share one colour and the trees stand in the same air as the text. */
+    /* Daylight. The page's own ground is a tone from the middle of the
+       grove's sky rather than the pale blue it was. Nothing shows it on a
+       desktop, where the sky covers the viewport. On a phone held sideways
+       it shows: Chrome on iOS keeps the layout inside the safe area and
+       fills the strips under the notch and the home bar with this colour,
+       and the pale blue stood out from the sky either side of it. A single
+       colour can't follow a gradient that runs from evening blue to peach,
+       but the sky is blue over most of its height, and this sits in it.
+       The veil keeps the pale ground it was tuned on. */
     :root.day {
       --wn: 0;
-      --bg:        #a6c7e3;
+      --bg:        #8c9ab1;
+      --veil:      #a6c7e3;
       --surface:   #fbfdff;
       --surface-2: #eef5fb;
       --border:    #c4d8e7;
@@ -381,7 +390,7 @@
       z-index: 1000;
       display: grid;
       place-items: center;
-      background: var(--bg);
+      background: var(--veil);
       touch-action: none;
       overscroll-behavior: contain;
       /* the ground clears slowly and evenly, so the page comes through it
@@ -2806,11 +2815,11 @@
       /* The grove takes the screen's height here, not the bio's — the row
          is as tall as the bio, which on a phone's short side runs to
          several screens, and a grove laid out that tall showed as a few
-         giant trunks with the shelf below the fold. It stays put while the
-         bio scrolls past it. */
+         giant trunks with the shelf below the fold. It scrolls away with
+         the page like everything else: the gramophone and the birds stand
+         where the grove says they stand, in page coordinates, and a grove
+         that stayed put while the page moved left them behind. */
       .hero-lead {
-        position: sticky;
-        top: 40px;
         align-self: start;
         min-height: 0;
         height: calc(100vh - 80px);
