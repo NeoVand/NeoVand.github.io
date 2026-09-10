@@ -3938,7 +3938,7 @@ self._SwissGL = SwissGL;
     // rule, his mutation rate, and how many steps of the automaton a
     // sixtieth of a second is worth: the quadratic one is slow to grow into
     // itself and gets two, the exponential ones would fill the cap at once
-    const RULES = [[2182, 0, 2], [2236, 0, 1], [17953, 5e-5, 1.2], [22220, 1e-3, 1.5], [3260, 0, 1.2]];
+    const RULES = [[2182, 0, 2], [2236, 0, 1], [17953, 5e-5, 1.2], [22220, 1e-3, 1.5]];
     let [rule, flip, pace] = RULES[Math.floor(Math.random() * RULES.length)];
     try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) { [rule, flip, pace] = RULES.find(r => r[0] === q) || [q, 0, 1]; } } catch (e) {}
     const graph = new GrowingGraph(rule, flip);
