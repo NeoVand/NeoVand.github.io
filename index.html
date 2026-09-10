@@ -2916,6 +2916,22 @@
     }
 
     const L = [0.42, -0.62, 0.66];       // the light: upper left, toward the viewer
+    // The bloom on a corner: one soft disc, drawn once and stamped, hot at
+    // the centre and falling away to nothing — added to the picture by
+    // night, laid over it by day.
+    const bloom = document.createElement('canvas');
+    bloom.width = bloom.height = 128;
+    {
+      const g = bloom.getContext('2d');
+      const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0.00, 'rgba(255,255,255,0.95)');
+      gr.addColorStop(0.08, 'rgba(235,242,255,0.60)');
+      gr.addColorStop(0.28, 'rgba(195,213,255,0.22)');
+      gr.addColorStop(0.60, 'rgba(170,195,255,0.06)');
+      gr.addColorStop(1.00, 'rgba(170,195,255,0)');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 128, 128);
+    }
     const order = FACES.map((f, i) => i);
     let lit = 0;                          // ready: it brightens
     function draw(t, w, h, dpr) {
@@ -2955,11 +2971,21 @@
         ctx.stroke();
         ctx.shadowBlur = 0;
       }
-      // the corners, as points of light, the nearer the larger
+      // the corners: a bloom on each, the nearer the larger and the
+      // brighter, and a point at the heart of it
+      ctx.globalCompositeOperation = day ? 'source-over' : 'lighter';
       for (let i = 0; i < 16; i++) {
         const x = cx + P2[i][0] * S, y = cy + P2[i][1] * S;
-        const k = 1.4 + 1.3 * (P3[i][2] + 2) / 4;
-        if (!day) { ctx.fillStyle = 'rgba(200,215,255,0.18)'; ctx.beginPath(); ctx.arc(x, y, k * 2.2, 0, Math.PI * 2); ctx.fill(); }
+        const near = (P3[i][2] + 2) / 4;                 // 0 far .. 1 near
+        const r = (day ? 12 : 20) * (0.7 + 0.6 * near) * (1 + lit * 0.35);
+        ctx.globalAlpha = (day ? 0.6 : 0.9) * (0.55 + 0.45 * near);
+        ctx.drawImage(bloom, x - r, y - r, r * 2, r * 2);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < 16; i++) {
+        const x = cx + P2[i][0] * S, y = cy + P2[i][1] * S;
+        const k = 1.2 + 1.2 * (P3[i][2] + 2) / 4;
         ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,255,255,0.95)';
         ctx.beginPath(); ctx.arc(x, y, k, 0, Math.PI * 2); ctx.fill();
       }
