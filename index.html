@@ -335,12 +335,24 @@
     }
     .day #sun-halo { opacity: 1; }
     html.theming #sun-halo { transition: opacity 480ms linear !important; }
+    /* The clip is the page's width exactly and cut off at its edges, so the
+       body coming in from a corner can never widen the page: a canvas a few
+       pixels past the right edge let a phone be dragged sideways, and the
+       ground showed beside the page. */
+    #light-in-clip {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 200vh;
+      overflow: hidden;
+      z-index: -1;
+      pointer-events: none;
+    }
     #light-in {
       position: absolute;
       left: 0;
       top: 0;
-      z-index: -1;
-      pointer-events: none;
       will-change: transform, opacity;
     }
     #light-in.sun { mix-blend-mode: screen; mix-blend-mode: plus-lighter; }
@@ -352,6 +364,10 @@
        the page's own ground — black by night, the sky's blue by day — with
        the flourish in the middle, unrolling while it waits. */
     #veil { display: none; }
+    /* The page holds still under the veil. A curtain does not scroll, but
+       the page behind it did: a swipe or a flick while waiting moved it,
+       and it came up already part-way down. */
+    html.veiled { overflow: hidden; }
     html.veiled #veil {
       position: fixed;
       inset: 0;
@@ -359,6 +375,8 @@
       display: grid;
       place-items: center;
       background: var(--bg);
+      touch-action: none;
+      overscroll-behavior: contain;
       /* the ground clears slowly and evenly, so the page comes through it
          rather than after it; the ornament goes first, opening outward */
       transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);
@@ -3917,10 +3935,14 @@ self._SwissGL = SwissGL;
     // ── the drawing (Mordvintsev): links, nodes coloured by age, bloom ──
     // a handful of rules that grow into something worth watching in the
     // few seconds they get; a different one each visit
-    const RULES = [[2182, 0], [2236, 0], [17953, 5e-5], [22220, 1e-3], [3260, 0]];
-    let [rule, flip] = RULES[Math.floor(Math.random() * RULES.length)];
-    try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) { rule = q; flip = (RULES.find(r => r[0] === q) || [0, 0])[1]; } } catch (e) {}
+    // rule, his mutation rate, and how many steps of the automaton a
+    // sixtieth of a second is worth: the quadratic one is slow to grow into
+    // itself and gets two, the exponential ones would fill the cap at once
+    const RULES = [[2182, 0, 2], [2236, 0, 1], [17953, 5e-5, 1.2], [22220, 1e-3, 1.5], [3260, 0, 1.2]];
+    let [rule, flip, pace] = RULES[Math.floor(Math.random() * RULES.length)];
+    try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) { [rule, flip, pace] = RULES.find(r => r[0] === q) || [q, 0, 1]; } } catch (e) {}
     const graph = new GrowingGraph(rule, flip);
+    window.__veilGraph = () => ({ rule, nodes: graph.nodes.length, gen: graph.lastGen });   // for the test harness
     const points = new Float32Array(256 * 16 * 4);     // the points texture, 4096 of them
     const linkBuf = new Int32Array(256 * 32 * 2);      // the links texture, 8192 of them
 
@@ -4042,13 +4064,13 @@ self._SwissGL = SwissGL;
       const dt = last ? Math.min(64, now - last) : 16; last = now;
       // one step of the automaton per sixtieth of a second, whatever the
       // frame rate; after a stall it catches up a little, never all at once
-      growAcc += dt / 16.7;
+      growAcc += dt / 16.7 * pace;
       let steps = 0;
-      while (growAcc >= 1 && steps < 3) {
+      while (growAcc >= 1 && steps < 4) {
         growAcc -= 1; steps++;
         if (graph.nodes.length < MAXN) { graph.grow(MAXN); addPoints(graph.nodes.length, graph.addedHints); }
       }
-      if (growAcc > 2) growAcc = 0;
+      if (growAcc > 3) growAcc = 0;
       tick(graph.links, 2);
       // ready: it lights
       const want = root.classList.contains('veil-full') ? 3.2 : 1.5;
@@ -4088,6 +4110,11 @@ self._SwissGL = SwissGL;
     // the grove's presses listen on the window, and must not hear it
     veil.addEventListener('pointerdown', e => e.stopPropagation());
     veil.addEventListener('click', e => e.stopPropagation());
+    // and nothing scrolls the page behind it (the stylesheet holds the
+    // page still too; this is for the browsers that scroll anyway)
+    const still = e => { if (e.cancelable) e.preventDefault(); };
+    veil.addEventListener('wheel', still, { passive: false });
+    veil.addEventListener('touchmove', still, { passive: false });
 
     // The graph is given a little while to grow into something before the
     // veil lifts, and is never held longer than MAX, whatever fails.
@@ -4141,7 +4168,7 @@ self._SwissGL = SwissGL;
        birds — and on a phone drops below sixty frames, and a moving body
        drawn at thirty reads as juddering. Behind the page like the sky, so
        the trees still stand in front of it. -->
-  <canvas id="light-in" aria-hidden="true" hidden></canvas>
+  <div id="light-in-clip" aria-hidden="true"><canvas id="light-in" hidden></canvas></div>
 
   <script>
   // ─── The sky ──────────────────────────────────────────────────────────────
