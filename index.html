@@ -2857,1267 +2857,130 @@
        piece, stalling while the rest of it is still being parsed. It is
        first in the body so it is the first thing painted. -->
   <div id="veil" aria-hidden="true">
-    <!-- A growing graph, after Alexander Mordvintsev's "Growing graphs"
-         (github.com/znah/graphs, MIT), itself after Paul Cousin's work on
-         graph-rewriting automata: a ten-node ring whose nodes divide by a
-         rule that reads each node's own state and its neighbours', laid out
-         by a force simulation as it grows, the newest growth glowing. It is
-         drawn on this canvas by WebGL while the page is built behind it;
-         without WebGL 2 the ground alone stands in. -->
+    <!-- A tesseract turning in four dimensions, drawn on this canvas while
+         the page is built behind it: see the script below. -->
     <canvas id="veil-canvas" aria-hidden="true"></canvas>
   </div>
   <script>
-  // SwissGL, by Google (github.com/google/swissgl), inlined so the veil can
-  // draw before anything else has arrived. Apache License 2.0; the header
-  // below is its own.
-// Copyright 2023 Google LLC
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     https://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-
-// Repeat/Loop?
-// fbo:
-// - multiple named render targets (Out...?)
-// - stencil?
-// - mipmaps?
-// data texture subimage?
-// integer textures
-// glsl lib
-// - hash (overloads)
-// - 3d prim/helpers
-// - universal geom (mesh)
-// devicePixelRatio
-// depth test modes
-
-// pain points:
-// - view transform params
-// - fragment only aspect
-// - tag already exists
-// - texture/array uniform compatibility
-
-const Type2Setter = {};
-const UniformType2TexTarget = {};
-const TextureFormats = {};
-{
-    const GL = WebGL2RenderingContext;
-    for (const t of ['FLOAT', 'INT', 'BOOL']) {
-        const suf = t=='FLOAT' ? 'f':'i';
-        Type2Setter[GL[t]] = `uniform1${suf}v`;
-        for (const i of [2, 3, 4]) {
-            Type2Setter[GL[`${t}_VEC${i}`]] = `uniform${i}${suf}v`;
-            if (suf=='f') {
-                Type2Setter[GL[`${t}_MAT${i}`]] = `uniformMatrix${i}fv`;
-            }
-        }
-    }
-    UniformType2TexTarget[GL.SAMPLER_2D] = GL.TEXTURE_2D;
-    UniformType2TexTarget[GL.SAMPLER_2D_ARRAY] = GL.TEXTURE_2D_ARRAY;
-    UniformType2TexTarget[GL.INT_SAMPLER_2D] = GL.TEXTURE_2D;
-    UniformType2TexTarget[GL.UNSIGNED_INT_SAMPLER_2D] = GL.TEXTURE_2D;
-
-    const regfmt = (name, internalFormat, glformat, type, CpuArray, chn)=>{
-        TextureFormats[name] = {internalFormat, glformat, type, CpuArray, chn};
-    }
-    regfmt('depth', GL.DEPTH_COMPONENT24, GL.DEPTH_COMPONENT, GL.UNSIGNED_INT, Uint32Array, 1);
-    regfmt('rgb11f', GL.R11F_G11F_B10F, GL.RGB, GL.FLOAT, Float32Array, 3);
-    for (const c of ['r', 'rg', 'rgb', 'rgba'])
-    {
-        const C = c.toUpperCase(), chn=C.length;
-        const fmt = (C=='R' ? 'RED' : C);
-        const fmtI = fmt + '_INTEGER';
-        regfmt(c+'8', GL[C+'8'], GL[fmt], GL.UNSIGNED_BYTE, Uint8Array, chn);
-        regfmt(c+'16f', GL[C+'16F'], GL[fmt], GL.HALF_FLOAT, Uint16Array, chn);
-        regfmt(c+'32f', GL[C+'32F'], GL[fmt], GL.FLOAT, Float32Array, chn);
-        for (const [bits, type] of [[8, 'BYTE'], [16, 'SHORT'], [32, 'INT']]) {
-            regfmt(`${c}${bits}i`, GL[`${C}${bits}I`],  GL[fmtI], GL[type], self[`Int${bits}Array`], chn);
-            regfmt(`${c}${bits}u`, GL[`${C}${bits}UI`], GL[fmtI], GL['UNSIGNED_'+type], self[`Uint${bits}Array`], chn);
-        }
-    }  
-}
-
-function memoize(f) {
-    const cache = {};
-    const wrap = k => k in cache ? cache[k] : cache[k]=f(k);
-    wrap.cache = cache;
-    return wrap;
-}
-
-// Parse strings like 'min(s,d)', 'max(s,d)', 's*d', 's+d*(1-sa)',
-// 's*d', 'd*(1-sa) + s*sa', s-d', 'd-s' and so on into
-// gl.blendFunc/gl.blendEquation arguments.
-function parseBlend(s0) {
-    if (!s0) return;
-    let s = s0.replace(/\s+/g, '');
-    if (!s) return null;
-    const GL = WebGL2RenderingContext;
-    const func2gl = {
-        'min': GL.MIN, 'max': GL.MAX, '+':GL.FUNC_ADD,
-        's-d': GL.FUNC_SUBTRACT, 'd-s': GL.FUNC_REVERSE_SUBTRACT
-    };
-    const factor2gl = {
-        '0': GL.ZERO, '1': GL.ONE,
-        's': GL.SRC_COLOR, '(1-s)': GL.ONE_MINUS_SRC_COLOR,
-        'd': GL.DST_COLOR, '(1-d)': GL.ONE_MINUS_DST_COLOR,
-        'sa': GL.SRC_ALPHA, '(1-sa)': GL.ONE_MINUS_SRC_ALPHA,
-        'da': GL.DST_ALPHA, '(1-da)': GL.ONE_MINUS_DST_ALPHA,
-        'c': GL.CONSTANT_COLOR, '(1-c)': GL.ONE_MINUS_CONSTANT_COLOR,
-        'ca': GL.CONSTANT_ALPHA, '(1-ca)': GL.ONE_MINUS_CONSTANT_ALPHA,
-    };
-    const res = {s:GL.ZERO, d:GL.ZERO, f:null};
-    s = s.replace(/(s|d)(?:\*(\w+|\(1-\w+\)))?/g, (_,term,factor)=>{
-        factor = factor||'1';
-        if (!(factor in factor2gl)) {
-            throw `Unknown blend factor: "${factor}"`;
-        }
-        res[term] = factor2gl[factor];
-        return term;
-    });
-    let m;
-    if (m=s.match(/^(min|max)\((s,d|d,s)\)$/)) {
-        res.f = func2gl[m[1]];
-    } else if (s.match(/^(s|d|s\+d|d\+s)$/)) {
-        res.f = func2gl['+'];
-    } else if (s in func2gl) {
-        res.f = func2gl[s];
-    } else {
-        throw `Unable to parse blend spec: "${s0}"`;
-    }
-    return res;
-}
-parseBlend = memoize(parseBlend);
-
-function compileShader(gl, code, type, program) {
-    code = '#version 300 es\n'+code;
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, code);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const withLines = code.split('\n').map(
-            (s, i)=>`${(i+1+'').padStart(4)}: ${s}`).join('\n')
-        throw (withLines+'\n'+'--- GLSL COMPILE ERROR ---\n'+ gl.getShaderInfoLog(shader));
-    }
-    gl.attachShader(program, shader);
-    gl.deleteShader(shader);
-}
-
-function compileProgram(gl, vs, fs) {
-    const program = gl.createProgram();
-    compileShader(gl, vs, gl.VERTEX_SHADER, program);
-    compileShader(gl, fs, gl.FRAGMENT_SHADER, program);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error("shader link error:" + gl.getProgramInfoLog(program));
-    }
-    gl.useProgram(program);
-    program.setters = {};
-    let unitCount = 0;
-    const isArray = v => Array.isArray(v) || ArrayBuffer.isView(v);
-    const numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-    for (let i = 0; i < numUniforms; ++i) {
-        const info = gl.getActiveUniform(program, i);
-        const loc = gl.getUniformLocation(program, info.name);
-        const name = info.name.match(/^\w+/)[0];
-        if (info.type in UniformType2TexTarget) {
-            const unit = unitCount++;
-            const target = UniformType2TexTarget[info.type];
-            gl.uniform1i(loc, unit);
-            program.setters[name] = tex=>{
-                gl.activeTexture(gl.TEXTURE0+unit);
-                tex ? tex.bindSampler(unit) : gl.bindTexture(target, null);
-            }
-        } else {
-            const fname = Type2Setter[info.type];
-            const setter = fname.startsWith('uniformMatrix') ?
-                v=>gl[fname](loc, false, v) : v=>gl[fname](loc, isArray(v) ? v : [v]);
-            program.setters[name] = v=>v!=undefined?setter(v):null;
-        }
-    }
-    gl.useProgram(null);
-    console.log('created', program);
-    return program;
-}
-
-const glsl_template = `
-precision highp float;
-precision highp int;
-precision highp sampler2DArray;
-precision highp isampler2D;
-precision highp usampler2D;
-precision highp isampler2DArray;
-precision highp usampler2DArray;
-#ifdef VERT
-    #define varying out
-    #define VPos gl_Position
-    layout(location = 0) in int VertexID;
-    layout(location = 1) in int InstanceID;
-    int MeshRow;
-    ivec2 VID;
-#else
-    #define varying in
-    ivec2 I;
-#endif
-flat varying ivec3 ID;
-
-uniform ivec3 Grid;
-uniform ivec2 Mesh;
-uniform int MeshMode;
-uniform ivec4 View;
-#define ViewSize (View.zw)
-uniform vec2 Aspect;
-varying vec2 UV;
-#define XY (2.0*UV-1.0)
-// #define VertexID gl_VertexID
-// #define InstanceID gl_InstanceID
-
-
-//////// GLSL Utils ////////
-
-const float PI  = radians(180.0);
-const float TAU = radians(360.0);
-
-#define ASPECT_F(name, expr) vec2 name() {vec2 s = vec2(ViewSize); return vec2(expr);}
-ASPECT_F(viewFit,   min(s.x,s.y)/s)
-ASPECT_F(viewCover, max(s.x,s.y)/s)
-ASPECT_F(viewFitX,  (1.0, s.x/s.y))
-ASPECT_F(viewFitY,  (s.y/s.x, 1.0))
-ASPECT_F(viewMean,  0.5*(s.x+s.y)/s)
-#undef ASPECT_F
-
-// source: https://www.shadertoy.com/view/XlXcW4
-// TODO more complete hash library
-vec3 hash( ivec3 ix ) {
-    uvec3 x = uvec3(ix);
-    const uint k = 1103515245U;
-    x = ((x>>8U)^x.yzx)*k;
-    x = ((x>>8U)^x.yzx)*k;
-    x = ((x>>8U)^x.yzx)*k;
-    return vec3(x)*(1.0/float(0xffffffffU));
-}
-
-mat2 rot2(float a) {
-  float s=sin(a), c=cos(a);
-  return mat2(c, s, -s, c);
-}
-
-// https://suricrasia.online/demoscene/functions/
-vec3 erot(vec3 p, vec3 ax, float ro) {
-    return mix(dot(ax, p)*ax, p, cos(ro)) + cross(ax,p)*sin(ro);
-}
-
-vec3 uv2sphere(vec2 uv) {
-  uv *= vec2(-TAU,PI);
-  return vec3(vec2(cos(uv.x), sin(uv.x))*sin(uv.y), cos(uv.y));
-}
-
-vec3 torus(vec2 uv, float r1, float r2) {
-    uv *= TAU;
-    vec3 p = vec3(r1+cos(uv.x)*r2, 0, sin(uv.x)*r2);
-    return vec3(p.xy * rot2(uv.y), p.z);
-}
-
-vec3 cubeVert(vec2 xy, int side) {
-    float x=xy.x, y=xy.y;
-    switch (side) {
-        case 0: return vec3(x,y,1); case 1: return vec3(y,x,-1);
-        case 2: return vec3(y,1,x); case 3: return vec3(x,-1,y);
-        case 4: return vec3(1,x,y); case 5: return vec3(-1,y,x);
-    };
-    return vec3(0.0);
-}
-
-vec3 _surf_f(vec3 p, vec3 a, vec3 b, out vec3 normal) {
-    normal = normalize(cross(a-p, b-p));
-    return p;
-}
-#define SURF(f, uv, out_normal, eps) _surf_f(f(uv), f(uv+vec2(eps,0)), f(uv+vec2(0,eps)), out_normal)
-${
-['', 'u', 'i'].map(t=>`
-${t}vec4 _sample(${t}sampler2D tex, vec2 uv) {return texture(tex, uv);}
-${t}vec4 _sample(${t}sampler2D tex, ivec2 xy) {return texelFetch(tex, xy, 0);}
-${t}vec4 _sample(${t}sampler2DArray tex, vec2 uv, int layer) {return texture(tex, vec3(uv, layer));}
-${t}vec4 _sample(${t}sampler2DArray tex, ivec2 xy, int layer) {return texelFetch(tex, ivec3(xy, layer), 0);}
-`).join("")}
-#ifdef VERT
-    void _setupMesh() {
-        int odd = MeshMode == 1 ? MeshRow%2 : 0;
-        int i = clamp(VertexID-odd, 0, Mesh.x*2+1);
-        VID = ivec2(i>>1, MeshRow+(i+odd+1)%2);
-        UV = vec2(VID) / vec2(Mesh);
-        VPos = vec4(XY,0,1);
-    }
-#else
-    float isoline(float v) {
-        float distToInt = abs(v-round(v));
-        return smoothstep(max(fwidth(v), 0.0001), 0.0, distToInt);
-    }
-    float wireframe() {
-        vec2 m = UV*vec2(Mesh);
-        float diag = isoline(m.x-m.y);
-        if (MeshMode==1 && (int(m.y)%2==1)) {
-            diag = isoline(m.x+m.y);
-        }
-        return isoline(m.x)+isoline(m.y)+diag;
-    }
-#endif
-`;
-
-function guessUniforms(params) {
-    const uni = [];
-    const len2type = {1:'float', 2:'vec2', 3:'vec3', 4:'vec4', 9:'mat3', 16:'mat4'};
-    for (const name in params) {
-        const v = params[name];
-        let s = null;
-        if (v instanceof TextureSampler) {
-            s = v.getUniformCode(name);
-        } else if (typeof v === 'number') {
-            s=`uniform float ${name};`
-        } else if (typeof v === 'boolean') {
-            s=`uniform bool ${name};`
-        } else if (v.length in len2type) {
-            s=`uniform ${len2type[v.length]} ${name};`
-        }
-        if (s) uni.push(s);
-    }
-    return uni.join('\n')+'\n';
-}
-
-const stripComments = code=>code.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g,'');
-
-// TODO better parser (use '\b')
-function definedUniforms(code) {
-    code = stripComments(code);
-    const lines = Array.from(code.matchAll(/uniform\s+\w+\s+([^;]+)\s*;/g));
-    return new Set(lines.map(m=>m[1].split(/[^\w]+/)).flat());
-}
-
-function expandCode(code, mainFunc, outVar) {
-    const stripped = stripComments(code).trim();
-    if (stripped != '' && stripped.indexOf(';') == -1) {
-        code = `${outVar} = vec4(${stripped});`
-    }
-    if (!stripped.match(new RegExp(`\\b${mainFunc}\s*\\(`))) {
-        code = `void ${mainFunc}() {
-          ${code};
-        }`
-    }
-    return code;
-}
-const expandVP = memoize(code=>expandCode(code, 'vertex', 'VPos'));
-const expandFP = memoize(code=>expandCode(code, 'fragment', 'FOut'));
-
-function extractVaryings(VP) {
-    return Array.from(stripComments(VP).matchAll(/\b(flat\s+)?varying\s+[^;]+;/g))
-    .map(m=>m[0]).map(s=>{
-        while (s != (s=s.replace(/\([^()]*\)/g, ''))); // remove nested ()
-        return s.replace(/=[^,;]*/g,'')  // remove assigned values 
-    }).join('\n');
-}
-
-function stripVaryings(VP) {
-    return VP.replace(/\b(flat\s+)?varying\s+\w+/g,'');
-}
-
-function linkShader(gl, uniforms, Inc, VP, FP, layern) {
-    Inc = Inc.join('\n');
-    const defined = definedUniforms([glsl_template, Inc, VP, FP].join('\n'));
-    const undefined = Object.entries(uniforms)
-        .filter(kv=>kv[0].match(/^\w+$/))
-        .filter(kv=>!(defined.has(kv[0])));
-    const autoUniforms = guessUniforms(Object.fromEntries(undefined));
-    const varyings = extractVaryings(VP);
-    const prefix = `${glsl_template}\n${autoUniforms}\n${varyings}\n`;
-    let fragOutputs = ['layout(location = 0) out vec4 FOut;'];
-    for (let i=1; i < layern; ++i) {
-        fragOutputs.push(`layout(location = ${i}) out vec4 FOut${i};`);
-    }
-    return compileProgram(gl, `
-    #define VERT
-    ${prefix}
-    ${Inc}
-    ${expandVP(stripVaryings(VP))}
-    void main() {
-      int ii = InstanceID;
-      MeshRow = ii % Mesh.y; ii/=Mesh.y;
-      ID.x = ii % Grid.x; ii/=Grid.x;
-      ID.y = ii % Grid.y; ii/=Grid.y;
-      ID.z = ii;
-      _setupMesh();
-      vertex();
-      VPos.xy *= Aspect;
-    }`, `
-    #define FRAG
-    ${prefix}
-    ${fragOutputs.join('\n')}
-    ${Inc}
-    ${expandFP(FP)}
-    void main() {
-      I = ivec2(gl_FragCoord.xy);
-      fragment();
-    }`);
-}
-
-class TextureSampler {
-    fork(updates) {
-        const {filter, wrap, _root} = {...this, ...updates};
-        return Object.assign(new TextureSampler(), {filter, wrap, _root});
-    }
-    get linear()  {return this.fork({filter:'linear'})}
-    get nearest() {return this.fork({filter:'nearest'})}
-    get miplinear() {return this.fork({filter:'miplinear'})}
-    get edge()    {return this.fork({wrap:'edge'})}
-    get repeat()  {return this.fork({wrap:'repeat'})}
-    get mirror()  {return this.fork({wrap:'mirror'})}
-
-    getUniformCode(name) {
-        return this._root._getUniformCode(name);
-    }
-
-    get _sampler() {
-        const gl = this._root.gl;
-        const {filter, wrap} = this;
-        if (!gl._samplers) {gl._samplers = {};}
-        const id = `${filter}:${wrap}`;
-        if (!(id in gl._samplers)) {
-            const glfilter = { 'nearest': gl.NEAREST, 'linear': gl.LINEAR,
-                'miplinear':gl.LINEAR_MIPMAP_LINEAR}[filter];
-            const glwrap = {'repeat': gl.REPEAT, 'edge': gl.CLAMP_TO_EDGE,
-                            'mirror': gl.MIRRORED_REPEAT}[wrap];
-            const sampler = gl.createSampler();
-            const setf = (k, v)=>gl.samplerParameteri(sampler, gl['TEXTURE_'+k], v);
-            setf('MIN_FILTER', glfilter);
-            setf('MAG_FILTER', filter=='miplinear' ? gl.LINEAR : glfilter);
-            setf('WRAP_S', glwrap);
-            setf('WRAP_T', glwrap);
-            if (filter == 'miplinear' && gl.TEXTURE_MAX_ANISOTROPY_EXT) {
-                setf('MAX_ANISOTROPY_EXT', 4.0);
-            }
-            gl._samplers[id] = sampler;
-        }
-        return gl._samplers[id];
-    }
-    bindSampler(unit) {
-        // assume unit is already active
-        const {gl, gltarget, handle} = this._root;
-        this._root.bindTexture();
-        if (this.filter == 'miplinear' && !handle.hasMipmap) {
-            gl.generateMipmap(gltarget)
-            handle.hasMipmap = true;
-        }
-        gl.bindSampler(unit, this._sampler);
-    }
-}
-
-class MultisampleTarget {
-    constructor(gl, formatInfo, sampleN, depth) {
-        this.gl = gl;
-        this.formatInfo = formatInfo;
-        this.sampleN = sampleN;
-        this.fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-        this.colorRB = gl.createRenderbuffer();
-        gl.bindRenderbuffer(gl.RENDERBUFFER, this.colorRB);
-        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, this.colorRB);
-        if (depth) {
-            this.depthRB = gl.createRenderbuffer();
-            gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthRB);
-            gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, this.depthRB);
-        }
-        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-
-    update(size) {
-        const {gl} = this;
-        const [w, h] = this.size = size;
-        const {internalFormat} = this.formatInfo;
-        gl.bindRenderbuffer(gl.RENDERBUFFER, this.colorRB);
-        gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.sampleN, internalFormat, w, h);
-        if (this.depthRB) {
-            gl.bindRenderbuffer(gl.RENDERBUFFER, this.depthRB);
-            gl.renderbufferStorageMultisample(gl.RENDERBUFFER, this.sampleN, gl.DEPTH_COMPONENT24, w, h);
-        }
-        gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-        this.dirty = true;
-    }
-
-    bind() {
-        this.dirty = true;
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.fbo);
-    }
-
-    blit(targetFBO) {
-        if (!this.dirty) {
-            return;
-        }
-        const {gl} = this;
-        const saveRead = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
-        const saveDraw = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fbo);
-	    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, targetFBO);
-        const [w, h] = this.size;
-        const bufferBits = gl.COLOR_BUFFER_BIT | (this.depthRB ? gl.DEPTH_BUFFER_BIT : 0);
-    	gl.blitFramebuffer(0,0,w,h,  0,0,w,h, bufferBits, gl.NEAREST);
-        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, saveRead);
-	    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, saveDraw);
-        this.dirty = false;
-    }
-}
-
-class TextureTarget extends TextureSampler {
-    constructor(gl, params) {
-        super();
-        this._root = this;
-        let {size, tag, format='rgba8', filter='nearest', wrap='repeat',
-            layern=null, data=null, depth=null, msaa=null} = params;
-        if (!depth && format.includes('+')) {
-            const [mainFormat, depthFormat] = format.split('+');
-            format = mainFormat;
-            depth = new TextureTarget(gl, {...params,
-                tag:tag+'_depth',format:depthFormat, layern:null, depth:null, msaa:null});
-        }
-        this.handle = gl.createTexture();
-        this.filter = format=='depth' ? 'nearest' : filter;
-        this.gltarget = layern ? gl.TEXTURE_2D_ARRAY : gl.TEXTURE_2D;
-        this.formatInfo = TextureFormats[format];
-        Object.assign(this, {gl, _tag:tag, format, layern, wrap, depth});
-        if (msaa > 1) {
-            this._msaa = new MultisampleTarget(gl, this.formatInfo, msaa, depth)
-        }
-        this.update(size, data);
-
-        this.fbo = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-        this.attach(gl)
-        if (this.depth) this.depth.attach(gl);
-
-        const typePrefix = format.endsWith('u') ? 'u' : 
-            (format.endsWith('i') ? 'i':'');
-        this._uniformTemplate = layern ? `
-            uniform ${typePrefix}sampler2DArray $name;
-            #define $name(p,l) (_sample($name, (p), (l)))
-            ivec3 $name_size() {return textureSize($name, 0);}
-            vec3  $name_step() {return 1.0/vec3($name_size());}
-            `:`
-            uniform ${typePrefix}sampler2D $name;
-            #define $name(p) (_sample($name, (p)))
-            ivec2 $name_size() {return textureSize($name, 0);}
-            vec2  $name_step() {return 1.0/vec2($name_size());}\n`;
-    }
-    _getUniformCode(name) {
-        return this._uniformTemplate.replaceAll('$name', name)
-    }
-    update(size, data) {
-        const {gl, handle, gltarget, layern} = this;
-        const {internalFormat, glformat, type} = this.formatInfo;
-        const [w, h] = size;
-        gl.bindTexture(gltarget, handle);
-        if (!layern) {
-            gl.texImage2D(gltarget, 0/*mip level*/,
-                internalFormat, w, h, 0/*border*/,
-                glformat, type, data/*data*/);
-        } else {
-            gl.texImage3D(gltarget, 0/*mip level*/,
-                internalFormat, w, h, layern, 0/*border*/,
-                glformat, type, data/*data*/);
-        }
-        gl.bindTexture(gltarget, null);
-        this.size = size;
-        if (this.depth) {this.depth.update(size, data);}
-        if (this._msaa) {this._msaa.update(size);}
-    }
-    attach(gl) {
-        if (!this.layern) {
-            const attachment = this.format == 'depth' ? gl.DEPTH_ATTACHMENT : gl.COLOR_ATTACHMENT0;
-            gl.framebufferTexture2D(
-                gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, this.handle, 0/*level*/);
-        } else {
-            const drawBuffers = [];
-            for (let i=0; i<this.layern; ++i) {
-                const attachment = gl.COLOR_ATTACHMENT0+i;
-                drawBuffers.push(attachment);
-                gl.framebufferTextureLayer(
-                    gl.FRAMEBUFFER, attachment, this.handle, 0/*level*/, i);
-            }
-            gl.drawBuffers(drawBuffers);
-        }
-    }
-    bindTarget(gl, readonly=false) {
-        if (!readonly && this._msaa) {
-            this._msaa.bind();
-            return this.size;    
-        }
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-        if (!readonly) {this.handle.hasMipmap = false;}
-        return this.size;
-    }
-    bindTexture() {
-        // assume unit is already active
-        const {gl, gltarget, handle} = this;
-        if (this._msaa) { this._msaa.blit(this.fbo); }
-        gl.bindTexture(gltarget, handle);
-    }
-    _getBox(box) {
-        box = (box && box.length) ? box : [0, 0, ...this.size];
-        const [x, y, w, h] = box, n = w*h*this.formatInfo.chn;
-        return {box, n}
-    }
-    _getCPUBuf(n) {
-        if (!this.cpu || this.cpu.length < n) {
-            this.cpu = new this.formatInfo.CpuArray(n);
-        }
-        return this.cpu.length == n ? this.cpu : this.cpu.subarray(0, n);
-    }
-    _readPixels(box, targetBuf) {
-        const {glformat, type} = this.formatInfo;
-        this.bindTarget(this.gl, /*readonly*/true);
-        this.gl.readPixels(...box, glformat, type, targetBuf);
-    }
-    readSync(...optBox) {
-        const {box, n} = this._getBox(optBox);
-        const buf = this._getCPUBuf(n);
-        this._readPixels(box, buf);
-        return buf
-    }
-    _bindAsyncBuffer(n) {
-        const {gl} = this;
-        const {CpuArray} = this.formatInfo;
-        if (!this.async) {this.async = {all:new Set(), queue:[]};}
-        if (this.async.queue.length == 0) {
-            const gpuBuf = gl.createBuffer();
-            this.async.queue.push(gpuBuf);
-            this.async.all.add(gpuBuf);
-        }
-        const gpuBuf = this.async.queue.shift();
-        if (this.async.queue.length > 6) {
-            this._deleteAsyncBuf(this.async.queue.pop());
-        }
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, gpuBuf);
-        if (!gpuBuf.length || gpuBuf.length < n) {
-            const byteN = n * this.formatInfo.CpuArray.BYTES_PER_ELEMENT
-            gl.bufferData(gl.PIXEL_PACK_BUFFER, byteN, gl.STREAM_READ);
-            gpuBuf.length = n;
-            console.log(`created/resized async gpu buffer "${this._tag}":`, gpuBuf);
-        }
-        return gpuBuf;
-    }
-    _deleteAsyncBuf(gpuBuf) {
-        delete gpuBuf.length;
-        this.gl.deleteBuffer(gpuBuf);
-        this.async.all.delete(gpuBuf);
-    }
-    // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#use_non-blocking_async_data_readback
-    read(callback, optBox, optTarget) {
-        const {gl} = this;
-        const {box, n} = this._getBox(optBox);
-        const gpuBuf = this._bindAsyncBuffer(n);
-        this._readPixels(box, 0);
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        gl.flush();
-        this._asyncFetch(gpuBuf, sync, callback, optTarget);
-    }
-    _asyncFetch(gpuBuf, sync, callback, optTarget) {
-        const {gl} = this;
-        if (!gpuBuf.length) {  // check that gpu buffer is not deleted
-            gl.deleteSync(sync); return;
-        }
-        const res = gl.clientWaitSync(sync, 0, 0);
-        if (res === gl.TIMEOUT_EXPIRED) { 
-            setTimeout(()=>this._asyncFetch(gpuBuf, sync, callback, optTarget), 1 /*ms*/); return; }            
-        if (res === gl.WAIT_FAILED) {
-            console.log(`async read of ${this._tag} failed`);
-        } else {
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, gpuBuf);
-            const target = optTarget || this._getCPUBuf(gpuBuf.length);
-            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER,  0 /*srcOffset*/,
-                target, 0 /*dstOffset*/, gpuBuf.length /*length*/);
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-            callback(target);
-        }
-        gl.deleteSync(sync);
-        this.async.queue.push(gpuBuf);
-    }
-    free() {
-        const gl = this.gl;
-        if (this.depth) this.depth.free();
-        if (this.fbo) gl.deleteFramebuffer(this.fbo);
-        if (this.async) this.async.all.forEach(buf=>this._deleteAsyncBuf(buf));
-        gl.deleteTexture(this.handle);
-    }
-}
-
-function calcAspect(aspect, w, h) {
-    if (!aspect) return [1,1];
-    let c;
-    switch (aspect) {
-        case 'fit':   c = Math.min(w, h); break;
-        case 'cover': c = Math.max(w, h); break;
-        case 'x':     c = w; break;
-        case 'y':     c = h; break;
-        case 'mean':  c = (w+h)/2; break;
-        default: throw `Unknown aspect mode "${aspect}"`;
-    }
-    return [c/w, c/h];
-}
-
-function ensureVertexArray(gl, neededSize) {
-    // gl_VertexID / gl_InstanceID seem to be broken in some configurations
-    // (e.g. https://crbug.com/1315104), so I had to fallback to using arrays
-    if (gl._indexVA && neededSize <= gl._indexVA.size)
-        return;
-    const size = neededSize*2;
-    
-    const va = gl._indexVA || gl.createVertexArray();
-    va.size = size;
-    gl._indexVA = va;
-    gl.bindVertexArray(va);
-    
-    const arr = new Int32Array(size);
-    arr.forEach((v, i)=>{arr[i] = i});
-    
-    const buf = va.buf || gl.createBuffer();
-    va.buf = buf;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
-    
-    for (let loc=0; loc<2; ++loc) {
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribIPointer(loc, 1/*size*/, gl.INT,
-            false/*normalize*/, 0/*stride*/, 0/*offset*/);
-    }
-    gl.vertexAttribDivisor(1, 1);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    gl.bindVertexArray(null);
-
-    console.log('created:', va);
-}
-
-function getTargetSize(gl, {size, scale=1, data}) {
-    if (!size && data) {
-        if (data.videoWidth && data.videoHeight) {
-            size = [data.videoWidth, data.videoHeight];
-        } else if (data.width && data.height) {
-            size = [data.width, data.height];
-        }
-    }
-    size = size || [gl.canvas.width, gl.canvas.height];
-    return [Math.ceil(size[0]*scale), Math.ceil(size[1]*scale)];
-}
-
-function createTarget(gl, params) {
-    if (!params.story) return new TextureTarget(gl, params);
-    return Array(params.story).fill(0).map(_=>new TextureTarget(gl, params));
-}
-function prepareOwnTarget(self, spec) {
-    const buffers = self.buffers;
-    spec.size = getTargetSize(self.gl, spec);
-    if (!buffers[spec.tag]) {
-        const target = buffers[spec.tag] = createTarget(self.gl, spec);
-        console.log('created', target);
-    } 
-    const target = buffers[spec.tag];
-    const tex = Array.isArray(target) ? target[target.length-1] : target;
-    const needResize = tex.size[0] != spec.size[0] || tex.size[1] != spec.size[1];
-    if (needResize || spec.data) {
-        if (needResize) {
-            console.log(`resizing "${spec.tag}" (${tex.size})->(${spec.size})`);
-        }
-        tex.update(spec.size, spec.data);
-    }
-    if (Array.isArray(target)) {
-        target.size = spec.size;
-    }
-    return buffers[spec.tag];
-}
-
-function bindTarget(gl, target) {
-    if (!target) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return [gl.canvas.width, gl.canvas.height];
-    }
-    if (Array.isArray(target)) {
-        const next = target.pop();
-        if (target.size[0] != next.size[0] || target.size[1] != next.size[1]) {
-            next.update(target.size, null);
-        }
-        target.unshift(next);
-        target = next;
-    }
-    return target.bindTarget(gl)
-}
-
-const OptNames = new Set([
-    'Inc', 'VP', 'FP',
-    'Clear', 'Blend', 'View', 'Grid', 'Mesh', 'Aspect', 'DepthTest', 'AlphaCoverage', 'Face'
-]);
-
-function drawQuads(self, params, target) {
-    const options={}, uniforms={}
-    for (const p in params) {
-        (OptNames.has(p)?options:uniforms)[p] = params[p];
-    }
-    let Inc = options.Inc || [];
-    if (!Array.isArray(Inc)) { Inc = [Inc]; }
-    const [VP, FP] = [options.VP||'', options.FP||''];
-    const haveShader = VP || FP;
-    const haveClear = options.Clear || options.Clear==0;
-
-    // setup target
-    if (target && target.tag) {
-        target = prepareOwnTarget(self, target);
-        if (!haveShader && !haveClear) {
-            // rotate texture story
-            if (Array.isArray(target)) {
-                target.unshift(target.pop());
-                target.size = target[0].size;
-            }
-            return target;
-        }
-    }
-    if (Array.isArray(target)) {
-        uniforms.Src = uniforms.Src || target[0];
-    }
-
-    // bind (and clear) target
-    const gl = self.gl;
-    const targetSize = bindTarget(gl, target);
-    let view = options.View || [0, 0, targetSize[0], targetSize[1]];
-    if (view.length == 2) {
-        view = [0, 0, view[0], view[1]]
-    }
-    gl.depthMask(!(options.DepthTest == 'keep'));
-    if (haveClear) {
-        let clear = options.Clear;
-        if (typeof clear === 'number') {
-            clear = [clear, clear, clear, clear];
-        }
-        gl.clearColor(...clear);
-        gl.enable(gl.SCISSOR_TEST);
-        gl.scissor(...view);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.disable(gl.SCISSOR_TEST);
-    }
-
-    // setup program
-    if (!haveShader) {
-        return target;
-    }
-    let prog = self.shaders;
-    for (const chunk of Inc) {
-        prog = prog[chunk] || (prog[chunk] = {});    
-    }
-    prog = prog[VP] || (prog[VP] = {});
-    const layern = (target && (Array.isArray(target) ? target[0] : target).layern) || 1;
-    prog = prog[FP] || (prog[FP] = linkShader(gl, uniforms, Inc, VP, FP, layern));
-    gl.useProgram(prog);
-    
-    // process options
-    if (options.Blend) {
-        const blend = parseBlend(options.Blend);
-        const {s, d, f}=blend;
-        gl.enable(gl.BLEND);
-        gl.blendFunc(s, d);
-        gl.blendEquation(f);
-    }
-    if (options.DepthTest) {
-        gl.enable(gl.DEPTH_TEST);
-    }
-    if (options.Face) {
-        gl.enable(gl.CULL_FACE);
-        const mode = {'front':gl.BACK, 'back':gl.FRONT}[options.Face];
-        gl.cullFace(mode);
-    }
-    if (options.AlphaCoverage) {
-        gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
-    }
-
-    // View, Aspect
-    gl.viewport(...view)
-    const width=view[2], height=view[3];
-    uniforms.View = view;
-    uniforms.Aspect = calcAspect(options.Aspect, width, height);
-
-    // Grid, Mesh
-    const [gx=1, gy=1, gz=1] = options.Grid || [];
-    const [mx=1, my=1] = options.Mesh || [];
-    uniforms.Grid = [gx, gy, gz];
-    uniforms.Mesh = [mx, my]; // 3d for cube?
-    const vertN = (mx+1)*2 + (my>1); // extra vertex to fix row winding in MeshMode==1
-    const instN = my * gx*gy*gz;
-    ensureVertexArray(gl, Math.max(vertN, instN));
-    gl.bindVertexArray(gl._indexVA);
-
-    // setup uniforms and textures
-    Object.entries(prog.setters).forEach(([name, f])=>f(uniforms[name]));
-    // draw
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, vertN, instN);
-    
-    // revert gl state
-    if (options.Blend) gl.disable(gl.BLEND);
-    if (options.DepthTest) gl.disable(gl.DEPTH_TEST);
-    if (options.Face) gl.disable(gl.CULL_FACE);
-    if (options.AlphaCoverage) gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
-    gl.bindVertexArray(null);
-    return target;
-}
-
-function SwissGL(canvas_gl) {
-    const gl = canvas_gl.getContext ?
-        canvas_gl.getContext('webgl2', {alpha:false, antialias:true}) : canvas_gl;
-    gl.getExtension("EXT_color_buffer_float");
-    gl.getExtension("OES_texture_float_linear");
-    const ext = gl.getExtension("EXT_texture_filter_anisotropic")
-    for (const k in ext) {
-        gl[k] = ext[k];
-    }
-    gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    ensureVertexArray(gl, 1024);
-    const glsl = (params, target)=>drawQuads(glsl, params, target);
-    
-    glsl.gl = gl;
-    glsl.shaders = {};
-    glsl.buffers = {};
-    glsl.reset = ()=>{
-        const freeProg = o=>(o instanceof WebGLProgram) ? gl.deleteProgram(o) : Object.values(o).forEach(freeProg);
-        freeProg(glsl.shaders);
-        Object.values(glsl.buffers).flat().forEach(target=>target.free());
-        glsl.shaders = {};
-        glsl.buffers = {};
-    };
-    glsl.adjustCanvas = dpr=>{
-        dpr = dpr || self.devicePixelRatio;
-        const canvas = gl.canvas;
-        const w = Math.max(1, Math.floor(canvas.clientWidth*dpr));
-        const h = Math.max(1, Math.floor(canvas.clientHeight*dpr));
-        if (canvas.width != w || canvas.height != h) {
-            canvas.width = w; canvas.height = h;
-        }
-    }
-    glsl.loop = callback=>{
-        const frameFunc = time=>{
-            const res = callback({glsl, time:time/1000.0});
-            if (res != 'stop') requestAnimationFrame(frameFunc);
-        };
-        requestAnimationFrame(frameFunc);
-    };
-    return glsl;
-}
-
-self._SwissGL = SwissGL;
-
-  </script>
-
-  <script>
-  // ─── The veil's growing graph ────────────────────────────────────────────
-  // After Alexander Mordvintsev's "Growing graphs" (github.com/znah/graphs,
-  // MIT licence), which is after Paul Cousin's graph-rewriting automata. The
-  // automaton and the drawing are his; the layout here is a plain force
-  // simulation in JavaScript rather than his WebAssembly octree, since a few
-  // hundred nodes want no tree. Nothing of this touches the page: it draws
-  // into the veil's own canvas and stops when the veil leaves.
+  // ─── The veil's tesseract ─────────────────────────────────────────────────
+  // A hypercube turning in four dimensions, drawn in two: sixteen corners,
+  // thirty-two edges and twenty-four square faces, each face a pane of
+  // glass shaded by where it faces, laid down back to front so the inner
+  // cell shows through the outer as the figure turns itself inside out. It
+  // turns in two planes at once, one of them through the fourth axis, which
+  // is what a tesseract does that a cube cannot. Nothing of this touches
+  // the page: it draws on the veil's own canvas and stops when the veil
+  // leaves.
   (() => {
     const canvas = document.getElementById('veil-canvas');
     const root = document.documentElement;
-    if (!canvas || !window.SwissGL || !root.classList.contains('veiled')) return;
+    if (!canvas || !root.classList.contains('veiled')) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let glsl = null;
-    try { glsl = SwissGL(canvas); } catch (e) { glsl = null; }
-    if (!glsl) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // ── the automaton (Mordvintsev, after Cousin) ──
-    // Every node has three neighbours. Each step, a node reads its own state
-    // and how many of its neighbours are on, and the rule — a number, read
-    // bit by bit — says what its next state is and whether it divides. A
-    // dividing node becomes three, keeping the graph trivalent.
-    const NN = 3, CaseN = (NN + 1) * 2;
-    class GrowingGraph {
-      constructor(rule, flipProb) {
-        this.rule = rule;
-        this.flipProb = flipProb || 0;
-        this.lastGen = 0;
-        this.nodes = [[9,1,2],[0,2,4],[1,3,0],[2,4,6],[3,5,1],[4,6,8],[5,7,3],[6,8,9],[7,9,5],[8,0,7]];
-        this.states = [0,0,0,1,0, 1,0,1,1,1];
-        this.dividing = [];
-        this.phase = 0;
-        this.nodes.forEach(n => { n.gen = 0; });
-        this.addedHints = {};
-        this.links = this.updateLinks();
-      }
-      updateLinks() {
-        const links = [];
-        for (let i = 0; i < this.nodes.length; ++i) for (const j of this.nodes[i]) if (i < j) links.push(i, j);
-        return new Int32Array(links);
-      }
-      reconnect(source, oldPeer, newPeer) { const n = this.nodes[source]; n[n.indexOf(oldPeer)] = newPeer; }
-      grow(limit) {
-        const { nodes, states, rule } = this;
-        if (nodes.length >= limit) return;
-        if (this.phase === 0) {
-          ++this.lastGen;
-          this.addedHints = {};
-          const cases = nodes.map((node, i) => node.reduce((a, j) => a + states[j], 0) + states[i] * (NN + 1));
-          cases.forEach((r, i) => {
-            states[i] = (rule >> r) & 1;
-            this.dividing[i] = (rule >> (r + CaseN)) & 1;
-            if (this.flipProb > 0 && Math.random() < this.flipProb) states[i] = 1 - states[i];
-          });
-        } else {
-          // At the cap the division stops part-way, and the links have to be
-          // rebuilt for what was added regardless, or the last nodes in are
-          // left unlinked and drift off on their own.
-          let hitLimit = false;
-          for (let i = 0; i < this.dividing.length; ++i) {
-            if (nodes.length >= limit) { hitLimit = true; break; }
-            if (!this.dividing[i]) continue;
-            const [a, b, c] = nodes[i];
-            const j = nodes.length, k = j + 1;
-            Object.assign(nodes[i], [a, j, k]);
-            nodes.push([i, b, k]);
-            nodes.push([i, j, c]);
-            states.push(states[i], states[i]);
-            this.reconnect(b, i, j);
-            this.reconnect(c, i, k);
-            nodes[i].gen = nodes[j].gen = nodes[k].gen = this.lastGen;
-            this.dividing[i] = 0;
-            this.addedHints[j] = [i, b];
-            this.addedHints[k] = [i, c];
-          }
-          this.links = this.updateLinks();
-          if (hitLimit) return;
-        }
-        this.phase = 1 - this.phase;
+    // the corners: every choice of sign in four coordinates
+    const V = [];
+    for (let i = 0; i < 16; i++) V.push([i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1, i & 8 ? 1 : -1]);
+    // the edges: corners that differ in exactly one coordinate
+    const EDGES = [];
+    for (let i = 0; i < 16; i++) for (let j = i + 1; j < 16; j++) { const d = i ^ j; if (!(d & (d - 1))) EDGES.push([i, j]); }
+    // the faces: two coordinates free, the other two fixed; the four
+    // corners taken round the square, not across it
+    const FACES = [];
+    for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) {
+      const [c, d] = [0, 1, 2, 3].filter(k => k !== a && k !== b);
+      for (let sc = -1; sc <= 1; sc += 2) for (let sd = -1; sd <= 1; sd += 2) {
+        const at = (va, vb) => V.findIndex(v => v[a] === va && v[b] === vb && v[c] === sc && v[d] === sd);
+        FACES.push([at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)]);
       }
     }
 
-    // ── the layout: his WebAssembly core (src/main.c in the repository),
-    // inlined — an octree, a dual-tree Barnes–Hut for the charges, and the
-    // link springs — so thousands of nodes settle at the screen's rate. ──
-    const WASM = 'AGFzbQEAAAABMwlgAX8Bf2AAAX9gA39/fwBgAAF9YAN/f38Bf2AEf39/fwBgA399fQBgAn99AGADf399AAM9PAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAwQCBQYHBwcICAQFAXABAQEFAwEAAgYIAX8BQYCABAsH9wg7Bm1lbW9yeQIABWFsbG9jAAANX2dldF9zb3J0ZWRfeAABFV9sZW5fc29ydGVkX3hfX3YxMjhfdAACDV9nZXRfc29ydGVkX3kAAxVfbGVuX3NvcnRlZF95X192MTI4X3QABA1fZ2V0X3NvcnRlZF96AAUVX2xlbl9zb3J0ZWRfel9fdjEyOF90AAYMX2dldF9mb3JjZV94AAcUX2xlbl9mb3JjZV94X192MTI4X3QACAxfZ2V0X2ZvcmNlX3kACRRfbGVuX2ZvcmNlX3lfX3YxMjhfdAAKDF9nZXRfZm9yY2VfegALFF9sZW5fZm9yY2Vfel9fdjEyOF90AAwPX2dldF9ub2RlX3N0YXJ0AA0UX2xlbl9ub2RlX3N0YXJ0X19pbnQADg1fZ2V0X25vZGVfZW5kAA8SX2xlbl9ub2RlX2VuZF9faW50ABAPX2dldF9ub2RlX2xldmVsABEUX2xlbl9ub2RlX2xldmVsX19pbnQAEhBfZ2V0X25vZGVfcGFyZW50ABMVX2xlbl9ub2RlX3BhcmVudF9faW50ABQOX2dldF9ub2RlX25leHQAFRNfbGVuX25vZGVfbmV4dF9faW50ABYQX2dldF9ub2RlX2NlbnRlcgAXF19sZW5fbm9kZV9jZW50ZXJfX2Zsb2F0ABgNX2dldF9ub2RlX21pbgAZFF9sZW5fbm9kZV9taW5fX2Zsb2F0ABoNX2dldF9ub2RlX21heAAbFF9sZW5fbm9kZV9tYXhfX2Zsb2F0ABwOX2dldF9ub2RlX21hc3MAHRVfbGVuX25vZGVfbWFzc19fZmxvYXQAHhBfZ2V0X25vZGVfZXh0ZW50AB8XX2xlbl9ub2RlX2V4dGVudF9fZmxvYXQAIA9fZ2V0X25vZGVfZm9yY2UAIRZfbGVuX25vZGVfZm9yY2VfX2Zsb2F0ACILX2dldF9wb2ludHMAIxJfbGVuX3BvaW50c19fZmxvYXQAJAhfZ2V0X3ZlbAAl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';
-    function prepareWASM(instance) {
-      const type2class = { uint8_t: Uint8Array, int: Int32Array, uint32_t: Uint32Array, uint64_t: BigUint64Array, float: Float32Array };
-      const prefix = '_len_', exports = instance.exports, main = {}, arrays = {};
-      for (const key in exports) {
-        if (!key.startsWith(prefix)) { if (!key.startsWith('_')) main[key] = exports[key]; continue; }
-        const [name, type] = key.slice(prefix.length).split('__');
-        Object.defineProperty(main, name, { enumerable: true, get() {
-          if (!(name in arrays) || arrays[name].buffer != exports.memory.buffer) {
-            const ofs = exports['_get_' + name](), len = exports[key]();
-            if (!ofs) return null;
-            arrays[name] = new (type2class[type])(exports.memory.buffer, ofs, len);
-          }
-          return arrays[name];
-        } });
-      }
-      return main;
-    }
-    const MAXN = innerWidth < 700 ? 2500 : 4000;
-    const LINK_D = 25, LINK_K = 0.5, CHARGE = -3.0, CHARGE_MAX = 2000, DECAY = 0.1;
-    let wasm = null, pointN = 0, nodeCount = 0, treeExtent = 1;
-    function addPoints(n, hints) {
-      const pos = wasm.points;
-      for (let i = pointN; i < n; ++i) {
-        let x = Math.random() - 0.5, y = Math.random() - 0.5, nn = 0;
-        const h = hints && hints[i];
-        if (h) for (const j of h) { if (j >= pointN) continue; x += pos[j * 3]; y += pos[j * 3 + 1]; nn++; }
-        if (nn > 1) { x /= nn; y /= nn; }
-        pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = 0;
-      }
-      pointN = n;
-    }
-    function tick(links, steps) {
-      wasm.links.set(links);
-      nodeCount = wasm.buildOctree(pointN, 16, 10);
-      treeExtent = wasm.get_tree_extent();
-      wasm.accumPoints(nodeCount, treeExtent);
-      for (let k = 0; k < steps; ++k) {
-        wasm.linkForce(links.length / 2, LINK_K, LINK_D);
-        wasm.calcMultibodyForceDual(pointN, nodeCount, CHARGE_MAX);
-        wasm.applyChargeForces(pointN, CHARGE);
-        wasm.updateNodes(pointN, 1 - DECAY);
+    const rot = (p, i, j, t) => { const c = Math.cos(t), s = Math.sin(t), a = p[i], b = p[j]; p[i] = a * c - b * s; p[j] = a * s + b * c; };
+    const P3 = V.map(() => [0, 0, 0]), P2 = V.map(() => [0, 0]);
+    function project(t) {
+      for (let i = 0; i < 16; i++) {
+        const p = V[i].slice();
+        rot(p, 0, 3, t * 0.42);            // the turn through the fourth axis
+        rot(p, 1, 2, t * 0.27);            // and one in the plane across it
+        rot(p, 0, 2, 0.6 + t * 0.05);      // a slow turn in ordinary space
+        const k4 = 2.4 / (2.4 - p[3] * 0.85);   // the fourth coordinate as depth
+        let x = p[0] * k4, y = p[1] * k4, z = p[2] * k4;
+        // a fixed way of looking at it: from a little above and to one side
+        let y2 = y * 0.94 - z * 0.34, z2 = y * 0.34 + z * 0.94; y = y2; z = z2;
+        let x2 = x * 0.88 + z * 0.47; z2 = -x * 0.47 + z * 0.88; x = x2; z = z2;
+        const k3 = 4.4 / (4.4 - z);
+        P3[i][0] = x; P3[i][1] = y; P3[i][2] = z;
+        P2[i][0] = x * k3; P2[i][1] = y * k3;
       }
     }
 
-    // ── the drawing (Mordvintsev): links, nodes coloured by age, bloom ──
-    // a handful of rules that grow into something worth watching in the
-    // few seconds they get; a different one each visit
-    // rule, his mutation rate, and how many steps of the automaton a
-    // sixtieth of a second is worth: the quadratic one is slow to grow into
-    // itself and gets two, the exponential ones would fill the cap at once
-    const RULES = [[2182, 0, 2], [2236, 0, 1], [17953, 5e-5, 1.2], [22220, 1e-3, 1.5]];
-    let [rule, flip, pace] = RULES[Math.floor(Math.random() * RULES.length)];
-    try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) { [rule, flip, pace] = RULES.find(r => r[0] === q) || [q, 0, 1]; } } catch (e) {}
-    const graph = new GrowingGraph(rule, flip);
-    window.__veilGraph = () => ({ rule, nodes: graph.nodes.length, links: graph.links.length / 2, gen: graph.lastGen });   // for the test harness
-    const points = new Float32Array(256 * 16 * 4);     // the points texture, 4096 of them
-    const linkBuf = new Int32Array(256 * 32 * 2);      // the links texture, 8192 of them
-
-    const blurRadius = [3, 5, 7, 9, 11];
-    const blurKernel = blurRadius.map(r => {
-      const a = new Float32Array(12); a[0] = 1; let acc = 1;
-      for (let i = 1; i < r; ++i) { a[i] = Math.exp(-5 * i * i / r / r); acc += 2 * a[i]; }
-      return a.map(x => x / acc);
-    });
-    // the page's own ground and ink, for the day's version of the picture
-    const cssColor = name => {
-      const v = getComputedStyle(root).getPropertyValue(name).trim();
-      const m = v.match(/^#([0-9a-f]{6})$/i);
-      return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255) : null;
-    };
-    let bloom = 1.5;
-    const gamma = 2.0;
-
-    function render(w, h) {
-      const N = Math.min(pointN, 4096), lastGen = graph.lastGen, pos = wasm.points;
-      for (let i = 0; i < N; ++i) {
-        points[i * 4] = pos[i * 3]; points[i * 4 + 1] = pos[i * 3 + 1]; points[i * 4 + 2] = 0;
-        points[i * 4 + 3] = graph.nodes[i].gen;
+    const L = [0.42, -0.62, 0.66];       // the light: upper left, toward the viewer
+    const order = FACES.map((f, i) => i);
+    let lit = 0;                          // ready: it brightens
+    function draw(t, w, h, dpr) {
+      project(t);
+      const day = root.classList.contains('day');
+      // the projected corners reach about four units out at their widest;
+      // the figure is given a third of the shorter side
+      const S = Math.min(w, h) * 0.082, cx = w / 2, cy = h / 2;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.lineJoin = 'round';
+      const depth = FACES.map(f => (P3[f[0]][2] + P3[f[1]][2] + P3[f[2]][2] + P3[f[3]][2]) / 4);
+      order.sort((i, j) => depth[i] - depth[j]);   // far first
+      for (const fi of order) {
+        const f = FACES[fi];
+        const a = P3[f[0]], b = P3[f[1]], d = P3[f[3]];
+        // the face's own normal, turned to face the viewer, for the shade
+        const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+        const vx = d[0] - a[0], vy = d[1] - a[1], vz = d[2] - a[2];
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+        if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+        const shade = 0.16 + 0.84 * Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+        const glass = (day ? 0.08 : 0.05) + (day ? 0.34 : 0.30) * shade + lit * 0.05;
+        ctx.beginPath();
+        ctx.moveTo(cx + P2[f[0]][0] * S, cy + P2[f[0]][1] * S);
+        for (let k = 1; k < 4; k++) ctx.lineTo(cx + P2[f[k]][0] * S, cy + P2[f[k]][1] * S);
+        ctx.closePath();
+        ctx.fillStyle = day ? `rgba(255,255,255,${glass.toFixed(3)})` : `rgba(190,206,240,${glass.toFixed(3)})`;
+        ctx.fill();
+        // by night the edges carry a faint light of their own
+        if (!day) { ctx.shadowColor = 'rgba(170,195,255,0.55)'; ctx.shadowBlur = 5 * dpr; }
+        ctx.lineWidth = 1.1;
+        ctx.strokeStyle = day ? `rgba(18,30,48,${(0.55 + lit * 0.3).toFixed(3)})` : `rgba(228,234,250,${(0.66 + lit * 0.3).toFixed(3)})`;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
       }
-      const tc = wasm.tree_center;
-      const center = [tc[0], tc[1], 0];
-      const extent = Math.max(treeExtent, 1);
-      const links = graph.links, linkN = Math.min(links.length / 2, 8192);
-      linkBuf.set(links.subarray(0, linkN * 2));
-
-      const day = root.classList.contains('day') ? 1 : 0;
-      const Inc = `
-        uniform float day;
-        vec2 mapXY(vec2 p) { return 1.9 * p / (extent + 30.0); }
-      `;
-      const data = {
-        Inc,
-        pointsTex: glsl({}, { data: points, size: [256, 16], format: 'rgba32f', tag: 'vpoints' }),
-        linksTex: glsl({}, { data: linkBuf, size: [256, 32], format: 'rg32i', tag: 'vlinks' }),
-        center, extent, lastGen, day, Blend: 's*sa+d*(1-sa)', Aspect: 'fit',
-      };
-      const frame = glsl({ Clear: 0 }, { tag: 'vframe', msaa: 4, size: [w, h] });
-      glsl({ ...data, Grid: [linkN], DepthTest: 1, VP: `
-        #define id2xy(id) ivec2((id)&0xff, (id)>>8)
-        ivec2 link = linksTex(id2xy(ID.x)).xy;
-        vec3 p0 = pointsTex(id2xy(link.x)).xyz-center;
-        vec3 p1 = pointsTex(id2xy(link.y)).xyz-center;
-        vec2 dp = normalize(p1.xy-p0.xy);
-        vec2 p = mix(p0, p1, UV.x).xy + vec2(-dp.y, dp.x)*XY.y*(day > 0.5 ? 1.15 : 0.7);
-        VPos.xy = mapXY(p);
-      `, FP: `day > 0.5 ? vec4(0.15, 0.12, 0.30, 1.0) : vec4(0.36, 0.40, 0.60, 1.0)` }, frame);
-      glsl({ ...data, Grid: [N], DepthTest: 1, VP: `
-        // The spectrum runs with age, old to new. By night: deep violet,
-        // blue, teal, then a pale warm white at the growing tips, which is
-        // what blooms. By day the same run in ink: indigo, plum, brick,
-        // and amber at the tips.
-        vec3 ramp(float t, vec3 c0, vec3 c1, vec3 c2, vec3 c3, vec3 c4) {
-          float s = t * 4.0;
-          vec3 c = mix(c0, c1, clamp(s, 0.0, 1.0));
-          c = mix(c, c2, clamp(s - 1.0, 0.0, 1.0));
-          c = mix(c, c3, clamp(s - 2.0, 0.0, 1.0));
-          return mix(c, c4, clamp(s - 3.0, 0.0, 1.0));
-        }
-        vec3 color_map(float t) {
-          return day > 0.5
-            ? ramp(t, vec3(0.12, 0.07, 0.30), vec3(0.34, 0.10, 0.42), vec3(0.62, 0.18, 0.30), vec3(0.90, 0.45, 0.18), vec3(1.00, 0.78, 0.30))
-            : ramp(t, vec3(0.22, 0.10, 0.48), vec3(0.18, 0.38, 0.78), vec3(0.25, 0.72, 0.78), vec3(0.80, 0.92, 0.80), vec3(1.00, 0.96, 0.72));
-        }
-        void vertex() {
-          #define id2xy(id) ivec2((id)&0xff, (id)>>8)
-          vec4 p = pointsTex(id2xy(ID.x));
-          p.xyz -= center;
-          varying vec3 color = color_map(p.w/(lastGen+1.));
-          color = min(color, 0.9);
-          color *= 1.0+max(0.0, 1.0-(lastGen-p.w)/10.0);
-          VPos.xy = mapXY(p.xy + XY * (day > 0.5 ? 7.5 : 6.5));
-        }`, FP: `vec4(color,1)*smoothstep(1.0, 0.8, length(XY))` }, frame);
-
-      // bloom: only what is brighter than 0.9 — the newest growth — blooms
-      let [bw, bh] = frame.size;
-      let tex = glsl({ T: frame.linear, FP: `vec4 c = T(UV); FOut = (c-0.9)/0.1;` },
-        { size: [bw, bh], filter: 'linear', wrap: 'edge', tag: 'vlum' });
-      const lods = {};
-      for (let lod = 0; lod < blurRadius.length; ++lod, bw /= 2, bh /= 2) {
-        for (const dir of [[1, 0], [0, 1]]) {
-          lods['L' + lod] = tex = glsl({ T: tex, dir, R: blurRadius[lod], kernel: blurKernel[lod], FP: `
-            uniform float kernel[12];
-            uniform int R;
-            void fragment() {
-              FOut = T(UV)*kernel[0];
-              vec2 dp = dir/vec2(ViewSize), p=dp;
-              for (int i=1; i<R; i+=1, p+=dp) FOut += kernel[i] * (T(UV+p) + T(UV-p));
-            }` }, { size: [bw, bh], story: 2, format: 'rgb11f', filter: 'linear', wrap: 'edge', tag: `vlod${lod}` })[0];
-        }
+      // the corners, as points of light, the nearer the larger
+      for (let i = 0; i < 16; i++) {
+        const x = cx + P2[i][0] * S, y = cy + P2[i][1] * S;
+        const k = 1.4 + 1.3 * (P3[i][2] + 2) / 4;
+        if (!day) { ctx.fillStyle = 'rgba(200,215,255,0.28)'; ctx.beginPath(); ctx.arc(x, y, k * 2.6, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,255,255,0.95)';
+        ctx.beginPath(); ctx.arc(x, y, k, 0, Math.PI * 2); ctx.fill();
       }
-      const bg = cssColor('--bg') || [0, 0, 0];
-      glsl({ ...lods, T: frame, bloom, gamma, day, bg, FP: `
-        vec4 c = T(UV);
-        vec4 glow = bloom*(L0(UV) + L1(UV) + L2(UV) + L3(UV) + L4(UV));
-        vec3 v;
-        if (day < 0.5) {
-          v = pow((c + glow).rgb, vec3(1./gamma));
-        } else {
-          // By day the drawing is laid over the sky in its own colours,
-          // and the glow of the newest growth is added as light on top
-          float a = clamp(c.a, 0.0, 1.0);
-          v = mix(bg, c.rgb / max(a, 1e-3), a);
-          // the newest growth catches the light: a warm haze, not added
-          // white, which vanishes on a bright sky
-          float g = clamp(max(glow.r, max(glow.g, glow.b)) * 0.8, 0.0, 1.0);
-          v = mix(v, vec3(1.0, 0.60, 0.16), g);
-        }
-        FOut = vec4(v, 1.0);
-      ` });
     }
 
-    let raf = 0, last = 0, growAcc = 0;
+    let raf = 0;
+    const born = performance.now();
     function frame(now) {
-      if (!document.getElementById('veil')) {
-        // the veil has left: hand the GPU its memory back
-        raf = 0;
-        try { const ext = glsl.gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); } catch (e) {}
-        return;
-      }
+      if (!document.getElementById('veil')) { raf = 0; return; }
       raf = requestAnimationFrame(frame);
-      const dt = last ? Math.min(64, now - last) : 16; last = now;
-      // one step of the automaton per sixtieth of a second, whatever the
-      // frame rate; after a stall it catches up a little, never all at once
-      growAcc += dt / 16.7 * pace;
-      let steps = 0;
-      while (growAcc >= 1 && steps < 4) {
-        growAcc -= 1; steps++;
-        if (graph.nodes.length < MAXN) { graph.grow(MAXN); addPoints(graph.nodes.length, graph.addedHints); }
+      const want = root.classList.contains('veil-full') ? 1 : 0;
+      lit += (want - lit) * 0.06;
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      const w = innerWidth, h = innerHeight;
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       }
-      if (growAcc > 3) growAcc = 0;
-      tick(graph.links, 2);
-      // ready: it lights
-      const want = root.classList.contains('veil-full') ? 3.2 : 1.5;
-      bloom += (want - bloom) * 0.08;
-      const DPR = Math.min(devicePixelRatio || 1, 1.5);
-      const w = Math.round(innerWidth * DPR), h = Math.round(innerHeight * DPR);
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-      render(w, h);
+      draw((now - born) / 1000, w, h, dpr);
     }
-    // the core arrives in a moment; nothing is drawn until it has
-    (async () => {
-      try {
-        const bin = Uint8Array.from(atob(WASM), c => c.charCodeAt(0));
-        const { instance } = await WebAssembly.instantiate(bin);
-        instance.exports.init(MAXN + 64, MAXN + 64, (MAXN + 64) * 4);
-        wasm = prepareWASM(instance);
-        addPoints(graph.nodes.length, graph.addedHints);
-        if (document.getElementById('veil') && !document.hidden) raf = requestAnimationFrame(frame);
-      } catch (e) { /* no core, no graph: the ground alone stands in */ }
-    })();
+    raf = requestAnimationFrame(frame);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; last = 0; }
-      else if (!raf && wasm && document.getElementById('veil')) raf = requestAnimationFrame(frame);
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+      else if (!raf && document.getElementById('veil')) raf = requestAnimationFrame(frame);
     });
   })();
   </script>
@@ -4140,10 +3003,10 @@ self._SwissGL = SwissGL;
     veil.addEventListener('wheel', still, { passive: false });
     veil.addEventListener('touchmove', still, { passive: false });
 
-    // The graph is given a little while to grow into something before the
-    // veil lifts, and is never held longer than MAX, whatever fails.
+    // The figure is given a little while to be seen turning before the veil
+    // lifts, and is never held longer than MAX, whatever fails.
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const MIN = reduced ? 600 : 2600, MAX = 8000;   // nothing grows under reduced motion
+    const MIN = reduced ? 600 : 2400, MAX = 8000;   // nothing turns under reduced motion
     const born = performance.now();
     let done = false;
 
