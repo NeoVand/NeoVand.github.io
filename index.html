@@ -46,7 +46,7 @@
     // class goes on before first paint, or the head of the page would show
     // itself finished and then start over.
     window.__intro = {
-      dur: 3900, textDur: 2800,
+      dur: 4900, textDur: 2800,
       shelfEnd: 650, plantsAt: 1700, birdsAt: 2900,
       t0: 0, done: false, textDone: false, sceneDone: false, skipped: false,
     };
@@ -375,21 +375,25 @@
        is precisely when this has to keep moving. */
     .veil-orbit, .veil-ring, .veil-frame { position: absolute; inset: 0; }
     .veil-orbit { will-change: transform, opacity; }
+    /* Each square makes one turn — the outer one way, the inner the other —
+       slowing all the way, and comes to rest set into the star: the outer
+       upright, the inner a diamond inside it. The end is the composition,
+       whenever the page is ready; a slow page only finds it waiting. */
     .veil-ring {
       will-change: transform;
-      animation: veil-spin var(--spin, 12s) linear infinite;
+      animation: veil-settle 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
     }
-    @keyframes veil-spin {
-      from { transform: rotate(var(--k0, 0deg)); }
-      to   { transform: rotate(calc(var(--k0, 0deg) + 360deg)); }
+    @keyframes veil-settle {
+      from { transform: rotate(var(--from, 0deg)); }
+      to   { transform: rotate(var(--to, 0deg)); }
     }
     /* the inner square: smaller, and its pieces a beat behind the outer */
     .veil-orbit[data-ring="b"] .veil-frame { transform: scale(0.72); }
     .veil-orbit[data-ring="b"] .fl-part { animation-delay: calc(var(--d, 0ms) + 240ms); }
     /* the exit: the outer square opens outward, the inner closes inward */
-    .veil-orbit { transition: transform 1000ms var(--ease), opacity 640ms var(--ease); }
-    html.veil-gone .veil-orbit[data-ring="a"] { transform: scale(1.14); opacity: 0; }
-    html.veil-gone .veil-orbit[data-ring="b"] { transform: scale(0.82); opacity: 0; }
+    .veil-orbit { transition: transform 1400ms var(--ease), opacity 760ms var(--ease); }
+    html.veil-gone .veil-orbit[data-ring="a"] { transform: scale(1.05); opacity: 0; }
+    html.veil-gone .veil-orbit[data-ring="b"] { transform: scale(0.95); opacity: 0; }
     /* each side is the whole square, turned a quarter at a time about its
        centre, with the ornament laid along its top edge, finial outward */
     .veil-side {
@@ -423,7 +427,7 @@
     }
     html.veil-full .veil-fl { fill: var(--text); }
     @media (prefers-reduced-motion: reduce) {
-      .veil-ring { animation: none; transform: rotate(var(--k0, 0deg)); }
+      .veil-ring { animation: none; transform: rotate(var(--to, 0deg)); }
       .veil-fl .fl-part { animation: none; opacity: 1; transform: none; }
       .veil-orbit { transition: opacity 280ms linear; }
       html.veiled #veil { transition-duration: 280ms; }
@@ -2962,13 +2966,12 @@
       </g>
     </defs></svg>
     <!-- Two squares of it, one inside the other and a half-turn of a square
-         apart, which together make an eight-pointed star. Both turn, slowly
-         and at different rates, while their pieces unroll; when the page is
-         ready they glide to a stop set exactly into the star, and then the
-         outer one opens outward and the inner one closes inward as the
-         ground clears. -->
+         apart, which together make an eight-pointed star. Each makes one
+         slowing turn while its pieces unroll and comes to rest set into the
+         star; when the page is ready the outer one opens outward and the
+         inner one closes inward as the ground clears. -->
     <div class="veil-stage">
-      <div class="veil-orbit" data-ring="a" style="--k0:0deg;--spin:11s"><div class="veil-ring"><div class="veil-frame">
+      <div class="veil-orbit" data-ring="a" style="--from:-110deg;--to:0deg"><div class="veil-ring"><div class="veil-frame">
         <div class="veil-side" style="--k:0"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
@@ -3022,7 +3025,7 @@
         <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
         </div></div>
       </div></div></div>
-      <div class="veil-orbit" data-ring="b" style="--k0:45deg;--spin:17s"><div class="veil-ring"><div class="veil-frame">
+      <div class="veil-orbit" data-ring="b" style="--from:155deg;--to:45deg"><div class="veil-ring"><div class="veil-frame">
         <div class="veil-side" style="--k:0"><div class="fl veil-fl">
         <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
         <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
@@ -3091,10 +3094,10 @@
     veil.addEventListener('pointerdown', e => e.stopPropagation());
     veil.addEventListener('click', e => e.stopPropagation());
 
-    // The flourish takes about 1.6s to unroll to its last spiral; the veil
-    // is held at least that long, so it is never cut off part-way, and
-    // never longer than MAX, whatever fails.
-    const MIN = 1200, MAX = 8000;
+    // The squares take 2.4s to turn and settle into the star; the veil is
+    // held until they very nearly have, so the composition is never cut
+    // off part-way, and never longer than MAX, whatever fails.
+    const MIN = 2100, MAX = 8000;
     const born = performance.now();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let done = false;
@@ -3102,27 +3105,6 @@
     function go() {
       if (done) return;
       done = true;
-      // The squares glide to a stop from wherever the turning has them —
-      // a little further round, easing out — and stop set into the star:
-      // the inner one lands a half-turn of a square from the outer.
-      const rings = [...veil.querySelectorAll('.veil-ring')];
-      if (!reduced && rings.length === 2 && window.DOMMatrixReadOnly) {
-        const angle = el => {
-          const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
-          return Math.atan2(m.b, m.a) * 180 / Math.PI;
-        };
-        const a = rings.map(angle);
-        rings.forEach((r, i) => { r.style.animation = 'none'; r.style.transform = `rotate(${a[i].toFixed(2)}deg)`; });
-        void veil.offsetHeight;
-        const A = a[0] + 18;
-        let B = a[1] + 8;
-        const want = (((A + 45) % 90) + 90) % 90, have = ((B % 90) + 90) % 90;
-        B += ((want - have) % 90 + 90) % 90;
-        rings.forEach((r, i) => {
-          r.style.transition = 'transform 1100ms cubic-bezier(0.16, 1, 0.3, 1)';
-          r.style.transform = `rotate(${(i ? B : A).toFixed(2)}deg)`;
-        });
-      }
       root.classList.add('veil-full');            // the ornament brightens
       setTimeout(() => {
         // The fade begins. The opening follows a beat later, once the sky
@@ -3438,7 +3420,7 @@
     const hg = halo.getContext('2d');
     const bloom = document.createElement('canvas');
     bloom.width = bloom.height = 768;
-    let bloomWarm = -1, haloW = 0, haloH = 0, haloX = NaN, haloY = NaN;
+    let bloomWarm = -1, haloW = 0, haloH = 0, haloX = NaN, haloY = NaN, haloA = NaN;
     function bakeBloom(warm) {
       const g = bloom.getContext('2d'), C = bloom.width / 2;
       const gr = g.createRadialGradient(C, C, 0, C, C, C);
@@ -3479,11 +3461,14 @@
         haloX = haloY = NaN;
       }
       if (mix === 0 && mixTo === 0) return;    // don't repaint an invisible moon halo
-      if (!resized && !recolor && s.x === haloX && s.y === haloY) return;
+      const a = s.a == null ? 1 : s.a;
+      if (!resized && !recolor && s.x === haloX && s.y === haloY && a === haloA) return;
       if (recolor) bakeBloom(warm);
       hg.clearRect(0, 0, w, h);
+      hg.globalAlpha = a;                      // it comes up with the sun
       hg.drawImage(bloom, s.x - radius, s.y - radius, radius * 2, radius * 2);
-      haloX = s.x; haloY = s.y;
+      hg.globalAlpha = 1;
+      haloX = s.x; haloY = s.y; haloA = a;
     }
     window.__sky.paintHalo = paintHalo;
 
@@ -3510,7 +3495,7 @@
       // The sun is drawn by the grove, and it wanders when it is bothered, so
       // its glow in the cloud has to follow it rather than sit at a fixed spot.
       const s = window.__sun;
-      gl.uniform1f(uSunVisible, s && H ? 1 : 0);
+      gl.uniform1f(uSunVisible, s && H ? (s.a == null ? 1 : s.a) : 0);
       if (s && H) {
         // published in document coordinates, so it keeps scrolling away
         // correctly even after the grove has stopped drawing itself
@@ -8363,7 +8348,7 @@
 
     function publishSun() {
       const previous = window.__sun;
-      window.__sun = { x: groveOX + moonX, y: groveOY + moonY };
+      window.__sun = { x: groveOX + moonX, y: groveOY + moonY, a: lightAlpha };
       if (window.__sky?.paintHalo) window.__sky.paintHalo();
       if ((!previous || (reduced && (previous.x !== window.__sun.x || previous.y !== window.__sun.y))) && window.__sky?.wake)
         window.__sky.wake();
@@ -8650,9 +8635,13 @@
           // and then the sun or the moon rises over the finished grove on
           // the opening's final beat — it used to lead, and led alone.
           const u = Math.min(1, Math.max(0, (elapsed - I.birdsAt) / (I.dur - I.birdsAt)));
-          const sky = 1 - Math.pow(1 - u, 3);
+          // eased at both ends, so it neither starts with a jolt nor stops
+          // with one; it emerges from the dark near its place and settles
+          const sky = u * u * (3 - 2 * u);
           moonX = introMoonX + (moonXHome - introMoonX) * sky;
           moonY = introMoonY + (moonYHome - introMoonY) * sky;
+          const a = Math.min(1, u / 0.6);
+          lightAlpha = a * a * (3 - 2 * a);
           if (u > 0) lightIn = true;
         }
       }
@@ -8732,14 +8721,14 @@
           window.__sun = null;
         } else {
           if (mix < 0.999) {
-            ctx.globalAlpha = 1 - mix;
+            ctx.globalAlpha = (1 - mix) * lightAlpha;
             ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
           }
           if (mix > 0.001) {
             // a slow breath on the corona, so the light is never quite still
             const beat = 1 + Math.sin(now / 2600) * 0.035;
             const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
-            ctx.globalAlpha = mix;
+            ctx.globalAlpha = mix * lightAlpha;
             ctx.globalCompositeOperation = 'lighter';
             ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
             ctx.globalCompositeOperation = 'source-over';
@@ -9229,16 +9218,21 @@
     // whether the sun or moon has begun its entrance: it is the last thing
     // to arrive, and until then it is neither drawn nor published
     let lightIn = !INTRO;
+    // and how far into it: the body fades in as it comes, and its glow in
+    // the sky and its bloom on the page come up with it
+    let lightAlpha = INTRO ? 0 : 1;
     let introMoonX = 0, introMoonY = 0;
 
     // Called on the first frame of the opening, once the canvas has been laid
     // out, so the entry points are in real coordinates.
     function introBegin() {
       introStarted = true;
-      // the moon comes in over the top-left corner, from wholly outside the
-      // canvas: the sun's corona reaches a fifth past the disc
-      introMoonX = -moonR * 1.3;
-      introMoonY = -moonR * 1.2;
+      // It comes in from the direction of the top-left corner, but from a
+      // third of the way there, not from off the canvas: it fades in as it
+      // comes, so it need not start out of sight, and a short way at an
+      // easy pace is a body settling rather than one flying in.
+      introMoonX = moonXHome + (-moonR * 1.3 - moonXHome) * 0.34;
+      introMoonY = moonYHome + (-moonR * 1.2 - moonYHome) * 0.34;
       moonX = introMoonX; moonY = introMoonY;
 
       // The air is invited later, after the greenery has finished growing.
