@@ -335,6 +335,15 @@
     }
     .day #sun-halo { opacity: 1; }
     html.theming #sun-halo { transition: opacity 480ms linear !important; }
+    #light-in {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: -1;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+    #light-in.sun { mix-blend-mode: screen; mix-blend-mode: plus-lighter; }
 
     /* ─── The veil ───
        A curtain over the whole page while it is built, lifted by the script
@@ -3804,8 +3813,9 @@ self._SwissGL = SwissGL;
     // dividing node becomes three, keeping the graph trivalent.
     const NN = 3, CaseN = (NN + 1) * 2;
     class GrowingGraph {
-      constructor(rule) {
+      constructor(rule, flipProb) {
         this.rule = rule;
+        this.flipProb = flipProb || 0;
         this.lastGen = 0;
         this.nodes = [[9,1,2],[0,2,4],[1,3,0],[2,4,6],[3,5,1],[4,6,8],[5,7,3],[6,8,9],[7,9,5],[8,0,7]];
         this.states = [0,0,0,1,0, 1,0,1,1,1];
@@ -3831,6 +3841,7 @@ self._SwissGL = SwissGL;
           cases.forEach((r, i) => {
             states[i] = (rule >> r) & 1;
             this.dividing[i] = (rule >> (r + CaseN)) & 1;
+            if (this.flipProb > 0 && Math.random() < this.flipProb) states[i] = 1 - states[i];
           });
         } else {
           for (let i = 0; i < this.dividing.length; ++i) {
@@ -3855,64 +3866,63 @@ self._SwissGL = SwissGL;
       }
     }
 
-    // ── the layout: links as springs, every node pushing every other ──
-    const MAXN = innerWidth < 700 ? 600 : 1000;
-    const pos = new Float32Array(MAXN * 3), vel = new Float32Array(MAXN * 3);
-    let pointN = 0;
-    const LINK_D = 25, LINK_K = 0.5, CHARGE = -3.0, DECAY = 0.1;
+    // ── the layout: his WebAssembly core (src/main.c in the repository),
+    // inlined — an octree, a dual-tree Barnes–Hut for the charges, and the
+    // link springs — so thousands of nodes settle at the screen's rate. ──
+    const WASM = 'AGFzbQEAAAABMwlgAX8Bf2AAAX9gA39/fwBgAAF9YAN/f38Bf2AEf39/fwBgA399fQBgAn99AGADf399AAM9PAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAgEBAwQCBQYHBwcICAQFAXABAQEFAwEAAgYIAX8BQYCABAsH9wg7Bm1lbW9yeQIABWFsbG9jAAANX2dldF9zb3J0ZWRfeAABFV9sZW5fc29ydGVkX3hfX3YxMjhfdAACDV9nZXRfc29ydGVkX3kAAxVfbGVuX3NvcnRlZF95X192MTI4X3QABA1fZ2V0X3NvcnRlZF96AAUVX2xlbl9zb3J0ZWRfel9fdjEyOF90AAYMX2dldF9mb3JjZV94AAcUX2xlbl9mb3JjZV94X192MTI4X3QACAxfZ2V0X2ZvcmNlX3kACRRfbGVuX2ZvcmNlX3lfX3YxMjhfdAAKDF9nZXRfZm9yY2VfegALFF9sZW5fZm9yY2Vfel9fdjEyOF90AAwPX2dldF9ub2RlX3N0YXJ0AA0UX2xlbl9ub2RlX3N0YXJ0X19pbnQADg1fZ2V0X25vZGVfZW5kAA8SX2xlbl9ub2RlX2VuZF9faW50ABAPX2dldF9ub2RlX2xldmVsABEUX2xlbl9ub2RlX2xldmVsX19pbnQAEhBfZ2V0X25vZGVfcGFyZW50ABMVX2xlbl9ub2RlX3BhcmVudF9faW50ABQOX2dldF9ub2RlX25leHQAFRNfbGVuX25vZGVfbmV4dF9faW50ABYQX2dldF9ub2RlX2NlbnRlcgAXF19sZW5fbm9kZV9jZW50ZXJfX2Zsb2F0ABgNX2dldF9ub2RlX21pbgAZFF9sZW5fbm9kZV9taW5fX2Zsb2F0ABoNX2dldF9ub2RlX21heAAbFF9sZW5fbm9kZV9tYXhfX2Zsb2F0ABwOX2dldF9ub2RlX21hc3MAHRVfbGVuX25vZGVfbWFzc19fZmxvYXQAHhBfZ2V0X25vZGVfZXh0ZW50AB8XX2xlbl9ub2RlX2V4dGVudF9fZmxvYXQAIA9fZ2V0X25vZGVfZm9yY2UAIRZfbGVuX25vZGVfZm9yY2VfX2Zsb2F0ACILX2dldF9wb2ludHMAIxJfbGVuX3BvaW50c19fZmxvYXQAJAhfZ2V0X3ZlbAAl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';
+    function prepareWASM(instance) {
+      const type2class = { uint8_t: Uint8Array, int: Int32Array, uint32_t: Uint32Array, uint64_t: BigUint64Array, float: Float32Array };
+      const prefix = '_len_', exports = instance.exports, main = {}, arrays = {};
+      for (const key in exports) {
+        if (!key.startsWith(prefix)) { if (!key.startsWith('_')) main[key] = exports[key]; continue; }
+        const [name, type] = key.slice(prefix.length).split('__');
+        Object.defineProperty(main, name, { enumerable: true, get() {
+          if (!(name in arrays) || arrays[name].buffer != exports.memory.buffer) {
+            const ofs = exports['_get_' + name](), len = exports[key]();
+            if (!ofs) return null;
+            arrays[name] = new (type2class[type])(exports.memory.buffer, ofs, len);
+          }
+          return arrays[name];
+        } });
+      }
+      return main;
+    }
+    const MAXN = innerWidth < 700 ? 2500 : 4000;
+    const LINK_D = 25, LINK_K = 0.5, CHARGE = -3.0, CHARGE_MAX = 2000, DECAY = 0.1;
+    let wasm = null, pointN = 0, nodeCount = 0, treeExtent = 1;
     function addPoints(n, hints) {
+      const pos = wasm.points;
       for (let i = pointN; i < n; ++i) {
         let x = Math.random() - 0.5, y = Math.random() - 0.5, nn = 0;
         const h = hints && hints[i];
         if (h) for (const j of h) { if (j >= pointN) continue; x += pos[j * 3]; y += pos[j * 3 + 1]; nn++; }
         if (nn > 1) { x /= nn; y /= nn; }
         pos[i * 3] = x; pos[i * 3 + 1] = y; pos[i * 3 + 2] = 0;
-        vel[i * 3] = vel[i * 3 + 1] = vel[i * 3 + 2] = 0;
       }
       pointN = n;
     }
     function tick(links, steps) {
-      const f = 1 - DECAY, linkN = links.length / 2, N = pointN;
+      wasm.links.set(links);
+      nodeCount = wasm.buildOctree(pointN, 16, 10);
+      treeExtent = wasm.get_tree_extent();
+      wasm.accumPoints(nodeCount, treeExtent);
       for (let k = 0; k < steps; ++k) {
-        for (let l = 0; l < linkN; ++l) {
-          const i = links[l * 2] * 3, j = links[l * 2 + 1] * 3;
-          const dx = pos[j] - pos[i], dy = pos[j + 1] - pos[i + 1];
-          const len = Math.sqrt(dx * dx + dy * dy) + 1e-6;
-          const s = (len - LINK_D) / len * LINK_K * 0.5;
-          vel[j] -= dx * s; vel[j + 1] -= dy * s;
-          vel[i] += dx * s; vel[i + 1] += dy * s;
-        }
-        for (let a = 0; a < N; ++a) {
-          const ia = a * 3, ax = pos[ia], ay = pos[ia + 1];
-          let fx = 0, fy = 0;
-          for (let b = a + 1; b < N; ++b) {
-            const ib = b * 3;
-            let dx = pos[ib] - ax, dy = pos[ib + 1] - ay;
-            let d2 = dx * dx + dy * dy;
-            if (d2 < 1e-3) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = dx * dx + dy * dy; }
-            const s = CHARGE / d2;
-            fx += dx * s; fy += dy * s;
-            vel[ib] -= dx * s; vel[ib + 1] -= dy * s;
-          }
-          vel[ia] += fx; vel[ia + 1] += fy;
-        }
-        for (let i = 0; i < N * 3; i += 3) {
-          vel[i] *= f; vel[i + 1] *= f;
-          pos[i] += vel[i]; pos[i + 1] += vel[i + 1];
-        }
+        wasm.linkForce(links.length / 2, LINK_K, LINK_D);
+        wasm.calcMultibodyForceDual(pointN, nodeCount, CHARGE_MAX);
+        wasm.applyChargeForces(pointN, CHARGE);
+        wasm.updateNodes(pointN, 1 - DECAY);
       }
     }
 
     // ── the drawing (Mordvintsev): links, nodes coloured by age, bloom ──
     // a handful of rules that grow into something worth watching in the
     // few seconds they get; a different one each visit
-    const RULES = [2182, 6259, 3260, 2236, 17953];
-    let rule = RULES[Math.floor(Math.random() * RULES.length)];
-    try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) rule = q; } catch (e) {}
-    const graph = new GrowingGraph(rule);
-    addPoints(graph.nodes.length, graph.addedHints);
-    const points = new Float32Array(1024 * 4);
-    const linkBuf = new Int32Array(256 * 16 * 2);   // the links texture, 4096 of them
+    const RULES = [[2182, 0], [2236, 0], [17953, 5e-5], [22220, 1e-3], [3260, 0]];
+    let [rule, flip] = RULES[Math.floor(Math.random() * RULES.length)];
+    try { const q = parseInt(new URLSearchParams(location.search).get('veilrule')); if (q === q) { rule = q; flip = (RULES.find(r => r[0] === q) || [0, 0])[1]; } } catch (e) {}
+    const graph = new GrowingGraph(rule, flip);
+    const points = new Float32Array(256 * 16 * 4);     // the points texture, 4096 of them
+    const linkBuf = new Int32Array(256 * 32 * 2);      // the links texture, 8192 of them
 
     const blurRadius = [3, 5, 7, 9, 11];
     const blurKernel = blurRadius.map(r => {
@@ -3930,16 +3940,15 @@ self._SwissGL = SwissGL;
     const gamma = 2.0;
 
     function render(w, h) {
-      const N = pointN, lastGen = graph.lastGen;
-      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      const N = Math.min(pointN, 4096), lastGen = graph.lastGen, pos = wasm.points;
       for (let i = 0; i < N; ++i) {
-        const x = pos[i * 3], y = pos[i * 3 + 1];
-        points[i * 4] = x; points[i * 4 + 1] = y; points[i * 4 + 2] = 0; points[i * 4 + 3] = graph.nodes[i].gen;
-        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        points[i * 4] = pos[i * 3]; points[i * 4 + 1] = pos[i * 3 + 1]; points[i * 4 + 2] = 0;
+        points[i * 4 + 3] = graph.nodes[i].gen;
       }
-      const center = [(x0 + x1) / 2, (y0 + y1) / 2, 0];
-      const extent = Math.max(x1 - x0, y1 - y0, 1);
-      const links = graph.links, linkN = Math.min(links.length / 2, 4096);
+      const tc = wasm.tree_center;
+      const center = [tc[0], tc[1], 0];
+      const extent = Math.max(treeExtent, 1);
+      const links = graph.links, linkN = Math.min(links.length / 2, 8192);
       linkBuf.set(links.subarray(0, linkN * 2));
 
       const Inc = `
@@ -3947,8 +3956,8 @@ self._SwissGL = SwissGL;
       `;
       const data = {
         Inc,
-        pointsTex: glsl({}, { data: points, size: [256, 4], format: 'rgba32f', tag: 'vpoints' }),
-        linksTex: glsl({}, { data: linkBuf, size: [256, 16], format: 'rg32i', tag: 'vlinks' }),
+        pointsTex: glsl({}, { data: points, size: [256, 16], format: 'rgba32f', tag: 'vpoints' }),
+        linksTex: glsl({}, { data: linkBuf, size: [256, 32], format: 'rg32i', tag: 'vlinks' }),
         center, extent, lastGen, Blend: 's*sa+d*(1-sa)', Aspect: 'fit',
       };
       const frame = glsl({ Clear: 0 }, { tag: 'vframe', msaa: 4, size: [w, h] });
@@ -4049,10 +4058,20 @@ self._SwissGL = SwissGL;
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       render(w, h);
     }
-    raf = requestAnimationFrame(frame);
+    // the core arrives in a moment; nothing is drawn until it has
+    (async () => {
+      try {
+        const bin = Uint8Array.from(atob(WASM), c => c.charCodeAt(0));
+        const { instance } = await WebAssembly.instantiate(bin);
+        instance.exports.init(MAXN + 64, MAXN + 64, (MAXN + 64) * 4);
+        wasm = prepareWASM(instance);
+        addPoints(graph.nodes.length, graph.addedHints);
+        if (document.getElementById('veil') && !document.hidden) raf = requestAnimationFrame(frame);
+      } catch (e) { /* no core, no graph: the ground alone stands in */ }
+    })();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { cancelAnimationFrame(raf); raf = 0; last = 0; }
-      else if (!raf && document.getElementById('veil')) raf = requestAnimationFrame(frame);
+      else if (!raf && wasm && document.getElementById('veil')) raf = requestAnimationFrame(frame);
     });
   })();
   </script>
@@ -4116,6 +4135,13 @@ self._SwissGL = SwissGL;
        occasional meteor by night. Behind everything, and inert. -->
   <canvas id="sky" aria-hidden="true"></canvas>
   <canvas id="sun-halo" aria-hidden="true"></canvas>
+  <!-- The sun or moon making its entrance. For those two seconds it is drawn
+       here, on a layer of its own that the compositor moves, rather than on
+       the grove's canvas: the grove is at its busiest then — ivy, leaves,
+       birds — and on a phone drops below sixty frames, and a moving body
+       drawn at thirty reads as juddering. Behind the page like the sky, so
+       the trees still stand in front of it. -->
+  <canvas id="light-in" aria-hidden="true" hidden></canvas>
 
   <script>
   // ─── The sky ──────────────────────────────────────────────────────────────
@@ -9618,6 +9644,9 @@ self._SwissGL = SwissGL;
           const a = Math.min(1, u / 0.6);
           lightAlpha = a * a * (3 - 2 * a);
           if (u > 0) lightIn = true;
+          if (u > 0 && u < 1 && !I.skipped && !lightDom && !lightDomDone)
+            lightEnter(I.dur - I.birdsAt, elapsed - I.birdsAt);
+          if (u >= 1 && !lightDomDone) lightLand();
         }
       }
 
@@ -9695,20 +9724,25 @@ self._SwissGL = SwissGL;
         if (!lightIn) {
           window.__sun = null;
         } else {
-          if (mix < 0.999) {
-            ctx.globalAlpha = (1 - mix) * lightAlpha;
-            ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
+          // while its own layer carries it in, the grove only keeps the
+          // sky's glow and the bloom following; it draws the body itself
+          // from the moment it lands
+          if (!lightDom) {
+            if (mix < 0.999) {
+              ctx.globalAlpha = (1 - mix) * lightAlpha;
+              ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
+            }
+            if (mix > 0.001) {
+              // a slow breath on the corona, so the light is never quite still
+              const beat = 1 + Math.sin(now / 2600) * 0.035;
+              const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
+              ctx.globalAlpha = mix * lightAlpha;
+              ctx.globalCompositeOperation = 'lighter';
+              ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
+              ctx.globalCompositeOperation = 'source-over';
+            }
+            ctx.globalAlpha = 1;
           }
-          if (mix > 0.001) {
-            // a slow breath on the corona, so the light is never quite still
-            const beat = 1 + Math.sin(now / 2600) * 0.035;
-            const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
-            ctx.globalAlpha = mix * lightAlpha;
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
-            ctx.globalCompositeOperation = 'source-over';
-          }
-          ctx.globalAlpha = 1;
           publishSun();
         }
         // and every shadow on the shelf is measured from it, once, here
@@ -10196,6 +10230,51 @@ self._SwissGL = SwissGL;
     // and how far into it: the body fades in as it comes, and its glow in
     // the sky and its bloom on the page come up with it
     let lightAlpha = INTRO ? 0 : 1;
+    // While it makes its entrance it is drawn on #light-in, a layer of its
+    // own that the compositor moves at the screen's full rate whatever the
+    // grove is managing; the grove draws it itself from the moment it lands.
+    const lightEl = document.getElementById('light-in');
+    let lightDom = null, lightDomDone = false;
+    function lightEnter(total, into) {
+      if (!lightEl || lightDomDone) return;
+      const isSun = mix >= 0.5;
+      const size = moonR * 2 * (isSun ? SUN_SPREAD : 1);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      lightEl.width = Math.max(1, Math.round(size * dpr));
+      lightEl.height = lightEl.width;
+      lightEl.style.width = lightEl.style.height = size + 'px';
+      const g = lightEl.getContext('2d');
+      g.clearRect(0, 0, lightEl.width, lightEl.height);
+      g.drawImage(isSun ? sun : moon, 0, 0, lightEl.width, lightEl.height);
+      lightEl.classList.toggle('sun', isSun);
+      const half = size / 2;
+      lightEl.style.left = (groveOX + introMoonX - half) + 'px';
+      lightEl.style.top = (groveOY + introMoonY - half) + 'px';
+      lightEl.hidden = false;
+      const dx = moonXHome - introMoonX, dy = moonYHome - introMoonY;
+      // The same two curves the grove uses for the glow that follows it.
+      // cubic-bezier(1/3, 0, 2/3, 1) is smoothstep exactly — x(t) comes out
+      // linear and y(t) = 3t² − 2t³ — so the body and its glow agree all the
+      // way, not only at the ends. The fade runs over the first three fifths.
+      const ease = 'cubic-bezier(0.3333, 0, 0.6667, 1)';
+      const opts = { duration: total, fill: 'both' };
+      lightDom = lightEl.animate([
+        { transform: 'translate(0px, 0px)', easing: ease },
+        { transform: `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)` },
+      ], opts);
+      const fade = lightEl.animate([
+        { opacity: 0, easing: ease, offset: 0 },
+        { opacity: 1, offset: 0.6 },
+        { opacity: 1, offset: 1 },
+      ], opts);
+      try { lightDom.currentTime = into; fade.currentTime = into; } catch (e) {}
+      lightDom.fade = fade;
+    }
+    function lightLand() {
+      if (lightDom) { try { lightDom.cancel(); lightDom.fade.cancel(); } catch (e) {} lightDom = null; }
+      if (lightEl) lightEl.hidden = true;
+      lightDomDone = true;
+    }
     let introMoonX = 0, introMoonY = 0;
 
     // Called on the first frame of the opening, once the canvas has been laid
