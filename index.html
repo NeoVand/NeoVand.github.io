@@ -350,9 +350,16 @@
       display: grid;
       place-items: center;
       background: var(--bg);
-      transition: opacity 700ms var(--ease);
+      /* the ground clears slowly and evenly, so the page comes through it
+         rather than after it; the ornament goes first, opening outward */
+      transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);
     }
     html.veil-gone #veil { opacity: 0; pointer-events: none; }
+    html.veil-gone .veil-frame {
+      opacity: 0;
+      transform: scale(1.07);
+      transition: opacity 560ms var(--ease), transform 1000ms var(--ease);
+    }
     /* Once unrolled it breathes, slowly, so a long wait reads as waiting
        rather than as stuck; ready, it brightens and holds still. Both are
        opacity and transform on whole elements — compositor work — because
@@ -364,6 +371,7 @@
       position: relative;
       width: var(--S);
       height: var(--S);
+      will-change: transform, opacity;
       animation: veil-breathe 2600ms ease-in-out 1700ms infinite alternate;
     }
     /* each side is the whole square, turned a quarter at a time about its
@@ -3019,12 +3027,14 @@
       done = true;
       root.classList.add('veil-full');            // the ornament brightens
       setTimeout(() => {
-        // the fade begins, and the opening with it: the shelf is laid on a
-        // page that is already there, under a curtain going up
+        // The fade begins. The opening follows a beat later, once the sky
+        // has come through the ground: the shelf is then laid on a page
+        // that is already there, under a curtain still going up, rather
+        // than everything starting at once on the first frame of the fade.
         root.classList.add('veil-gone');
         V.gone = true;
-        lift();
-        setTimeout(() => { root.classList.remove('veiled'); veil.remove(); }, reduced ? 320 : 760);
+        setTimeout(lift, reduced ? 0 : 280);
+        setTimeout(() => { root.classList.remove('veiled'); veil.remove(); }, reduced ? 320 : 1160);
       }, reduced ? 80 : 420);
     }
 
@@ -3298,9 +3308,13 @@
     // a smooth falloff, so neither shows the difference.
     const MAXPX = matchMedia('(max-width: 700px)').matches ? 1.3e6 : 2.4e6;
     let W = 0, H = 0;
+    // The window's size, read once per resize rather than once per frame:
+    // innerWidth and innerHeight are layout-forcing reads, and taken every
+    // frame in the middle of a scroll they were the loop's biggest cost.
+    let vw = innerWidth, vh = innerHeight;
 
     function resize() {
-      const w = Math.max(1, innerWidth), h = Math.max(1, innerHeight);
+      const w = Math.max(1, vw), h = Math.max(1, vh);
       let s = Math.min(devicePixelRatio || 1, 2);
       if (w * h * s * s > MAXPX) s = Math.sqrt(MAXPX / (w * h));
       const nw = Math.max(1, Math.round(w * s)), nh = Math.max(1, Math.round(h * s));
@@ -3402,8 +3416,8 @@
       if (s && H) {
         // published in document coordinates, so it keeps scrolling away
         // correctly even after the grove has stopped drawing itself
-        const px = (s.x - window.scrollX - innerWidth / 2) * 2 / innerHeight;
-        const py = (innerHeight / 2 - (s.y - window.scrollY)) * 2 / innerHeight;
+        const px = (s.x - window.scrollX - vw / 2) * 2 / vh;
+        const py = (vh / 2 - (s.y - window.scrollY)) * 2 / vh;
         gl.uniform2f(uSun, px, py);
       } else {
         gl.uniform2f(uSun, 0, 0);
@@ -3413,9 +3427,18 @@
       if (!lit) { lit = true; cv.classList.add('lit'); up(); }
     }
 
+    // While the page is being scrolled the sky holds its frame. A scroll is
+    // the one time the whole page is repainted every frame, and a full-screen
+    // shader on top of that is what a phone's GPU could not keep up with. By
+    // night nothing in the sky depends on where the page is, so it simply
+    // waits; by day the cloud lit under the sun follows the sun through the
+    // page, so it goes on at a tenth of its rate rather than stopping.
+    let scrolledAt = -1e9;
     function loop(now) {
       raf = requestAnimationFrame(loop);
-      if (now - prev < FRAME - 1) return;
+      const scrolling = lit && now - scrolledAt < 160;
+      const gap = !scrolling ? FRAME : (mix <= 0.001 && mix === mixTo ? Infinity : 100);
+      if (now - prev < gap - 1) return;
       resize();
       draw(now);
       // Nothing moves under reduced motion, and nothing needs to: one frame,
@@ -3429,12 +3452,16 @@
 
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     addEventListener('resize', () => {
+      vw = innerWidth; vh = innerHeight;
       paintHalo();
       if (reduced) { resize(); draw(performance.now()); }
     });
     // Reduced motion has no weather loop; keep its cloud lighting aligned
     // too. The visible halo itself needs no scroll callback in either mode.
-    addEventListener('scroll', () => { if (reduced) start(); }, { passive: true });
+    addEventListener('scroll', () => {
+      scrolledAt = performance.now();
+      if (reduced) start();
+    }, { passive: true });
     document.addEventListener('lights', start);
     cv.addEventListener('webglcontextlost', e => { e.preventDefault(); stop(); });
 
@@ -8521,14 +8548,19 @@
         }
         if (I.t0 && moonR > 0) {
           const elapsed = I.skipped ? I.dur : Math.max(0, now - I.t0);
-          const sky = 1 - Math.pow(1 - Math.min(1, elapsed / I.plantsAt), 3);
+          // The light comes last. Shelf, pavilion, greenery and birds first,
+          // and then the sun or the moon rises over the finished grove on
+          // the opening's final beat — it used to lead, and led alone.
+          const u = Math.min(1, Math.max(0, (elapsed - I.birdsAt) / (I.dur - I.birdsAt)));
+          const sky = 1 - Math.pow(1 - u, 3);
           moonX = introMoonX + (moonXHome - introMoonX) * sky;
           moonY = introMoonY + (moonYHome - introMoonY) * sky;
+          if (u > 0) lightIn = true;
         }
       }
 
       // Before the opening begins the canvas stays clear. The sun or moon
-      // comes in from the corner on the opening's first beat, and drawn at
+      // comes in from the corner on the opening's last beat, and drawn at
       // its home before then it hung alone on an empty ground and then
       // jumped to the corner to make its entrance — which looked like the
       // page reloading.
@@ -8596,21 +8628,27 @@
           }
         }
         const dd = moonR * 2;
-        if (mix < 0.999) {
-          ctx.globalAlpha = 1 - mix;
-          ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
+        // waiting in the wings until its entrance: nothing drawn, nothing
+        // published, so the sky shows no glow and the bloom no light yet
+        if (!lightIn) {
+          window.__sun = null;
+        } else {
+          if (mix < 0.999) {
+            ctx.globalAlpha = 1 - mix;
+            ctx.drawImage(moon, moonX - moonR, moonY - moonR, dd, dd);
+          }
+          if (mix > 0.001) {
+            // a slow breath on the corona, so the light is never quite still
+            const beat = 1 + Math.sin(now / 2600) * 0.035;
+            const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
+            ctx.globalAlpha = mix;
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
+            ctx.globalCompositeOperation = 'source-over';
+          }
+          ctx.globalAlpha = 1;
+          publishSun();
         }
-        if (mix > 0.001) {
-          // a slow breath on the corona, so the light is never quite still
-          const beat = 1 + Math.sin(now / 2600) * 0.035;
-          const sd = dd * SUN_SPREAD * beat, sr = sd / 2;
-          ctx.globalAlpha = mix;
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.drawImage(sun, moonX - sr, moonY - sr, sd, sd);
-          ctx.globalCompositeOperation = 'source-over';
-        }
-        ctx.globalAlpha = 1;
-        publishSun();
         // and every shadow on the shelf is measured from it, once, here
         readLight(gaz ? gaz.cx : W / 2,
                   gaz ? gaz.base - GZ_CROWN * gaz.u * 0.5 : ground - 60);
@@ -9090,15 +9128,19 @@
 
     // ── opening state ──────────────────────────────────────────────────────
     let introing = INTRO, introStarted = false, introWait = 0, introEase = 0;
+    // whether the sun or moon has begun its entrance: it is the last thing
+    // to arrive, and until then it is neither drawn nor published
+    let lightIn = !INTRO;
     let introMoonX = 0, introMoonY = 0;
 
     // Called on the first frame of the opening, once the canvas has been laid
     // out, so the entry points are in real coordinates.
     function introBegin() {
       introStarted = true;
-      // the moon comes in over the top-left corner, outside the canvas
-      introMoonX = -moonR * 0.7;
-      introMoonY = -moonR * 0.9;
+      // the moon comes in over the top-left corner, from wholly outside the
+      // canvas: the sun's corona reaches a fifth past the disc
+      introMoonX = -moonR * 1.3;
+      introMoonY = -moonR * 1.2;
       moonX = introMoonX; moonY = introMoonY;
 
       // The air is invited later, after the greenery has finished growing.
@@ -10854,6 +10896,12 @@
         mix = mix < mixTo ? Math.min(mixTo, mix + s) : Math.max(mixTo, mix - s);
       }
       const roomOpen = !!roomEl && !roomEl.hidden;
+      // A window-sized sheet is a window-sized layer the compositor blends
+      // into every frame, scrolling included; the room's is only in the
+      // document while the room is open.
+      if (roomSheet && (roomSheet.style.display === 'none') === roomOpen) {
+        roomSheet.style.display = roomOpen ? '' : 'none';
+      }
       if (!roomOpen) {
         let had = false;
         for (const c of flock) if (c.room) { c.room = false; had = true; }
@@ -11600,6 +11648,7 @@
     function layout() {
       W = window.innerWidth; H = window.innerHeight;
       if (!W || !H) return;
+      restDrawn = false;             // a resized sheet is a blank sheet
       // Where the page is stacked the cord's numbers are page numbers (see
       // `docAnchored` below), so its sheet and its grip go in the page too,
       // and the scroll is not taken out of them anywhere. Drawn into a
@@ -11795,12 +11844,23 @@
       }
     }
 
-    function draw() {
-      ctx.clearRect(0, 0, W, CH);
+    // Whether the sheet holds a finished drawing of the cord at rest. While
+    // it does, and the cord stays at rest, a frame has nothing to do: the
+    // loop is woken by every scroll on a phone, where the sheet is in the
+    // page, and it used to clear and redraw the whole sheet and move the
+    // grip on each of those frames, for a cord that had not moved.
+    let restDrawn = false, gripX = NaN, gripY = NaN;
+    function draw(quiet) {
       // the grip goes wherever the knob goes, off the screen included, and
       // in the same coordinates the sheet is drawn in
       const kx = px[N - 1], ky = py[N - 1];
-      host.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
+      if (kx !== gripX || ky !== gripY) {
+        gripX = kx; gripY = ky;
+        host.style.transform = `translate(${kx.toFixed(1)}px, ${ky.toFixed(1)}px)`;
+      }
+      if (quiet && restDrawn) return;
+      restDrawn = false;
+      ctx.clearRect(0, 0, W, CH);
       // scrolled away with the page: nothing to draw, unless the lamp is lit
       const away = sy();
       if (away > 0 && lamp <= 0) {
@@ -11808,6 +11868,7 @@
         for (let i = 0; i < N; i++) low = Math.max(low, py[i]);
         if (low - away < -KNOB * 4) return;
       }
+      restDrawn = !!quiet;
       ctx.save();
       if (lamp > 0) drawLamp();
       const styles = getComputedStyle(document.documentElement);
@@ -11869,7 +11930,6 @@
       // re-arm once it has come most of the way home
       if (!armed && py[N - 1] < restY() + TRIP * 0.45) armed = true;
       if (armed && held && py[N - 1] > restY() + TRIP) trip();
-      draw();
       // A swinging cord is briefly motionless at the top of every swing, so
       // one slow frame proves nothing. It is only asleep once every bead has
       // been quiet, and the knob has hung straight under the anchor, for a
@@ -11878,6 +11938,7 @@
       for (let i = 1; quiet && i < N; i++) {
         if (Math.abs(px[i] - ox[i]) > 0.02 || Math.abs(py[i] - oy[i]) > 0.02) quiet = false;
       }
+      draw(quiet);
       still = quiet ? still + 1 : 0;
       raf = still < 30 ? requestAnimationFrame(frame) : 0;
       if (!raf) last = 0;
@@ -11982,6 +12043,7 @@
       if (restore) restore();   // the reserved height stays, so nothing reflows
       I.done = true;
       if (!I.t0) I.t0 = performance.now() - I.dur;   // tell the grove to land now
+      removeEventListener('scroll', onScroll);       // nothing left to skip
       document.dispatchEvent(new Event('intro:done'));
     };
 
@@ -12137,7 +12199,8 @@
         finish();
       }
     };
-    addEventListener('scroll', () => { if (scrollY > 40) skip(); }, { passive: true });
+    function onScroll() { if (scrollY > 40) skip(); }
+    addEventListener('scroll', onScroll, { passive: true });
     addEventListener('pointerdown', skip, { once: true, passive: true });
     addEventListener('keydown', e => { if (e.key === 'Escape') skip(); });
     // A restored scroll position may already exist before listeners attach.
