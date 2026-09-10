@@ -53,6 +53,10 @@
     document.documentElement.style.setProperty('--gram-enter-delay', window.__intro.plantsAt + 'ms');
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
       document.documentElement.classList.add('has-intro');
+    // The veil (top of the body): the page is built behind a curtain and
+    // comes up whole. Only a script sets this, so with JS off there is no
+    // curtain, and nothing to lift it.
+    document.documentElement.classList.add('veiled');
 
     // The clock. The page keeps the visitor's own hour only to decide whether
     // the lights start on or off. The day itself is one fixed hour: a summer
@@ -109,7 +113,7 @@
       if (day) root.classList.add('day');
       // the top of the sky, by day and by night, for the browser's own bars
       const tone = document.querySelector('meta[name="theme-color"]');
-      const paintBars = d => { if (tone) tone.setAttribute('content', d ? '#4e70a3' : '#04050a'); };
+      const paintBars = d => { if (tone) tone.setAttribute('content', d ? '#4e70a3' : '#000000'); };
       paintBars(day);
       window.__theme = {
         get day() { return root.classList.contains('day'); },
@@ -157,7 +161,10 @@
          by night the running text is set a shade heavier to compensate.
          Zero by day. Inter is variable, so any number is a real weight. */
       --wn: 22;
-      --bg:        #080808;
+      /* Black, and not the near-black it was: the sky behind is black now
+         too, and on a phone the fallback has to match it exactly or a strip
+         of it shows either side of a sideways screen. */
+      --bg:        #000000;
       --surface:   #101010;
       --surface-2: #151515;
       --border:    #1e1e1e;
@@ -328,6 +335,76 @@
     }
     .day #sun-halo { opacity: 1; }
     html.theming #sun-halo { transition: opacity 480ms linear !important; }
+
+    /* ─── The veil ───
+       A curtain over the whole page while it is built, lifted by the script
+       that goes with it at the top of the body. Only html.veiled shows it,
+       and only a script sets that, so with JS off there is no curtain. It is
+       the page's own ground — black by night, the sky's blue by day — with
+       the flourish in the middle, unrolling while it waits. */
+    #veil { display: none; }
+    html.veiled #veil {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      transition: opacity 700ms var(--ease);
+    }
+    html.veil-gone #veil { opacity: 0; pointer-events: none; }
+    /* Once unrolled it breathes, slowly, so a long wait reads as waiting
+       rather than as stuck; ready, it brightens and holds still. Both are
+       opacity and transform on whole elements — compositor work — because
+       the main thread is busy parsing and building the page behind the
+       veil for most of the time the veil is up, and that is precisely when
+       this has to keep moving. */
+    .veil-frame {
+      --S: min(62vmin, 380px);
+      position: relative;
+      width: var(--S);
+      height: var(--S);
+      animation: veil-breathe 2600ms ease-in-out 1700ms infinite alternate;
+    }
+    /* each side is the whole square, turned a quarter at a time about its
+       centre, with the ornament laid along its top edge, finial outward */
+    .veil-side {
+      position: absolute;
+      inset: 0;
+      transform: rotate(calc(var(--k, 0) * 90deg));
+    }
+    .veil-fl {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: calc(var(--S) * 0.84);
+      max-width: none;
+      transform: translate(-50%, -42%);
+      fill: var(--ink);
+      transition: fill 420ms var(--ease);
+    }
+    .veil-fl .fl-part {
+      transition: none;
+      animation: veil-unroll 800ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms) both;
+    }
+    /* by day the ornament is the branch it is on the dividers: bark where
+       it leaves the middle, green out at the curls — by piece here, since a
+       <use> takes its fill from the element that references it */
+    .day .veil-fl .fl-part {
+      fill: color-mix(in oklab, var(--bark), var(--leaf) calc(var(--far, 0.5) * 100%));
+    }
+    @keyframes veil-unroll {
+      from { opacity: 0; transform: scale(0.3) rotate(var(--r, 0deg)); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes veil-breathe { to { opacity: 0.62; } }
+    html.veil-full .veil-frame { animation: none; opacity: 1; }
+    html.veil-full .veil-fl { fill: var(--text); }
+    @media (prefers-reduced-motion: reduce) {
+      .veil-frame, .veil-fl .fl-part { animation: none; opacity: 1; }
+      .veil-fl .fl-part { transform: none; }
+      html.veiled #veil { transition-duration: 280ms; }
+    }
 
     body {
       background: var(--bg);
@@ -2764,6 +2841,212 @@
 </head>
 <body>
 
+  <!-- The veil. Everything below is built behind it — the sky, the grove,
+       the gramophone, a page of cards — and it lifts once all of that is
+       up, so the page arrives whole and in motion rather than piece by
+       piece, stalling while the rest of it is still being parsed. It is
+       first in the body so it is the first thing painted. -->
+  <div id="veil" aria-hidden="true">
+    <!-- The flourish from the section dividers, four times, as the sides of
+         a square, each unrolling from its middle out while the page is
+         built. One ornament on its own was a thing with an up and a down;
+         four about a centre have neither. The pieces are the same eleven
+         the divider script cuts the ornament into at runtime, baked here
+         with their places and pivots, since this has to paint before any
+         script has run, and defined once and referenced from each side. It
+         is the only thing on the veil, so that nothing on it can be
+         mistaken for the moon or the sun that arrive with the grove a
+         moment later, somewhere else. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <g id="vf0">
+        <g>
+          <path d="M549,345.1c0,0,0,0.1,0,0.2C549.1,345.1,549.1,345.1,549,345.1z"></path>
+          <path d="M560.9,372.4c-4.1-14.3-11.2-25.7-11.8-27.2c-0.4,1.5-8.3,13.1-11.9,27.2c-3.7,14.6,5.3,27.3,11.8,27.3
+          	C555.6,399.7,565,386.9,560.9,372.4z M549,398.2c-4.9,0-11.7-9.6-8.9-20.6c2.7-10.6,8.6-19.4,8.9-20.5c0-0.1,0-0.1,0-0.1
+          	c0,0,0,0,0,0.1c0.4,1.1,5.8,9.7,8.9,20.5C561.1,388.6,554,398.2,549,398.2z"></path>
+</g>
+      </g>
+      <g id="vf1">
+        <path d="M607.1,396.4c10.7,4.4,23.8,12.1,33.3,18.7c4.9,3.4,9.5,7.1,14.9,9.8c12.4,6.1,24,9.9,36.8,2.5
+          c15.4-8.9,26.2-38.2,3.3-50.5c-4.6-2.5-7.2-1.4-11.9,0.5c-0.5,0.2-1.1,0.4-1.6,0.4c-1.2-0.1-1.9-1.7-1.4-2.8
+          c2.4-5.5,15.9-0.2,19.3,1.7c16,9.1,15.7,33.6,4.6,45.3c-32.3,34.2-67.4-1.1-92.7-18.1l0,0.1c-18.4-12.5-40.3-8.8-50.8,3.7
+          c-5.8,6.9-7.2,18.1-3.5,27.2c3.3,8,9.8,14.9,17.6,17c14.3,3.9,26.8-5.3,27-18.1c0.1-5.7-1-14.4-8.2-18.2c-4.6-2.4-13.4-3.9-15.3,2.9
+          c-0.7,2.5,1.1,5.6,3.7,5.7c1.4,0,2.7-0.8,4.1-0.9c1.6-0.2,3.2,0.6,4.1,1.9c0.9,1.3,1,3.1,0.2,4.5c-2.1,3.9-9.6,3.9-12.8,1.6
+          c-3.4-2.5-5.2-7.4-4.3-12c0.7-3.6,3-6.6,6.2-8.1c4.4-2.1,12-2,18,1.2c8.9,4.8,14.5,16.8,11.1,29.4c-4.1,15.5-16.3,24.1-35.4,19.2
+          c-9.4-2.4-17.2-12.9-20.3-24.1c-3-11.1-2.2-23.2,4.7-31.4C571.2,389.6,589.4,389.2,607.1,396.4z" fill-rule="evenodd"></path>
+        <path d="M635.7,419.7c3.4,3.4,5.7,9.3,4,13.6c-1,2.5-4.2,5-7.1,5.6c-2.9,0.7-5.8-0.7-7.4-2.5c-5-5.5-1.2-12.7,5.8-12.1
+          c1.1,0.1,2.5,0.6,2.7,1.8c0.2,1-1,2.5-2.1,2.4c-1.1-0.1-1.5-1.5-2.5-2c-1-0.6-2.4,0.1-3.1,1c-1.5,2-1.8,4.9-0.5,7
+          c3.4,5.6,11.4,2.3,13.2-1.6c1.7-3.8-0.7-9.6-4-12.7L635.7,419.7z"></path>
+      </g>
+      <g id="vf2">
+        <path d="M491.3,396.4c-10.7,4.4-23.8,12.1-33.3,18.7c-4.9,3.4-9.5,7.1-14.9,9.8c-12.4,6.1-24,9.9-36.8,2.5
+          c-15.4-8.9-26.2-38.2-3.3-50.5c4.6-2.5,7.2-1.4,11.9,0.5c0.5,0.2,1.1,0.4,1.6,0.4c1.2-0.1,1.9-1.7,1.4-2.8
+          c-2.4-5.5-15.9-0.2-19.3,1.7c-16,9.1-15.7,33.6-4.6,45.3c32.3,34.2,67.4-1.1,92.7-18.1l0,0.1c18.4-12.5,40.3-8.8,50.8,3.7
+          c5.8,6.9,7.2,18.1,3.5,27.2c-3.3,8-9.8,14.9-17.6,17c-14.3,3.9-26.8-5.3-27-18.1c-0.1-5.7,1-14.4,8.2-18.2
+          c4.6-2.4,13.4-3.9,15.3,2.9c0.7,2.5-1.1,5.6-3.7,5.7c-1.4,0-2.7-0.8-4.1-0.9c-1.6-0.2-3.2,0.6-4.1,1.9c-0.9,1.3-1,3.1-0.2,4.5
+          c2.1,3.9,9.6,3.9,12.8,1.6c3.4-2.5,5.2-7.4,4.3-12c-0.7-3.6-3-6.6-6.2-8.1c-4.4-2.1-12-2-18,1.2c-8.9,4.8-14.5,16.8-11.1,29.4
+          c4.1,15.5,16.3,24.1,35.4,19.2c9.4-2.4,17.2-12.9,20.3-24.1c3-11.1,2.2-23.2-4.7-31.4C527.2,389.6,509,389.2,491.3,396.4z" fill-rule="evenodd"></path>
+        <path d="M462.6,419.7c-3.4,3.4-5.7,9.3-4,13.6c1,2.5,4.2,5,7.1,5.6c2.9,0.7,5.8-0.7,7.4-2.5c5-5.5,1.2-12.7-5.8-12.1
+          c-1.1,0.1-2.5,0.6-2.7,1.8c-0.2,1,1,2.5,2.1,2.4c1.1-0.1,1.5-1.5,2.5-2c1-0.6,2.4,0.1,3.1,1c1.5,2,1.8,4.9,0.5,7
+          c-3.4,5.6-11.4,2.3-13.2-1.6c-1.7-3.8,0.7-9.6,4-12.7L462.6,419.7z"></path>
+      </g>
+      <g id="vf3">
+        <path d="M691.2,478c1.4,1,0.5,1.5,0,1.2c-4.7-3.6-6.8-0.5-7.1,1c-0.1,3.8,4.3,5.3,7.8,2.8c2.4-1.5,4.6-4.4,5.4-8.7
+          c1.6-6.7-0.4-34.5-38.3-40.8c-0.6-0.1-0.9-0.2-1.5-0.3c-1.4-0.3-2-1.1,0.1-1c0.5,0,1.1,0.1,1.6,0.2c6.7,1.4,31.9,6.3,37.8,30.2
+          c1.6,6.2,1.9,12.7-2.2,18.2c-6.2,7.1-11.5,2.6-11.2-0.8C684.3,476.9,688.5,475.8,691.2,478z"></path>
+        <path d="M683.7,432.1c4.7-1,9.9-4.6,10.9-9.1c0.6-2.7-0.7-6.5-2.7-8.6c-2.1-2.2-5.2-2.6-7.6-2c-7.2,1.8-8.1,9.9-1.9,13.3
+          c1,0.5,2.4,0.9,3.2,0c0.7-0.8,0.6-2.6-0.4-3.1c-1-0.5-2.1,0.4-3.2,0.3c-1.2-0.1-1.9-1.4-2-2.6c-0.2-2.5,1.2-5,3.5-6.1
+          c5.9-2.8,10.8,4.4,10.1,8.6c-0.7,4.1-5.9,7.6-10.4,8.4L683.7,432.1z"></path>
+        <path d="M691.1,450.2c14.8,5.6,38.8,0,42.1-17.2c1.4-7.2,0.1-17.3-7.4-20.8c-3.4-1.6-9.1-1.1-10.7,3.4
+          c-1.1,3.3,2.4,7.5,6.1,5.4c4.9-2.9,2.1-8.2-2.8-7.8c15.1-3.2,16.6,16.7,10.9,26.2c-6.8,11.3-30.5,15.4-40.7,8L691.1,450.2z" fill-rule="evenodd"></path>
+      </g>
+      <g id="vf4">
+        <path d="M407.1,478c-1.4,1-0.5,1.5,0,1.2c4.7-3.6,6.8-0.5,7.1,1c0.1,3.8-4.3,5.3-7.8,2.8c-2.4-1.5-4.6-4.4-5.4-8.7
+          c-1.6-6.7,0.4-34.5,38.3-40.8c0.6-0.1,0.9-0.2,1.5-0.3c1.4-0.3,2-1.1-0.1-1c-0.5,0-1.1,0.1-1.6,0.2c-6.7,1.4-31.9,6.3-37.8,30.2
+          c-1.6,6.2-1.9,12.7,2.2,18.2c6.2,7.1,11.5,2.6,11.2-0.8C414.1,476.9,409.8,475.8,407.1,478z"></path>
+        <path d="M414.6,432.1c-4.7-1-9.9-4.6-10.9-9.1c-0.6-2.7,0.7-6.5,2.7-8.6c2.1-2.2,5.2-2.6,7.6-2c7.2,1.8,8.1,9.9,1.9,13.3
+          c-1,0.5-2.4,0.9-3.2,0c-0.7-0.8-0.6-2.6,0.4-3.1c1-0.5,2.1,0.4,3.2,0.3c1.2-0.1,1.9-1.4,2-2.6c0.2-2.5-1.2-5-3.5-6.1
+          c-5.9-2.8-10.8,4.4-10.1,8.6c0.7,4.1,5.9,7.6,10.4,8.4L414.6,432.1z"></path>
+        <path d="M407.2,450.2c-14.8,5.6-38.8,0-42.1-17.2c-1.4-7.2-0.1-17.3,7.4-20.8c3.4-1.6,9.1-1.1,10.7,3.4
+          c1.1,3.3-2.4,7.5-6.1,5.4c-4.9-2.9-2.1-8.2,2.8-7.8c-15.1-3.2-16.6,16.7-10.9,26.2c6.8,11.3,30.6,15.4,40.7,8L407.2,450.2z" fill-rule="evenodd"></path>
+      </g>
+      <g id="vf5">
+        <path d="M393.7,416.8c-23.4-21-71.7-27.8-90.3,1.6c-7.7,12.2-12.7,32-1.2,43.8c5.2,5.4,16.1,8.6,22.3,1.3
+          c4.5-5.2,0.9-15.7-7.5-14.3c-11.1,1.8-9.8,13.6-0.5,16.4c-30.1-4.9-18.7-42.9-1.4-56.3c20.7-16,67.6-6.5,81,14.4L393.7,416.8z" fill-rule="evenodd"></path>
+      </g>
+      <g id="vf6">
+        <path d="M704.7,416.8c23.4-21,71.7-27.8,90.3,1.6c7.7,12.2,12.7,32,1.2,43.8c-5.2,5.4-16.1,8.6-22.3,1.3
+          c-4.5-5.2-0.9-15.7,7.5-14.3c11.1,1.8,9.8,13.6,0.5,16.4c30.1-4.9,18.7-42.9,1.4-56.3c-20.7-16-67.6-6.5-81,14.4L704.7,416.8z" fill-rule="evenodd"></path>
+      </g>
+      <g id="vf7">
+        <path d="M124.7,413.3c-5.2,1.7-4.7-1.6-3.2-2.2c18.7-5.3,14.5-17.1,11-20.6c-9.7-7.6-22.3,0.8-22.6,15c-0.7,9.2,2.7,20.7,12.2,31.1
+          c14.6,17.3,91.5,66.2,182-21.3c1.3-1.4,2.3-2,3.6-3.3c3.5-3.1,5.7-4.2,1.2,1.2c-1.2,1.3-2.4,2.7-3.7,3.8
+          c-16.7,14.8-77.5,72.7-152.1,41.6c-19.4-8-37.2-19.6-43.5-41.2c-6.6-30.2,15.5-35.4,23.9-27.8C141.1,397.3,135.5,410.5,124.7,413.3z
+          "></path>
+      </g>
+      <g id="vf8">
+        <path d="M973.7,413.3c5.2,1.7,4.7-1.6,3.2-2.2c-18.7-5.3-14.5-17.1-11-20.6c9.7-7.6,22.3,0.8,22.6,15c0.7,9.2-2.7,20.7-12.2,31.1
+          c-14.6,17.3-91.5,66.2-182-21.3c-1.3-1.4-2.3-2-3.6-3.3c-3.5-3.1-5.7-4.2-1.2,1.2c1.2,1.3,2.4,2.7,3.7,3.8
+          c16.7,14.8,77.5,72.7,152.1,41.6c19.4-8,37.2-19.6,43.5-41.2c6.6-30.2-15.5-35.4-23.9-27.8C957.3,397.3,962.8,410.5,973.7,413.3z"></path>
+      </g>
+      <g id="vf9">
+        <path d="M123.7,437.3c-15.4-16.5-49.5-24.4-64.7-4.5c-6.3,8.3-11.1,22.1-3.6,31.2c3.4,4.2,11,7.1,15.8,2.3
+          c3.5-3.5,1.6-11.2-4.5-10.7c-8,0.6-7.9,9.1-1.4,11.7c-21.2-5.4-10.7-31.8,2.5-40.3c15.8-10.2,48.7-0.5,57,15.4L123.7,437.3z" fill-rule="evenodd"></path>
+      </g>
+      <g id="vf10">
+        <path d="M974.7,437.3c15.4-16.5,49.5-24.4,64.7-4.5c6.3,8.3,11.1,22.1,3.6,31.2c-3.4,4.2-11,7.1-15.8,2.3
+          c-3.5-3.5-1.6-11.2,4.5-10.7c8,0.6,7.9,9.1,1.4,11.7c21.2-5.4,10.7-31.8-2.5-40.3c-15.8-10.2-48.7-0.5-57,15.4L974.7,437.3z" fill-rule="evenodd"></path>
+      </g>
+    </defs></svg>
+    <div class="veil-frame">
+      <div class="veil-side" style="--k:0"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+      </div></div>
+      <div class="veil-side" style="--k:1"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+      </div></div>
+      <div class="veil-side" style="--k:2"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+      </div></div>
+      <div class="veil-side" style="--k:3"><div class="fl veil-fl">
+        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
+        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
+        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
+        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
+        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
+        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
+        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
+        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
+        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
+        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
+        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
+      </div></div>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const root = document.documentElement;
+    const veil = document.getElementById('veil');
+    let lift = null;
+    const V = window.__veil = { gone: false, ready: new Promise(r => { lift = r; }) };
+    if (!veil || !root.classList.contains('veiled')) { V.gone = true; lift(); return; }
+
+    // a hand on the veil is not a hand on the page: the opening's skip and
+    // the grove's presses listen on the window, and must not hear it
+    veil.addEventListener('pointerdown', e => e.stopPropagation());
+    veil.addEventListener('click', e => e.stopPropagation());
+
+    // The flourish takes about 1.6s to unroll to its last spiral; the veil
+    // is held at least that long, so it is never cut off part-way, and
+    // never longer than MAX, whatever fails.
+    const MIN = 1200, MAX = 8000;
+    const born = performance.now();
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let done = false;
+
+    function go() {
+      if (done) return;
+      done = true;
+      root.classList.add('veil-full');            // the ornament brightens
+      setTimeout(() => {
+        // the fade begins, and the opening with it: the shelf is laid on a
+        // page that is already there, under a curtain going up
+        root.classList.add('veil-gone');
+        V.gone = true;
+        lift();
+        setTimeout(() => { root.classList.remove('veiled'); veil.remove(); }, reduced ? 320 : 760);
+      }, reduced ? 80 : 420);
+    }
+
+    // What is waited on: the document parsed, which is every inline script
+    // run and the grove built; the webfonts; the sky's first frame; and two
+    // frames after those, so what they set up has drawn itself once.
+    const parsed = new Promise(r => {
+      const check = () => { if (document.readyState !== 'loading') r(); };
+      check();
+      document.addEventListener('readystatechange', check);
+    });
+    parsed.then(() => {
+      const gates = [];
+      if (document.fonts && document.fonts.ready) gates.push(document.fonts.ready);
+      if (window.__sky && window.__sky.ready) gates.push(window.__sky.ready);
+      return Promise.all(gates);
+    }).then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))
+      .then(() => setTimeout(go, Math.max(0, MIN - (performance.now() - born))));
+    setTimeout(go, MAX);
+  })();
+  </script>
+
   <!-- The sky the whole page sits in: drifting cloud by day, stars and the
        occasional meteor by night. Behind everything, and inert. -->
   <canvas id="sky" aria-hidden="true"></canvas>
@@ -2894,8 +3177,12 @@
 
         if (uMix < 0.999) {
           // ── night ──
-          vec3 sky = mix(vec3(0.043, 0.055, 0.086), vec3(0.016, 0.020, 0.039),
-                         smoothstep(-0.10, 1.05, uv.y));
+          // Black. It was a navy that paled toward the horizon, and on a
+          // phone on its side — the whole short screen inside that gradient,
+          // against the black of the bezel — it read as a blue haze over
+          // everything. The stars and the galaxy keep their colour; the
+          // ground they sit on has none.
+          vec3 sky = vec3(0.0);
           // a band of galaxy, laid across the diagonal: mottled where it is
           // thick, and mostly made of the stars it crowds together
           vec2 mp = vec2(p.x * 0.90 + p.y * 0.44, -p.x * 0.44 + p.y * 0.90);
@@ -8226,7 +8513,8 @@
       if (introing) {
         const I = window.__intro;
         if (!I.t0) {
-          introWait += dt;
+          // not counted while the veil is down: nothing starts behind it
+          if (!window.__veil || window.__veil.gone) introWait += dt;
           if (introWait > 1.4) { I.t0 = now; introBegin(); }
         } else if (!introStarted) {
           introBegin();
@@ -11817,21 +12105,28 @@
       raf = requestAnimationFrame(tick);
     }
 
-    // Wait for the webfont, and for the sky: starting before the font would
-    // type in the fallback and then reflow mid-sentence when Inter arrives,
-    // and starting before the sky would grow the grove on a flat ground and
-    // then have the sky come up behind it, which read as the page reloading.
-    // Neither is waited on for long.
+    // The veil does the waiting: for the webfont, for the sky's first frame,
+    // and for the rest of the page to be parsed and built. The opening
+    // starts as it lifts, so the shelf is laid on a page that is already
+    // there — the words used to start typing while the scripts below were
+    // still being parsed, and froze part-way through the first line.
+    // Without a veil the old gates stand in, and not for long: starting
+    // before the font would type in the fallback and reflow when Inter
+    // arrives; starting before the sky would grow the grove on a flat ground.
     const go = () => requestAnimationFrame(start);
-    const gates = [];
-    if (document.fonts && document.fonts.ready) gates.push(document.fonts.ready);
-    if (window.__sky && window.__sky.ready) gates.push(window.__sky.ready);
-    if (gates.length) {
-      let fired = false;
-      const once = () => { if (!fired) { fired = true; go(); } };
-      Promise.all(gates).then(once);
-      setTimeout(once, 900);
-    } else go();
+    if (window.__veil && window.__veil.ready) {
+      window.__veil.ready.then(go);
+    } else {
+      const gates = [];
+      if (document.fonts && document.fonts.ready) gates.push(document.fonts.ready);
+      if (window.__sky && window.__sky.ready) gates.push(window.__sky.ready);
+      if (gates.length) {
+        let fired = false;
+        const once = () => { if (!fired) { fired = true; go(); } };
+        Promise.all(gates).then(once);
+        setTimeout(once, 900);
+      } else go();
+    }
 
     // Anyone who scrolls or clicks has stopped watching: land it immediately.
     const skip = () => {
@@ -11903,7 +12198,10 @@
     const begin = () => { if (begun) return; begun = true; items.forEach(el => io.observe(el)); };
     if (window.__intro && !window.__intro.done) {
       document.addEventListener('intro:done', begin, { once: true });
-      setTimeout(begin, (window.__intro.dur || 2800) + 1500);
+      // counted from the veil lifting, since the opening does not start
+      // until then; the veil has a watchdog of its own
+      const arm = () => setTimeout(begin, (window.__intro.dur || 2800) + 1500);
+      if (window.__veil && window.__veil.ready) window.__veil.ready.then(arm); else arm();
     } else begin();
   })();
   </script>
@@ -11979,7 +12277,7 @@
       });
     }
 
-    strips.forEach(strip => {
+    const build = strip => {
       strip.appendChild(tpl.content.cloneNode(true));
       const svg = strip.querySelector('.fl');
       {
@@ -12057,10 +12355,34 @@
         wrap.appendChild(part);
       }
       svg.replaceWith(wrap);
-    });
+    };
+
+    // Built after the opening, not during the load. Measuring the strokes
+    // and placing the leaves forces layout over and over, and on a phone
+    // that was the longest single block on the way to the first frame —
+    // over half a second for two ornaments that sit well below the fold.
+    // So it waits for the opening to finish, then takes one strip per idle
+    // slot; anyone who has scrolled has ended the opening already, and
+    // the strip arrives before they reach it.
+    let built = false, afterBuild = () => {};
+    const idle = fn => ('requestIdleCallback' in window)
+      ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 60);
+    const buildAll = () => {
+      if (built) return;
+      built = true;
+      const next = i => {
+        if (i >= strips.length) { afterBuild(); return; }
+        idle(() => { build(strips[i]); next(i + 1); });
+      };
+      next(0);
+    };
+    if (window.__intro && !window.__intro.done) {
+      document.addEventListener('intro:done', buildAll, { once: true });
+      setTimeout(buildAll, 15000);          // and never left waiting for good
+    } else buildAll();
 
     if (!('IntersectionObserver' in window)) {
-      strips.forEach(s => s.classList.add('is-open'));
+      afterBuild = () => strips.forEach(s => s.classList.add('is-open'));
       return;
     }
 
@@ -12079,8 +12401,10 @@
     // up, which put both dividers inside the viewport on the first frame and
     // spent the animation before anyone had scrolled anywhere.
     const watch = () => strips.forEach(s => io.observe(s));
-    if (document.readyState === 'complete') watch();
-    else window.addEventListener('load', watch, { once: true });
+    afterBuild = () => {
+      if (document.readyState === 'complete') watch();
+      else window.addEventListener('load', watch, { once: true });
+    };
   })();
   </script>
 
