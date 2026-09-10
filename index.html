@@ -305,9 +305,15 @@
        what shows if WebGL is unavailable. */
     #sky {
       position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      /* out past the safe areas on either side, so a phone on its side is
+         sky right to its edges: iOS was keeping the fixed canvas inside
+         them, and the flat ground showed in bands beside it. Where the
+         insets are zero this is inset: 0, and a fixed box adds nothing to
+         what there is to scroll however wide it is. */
+      top: 0;
+      bottom: 0;
+      left: calc(-1 * env(safe-area-inset-left, 0px));
+      right: calc(-1 * env(safe-area-inset-right, 0px));
       display: block;
       z-index: -1;
       pointer-events: none;
@@ -2796,6 +2802,19 @@
         padding: 40px 24px 40px;
         padding-left: max(10px, calc(24px - env(safe-area-inset-left, 0px)));
         padding-right: max(10px, calc(24px - env(safe-area-inset-right, 0px)));
+      }
+      /* The grove takes the screen's height here, not the bio's — the row
+         is as tall as the bio, which on a phone's short side runs to
+         several screens, and a grove laid out that tall showed as a few
+         giant trunks with the shelf below the fold. It stays put while the
+         bio scrolls past it. */
+      .hero-lead {
+        position: sticky;
+        top: 40px;
+        align-self: start;
+        min-height: 0;
+        height: calc(100vh - 80px);
+        height: calc(100svh - 80px);
       }
       /* the gallery's padding is its --pad, which the chip strip bleeds by */
       .gallery-wrap { --pad: max(10px, calc(24px - env(safe-area-inset-left, 0px))); }
@@ -5834,6 +5853,10 @@
     // Side by side with the words, or stacked above them: the same two
     // conditions as the stylesheet — wide screens, and phones on their side.
     const WIDE = window.matchMedia('(min-width: 901px), (min-width: 700px) and (max-height: 500px)');
+    // A phone on its side is the wide layout too, but there the column is
+    // no taller than the screen and the bio beside it runs on for several:
+    // the shelf cannot track the text there, or it lands below the canvas.
+    const SIDE = window.matchMedia('(min-width: 700px) and (max-width: 900px) and (max-height: 500px)');
     // and a phone is a phone either way up: a hand's width of canvas, or a
     // hand's height of column, plants fewer trees
     const PHONE = innerWidth < 600 || window.matchMedia('(max-width: 900px) and (max-height: 500px)').matches;
@@ -8351,7 +8374,7 @@
       // gap under the buttons, stopping short of the filters.
       LEDGE_H = LEDGE_DEFAULT_H;
       let top = BLEED_Y, treeBase = H - BLEED_BOTTOM - LEDGE_H - 40, ivyEnd = H - BLEED_BOTTOM;
-      if (WIDE.matches && nameEl && linksEl) {
+      if (WIDE.matches && !SIDE.matches && nameEl && linksEl) {
         const lr = linksEl.getBoundingClientRect();
         const btn = linksEl.firstElementChild;
         const bh = btn ? btn.getBoundingClientRect().height : LEDGE_DEFAULT_H;
@@ -9356,7 +9379,7 @@
     let laidOut = '';
     const relayout = () => {
       const r = canvas.getBoundingClientRect();
-      const sig = `${Math.round(r.width)}x${Math.round(r.height)}|${WIDE.matches}|${window.devicePixelRatio}`;
+      const sig = `${Math.round(r.width)}x${Math.round(r.height)}|${WIDE.matches}|${SIDE.matches}|${window.devicePixelRatio}`;
       if (sig === laidOut) return;
       laidOut = sig;
       layout();
@@ -9373,6 +9396,7 @@
     if (bioEl) ro.observe(bioEl);
     if (linksEl) ro.observe(linksEl);
     WIDE.addEventListener('change', relayout);
+    SIDE.addEventListener('change', relayout);
 
     // don't burn frames when the grove is scrolled out of view
     let inView = true;
