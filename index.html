@@ -362,81 +362,54 @@
        veil for most of the time the veil is up, and that is precisely when
        this has to keep moving. */
     .veil-stage {
-      --S: min(64vmin, 400px);
+      --S: min(56vmin, 360px);
       position: relative;
       width: var(--S);
       height: var(--S);
+      color: var(--ink);
+      perspective: calc(var(--S) * 2.6);
+      transition: color 480ms var(--ease), transform 1300ms var(--ease), opacity 760ms var(--ease);
+      will-change: transform, opacity;
     }
-    /* Each square is three boxes deep: the orbit, which the exit scales and
-       fades; the ring, which turns; and the frame, which holds the sides.
-       All of it is transforms and opacity on whole elements, which the
-       compositor runs on its own — the main thread is busy building the
-       page behind the veil for most of the time the veil is up, and that
-       is precisely when this has to keep moving. */
-    .veil-orbit, .veil-ring, .veil-frame { position: absolute; inset: 0; }
-    .veil-orbit { will-change: transform, opacity; }
-    /* Each square makes one turn — the outer one way, the inner the other —
-       slowing all the way, and comes to rest set into the star: the outer
-       upright, the inner a diamond inside it. The end is the composition,
-       whenever the page is ready; a slow page only finds it waiting. */
-    .veil-ring {
-      will-change: transform;
-      animation: veil-settle 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-    }
-    @keyframes veil-settle {
-      from { transform: rotate(var(--from, 0deg)); }
-      to   { transform: rotate(var(--to, 0deg)); }
-    }
-    /* the inner square: smaller */
-    .veil-orbit[data-ring="b"] .veil-frame { transform: scale(0.72); }
-    /* the exit: the outer square opens outward, the inner closes inward */
-    .veil-orbit { transition: transform 1400ms var(--ease), opacity 760ms var(--ease); }
-    html.veil-gone .veil-orbit[data-ring="a"] { transform: scale(1.05); opacity: 0; }
-    html.veil-gone .veil-orbit[data-ring="b"] { transform: scale(0.95); opacity: 0; }
-    /* each side is the whole square, turned a quarter at a time about its
-       centre, with the ornament laid along its top edge, finial outward */
-    .veil-side {
+    /* The figure turns about its own axis, seen from a little above, and
+       makes one turn only, slowing all the way to rest. The end is the
+       composition, whenever the page is ready; a slow page finds it waiting. */
+    .veil-figure {
       position: absolute;
       inset: 0;
-      transform: rotate(calc(var(--k, 0) * 90deg));
+      transform-style: preserve-3d;
+      animation: veil-turn 2400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
     }
-    .veil-fl {
+    @keyframes veil-turn {
+      from { transform: rotateX(-17deg) rotateY(-210deg); }
+      to   { transform: rotateX(-17deg) rotateY(0deg); }
+    }
+    /* Each line is a hairline box stood in space by --tf: moved to its
+       middle, then turned to lie along its ruling. Each arrives in its turn
+       round the circle, fading in where it is. */
+    .veil-figure > i {
       position: absolute;
       left: 50%;
-      top: 0;
-      width: calc(var(--S) * 0.84);
-      max-width: none;
-      transform: translate(-50%, -42%);
-      fill: var(--ink);
-      transition: fill 420ms var(--ease);
+      top: 50%;
+      width: 1.3px;
+      margin-left: -0.65px;
+      transform: translateY(-50%) var(--tf);
+      transform-origin: 50% 50%;
+      background: currentColor;
+      backface-visibility: visible;
+      opacity: 0;
+      animation: veil-arrive 700ms var(--ease) var(--d, 0ms) forwards;
     }
-    /* The ornament grows as it turns: its pieces come in from the middle
-       of each side outward, spread over the whole of the turn, so that the
-       last spirals land at the moment the turning stops. The delays are
-       baked per piece as --d, on an 800ms scale; stretched here to fit the
-       2400ms turn, with each piece's own 720ms added at the end. The inner
-       square starts a beat behind the outer and catches it up by the end. */
-    .veil-fl .fl-part {
-      transition: none;
-      animation: veil-unroll 720ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--d, 0ms) * 2.1) both;
-    }
-    .veil-orbit[data-ring="b"] .fl-part { animation-delay: calc(var(--d, 0ms) * 1.8 + 240ms); }
-    /* by day the ornament is the branch it is on the dividers: bark where
-       it leaves the middle, green out at the curls — by piece here, since a
-       <use> takes its fill from the element that references it */
-    .day .veil-fl .fl-part {
-      fill: color-mix(in oklab, var(--bark), var(--leaf) calc(var(--far, 0.5) * 100%));
-    }
-    @keyframes veil-unroll {
-      from { opacity: 0; transform: scale(0.3) rotate(var(--r, 0deg)); }
-      to   { opacity: 1; transform: none; }
-    }
-    html.veil-full .veil-fl { fill: var(--text); }
+    @keyframes veil-arrive { to { opacity: 0.85; } }
+    /* ready: it lights; and it comes toward whoever is looking as the veil
+       clears, so the page seems to come through it rather than after it */
+    html.veil-full .veil-stage { color: var(--text); }
+    html.veil-gone .veil-stage { transform: scale(1.18); opacity: 0; }
     @media (prefers-reduced-motion: reduce) {
-      .veil-ring { animation: none; transform: rotate(var(--to, 0deg)); }
-      .veil-fl .fl-part { animation: none; opacity: 1; transform: none; }
-      .veil-orbit { transition: opacity 280ms linear; }
-      html.veiled #veil { transition-duration: 280ms; }
+      .veil-figure { animation: none; transform: rotateX(-17deg); }
+      .veil-figure > i { animation: none; opacity: 0.85; }
+      .veil-stage { transition: opacity 280ms linear; }
+      html.veil-gone .veil-stage { transform: none; }
     }
 
     body {
@@ -2880,211 +2853,91 @@
        piece, stalling while the rest of it is still being parsed. It is
        first in the body so it is the first thing painted. -->
   <div id="veil" aria-hidden="true">
-    <!-- The flourish from the section dividers, as the sides of squares,
-         each unrolling from its middle out while the page is built. One
-         ornament on its own was a thing with an up and a down; four about a
-         centre have neither. The pieces are the same eleven the divider
-         script cuts the ornament into at runtime, baked here with their
-         places and pivots, since this has to paint before any script has
-         run, and defined once and referenced from each side. It is the only
-         thing on the veil, so that nothing on it can be mistaken for the
-         moon or the sun that arrive with the grove a moment later,
-         somewhere else. -->
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-      <g id="vf0">
-        <g>
-          <path d="M549,345.1c0,0,0,0.1,0,0.2C549.1,345.1,549.1,345.1,549,345.1z"></path>
-          <path d="M560.9,372.4c-4.1-14.3-11.2-25.7-11.8-27.2c-0.4,1.5-8.3,13.1-11.9,27.2c-3.7,14.6,5.3,27.3,11.8,27.3
-          	C555.6,399.7,565,386.9,560.9,372.4z M549,398.2c-4.9,0-11.7-9.6-8.9-20.6c2.7-10.6,8.6-19.4,8.9-20.5c0-0.1,0-0.1,0-0.1
-          	c0,0,0,0,0,0.1c0.4,1.1,5.8,9.7,8.9,20.5C561.1,388.6,554,398.2,549,398.2z"></path>
-</g>
-      </g>
-      <g id="vf1">
-        <path d="M607.1,396.4c10.7,4.4,23.8,12.1,33.3,18.7c4.9,3.4,9.5,7.1,14.9,9.8c12.4,6.1,24,9.9,36.8,2.5
-          c15.4-8.9,26.2-38.2,3.3-50.5c-4.6-2.5-7.2-1.4-11.9,0.5c-0.5,0.2-1.1,0.4-1.6,0.4c-1.2-0.1-1.9-1.7-1.4-2.8
-          c2.4-5.5,15.9-0.2,19.3,1.7c16,9.1,15.7,33.6,4.6,45.3c-32.3,34.2-67.4-1.1-92.7-18.1l0,0.1c-18.4-12.5-40.3-8.8-50.8,3.7
-          c-5.8,6.9-7.2,18.1-3.5,27.2c3.3,8,9.8,14.9,17.6,17c14.3,3.9,26.8-5.3,27-18.1c0.1-5.7-1-14.4-8.2-18.2c-4.6-2.4-13.4-3.9-15.3,2.9
-          c-0.7,2.5,1.1,5.6,3.7,5.7c1.4,0,2.7-0.8,4.1-0.9c1.6-0.2,3.2,0.6,4.1,1.9c0.9,1.3,1,3.1,0.2,4.5c-2.1,3.9-9.6,3.9-12.8,1.6
-          c-3.4-2.5-5.2-7.4-4.3-12c0.7-3.6,3-6.6,6.2-8.1c4.4-2.1,12-2,18,1.2c8.9,4.8,14.5,16.8,11.1,29.4c-4.1,15.5-16.3,24.1-35.4,19.2
-          c-9.4-2.4-17.2-12.9-20.3-24.1c-3-11.1-2.2-23.2,4.7-31.4C571.2,389.6,589.4,389.2,607.1,396.4z" fill-rule="evenodd"></path>
-        <path d="M635.7,419.7c3.4,3.4,5.7,9.3,4,13.6c-1,2.5-4.2,5-7.1,5.6c-2.9,0.7-5.8-0.7-7.4-2.5c-5-5.5-1.2-12.7,5.8-12.1
-          c1.1,0.1,2.5,0.6,2.7,1.8c0.2,1-1,2.5-2.1,2.4c-1.1-0.1-1.5-1.5-2.5-2c-1-0.6-2.4,0.1-3.1,1c-1.5,2-1.8,4.9-0.5,7
-          c3.4,5.6,11.4,2.3,13.2-1.6c1.7-3.8-0.7-9.6-4-12.7L635.7,419.7z"></path>
-      </g>
-      <g id="vf2">
-        <path d="M491.3,396.4c-10.7,4.4-23.8,12.1-33.3,18.7c-4.9,3.4-9.5,7.1-14.9,9.8c-12.4,6.1-24,9.9-36.8,2.5
-          c-15.4-8.9-26.2-38.2-3.3-50.5c4.6-2.5,7.2-1.4,11.9,0.5c0.5,0.2,1.1,0.4,1.6,0.4c1.2-0.1,1.9-1.7,1.4-2.8
-          c-2.4-5.5-15.9-0.2-19.3,1.7c-16,9.1-15.7,33.6-4.6,45.3c32.3,34.2,67.4-1.1,92.7-18.1l0,0.1c18.4-12.5,40.3-8.8,50.8,3.7
-          c5.8,6.9,7.2,18.1,3.5,27.2c-3.3,8-9.8,14.9-17.6,17c-14.3,3.9-26.8-5.3-27-18.1c-0.1-5.7,1-14.4,8.2-18.2
-          c4.6-2.4,13.4-3.9,15.3,2.9c0.7,2.5-1.1,5.6-3.7,5.7c-1.4,0-2.7-0.8-4.1-0.9c-1.6-0.2-3.2,0.6-4.1,1.9c-0.9,1.3-1,3.1-0.2,4.5
-          c2.1,3.9,9.6,3.9,12.8,1.6c3.4-2.5,5.2-7.4,4.3-12c-0.7-3.6-3-6.6-6.2-8.1c-4.4-2.1-12-2-18,1.2c-8.9,4.8-14.5,16.8-11.1,29.4
-          c4.1,15.5,16.3,24.1,35.4,19.2c9.4-2.4,17.2-12.9,20.3-24.1c3-11.1,2.2-23.2-4.7-31.4C527.2,389.6,509,389.2,491.3,396.4z" fill-rule="evenodd"></path>
-        <path d="M462.6,419.7c-3.4,3.4-5.7,9.3-4,13.6c1,2.5,4.2,5,7.1,5.6c2.9,0.7,5.8-0.7,7.4-2.5c5-5.5,1.2-12.7-5.8-12.1
-          c-1.1,0.1-2.5,0.6-2.7,1.8c-0.2,1,1,2.5,2.1,2.4c1.1-0.1,1.5-1.5,2.5-2c1-0.6,2.4,0.1,3.1,1c1.5,2,1.8,4.9,0.5,7
-          c-3.4,5.6-11.4,2.3-13.2-1.6c-1.7-3.8,0.7-9.6,4-12.7L462.6,419.7z"></path>
-      </g>
-      <g id="vf3">
-        <path d="M691.2,478c1.4,1,0.5,1.5,0,1.2c-4.7-3.6-6.8-0.5-7.1,1c-0.1,3.8,4.3,5.3,7.8,2.8c2.4-1.5,4.6-4.4,5.4-8.7
-          c1.6-6.7-0.4-34.5-38.3-40.8c-0.6-0.1-0.9-0.2-1.5-0.3c-1.4-0.3-2-1.1,0.1-1c0.5,0,1.1,0.1,1.6,0.2c6.7,1.4,31.9,6.3,37.8,30.2
-          c1.6,6.2,1.9,12.7-2.2,18.2c-6.2,7.1-11.5,2.6-11.2-0.8C684.3,476.9,688.5,475.8,691.2,478z"></path>
-        <path d="M683.7,432.1c4.7-1,9.9-4.6,10.9-9.1c0.6-2.7-0.7-6.5-2.7-8.6c-2.1-2.2-5.2-2.6-7.6-2c-7.2,1.8-8.1,9.9-1.9,13.3
-          c1,0.5,2.4,0.9,3.2,0c0.7-0.8,0.6-2.6-0.4-3.1c-1-0.5-2.1,0.4-3.2,0.3c-1.2-0.1-1.9-1.4-2-2.6c-0.2-2.5,1.2-5,3.5-6.1
-          c5.9-2.8,10.8,4.4,10.1,8.6c-0.7,4.1-5.9,7.6-10.4,8.4L683.7,432.1z"></path>
-        <path d="M691.1,450.2c14.8,5.6,38.8,0,42.1-17.2c1.4-7.2,0.1-17.3-7.4-20.8c-3.4-1.6-9.1-1.1-10.7,3.4
-          c-1.1,3.3,2.4,7.5,6.1,5.4c4.9-2.9,2.1-8.2-2.8-7.8c15.1-3.2,16.6,16.7,10.9,26.2c-6.8,11.3-30.5,15.4-40.7,8L691.1,450.2z" fill-rule="evenodd"></path>
-      </g>
-      <g id="vf4">
-        <path d="M407.1,478c-1.4,1-0.5,1.5,0,1.2c4.7-3.6,6.8-0.5,7.1,1c0.1,3.8-4.3,5.3-7.8,2.8c-2.4-1.5-4.6-4.4-5.4-8.7
-          c-1.6-6.7,0.4-34.5,38.3-40.8c0.6-0.1,0.9-0.2,1.5-0.3c1.4-0.3,2-1.1-0.1-1c-0.5,0-1.1,0.1-1.6,0.2c-6.7,1.4-31.9,6.3-37.8,30.2
-          c-1.6,6.2-1.9,12.7,2.2,18.2c6.2,7.1,11.5,2.6,11.2-0.8C414.1,476.9,409.8,475.8,407.1,478z"></path>
-        <path d="M414.6,432.1c-4.7-1-9.9-4.6-10.9-9.1c-0.6-2.7,0.7-6.5,2.7-8.6c2.1-2.2,5.2-2.6,7.6-2c7.2,1.8,8.1,9.9,1.9,13.3
-          c-1,0.5-2.4,0.9-3.2,0c-0.7-0.8-0.6-2.6,0.4-3.1c1-0.5,2.1,0.4,3.2,0.3c1.2-0.1,1.9-1.4,2-2.6c0.2-2.5-1.2-5-3.5-6.1
-          c-5.9-2.8-10.8,4.4-10.1,8.6c0.7,4.1,5.9,7.6,10.4,8.4L414.6,432.1z"></path>
-        <path d="M407.2,450.2c-14.8,5.6-38.8,0-42.1-17.2c-1.4-7.2-0.1-17.3,7.4-20.8c3.4-1.6,9.1-1.1,10.7,3.4
-          c1.1,3.3-2.4,7.5-6.1,5.4c-4.9-2.9-2.1-8.2,2.8-7.8c-15.1-3.2-16.6,16.7-10.9,26.2c6.8,11.3,30.6,15.4,40.7,8L407.2,450.2z" fill-rule="evenodd"></path>
-      </g>
-      <g id="vf5">
-        <path d="M393.7,416.8c-23.4-21-71.7-27.8-90.3,1.6c-7.7,12.2-12.7,32-1.2,43.8c5.2,5.4,16.1,8.6,22.3,1.3
-          c4.5-5.2,0.9-15.7-7.5-14.3c-11.1,1.8-9.8,13.6-0.5,16.4c-30.1-4.9-18.7-42.9-1.4-56.3c20.7-16,67.6-6.5,81,14.4L393.7,416.8z" fill-rule="evenodd"></path>
-      </g>
-      <g id="vf6">
-        <path d="M704.7,416.8c23.4-21,71.7-27.8,90.3,1.6c7.7,12.2,12.7,32,1.2,43.8c-5.2,5.4-16.1,8.6-22.3,1.3
-          c-4.5-5.2-0.9-15.7,7.5-14.3c11.1,1.8,9.8,13.6,0.5,16.4c30.1-4.9,18.7-42.9,1.4-56.3c-20.7-16-67.6-6.5-81,14.4L704.7,416.8z" fill-rule="evenodd"></path>
-      </g>
-      <g id="vf7">
-        <path d="M124.7,413.3c-5.2,1.7-4.7-1.6-3.2-2.2c18.7-5.3,14.5-17.1,11-20.6c-9.7-7.6-22.3,0.8-22.6,15c-0.7,9.2,2.7,20.7,12.2,31.1
-          c14.6,17.3,91.5,66.2,182-21.3c1.3-1.4,2.3-2,3.6-3.3c3.5-3.1,5.7-4.2,1.2,1.2c-1.2,1.3-2.4,2.7-3.7,3.8
-          c-16.7,14.8-77.5,72.7-152.1,41.6c-19.4-8-37.2-19.6-43.5-41.2c-6.6-30.2,15.5-35.4,23.9-27.8C141.1,397.3,135.5,410.5,124.7,413.3z
-          "></path>
-      </g>
-      <g id="vf8">
-        <path d="M973.7,413.3c5.2,1.7,4.7-1.6,3.2-2.2c-18.7-5.3-14.5-17.1-11-20.6c9.7-7.6,22.3,0.8,22.6,15c0.7,9.2-2.7,20.7-12.2,31.1
-          c-14.6,17.3-91.5,66.2-182-21.3c-1.3-1.4-2.3-2-3.6-3.3c-3.5-3.1-5.7-4.2-1.2,1.2c1.2,1.3,2.4,2.7,3.7,3.8
-          c16.7,14.8,77.5,72.7,152.1,41.6c19.4-8,37.2-19.6,43.5-41.2c6.6-30.2-15.5-35.4-23.9-27.8C957.3,397.3,962.8,410.5,973.7,413.3z"></path>
-      </g>
-      <g id="vf9">
-        <path d="M123.7,437.3c-15.4-16.5-49.5-24.4-64.7-4.5c-6.3,8.3-11.1,22.1-3.6,31.2c3.4,4.2,11,7.1,15.8,2.3
-          c3.5-3.5,1.6-11.2-4.5-10.7c-8,0.6-7.9,9.1-1.4,11.7c-21.2-5.4-10.7-31.8,2.5-40.3c15.8-10.2,48.7-0.5,57,15.4L123.7,437.3z" fill-rule="evenodd"></path>
-      </g>
-      <g id="vf10">
-        <path d="M974.7,437.3c15.4-16.5,49.5-24.4,64.7-4.5c6.3,8.3,11.1,22.1,3.6,31.2c-3.4,4.2-11,7.1-15.8,2.3
-          c-3.5-3.5-1.6-11.2,4.5-10.7c8,0.6,7.9,9.1,1.4,11.7c21.2-5.4,10.7-31.8-2.5-40.3c-15.8-10.2-48.7-0.5-57,15.4L974.7,437.3z" fill-rule="evenodd"></path>
-      </g>
-    </defs></svg>
-    <!-- Two squares of it, one inside the other and a half-turn of a square
-         apart, which together make an eight-pointed star. Each makes one
-         slowing turn while its pieces unroll and comes to rest set into the
-         star; when the page is ready the outer one opens outward and the
-         inner one closes inward as the ground clears. -->
+    <!-- A hyperboloid of one sheet, built the way it truly is: a ruled
+         surface, made of nothing but straight lines. Two families of them,
+         twisted against each other between two rims, and the curved waist
+         appears between them out of the straight lines alone. It is woven
+         line by line round the circle while the whole figure makes one
+         slowing turn, the last line landing as the turn comes to rest. The
+         lines are placed in real 3D and turned by the compositor, so it
+         keeps moving while the page is built behind it; and it is the only
+         thing on the veil, so nothing on it can be mistaken for the moon
+         or the sun that arrive with the grove a moment later. -->
     <div class="veil-stage">
-      <div class="veil-orbit" data-ring="a" style="--from:-110deg;--to:0deg"><div class="veil-ring"><div class="veil-frame">
-        <div class="veil-side" style="--k:0"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:1"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:2"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:3"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-      </div></div></div>
-      <div class="veil-orbit" data-ring="b" style="--from:155deg;--to:45deg"><div class="veil-ring"><div class="veil-frame">
-        <div class="veil-side" style="--k:0"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:1"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:2"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-        <div class="veil-side" style="--k:3"><div class="fl veil-fl">
-        <svg class="fl-part" viewBox="532.3 341.1 33.6 62.6" preserveAspectRatio="none" style="left:48.24%;top:2.01%;width:3.34%;height:40.65%;transform-origin:50% 100%;--d:1ms;--far:0.00"><use href="#vf0"/></svg>
-        <svg class="fl-part" viewBox="547.4 368.6 168.9 97.8" preserveAspectRatio="none" style="left:49.75%;top:19.85%;width:16.82%;height:63.51%;transform-origin:0% 50%;--r:-14deg;--d:202ms;--far:0.30"><use href="#vf1"/></svg>
-        <svg class="fl-part" viewBox="382.1 368.6 168.9 97.8" preserveAspectRatio="none" style="left:33.27%;top:19.85%;width:16.82%;height:63.51%;transform-origin:100% 50%;--r:14deg;--d:202ms;--far:0.30"><use href="#vf2"/></svg>
-        <svg class="fl-part" viewBox="652.2 407.4 85.5 81.2" preserveAspectRatio="none" style="left:60.18%;top:45.05%;width:8.51%;height:52.73%;transform-origin:0% 50%;--r:-14deg;--d:313ms;--far:0.44"><use href="#vf3"/></svg>
-        <svg class="fl-part" viewBox="360.6 407.4 85.5 81.2" preserveAspectRatio="none" style="left:31.14%;top:45.05%;width:8.51%;height:52.73%;transform-origin:100% 50%;--r:14deg;--d:313ms;--far:0.44"><use href="#vf4"/></svg>
-        <svg class="fl-part" viewBox="291.4 394.7 108.7 77.1" preserveAspectRatio="none" style="left:24.24%;top:36.79%;width:10.82%;height:50.07%;transform-origin:100% 50%;--r:14deg;--d:416ms;--far:0.56"><use href="#vf5"/></svg>
-        <svg class="fl-part" viewBox="698.3 394.7 108.7 77.1" preserveAspectRatio="none" style="left:64.77%;top:36.79%;width:10.82%;height:50.07%;transform-origin:0% 50%;--r:-14deg;--d:416ms;--far:0.56"><use href="#vf6"/></svg>
-        <svg class="fl-part" viewBox="104.4 382.5 211.0 89.2" preserveAspectRatio="none" style="left:5.62%;top:28.88%;width:21.02%;height:57.90%;transform-origin:100% 50%;--r:14deg;--d:626ms;--far:0.81"><use href="#vf7"/></svg>
-        <svg class="fl-part" viewBox="783.0 382.5 211.0 89.2" preserveAspectRatio="none" style="left:73.20%;top:28.88%;width:21.02%;height:57.90%;transform-origin:0% 50%;--r:-14deg;--d:626ms;--far:0.81"><use href="#vf8"/></svg>
-        <svg class="fl-part" viewBox="47.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:-0.04%;top:51.31%;width:8.09%;height:36.22%;transform-origin:100% 50%;--r:14deg;--d:800ms;--far:1.00"><use href="#vf9"/></svg>
-        <svg class="fl-part" viewBox="969.6 417.0 81.2 55.8" preserveAspectRatio="none" style="left:91.79%;top:51.31%;width:8.09%;height:36.22%;transform-origin:0% 50%;--r:-14deg;--d:800ms;--far:1.00"><use href="#vf10"/></svg>
-        </div></div>
-      </div></div></div>
+      <div class="veil-figure">
+        <i style="--d:0ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1126), calc(var(--S) * 0.0000), calc(var(--S) * 0.1669)) rotateY(-56.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:24ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1267), calc(var(--S) * 0.0000), calc(var(--S) * -0.1564)) rotateY(-129.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:47ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0819), calc(var(--S) * 0.0000), calc(var(--S) * 0.1839)) rotateY(-66.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:71ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1519), calc(var(--S) * 0.0000), calc(var(--S) * -0.1321)) rotateY(-139.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:94ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0487), calc(var(--S) * 0.0000), calc(var(--S) * 0.1953)) rotateY(-76.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:118ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1726), calc(var(--S) * 0.0000), calc(var(--S) * -0.1037)) rotateY(-149.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:142ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0140), calc(var(--S) * 0.0000), calc(var(--S) * 0.2008)) rotateY(-86.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:166ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1879), calc(var(--S) * 0.0000), calc(var(--S) * -0.0721)) rotateY(-159.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:189ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0210), calc(var(--S) * 0.0000), calc(var(--S) * 0.2002)) rotateY(-96.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:213ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1976), calc(var(--S) * 0.0000), calc(var(--S) * -0.0384)) rotateY(-169.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:236ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0555), calc(var(--S) * 0.0000), calc(var(--S) * 0.1935)) rotateY(-106.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:260ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.2013), calc(var(--S) * 0.0000), calc(var(--S) * -0.0035)) rotateY(-179.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:283ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0882), calc(var(--S) * 0.0000), calc(var(--S) * 0.1809)) rotateY(-116.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:307ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1988), calc(var(--S) * 0.0000), calc(var(--S) * 0.0315)) rotateY(171.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:331ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1183), calc(var(--S) * 0.0000), calc(var(--S) * 0.1629)) rotateY(-126.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:355ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1903), calc(var(--S) * 0.0000), calc(var(--S) * 0.0655)) rotateY(161.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:378ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1448), calc(var(--S) * 0.0000), calc(var(--S) * 0.1398)) rotateY(-136.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:402ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1761), calc(var(--S) * 0.0000), calc(var(--S) * 0.0976)) rotateY(151.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:425ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1669), calc(var(--S) * 0.0000), calc(var(--S) * 0.1126)) rotateY(-146.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:449ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1564), calc(var(--S) * 0.0000), calc(var(--S) * 0.1267)) rotateY(141.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:472ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1839), calc(var(--S) * 0.0000), calc(var(--S) * 0.0819)) rotateY(-156.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:496ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1321), calc(var(--S) * 0.0000), calc(var(--S) * 0.1519)) rotateY(131.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:519ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1953), calc(var(--S) * 0.0000), calc(var(--S) * 0.0487)) rotateY(-166.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:543ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1037), calc(var(--S) * 0.0000), calc(var(--S) * 0.1726)) rotateY(121.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:567ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.2008), calc(var(--S) * 0.0000), calc(var(--S) * 0.0140)) rotateY(-176.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:591ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0721), calc(var(--S) * 0.0000), calc(var(--S) * 0.1879)) rotateY(111.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:614ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.2002), calc(var(--S) * 0.0000), calc(var(--S) * -0.0210)) rotateY(174.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:638ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0384), calc(var(--S) * 0.0000), calc(var(--S) * 0.1976)) rotateY(101.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:661ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1935), calc(var(--S) * 0.0000), calc(var(--S) * -0.0555)) rotateY(164.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:685ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0035), calc(var(--S) * 0.0000), calc(var(--S) * 0.2013)) rotateY(91.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:708ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1809), calc(var(--S) * 0.0000), calc(var(--S) * -0.0882)) rotateY(154.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:732ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0315), calc(var(--S) * 0.0000), calc(var(--S) * 0.1988)) rotateY(81.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:756ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1629), calc(var(--S) * 0.0000), calc(var(--S) * -0.1183)) rotateY(144.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:780ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0655), calc(var(--S) * 0.0000), calc(var(--S) * 0.1903)) rotateY(71.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:803ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1398), calc(var(--S) * 0.0000), calc(var(--S) * -0.1448)) rotateY(134.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:827ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0976), calc(var(--S) * 0.0000), calc(var(--S) * 0.1761)) rotateY(61.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:850ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1126), calc(var(--S) * 0.0000), calc(var(--S) * -0.1669)) rotateY(124.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:874ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1267), calc(var(--S) * 0.0000), calc(var(--S) * 0.1564)) rotateY(51.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:897ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0819), calc(var(--S) * 0.0000), calc(var(--S) * -0.1839)) rotateY(114.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:921ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1519), calc(var(--S) * 0.0000), calc(var(--S) * 0.1321)) rotateY(41.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:944ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0487), calc(var(--S) * 0.0000), calc(var(--S) * -0.1953)) rotateY(104.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:968ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1726), calc(var(--S) * 0.0000), calc(var(--S) * 0.1037)) rotateY(31.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:992ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0140), calc(var(--S) * 0.0000), calc(var(--S) * -0.2008)) rotateY(94.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1016ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1879), calc(var(--S) * 0.0000), calc(var(--S) * 0.0721)) rotateY(21.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1039ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0210), calc(var(--S) * 0.0000), calc(var(--S) * -0.2002)) rotateY(84.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1063ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1976), calc(var(--S) * 0.0000), calc(var(--S) * 0.0384)) rotateY(11.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1086ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0555), calc(var(--S) * 0.0000), calc(var(--S) * -0.1935)) rotateY(74.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1110ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.2013), calc(var(--S) * 0.0000), calc(var(--S) * 0.0035)) rotateY(1.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1133ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0882), calc(var(--S) * 0.0000), calc(var(--S) * -0.1809)) rotateY(64.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1157ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1988), calc(var(--S) * 0.0000), calc(var(--S) * -0.0315)) rotateY(-9.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1181ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1183), calc(var(--S) * 0.0000), calc(var(--S) * -0.1629)) rotateY(54.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1205ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1903), calc(var(--S) * 0.0000), calc(var(--S) * -0.0655)) rotateY(-19.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1228ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1448), calc(var(--S) * 0.0000), calc(var(--S) * -0.1398)) rotateY(44.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1252ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1761), calc(var(--S) * 0.0000), calc(var(--S) * -0.0976)) rotateY(-29.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1275ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1669), calc(var(--S) * 0.0000), calc(var(--S) * -0.1126)) rotateY(34.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1299ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1564), calc(var(--S) * 0.0000), calc(var(--S) * -0.1267)) rotateY(-39.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1322ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1839), calc(var(--S) * 0.0000), calc(var(--S) * -0.0819)) rotateY(24.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1346ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1321), calc(var(--S) * 0.0000), calc(var(--S) * -0.1519)) rotateY(-49.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1369ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1953), calc(var(--S) * 0.0000), calc(var(--S) * -0.0487)) rotateY(14.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1393ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.1037), calc(var(--S) * 0.0000), calc(var(--S) * -0.1726)) rotateY(-59.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1417ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.2008), calc(var(--S) * 0.0000), calc(var(--S) * -0.0140)) rotateY(4.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1441ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0721), calc(var(--S) * 0.0000), calc(var(--S) * -0.1879)) rotateY(-69.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1464ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.2002), calc(var(--S) * 0.0000), calc(var(--S) * 0.0210)) rotateY(-6.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1488ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0384), calc(var(--S) * 0.0000), calc(var(--S) * -0.1976)) rotateY(-79.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1511ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1935), calc(var(--S) * 0.0000), calc(var(--S) * 0.0555)) rotateY(-16.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1535ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * -0.0035), calc(var(--S) * 0.0000), calc(var(--S) * -0.2013)) rotateY(-89.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1558ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1809), calc(var(--S) * 0.0000), calc(var(--S) * 0.0882)) rotateY(-26.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1582ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0315), calc(var(--S) * 0.0000), calc(var(--S) * -0.1988)) rotateY(-99.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1606ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1629), calc(var(--S) * 0.0000), calc(var(--S) * 0.1183)) rotateY(-36.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1630ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0655), calc(var(--S) * 0.0000), calc(var(--S) * -0.1903)) rotateY(-109.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1653ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.1398), calc(var(--S) * 0.0000), calc(var(--S) * 0.1448)) rotateY(-46.00deg) rotateX(35.40deg)"></i>
+        <i style="--d:1677ms;height:calc(var(--S) * 1.0305);--tf:translate3d(calc(var(--S) * 0.0976), calc(var(--S) * 0.0000), calc(var(--S) * -0.1761)) rotateY(-119.00deg) rotateX(35.40deg)"></i>
+      </div>
     </div>
   </div>
   <script>
