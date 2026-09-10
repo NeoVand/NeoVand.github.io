@@ -305,21 +305,6 @@
        document, so scrolling moves the page through the air instead of
        dragging the air with it. --bg stays underneath as the fallback, and is
        what shows if WebGL is unavailable. */
-    /* Chrome on iOS keeps the page inside the safe area, and on a phone on
-       its side WebKit paints the strips under the notch and beside it with
-       the colour of whatever fixed element touches those edges — one flat
-       colour, sampled from the element's own box, and nothing the page
-       draws can reach the strips themselves. This box is that element: the
-       page's ground, fixed to all four edges beneath the sky, so the strips
-       are the ground's colour on purpose rather than whatever was last
-       sampled. Safari lays the page out to the edges and never shows it. */
-    #edge {
-      position: fixed;
-      inset: 0;
-      z-index: -2;
-      background: var(--bg);
-      pointer-events: none;
-    }
     #sky {
       position: fixed;
       /* out past the safe areas on either side, so a phone on its side is
@@ -334,9 +319,16 @@
       /* A canvas is a replaced element: given no width of its own it takes
          its pixel size, ignores `right`, and on a retina screen stands
          twice the viewport with only its corner in view. So the box is
-         spelled out — the viewport plus the two insets it reaches into. */
+         spelled out — the viewport plus the two insets it reaches into,
+         and as tall as the viewport ever gets. A phone browser's bars
+         slide away as the page is scrolled and the viewport grows under
+         them; a canvas sized to the viewport of the moment grows too, and
+         since the sky holds its frame through a scroll, what showed was
+         the old frame stretched, then snapping to size when the scroll
+         stopped. Sized to the largest viewport it never needs to. */
       width: calc(100% + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px));
       height: 100%;
+      height: 100lvh;
       display: block;
       z-index: -1;
       pointer-events: none;
@@ -3117,7 +3109,6 @@
 
   <!-- The sky the whole page sits in: drifting cloud by day, stars and the
        occasional meteor by night. Behind everything, and inert. -->
-  <div id="edge" aria-hidden="true"></div>
   <canvas id="sky" aria-hidden="true"></canvas>
   <canvas id="sun-halo" aria-hidden="true"></canvas>
   <!-- The sun or moon making its entrance. For those two seconds it is drawn
@@ -3325,7 +3316,8 @@
         }
 
         // Where a browser leaves flat strips either side of the page (Chrome
-        // on a phone on its side: see #edge) the sky hazes into their colour
+        // on a phone on its side, which keeps the page out of the safe area
+        // and fills the strips with the ground's colour) the sky hazes into that colour
         // toward its edges, so the strips read as the sky thinning out
         // rather than as bands cut off it. The colour is --bg, black by
         // night; by day the pale blue the page's ground is. Zero elsewhere.
@@ -3390,13 +3382,14 @@
     // innerWidth and innerHeight are layout-forcing reads, and taken every
     // frame in the middle of a scroll they were the loop's biggest cost.
     let vw = innerWidth, vh = innerHeight;
-    // The canvas's own width: the viewport, plus the safe areas it reaches
-    // into on a phone on its side. Read at the same times as vw.
-    let cw = cv.clientWidth || vw;
+    // The canvas's own box: the viewport plus the safe areas it reaches
+    // into on a phone on its side, and as tall as the viewport gets with
+    // the browser's bars away. Read at the same times as vw.
+    let cw = cv.clientWidth || vw, ch = cv.clientHeight || vh;
 
     // How wide the haze at either side should be: only on a phone on its
     // side whose layout is narrower than its screen, which is Chrome on
-    // iOS keeping the page out of the safe area (see #edge). Safari lays
+    // iOS keeping the page out of the safe area (see the shader). Safari lays
     // the page out to the edges, so its gap is zero, and so is a desktop's
     // in the sense that matters: this only ever asks on an iPhone. The
     // haze runs a little wider than the strip so the join is soft.
@@ -3408,7 +3401,7 @@
     }
 
     function resize() {
-      const w = Math.max(1, cw), h = Math.max(1, vh);
+      const w = Math.max(1, cw), h = Math.max(1, ch);
       gl.uniform1f(uEdge, stripEdge(w));
       let s = Math.min(devicePixelRatio || 1, 2);
       if (w * h * s * s > MAXPX) s = Math.sqrt(MAXPX / (w * h));
@@ -3517,8 +3510,10 @@
       if (s && H) {
         // published in document coordinates, so it keeps scrolling away
         // correctly even after the grove has stopped drawing itself
-        const px = (s.x - window.scrollX - vw / 2) * 2 / vh;
-        const py = (vh / 2 - (s.y - window.scrollY)) * 2 / vh;
+        // p-units are the canvas's: it hangs from the top of the viewport
+        // and is centred on it side to side, the two insets being equal
+        const px = (s.x - window.scrollX - vw / 2) * 2 / ch;
+        const py = (ch / 2 - (s.y - window.scrollY)) * 2 / ch;
         gl.uniform2f(uSun, px, py);
       } else {
         gl.uniform2f(uSun, 0, 0);
@@ -3553,9 +3548,15 @@
 
     document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
     addEventListener('resize', () => {
-      vw = innerWidth; vh = innerHeight; cw = cv.clientWidth || vw;
+      vw = innerWidth; vh = innerHeight;
+      const w = cv.clientWidth || vw, h = cv.clientHeight || vh;
+      const grew = w !== cw || h !== ch;
+      cw = w; ch = h;
       paintHalo();
-      if (reduced) { resize(); draw(performance.now()); }
+      // A canvas whose box has changed is redrawn now rather than at the
+      // loop's leisure: mid-scroll the loop holds its frame, and a held
+      // frame on a box of a new size shows stretched until it lets go.
+      if (reduced || grew) { resize(); draw(performance.now()); }
     });
     // Reduced motion has no weather loop; keep its cloud lighting aligned
     // too. The visible halo itself needs no scroll callback in either mode.
