@@ -1176,6 +1176,15 @@ fair stand-in for Mobile Safari when a device is not to hand.
 
 ## The résumé
 
+The download serves the three-page graphical resume at
+`media/Neo-Mohsenvand-Resume.pdf`. The link includes a content-hash query so
+visitors receive the latest PDF after updates. The HTML record mirrors its
+role dates, technical skills, project contributions and education details;
+publications remain in the existing gallery below. Realtime AI has its own
+skills category, separate from application/UI work. Impact is described through
+products, adoption, risk reduction and cost benefits without dollar estimates.
+The PDF uses real selectable text, embedded fonts and tagged structure.
+
 The fourth button in the hero used to be ORCID. It is now a leaf, and it does
 not go anywhere: it opens a section between the hero and the gallery that is
 not there until it is asked for. Nothing is downloaded and no page is left.
