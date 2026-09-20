@@ -1189,8 +1189,8 @@ The fourth button in the hero used to be ORCID. It is now a leaf, and it does
 not go anywhere: it opens a section between the hero and the gallery that is
 not there until it is asked for. Nothing is downloaded and no page is left.
 
-What unfolds is the plain record in two columns — where he has worked and what
-he read down the left, what he can do and what he was given down the right —
+What unfolds is the plain record in two columns — experience, education and
+honours down the left, technical skills down the right —
 and every post opens again onto its own detail, so the whole thing reads in
 about twenty seconds and rewards anyone who wants more. The years sit beside
 the names rather than out at the column's right edge: this column is wide and
