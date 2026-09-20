@@ -12,11 +12,11 @@
   <!-- the browser's own bars take the colour of the top of the sky; the
        script below keeps this in step with the lights -->
   <meta name="theme-color" content="#4e70a3" />
-  <meta name="description" content="Interactive simulations, visualizations, and tools built for the browser — by Neo Mohsenvand." />
+  <meta name="description" content="Neo Mohsenvand builds enterprise AI agents, evaluation systems, voice interfaces, and local ML tools. MIT-trained researcher and AI architect at Caterpillar." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://neovand.github.io/" />
   <meta property="og:title" content="Neo Mohsenvand" />
-  <meta property="og:description" content="Interactive simulations, visualizations, and tools built for the browser." />
+  <meta property="og:description" content="Neo Mohsenvand builds enterprise AI agents, evaluation systems, voice interfaces, and local ML tools. MIT-trained researcher and AI architect at Caterpillar." />
   <!-- absolute URLs: link previews are fetched by crawlers with no page context -->
   <meta property="og:image" content="https://neovand.github.io/media/og.jpg" />
   <meta property="og:image:width" content="1200" />
@@ -24,7 +24,7 @@
   <meta property="og:image:alt" content="The homepage at dusk: an animated grove of L-system trees on a fired-clay shelf, an ivy-covered brick gazebo in the middle of it with a gramophone inside, beside a short bio and above the gallery of interactive demos." />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Neo Mohsenvand" />
-  <meta name="twitter:description" content="Interactive simulations, visualizations, and tools built for the browser." />
+  <meta name="twitter:description" content="Neo Mohsenvand builds enterprise AI agents, evaluation systems, voice interfaces, and local ML tools. MIT-trained researcher and AI architect at Caterpillar." />
   <meta name="twitter:image" content="https://neovand.github.io/media/og.jpg" />
   <!-- Inter, self-hosted, as one variable file (weight and optical size) in
        place of four static cuts: fewer bytes, one request, and a weight that
@@ -2291,6 +2291,28 @@
       padding: 40px 24px 8px;
     }
 
+    .cv-tools { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+
+    .cv-position {
+      margin-top: 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .cv-position:first-child { margin-top: 7px; }
+    .cv-position .cv-when { display: block; font-weight: 400; }
+    .cv-notes a {
+      color: var(--text);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .cv-notes a:hover { color: var(--title); }
+    .cv-notes a:focus-visible {
+      outline: 2px solid var(--border-2);
+      outline-offset: 3px;
+    }
+
     /* The long column and the short one. Experience and education run down
        the left because they are the record; skills and honours sit beside
        them because they are the index to it. */
@@ -2440,7 +2462,8 @@
     .cv-top {
       display: flex;
       align-items: baseline;
-      gap: 14px;
+      flex-wrap: wrap;
+      gap: 4px 14px;
     }
 
     .cv-org {
@@ -3773,7 +3796,7 @@
   <!-- HERO + ABOUT -->
   <header class="hero">
     <div class="hero-lead">
-      <h1 class="visually-hidden">Neo Mohsenvand — Interactive Complexity</h1>
+      <h1 class="visually-hidden">Neo Mohsenvand — Applied AI and Agent Systems</h1>
       <canvas id="grove" aria-hidden="true"></canvas>
       <canvas id="grove-leaves" aria-hidden="true"></canvas>
     </div>
@@ -3782,21 +3805,19 @@
       <h2 class="about-name">Neo Mohsenvand</h2>
       <p class="about-bio">
         I'm Chief AI Architect for Global Finance at <strong>Caterpillar</strong>, where I
-        architect complex <strong>enterprise agentic systems</strong> and modern
-        <strong>AI-first user interfaces</strong>, and I keep making interactive experiments
-        on the side. Before that I led R&amp;D at <strong>BrainCo</strong>, a
-        <strong>brain-computer interface</strong> startup, which I joined after a spell at
-        <strong>Apple</strong> as a <strong>machine learning</strong> research intern. I came
-        to industry from a postdoc at <strong>MIT</strong>, where I had also done my PhD, both
-        in the <strong>Media Lab</strong>'s Fluid Interfaces Group, working on
-        <strong>brain-computer interfaces</strong>, <strong>AI</strong>,
-        <strong>complex systems</strong>, <strong>affective computing</strong>, and tools that
-        extend human memory and attention. Earlier I did my master's in
-        <strong>applied mathematics</strong> at <strong>Oxford</strong>, and before any of it I
-        studied <strong>electrical and biomedical engineering</strong> at
-        <strong>Tehran Polytechnique</strong>. I'm passionate about the intersection of
-        <strong>software</strong>, <strong>design</strong>, and <strong>intelligence</strong>,
-        both artificial and biological.
+        build <strong>enterprise AI agents</strong> and the software around them:
+        document workflows, <strong>evaluation systems</strong>, <strong>voice interfaces</strong>,
+        and tools that bring people into decisions. I also make <strong>local AI tools</strong>
+        and interactive educational applications for exploring agent workflows, training
+        models, and understanding retrieval. Before Caterpillar, I led research at
+        <strong>BrainCo</strong> and worked on machine learning for biosignals at
+        <strong>Apple</strong>. My doctoral and part-time postdoctoral research at
+        <strong>MIT's Media Lab</strong> explored self-supervised learning,
+        brain-computer interfaces, and tools for human memory and attention. I hold a
+        <strong>PhD in Media Arts and Sciences</strong> from MIT and a master's in
+        <strong>Mathematical Modelling and Scientific Computing</strong> from
+        <strong>Oxford</strong>. I'm drawn to the intersection of <strong>software</strong>,
+        <strong>design</strong>, and <strong>intelligence</strong>, both artificial and biological.
       </p>
       <div class="about-links">
         <a class="about-link" href="https://github.com/NeoVand" target="_blank" rel="noopener">
@@ -3825,136 +3846,147 @@
 
 
   <!-- THE RÉSUMÉ -->
-  <!-- Opened by the fourth pill in the hero, and opened in place: nothing is
-       downloaded and the page does not go anywhere. What unfolds is the plain
-       record — where he has worked, what he read, what he can do, what he was
-       given — set in two columns and hung on a stem. The stem is the only
-       ornament, and it is the one this page already owns: a hairline of the
-       same ink as the flourish, drawn from the top down as the section opens,
-       with a bud at every post. Open a post and the bud puts out a leaf. -->
+  <!-- The fourth hero pill unfolds this record in place; a separate link
+       downloads the résumé. The existing stem and disclosures keep the
+       employment history compact until a visitor opens an entry. -->
   <section id="cv" class="cv" aria-label="Résumé">
     <div>
       <div class="cv-inner">
+        <div class="cv-tools cv-in" style="--d:0ms">
+          <a class="about-link" href="media/Neo-Mohsenvand-Resume.pdf" download="Neo-Mohsenvand-Resume.pdf">
+            <svg width="14" height="14" aria-hidden="true"><use href="#icon-download" /></svg>
+            Download résumé PDF
+          </a>
+        </div>
         <div class="cv-grid">
 
           <div class="cv-col">
-            <p class="section-label cv-in" style="--d:0ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-work" /></svg>Experience</p>
+            <h2 class="section-label cv-in" style="--d:0ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-work" /></svg>Experience</h2>
             <ol class="cv-list">
           <li class="cv-item" style="--d:60ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">Caterpillar</span><span class="cv-when">2024 &ndash; now</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">Chief AI Architect, Global Finance &middot; Irving, TX</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-caterpillar">
+              <span class="cv-top"><span class="cv-org">Caterpillar</span><span class="cv-when">Apr 2024 &ndash; present</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Chief AI Architect, Global Finance since January 2026</span>
             </button>
-            <div class="cv-body"><div>
-              <ul class="cv-also">
-                <li><span>Senior Principal Data Scientist, Global Finance</span><span>2025 &ndash; 2026</span></li>
-                <li><span>Senior Engineering Fellow, CAT Tech</span><span>2024 &ndash; 2025</span></li>
-              </ul>
+            <div class="cv-body" id="cv-caterpillar"><div>
+              <h3 class="cv-position">Chief AI Architect, Global Finance<span class="cv-when">January 2026 &ndash; present &middot; Irving, TX</span></h3>
               <ul class="cv-notes">
-                <li>Founding technical hire of the CAT Tech AI team &mdash; four engineers, twelve applications, eight thousand users, $8.7M in measured value.</li>
-                <li><em>Penman</em>, an enterprise multi-agent system that reads earnings calls and regulatory filings.</li>
-                <li>An adversarial pipeline that tests a disclosure against simulated high-frequency traders before it is published.</li>
-                <li>A prototype hub for Global Finance, and an internal curriculum that has reached 300+ engineers across ten teams.</li>
+                <li>Co-developed an invoice-processing agent connecting mailbox ingestion, PDF and scanned-document OCR, Snowflake lookups, and human exception review. Reduced the share of invoices requiring human review from 100% to approximately 10% in the workflow.</li>
+                <li>Developed <em>Tempo</em>, an enterprise investigation platform that identifies stakeholders through the org chart, schedules meetings, conducts OpenAI Realtime voice interviews, and populates structured forms. Available to hundreds of internal users and actively used for idea intake, requirements gathering, and conflict resolution.</li>
+                <li>Developed <em>Aperture</em>, an agentic image-generation system for slide decks and other visual work, starting from short prompts and hundreds of reference inputs.</li>
+                <li>Created 10+ complete example applications for an agentic-AI workshop now in its fifth iteration, including agentic RAG, talking dashboards, and voice-based data-science assistants; teach engineers and senior leaders across the company.</li>
+              </ul>
+              <h3 class="cv-position">Senior Principal Data Scientist, Global Finance<span class="cv-when">May 2025 &ndash; January 2026 &middot; Irving, TX</span></h3>
+              <ul class="cv-notes">
+                <li>Developed and deployed <em>Penman</em> using SvelteKit and Azure to analyze earnings-call transcripts and regulatory filings for finance leaders. Built an MLflow/DeepEval evaluation system and coordinated benchmark development across the organization.</li>
+                <li>Built an AI-idea prioritization agent using a RICE-derived methodology, company-specific impact measures, and human review.</li>
+                <li>Designed an adversarial LLM pipeline to test simulated trading-agent interpretations of draft disclosures and identify potentially unintended readings.</li>
+              </ul>
+              <h3 class="cv-position">Senior Engineering Fellow, Artificial Intelligence<span class="cv-when">April 2024 &ndash; May 2025 &middot; Illinois</span></h3>
+              <ul class="cv-notes">
+                <li>Founding technical hire of the CAT Tech AI team; led four engineers delivering 12+ applications serving 8,000+ technical users and generating $8.7M in measured business value through engineering-analysis automation.</li>
+                <li>Created <em>Magic Table</em> for spreadsheet and database workflows over million-row datasets, combining formulas with local-LLM prompts that generate rows and columns and trigger iterative operations; developed versions using Ollama.</li>
+                <li>Established an AI curriculum and reading group across 10+ teams, training 300+ engineers.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:106ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">BrainCo</span><span class="cv-when">2021 &ndash; 2024</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-brainco">
+              <span class="cv-top"><span class="cv-org">BrainCo</span><span class="cv-when">Nov 2021 &ndash; Mar 2024</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
               <span class="cv-role">Head of Research &middot; Somerville, MA</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-brainco"><div>
               <ul class="cv-notes">
-                <li>Eleven researchers on wearable AI and high-bandwidth brain&ndash;computer interfaces.</li>
-                <li>Real-time biosignal processing and intent recognition, running on the device.</li>
-                <li>Lead inventor on five provisional patents; principal investigator on two publications.</li>
+                <li>Led 11 researchers developing wearable AI and brain-computer interfaces; named inventor on five provisional patent applications.</li>
+                <li>Led development of a conditional-GAN system reconstructing breathing patterns from 25 Hz wearable PPG. The <a href="papers/breathing.pdf">published study</a> reports a one-second breathing-curve feedback delay and respiratory-rate mean absolute error of 1.47 breaths/min across ten test subjects.</li>
+                <li>Led soft-speech interface research comparing contact and MEMS microphones. In an <a href="papers/bone-conduction.pdf">eleven-person study</a>, contact microphones reduced soft-speech word error rate from 99&ndash;100% to 35% in the tested music/noise conditions.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:152ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">MIT Media Lab</span><span class="cv-when">2021 &ndash; 2022</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">Postdoctoral Research Scientist &middot; Cambridge, MA</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-mit-postdoc">
+              <span class="cv-top"><span class="cv-org">MIT Media Lab</span><span class="cv-when">Nov 2021 &ndash; Jun 2022</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Postdoctoral Research Scientist, part-time &middot; Cambridge, MA</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-mit-postdoc"><div>
               <ul class="cv-notes">
-                <li>A memory prosthesis that records continuously, and the multimodal pipeline behind it.</li>
-                <li>Self-experiments validating self-supervised retrieval, covered by <em>MIT Technology Review</em> and <em>Quartz</em>.</li>
+                <li>Conducted research on multimodal memory systems and physiological data.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:198ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">Apple</span><span class="cv-when">2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">AI / ML Research Intern &middot; Cupertino, CA</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-apple">
+              <span class="cv-top"><span class="cv-org">Apple</span><span class="cv-when">Jun &ndash; Sep 2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Machine Learning Research Intern &middot; Cupertino, CA</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-apple"><div>
               <ul class="cv-notes">
-                <li>Parameter-efficient transformers for on-device biosignal event detection.</li>
-                <li>A mechanistic-interpretability framework for attention heads on continuous time series.</li>
+                <li>Developed parameter-efficient transformers for biosignal event detection and methods for inspecting attention heads and activation patterns in continuous time-series models.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:244ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">Cortico</span><span class="cv-when">2017</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">Information Design &amp; Data Visualisation &middot; Cambridge, MA</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-cortico">
+              <span class="cv-top"><span class="cv-org">Cortico</span><span class="cv-when">Summer 2017</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Information Design &amp; Data Visualization Intern &middot; Cambridge, MA</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-cortico"><div>
               <ul class="cv-notes">
-                <li>A WebGL engine for very large dynamic social graphs, on permanent display at the MIT Media Lab.</li>
+                <li>Built a browser-based WebGL visualization engine for dynamic social-network graphs.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:290ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">Brain Research Centre, UBC</span><span class="cv-when">2013 &ndash; 2014</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">Data Scientist &middot; Vancouver</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-ubc">
+              <span class="cv-top"><span class="cv-org">University of British Columbia</span><span class="cv-when">Sep 2013 &ndash; Aug 2014</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">Data Scientist and Researcher &middot; Vancouver</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-ubc"><div>
               <ul class="cv-notes">
-                <li>An open-source library for retrieving, composing and rendering Allen Brain Atlas data in three dimensions.</li>
+                <li>Developed a Python library for retrieving, composing, and visualizing Allen Brain Atlas connectivity data in 3D.</li>
               </ul>
             </div></div>
           </li>
             </ol>
 
-            <p class="section-label cv-in" style="--d:150ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-school" /></svg>Education</p>
+            <h2 class="section-label cv-in" style="--d:150ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-school" /></svg>Education</h2>
             <ol class="cv-list">
           <li class="cv-item" style="--d:198ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
-              <span class="cv-top"><span class="cv-org">MIT</span><span class="cv-when">2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
-              <span class="cv-role">PhD, Human&ndash;AI Interaction &middot; Media Lab</span>
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-mit-phd">
+              <span class="cv-top"><span class="cv-org">MIT</span><span class="cv-when">Completed 2021</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
+              <span class="cv-role">PhD, Media Arts and Sciences &middot; Media Lab</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-mit-phd"><div>
               <ul class="cv-notes">
-                <li><em>Classifying and Displaying Brain-waves through Self-supervised Learning.</em></li>
-                <li>Advised by Pattie Maes, Tomaso Poggio and Ed Boyden.</li>
+                <li>Completed in 2021; listed in MIT&rsquo;s February 2022 degree record. Research in self-supervised learning and human&ndash;AI interaction.</li>
+                <li>Thesis: <em>Classifying and Displaying Brain-Waves through Self-Supervised Learning.</em> Advisor: Pattie Maes.</li>
+                <li>First author of <a href="https://proceedings.mlr.press/v136/mohsenvand20a.html">SeqCLR</a> (ML4H NeurIPS Workshop, 2020), adapting contrastive learning to EEG through channel recombination and signal augmentations; evaluated emotion recognition, sleep staging, and abnormal-EEG detection across three datasets.</li>
+                <li>Doctoral work also included continuous-capture memory interfaces and tools for human attention.</li>
               </ul>
             </div></div>
           </li>
           <li class="cv-item" style="--d:244ms">
             <i class="cv-bud" aria-hidden="true"></i>
             <svg class="cv-sprout" width="15" height="15" aria-hidden="true"><use href="#icon-leaf" /></svg>
-            <button class="cv-post" type="button" aria-expanded="false">
+            <button class="cv-post" type="button" aria-expanded="false" aria-controls="cv-oxford">
               <span class="cv-top"><span class="cv-org">University of Oxford</span><span class="cv-when">2013</span><svg class="cv-caret" width="9" height="9" aria-hidden="true"><use href="#icon-caret" /></svg></span>
               <span class="cv-role">MSc, Mathematical Modelling &amp; Scientific Computing</span>
             </button>
-            <div class="cv-body"><div>
+            <div class="cv-body" id="cv-oxford"><div>
               <ul class="cv-notes">
                 <li><em>Sparse-Signal Recovery and Compressive Sensing for Optical Functional Brain Imaging.</em></li>
                 <li>Advised by Jared Tanner and Mason Porter.</li>
@@ -3973,16 +4005,17 @@
           </div>
 
           <div class="cv-col">
-            <p class="section-label cv-in" style="--d:80ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-skill" /></svg>Skills</p>
+            <h2 class="section-label cv-in" style="--d:80ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-skill" /></svg>Skills</h2>
             <dl class="cv-skills">
-              <div class="cv-in" style="--d:110ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-ml" /></svg>Machine learning</dt><dd>PyTorch &middot; JAX &middot; LLM and VLM architecture &middot; distributed training (FSDP, DeepSpeed, Ray) &middot; inference optimisation (vLLM, WebGPU) &middot; agentic orchestration &middot; alignment (SFT, PEFT, RLHF, PPO/DPO) &middot; mechanistic interpretability &middot; evaluation</dd></div>
-              <div class="cv-in" style="--d:156ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-code" /></svg>Building</dt><dd>Python &middot; TypeScript &middot; React &middot; Svelte &middot; Three.js &middot; GLSL &middot; WGSL</dd></div>
-              <div class="cv-in" style="--d:202ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-math" /></svg>Scientific computing</dt><dd>MATLAB &middot; Mathematica &middot; signal processing</dd></div>
-              <div class="cv-in" style="--d:248ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lead" /></svg>Leading &amp; teaching</dt><dd>ML infrastructure strategy &middot; cross-functional R&amp;D &middot; AI system architecture &middot; curriculum design and workshops &middot; mentoring &middot; technical recruiting</dd></div>
-              <div class="cv-in" style="--d:294ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lang" /></svg>Languages</dt><dd>English &middot; Turkish &middot; Persian &middot; Mandarin</dd></div>
+              <div class="cv-in" style="--d:110ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-ml" /></svg>Agents &amp; evaluation</dt><dd>LangGraph &middot; MLflow &middot; DeepEval &middot; retrieval &middot; multimodal workflows &middot; human-in-the-loop evaluation &middot; OpenAI Realtime</dd></div>
+              <div class="cv-in" style="--d:156ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-code" /></svg>Application engineering</dt><dd>Python &middot; TypeScript &middot; SvelteKit &middot; React &middot; Azure &middot; Snowflake</dd></div>
+              <div class="cv-in" style="--d:202ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-math" /></svg>Models &amp; local inference</dt><dd>PyTorch &middot; JAX &middot; Ollama &middot; Transformers.js &middot; WebGPU &middot; self-supervised learning &middot; signal processing &middot; mechanistic interpretability</dd></div>
+              <div class="cv-in" style="--d:248ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-code" /></svg>Visual &amp; scientific computing</dt><dd>Three.js &middot; GLSL &middot; WGSL &middot; MATLAB &middot; Mathematica</dd></div>
+              <div class="cv-in" style="--d:294ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lead" /></svg>Leading &amp; teaching</dt><dd>AI system architecture &middot; cross-functional R&amp;D &middot; curriculum design and workshops &middot; mentoring &middot; technical recruiting</dd></div>
+              <div class="cv-in" style="--d:340ms"><dt><svg class="cv-gi" width="13" height="13" aria-hidden="true"><use href="#icon-cv-lang" /></svg>Languages</dt><dd>English &middot; Turkish &middot; Persian &middot; Mandarin</dd></div>
             </dl>
 
-            <p class="section-label cv-in" style="--d:230ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-honour" /></svg>Honours</p>
+            <h2 class="section-label cv-in" style="--d:230ms"><svg class="cv-mark" width="30" height="30" aria-hidden="true"><use href="#icon-cv-honour" /></svg>Honours</h2>
             <ul class="cv-awards">
               <li class="cv-in" style="--d:260ms"><time>2020</time><span><b>NTT Data Fellowship</b> &mdash; MIT, for <em>Rhizome</em>, a smart memory book</span></li>
               <li class="cv-in" style="--d:306ms"><time>2017</time><span><b>First place and the Koch AI Prize</b> &mdash; MIT Grand Hack, for <em>Memoroom</em>, VR for Alzheimer&rsquo;s</span></li>
@@ -12692,11 +12725,14 @@
     });
 
     for (const post of cv.querySelectorAll('.cv-post[aria-expanded]')) {
+      const item = post.closest('.cv-item');
+      const body = item.querySelector('.cv-body');
+      body.inert = !item.classList.contains('open');
       post.addEventListener('click', () => {
-        const item = post.closest('.cv-item');
         const open = !item.classList.contains('open');
         item.classList.toggle('open', open);
         post.setAttribute('aria-expanded', open ? 'true' : 'false');
+        body.inert = !open;
       });
     }
   })();
