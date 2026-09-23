@@ -49,7 +49,7 @@ export function newBark(): BarkBuffers {
 }
 
 function sidesFor(r: number) {
-	return r > 0.12 ? 18 : r > 0.06 ? 12 : r > 0.03 ? 8 : r > 0.015 ? 6 : 4;
+	return r > 0.12 ? 18 : r > 0.06 ? 12 : r > 0.03 ? 8 : r > 0.018 ? 5 : 3;
 }
 
 /** a smooth, repeatable wobble round and along a stem */
@@ -92,8 +92,12 @@ export function addBark(
 		pc = new THREE.Vector3(),
 		n = new THREE.Vector3();
 	const maxArc = sk.maxArc;
-	for (const [axisId, nodes] of axes) {
-		const chain = [sk.parent[nodes[0]], ...nodes];
+	for (const [axisId, all] of axes) {
+		// a thin stem is drawn from every other node: at its size the corner
+		// cut is less than its own thickness, and the rings are half as many
+		const thin = sk.radius[all[0]] * at.scale < 0.03;
+		const nodes = thin ? all.filter((_, k) => k % 2 === 1 || k === all.length - 1) : all;
+		const chain = [sk.parent[all[0]], ...nodes];
 		const limb = axisId !== sk.axis[0];
 		const r0 = sk.radius[nodes[0]];
 		if (r0 * at.scale < opts.minRadius) continue;

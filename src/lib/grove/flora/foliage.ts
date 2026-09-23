@@ -140,7 +140,7 @@ const LEAF_MOVE = /* glsl */ `
 		+ rs * 0.6;
 	vec3 fa = normalize(vec3(sin(seed * 17.0), 0.55, cos(seed * 11.0)));
 	vec3 lp = rotAxis(qrot(iQuat, position * iData.x * lg), fa, flut);
-	vec3 transformed = bendTree(iPos + lp, iBase, 1.0) + partAt(iPos) * lg;
+	vec3 transformed = bendTree(iPos + lp, iBase, 1.0);
 `;
 
 function leafPatch(u: Growth) {
@@ -230,7 +230,9 @@ export function leafMaterial(
 					// the crown's own shade: sky light goes first, sunlight less so
 					float sky = vSky;
 					reflectedLight.indirectDiffuse *= mix(0.16, 1.0, sky);
-					reflectedLight.indirectSpecular *= sky;
+					// a leaf is waxy but small and turned every way: it takes little
+					// of the sky's reflection, or the crown goes grey
+					reflectedLight.indirectSpecular *= sky * 0.3;
 					reflectedLight.directDiffuse *= mix(0.5, 1.0, sky);
 					reflectedLight.directSpecular *= sky;
 					// the glow of a leaf with the sun behind it

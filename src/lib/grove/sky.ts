@@ -288,10 +288,15 @@ void main() {
 	float tb = SEA_B / dn;
 
 	float hc = 0.0;
-	if (e > 0.0) hc = highC(roofP, rX, rY) * smoothstep(0.004, 0.06, e);
+	// the high cloud goes where it would be finer than a pixel, near the
+	// horizon: there it is only streaks that crawl as the view moves
+	float rFp = (length(rX) + length(rY)) * 0.19;
+	if (e > 0.0) hc = highC(roofP, rX, rY) * smoothstep(0.02, 0.12, e) * (1.0 - smoothstep(0.04, 0.16, rFp));
 	vec3 up3 = vec3(0.0, 1.0, 0.0);
 
 	vec3 col = vec3(0.0);
+	// how many puffs one pixel spans on the cloud below
+	float farBlur = smoothstep(0.012, 0.06, (length(gX) + length(gY)) * uSea);
 
 	if (uMix > 0.001) {
 		vec3 day;
@@ -321,6 +326,13 @@ void main() {
 			vec3 gap = mix(low * 0.95, mix(zen, low, 0.4) * 1.12, smoothstep(0.0, 0.2, -e));
 			// a cloud's edge is thin, and the blue shows through it
 			day = mix(gap, cloud, hit.ok * smoothstep(0.004, 0.12, hit.h));
+			// Toward the horizon a pixel spans more than a puff, and whether the
+			// ray hits one or slips between is chance: as the view moves it
+			// crawls. There the sea is drawn as its own average, a soft band.
+			vec3 avg = mix(gap, uSunCloud * E * 0.62 * 0.19 + amb * 0.55, 0.55);
+			day = mix(day, avg, farBlur);
+			// and at the horizon itself the far haze meets the sky with no line
+			day = mix(day, low, (1.0 - smoothstep(0.0, 0.045, -e)) * 0.85);
 			// and the air between, from the table, which stops at the cloud;
 			// held light, or the whole sea goes to milk
 			day = day * mix(air.a, 1.0, 0.6) + air.rgb * E * 0.32;
@@ -366,6 +378,7 @@ void main() {
 			vec3 cloud = shadeSea(hit, d, uMoon, uMoonLight, amb, tb);
 			vec3 gap = amb * 0.4;
 			night = mix(gap, cloud, hit.ok * smoothstep(0.004, 0.12, hit.h));
+			night = mix(night, mix(gap, uMoonLight * 0.19 + amb * 0.55, 0.55), farBlur);
 			// the moon's lane across the tops beneath it
 			float lane = exp(-abs(atan(d.x, -d.z) - atan(uMoon.x, -uMoon.z)) * 6.0 / (dn * 4.0 + 0.12));
 			night += uMoonLight * 0.05 * lane * hit.ok * smoothstep(0.2, 0.8, hit.h);

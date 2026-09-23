@@ -33,7 +33,7 @@ import {
 	type PlantItem
 } from './flora/plants';
 import type { Canopy } from './flora/canopy';
-import { OLIVE, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
+import { OLIVE, BLOSSOM, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
 import { Petals } from './flora/petals';
 import { patch, nightPatch } from './shared';
@@ -386,17 +386,18 @@ export class Grove {
 			barkNormal: this.mats.bark.normalMap!,
 			rows: 3,
 			density: phone ? 0.5 : 0.8,
-			minRadius: phone ? 0.017 : 0.012
+			minRadius: 0.003
 		};
 		const seed = () => Math.floor(r() * 1e6);
 		const at = (a: number, rad: number, y = 0) =>
 			new THREE.Vector3(Math.sin(a) * rad, y, Math.cos(a) * rad);
 		const { R, lawn: RL, wallTop } = ISLAND;
 
-		// olives either side of the doorway, a little behind it
+		// an olive one side of the doorway and a tree in blossom the other, a
+		// little behind it
 		const side = r() < 0.5 ? 1 : -1;
 		const olives: PlantItem[] = [side, -side].map((sgn, i) => ({
-			species: OLIVE,
+			species: i === 0 ? OLIVE : BLOSSOM,
 			seed: seed(),
 			pos: at(sgn * lerp(1.32, 1.5, r()), lerp(4.3, 4.8, r())),
 			rotY: r() * Math.PI * 2,
@@ -933,23 +934,14 @@ export class Grove {
 		this.wake();
 	}
 
-	// While the camera holds still (its idle drift is a sixth of a pixel a
-	// frame, and the cloud crawls) the sheet of sky is redrawn half at a
-	// time, as a chequer, so every frame carries the same half of its cost;
-	// when anything that would show it moves, all of it, every frame.
-	private skyQ = new THREE.Quaternion(0, 0, 0, 0);
-	private skyTick = 0;
+	// The sky is drawn whole every frame. (It was once drawn half at a time
+	// while the view held still, as a chequer; but anything that moved slowly
+	// through it — the far edge of the cloud as the camera drifts, the moon's
+	// rim — then stepped every other frame, pixel by pixel, and shimmered.)
 	skyDirty = true;
 	private draw() {
 		this.sky.update(this.renderer);
-		this.skyTick ^= 1;
-		// the half not drawn is a frame old: fine unless the view has turned
-		// more than a pixel or so since the last frame
-		const turned = this.skyQ.angleTo(this.camera.quaternion) > 5e-4;
-		this.skyQ.copy(this.camera.quaternion);
-		const full = turned || this.skyDirty || Math.abs(this.dayMix - this.dayTo) > 1e-4;
-		this.sky.render(this.renderer, this.camera, full ? -1 : this.skyTick);
-		this.skyDirty = false;
+		this.sky.render(this.renderer, this.camera);
 		this.composer.render();
 	}
 

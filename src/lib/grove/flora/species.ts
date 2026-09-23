@@ -54,151 +54,199 @@ export const VINE_WALL = { R: 7.0, lawn: 6.7, wallTop: 0.42 };
  * green above and silver beneath, with sprays of small cream flowers at some
  * of their tips. The crown is a broad, broken dome, with sky through it.
  */
-export const OLIVE: Species = {
+interface DomeTree {
+	name: string;
+	blade: Species['blade'];
+	palette: Palette;
+	gnarl: number;
+	/** how many of the shoots end in flowers, and how big and many they are */
+	flowering: [number, number];
+	flower: [number, number];
+	cluster: [number, number];
+	/** how big the leaves are */
+	leaf: [number, number];
+}
+
+function domeTree(o: DomeTree): Species {
+	return {
+		name: o.name,
+		blade: o.blade,
+		palette: o.palette,
+		gnarl: o.gnarl,
+		base: 0.13,
+		tip: 0.008,
+		pipe: 2.4,
+		flare: 0.7,
+		flex: 0.8,
+		rows: 5,
+		castLeaves: true,
+		derive(seed) {
+			const r = rng(seed);
+			const R = (a: number, b: number) => lerp(a, b, r());
+			const sk = newSkeleton();
+			const axes = { n: 0 };
+			const t = new Turtle(sk, axes);
+			// A garden olive is kept: pruned to a dome, open at the heart for the
+			// light, and thick with leaf at its skin. The dome is an envelope the
+			// wood may not pass; what reaches it stops and breaks into leafy
+			// shoots, which is what the pruning knife makes of it.
+			const heart = new THREE.Vector3(R(-0.15, 0.15), R(2.75, 3.0), R(-0.15, 0.15));
+			const rx = R(2.15, 2.45),
+				ry = R(1.45, 1.65);
+			const inside = (p: THREE.Vector3) =>
+				Math.hypot((p.x - heart.x) / rx, (p.y - heart.y) / ry, (p.z - heart.z) / rx);
+			const flowering = R(o.flowering[0], o.flowering[1]);
+
+			const leafPair = (s: Turtle, size: number) => {
+				const out = s.p.clone().sub(heart).normalize();
+				for (const side of [-1, 1]) {
+					const dir = s.h
+						.clone()
+						.multiplyScalar(0.5)
+						.addScaledVector(s.l, side * 0.85)
+						.addScaledVector(up, 0.15)
+						.normalize();
+					const face = up
+						.clone()
+						.multiplyScalar(0.75)
+						.addScaledVector(out, 0.6)
+						.add(new THREE.Vector3(R(-0.3, 0.3), R(-0.2, 0.2), R(-0.3, 0.3)));
+					s.leaf(dir, face, size * R(0.85, 1.15), 0);
+				}
+			};
+
+			// a leafy shoot: short internodes, a pair of leaves at each, each pair
+			// turned a quarter from the last, and flowers at some of the tips
+			const shoot = (s: Turtle, n: number, size: number) => {
+				for (let i = 0; i < n; i++) {
+					s.forward(R(0.06, 0.085), 1, 0.02, 7, r);
+					s.roll(90 + R(-12, 12));
+					leafPair(s, size);
+				}
+				if (r() < flowering) {
+					const m = o.cluster[0] + Math.floor(r() * (o.cluster[1] - o.cluster[0] + 1));
+					for (let k = 0; k < m; k++) {
+						const b = s.clone();
+						b.roll(k * 137.5).pitch(R(20, 60));
+						b.p.addScaledVector(b.h, R(0.02, 0.07));
+						b.leaf(b.h, up.clone().add(b.h), R(o.flower[0], o.flower[1]), 1);
+					}
+				} else leafPair(s, size * 0.9);
+			};
+
+			// where the wood meets the dome: a spray of three or four shoots
+			const pad = (s: Turtle) => {
+				const k = 2 + Math.floor(r() * 2);
+				const phase = r() * 360;
+				for (let i = 0; i < k; i++) {
+					const b = s.branch();
+					b.roll(phase + i * (360 / k) + R(-20, 20)).pitch(R(20, 50));
+					shoot(b, 3 + Math.floor(r() * 3), R(o.leaf[0], o.leaf[1]));
+				}
+				shoot(s, 4 + Math.floor(r() * 2), R(o.leaf[0], o.leaf[1]));
+			};
+
+			const limb = (s: Turtle, v: number, depth: number): void => {
+				let len = 0.85 * Math.pow(v, 0.75);
+				// no further than the dome allows
+				const end = s.p.clone().addScaledVector(s.h, len);
+				const over = inside(end);
+				const pruned = over > 1;
+				if (pruned) {
+					// back along the heading to the envelope
+					let lo = 0,
+						hi = len;
+					for (let i = 0; i < 8; i++) {
+						const m = (lo + hi) / 2;
+						if (inside(s.p.clone().addScaledVector(s.h, m)) > 1) hi = m;
+						else lo = m;
+					}
+					len = Math.max(0.05, lo);
+				}
+				// strong wood reaches up; young wood lifts its tips to the light
+				s.forward(len, Math.max(1, Math.round(len / 0.16)), 0.05 * v + 0.012, 3 + 9 * v, r);
+				if (pruned || v < 0.15 || depth > 8) {
+					pad(s);
+					return;
+				}
+				// the outer wood carries leafy spurs along it, and the inner does
+				// not, so the crown has a skin of leaf and a heart of wood
+				const depthIn = inside(s.p);
+				if (v < 0.5 && depthIn > 0.55) {
+					const spurs = 1 + Math.floor(r() * 2);
+					for (let k = 0; k < spurs; k++) {
+						const b = s.branch();
+						b.roll(R(0, 360)).pitch(R(35, 65));
+						shoot(b, 2 + Math.floor(r() * 3), R(o.leaf[0] * 0.93, o.leaf[1] * 0.93));
+					}
+				}
+				const kids = v > 0.45 ? 3 : 2;
+				const phase = r() * 360;
+				for (let k = 0; k < kids; k++) {
+					const b = s.branch();
+					b.roll(phase + k * (360 / kids) + R(-25, 25)).pitch(R(28, 50));
+					limb(b, v * R(0.56, 0.7), depth + 1);
+				}
+				// and the limb goes on, a little less strong, a little bent
+				s.roll(R(-40, 40)).pitch(R(-10, 10));
+				limb(s, v * R(0.68, 0.78), depth + 1);
+			};
+
+			// the trunk: a lean, a twist as it rises, and a parting into leaders
+			t.roll(R(0, 360)).pitch(R(4, 10));
+			const trunk = R(0.95, 1.3);
+			t.forward(trunk, 6, 0.05, 7, r);
+			const leaders = r() < 0.5 ? 2 : 3;
+			const phase = r() * 360;
+			for (let k = 0; k < leaders; k++) {
+				const b = t.branch();
+				b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(26, 40));
+				limb(b, R(0.85, 1.0), 1);
+			}
+			taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
+			return sk;
+		}
+	};
+}
+
+export const OLIVE = domeTree({
 	name: 'olive',
 	blade: { w: 0.2, cup: 0.12, droop: 0.12 },
 	palette: {
-		leafTop: new THREE.Color(0.19, 0.29, 0.13),
-		leafUnder: new THREE.Color(0.5, 0.57, 0.44),
-		leafVary: 0.22,
+		leafTop: new THREE.Color(0.11, 0.24, 0.07),
+		leafUnder: new THREE.Color(0.3, 0.4, 0.22),
+		leafVary: 0.24,
 		blossom: new THREE.Color(0.98, 0.95, 0.86),
 		barkTint: new THREE.Color(0.78, 0.74, 0.7)
 	},
 	gnarl: 1,
-	base: 0.13,
-	tip: 0.008,
-	pipe: 2.4,
-	flare: 0.7,
-	flex: 0.8,
-	rows: 5,
-	castLeaves: true,
-	derive(seed) {
-		const r = rng(seed);
-		const R = (a: number, b: number) => lerp(a, b, r());
-		const sk = newSkeleton();
-		const axes = { n: 0 };
-		const t = new Turtle(sk, axes);
-		// A garden olive is kept: pruned to a dome, open at the heart for the
-		// light, and thick with leaf at its skin. The dome is an envelope the
-		// wood may not pass; what reaches it stops and breaks into leafy
-		// shoots, which is what the pruning knife makes of it.
-		const heart = new THREE.Vector3(R(-0.15, 0.15), R(2.75, 3.0), R(-0.15, 0.15));
-		const rx = R(2.15, 2.45),
-			ry = R(1.45, 1.65);
-		const inside = (p: THREE.Vector3) =>
-			Math.hypot((p.x - heart.x) / rx, (p.y - heart.y) / ry, (p.z - heart.z) / rx);
-		const flowering = R(0.12, 0.22);
+	flowering: [0.1, 0.18],
+	flower: [0.06, 0.085],
+	cluster: [4, 7],
+	leaf: [0.15, 0.18]
+});
 
-		const leafPair = (s: Turtle, size: number) => {
-			const out = s.p.clone().sub(heart).normalize();
-			for (const side of [-1, 1]) {
-				const dir = s.h
-					.clone()
-					.multiplyScalar(0.5)
-					.addScaledVector(s.l, side * 0.85)
-					.addScaledVector(up, 0.15)
-					.normalize();
-				const face = up
-					.clone()
-					.multiplyScalar(0.75)
-					.addScaledVector(out, 0.6)
-					.add(new THREE.Vector3(R(-0.3, 0.3), R(-0.2, 0.2), R(-0.3, 0.3)));
-				s.leaf(dir, face, size * R(0.85, 1.15), 0);
-			}
-		};
-
-		// a leafy shoot: short internodes, a pair of leaves at each, each pair
-		// turned a quarter from the last, and flowers at some of the tips
-		const shoot = (s: Turtle, n: number, size: number) => {
-			for (let i = 0; i < n; i++) {
-				s.forward(R(0.06, 0.085), 1, 0.02, 7, r);
-				s.roll(90 + R(-12, 12));
-				leafPair(s, size);
-			}
-			if (r() < flowering) {
-				const m = 4 + Math.floor(r() * 4);
-				for (let k = 0; k < m; k++) {
-					const b = s.clone();
-					b.roll(k * 137.5).pitch(R(20, 60));
-					b.p.addScaledVector(b.h, R(0.02, 0.07));
-					b.leaf(b.h, up.clone().add(b.h), R(0.06, 0.085), 1);
-				}
-			} else leafPair(s, size * 0.9);
-		};
-
-		// where the wood meets the dome: a spray of three or four shoots
-		const pad = (s: Turtle) => {
-			const k = 2 + Math.floor(r() * 2);
-			const phase = r() * 360;
-			for (let i = 0; i < k; i++) {
-				const b = s.branch();
-				b.roll(phase + i * (360 / k) + R(-20, 20)).pitch(R(20, 50));
-				shoot(b, 3 + Math.floor(r() * 3), R(0.15, 0.18));
-			}
-			shoot(s, 4 + Math.floor(r() * 2), R(0.15, 0.18));
-		};
-
-		const limb = (s: Turtle, v: number, depth: number): void => {
-			let len = 0.85 * Math.pow(v, 0.75);
-			// no further than the dome allows
-			const end = s.p.clone().addScaledVector(s.h, len);
-			const over = inside(end);
-			const pruned = over > 1;
-			if (pruned) {
-				// back along the heading to the envelope
-				let lo = 0,
-					hi = len;
-				for (let i = 0; i < 8; i++) {
-					const m = (lo + hi) / 2;
-					if (inside(s.p.clone().addScaledVector(s.h, m)) > 1) hi = m;
-					else lo = m;
-				}
-				len = Math.max(0.05, lo);
-			}
-			// strong wood reaches up; young wood lifts its tips to the light
-			s.forward(len, Math.max(1, Math.round(len / 0.16)), 0.05 * v + 0.012, 3 + 9 * v, r);
-			if (pruned || v < 0.15 || depth > 8) {
-				pad(s);
-				return;
-			}
-			// the outer wood carries leafy spurs along it, and the inner does
-			// not, so the crown has a skin of leaf and a heart of wood
-			const depthIn = inside(s.p);
-			if (v < 0.5 && depthIn > 0.55) {
-				const spurs = 1 + Math.floor(r() * 2);
-				for (let k = 0; k < spurs; k++) {
-					const b = s.branch();
-					b.roll(R(0, 360)).pitch(R(35, 65));
-					shoot(b, 2 + Math.floor(r() * 3), R(0.14, 0.17));
-				}
-			}
-			const kids = v > 0.45 ? 3 : 2;
-			const phase = r() * 360;
-			for (let k = 0; k < kids; k++) {
-				const b = s.branch();
-				b.roll(phase + k * (360 / kids) + R(-25, 25)).pitch(R(28, 50));
-				limb(b, v * R(0.56, 0.7), depth + 1);
-			}
-			// and the limb goes on, a little less strong, a little bent
-			s.roll(R(-40, 40)).pitch(R(-10, 10));
-			limb(s, v * R(0.68, 0.78), depth + 1);
-		};
-
-		// the trunk: a lean, a twist as it rises, and a parting into leaders
-		t.roll(R(0, 360)).pitch(R(4, 10));
-		const trunk = R(0.95, 1.3);
-		t.forward(trunk, 6, 0.05, 7, r);
-		const leaders = r() < 0.5 ? 2 : 3;
-		const phase = r() * 360;
-		for (let k = 0; k < leaders; k++) {
-			const b = t.branch();
-			b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(26, 40));
-			limb(b, R(0.85, 1.0), 1);
-		}
-		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
-		return sk;
-	}
-};
+/**
+ * A tree in blossom, the other side of the door: the same pruned dome on
+ * darker, smoother wood, fresh green leaves, and nearly every shoot ending
+ * in a spray of pink-white flowers.
+ */
+export const BLOSSOM = domeTree({
+	name: 'blossom',
+	blade: { w: 0.32, cup: 0.14, droop: 0.14 },
+	palette: {
+		leafTop: new THREE.Color(0.13, 0.3, 0.06),
+		leafUnder: new THREE.Color(0.28, 0.42, 0.16),
+		leafVary: 0.22,
+		blossom: new THREE.Color(0.98, 0.6, 0.72),
+		barkTint: new THREE.Color(0.52, 0.4, 0.38)
+	},
+	gnarl: 0.55,
+	flowering: [0.7, 0.85],
+	flower: [0.085, 0.12],
+	cluster: [6, 10],
+	leaf: [0.13, 0.16]
+});
 
 /**
  * The Italian cypress: a single leader, dead straight, and all round it short
@@ -230,24 +278,39 @@ export const CYPRESS: Species = {
 		const sk = newSkeleton();
 		const t = new Turtle(sk, { n: 0 });
 		const H = R(5.2, 6.6);
-		const steps = 34;
+		const steps = 52;
 		let phase = r() * 360;
+		// the flame: fullest a third of the way up, drawn in to a point at the
+		// top, the foliage closing over the leader all the way so no bare wood
+		// shows between one whorl and the next
+		const reachAt = (f: number) =>
+			0.9 * Math.min(1, f / 0.1) * (f < 0.3 ? 0.75 + f * 0.8 : Math.pow((1 - f) / 0.7, 0.85));
+		const tuft = (tt: Turtle, n: number, size: number, lift: number) => {
+			for (let m = 0; m < n; m++) {
+				const a = r() * Math.PI * 2;
+				const dir = new THREE.Vector3(
+					Math.cos(a) * (1 - lift),
+					lift,
+					Math.sin(a) * (1 - lift)
+				).normalize();
+				tt.leaf(dir, new THREE.Vector3(Math.cos(a), 0.4, Math.sin(a)), size * R(0.85, 1.15), 0);
+			}
+		};
 		for (let i = 0; i < steps; i++) {
 			const f = (i + 0.5) / steps;
 			t.forward(H / steps, 1, 0.3, 1.2, r);
 			if (f < 0.04) continue;
-			// the spindle: fullest a third of the way up
-			const reach =
-				0.95 *
-				Math.pow(Math.sin(Math.PI * Math.min(1, f * 1.04)), 0.7) *
-				(f < 0.33 ? 0.7 + f : 1.08 - f * 0.55);
-			const n = 5;
+			const reach = reachAt(f);
+			// sprays straight off the leader, which is what hides it
+			tuft(t, f > 0.75 ? 5 : 3, Math.max(0.15, 0.24 * Math.min(1, reach / 0.4)), 0.55);
+			if (reach < 0.1) continue;
+			const n = 4;
 			for (let k = 0; k < n; k++) {
 				phase += 137.5;
 				const b = t.branch();
 				b.roll(phase).pitch(R(34, 48));
-				const len = reach * R(0.75, 1.1);
-				const segs = 3;
+				const len = reach * R(0.8, 1.1);
+				const segs = len > 0.4 ? 3 : 2;
 				for (let j = 0; j < segs; j++) {
 					b.forward(len / segs, 1, 0.12, 5, r);
 					const out = b.p.clone().setY(0).normalize();
@@ -258,25 +321,17 @@ export const CYPRESS: Species = {
 							.addScaledVector(up, 0.4)
 							.normalize();
 						const face = out.clone().multiplyScalar(0.8).addScaledVector(up, 0.3);
-						// smaller toward the top, so the flame draws to a point
-						const small = 0.4 + 0.6 * Math.min(1, reach / 0.55);
-						b.leaf(dir, face, R(0.2, 0.27) * (1 - j * 0.12) * small, 0);
+						const small = 0.55 + 0.45 * Math.min(1, reach / 0.5);
+						b.leaf(dir, face, R(0.2, 0.26) * (1 - j * 0.1) * small, 0);
 					}
 				}
 			}
 		}
-		// the leader goes on a little above the last whorl, and ends in a
-		// slim spire of small sprays
-		for (let k = 0; k < 4; k++) {
-			t.forward(0.09, 1, 0.3, 1, r);
-			for (let m = 0; m < 3; m++) {
-				const dir = up
-					.clone()
-					.add(new THREE.Vector3(R(-0.25, 0.25), 0, R(-0.25, 0.25)))
-					.normalize();
-				t.leaf(dir, new THREE.Vector3(R(-1, 1), 0, R(-1, 1)), R(0.1, 0.14) * (1 - k * 0.18), 0);
-			}
-		}
+		// the point: the last of the leader, closed over by sprays turned up
+		t.forward(0.12, 1, 0.3, 0, r);
+		tuft(t, 6, 0.17, 0.85);
+		t.forward(0.1, 1, 0.3, 0, r);
+		tuft(t, 4, 0.13, 0.92);
 		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 		return sk;
 	}

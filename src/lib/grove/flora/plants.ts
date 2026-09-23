@@ -219,7 +219,7 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 	leafGeo.boundingSphere = bounds;
 	const leafMesh = new THREE.Mesh(
 		leafGeo,
-		leafMaterial(u, sp.palette.leafTop, sp.palette.leafUnder, sp.palette.leafVary, 0.52)
+		leafMaterial(u, sp.palette.leafTop, sp.palette.leafUnder, sp.palette.leafVary, 0.72)
 	);
 	leafMesh.castShadow = false;
 	leafMesh.receiveShadow = true;
