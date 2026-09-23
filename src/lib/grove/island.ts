@@ -351,3 +351,44 @@ export function buildIsland(mats: IslandMaterials, seed: number) {
 	}
 	return { group, lawn, lawnU, rim } satisfies IslandParts;
 }
+
+/**
+ * Lanterns on the wall: a short stone post on the coping and a bronze lantern
+ * on it, glazed. Two stand either side of where the path meets the wall, the
+ * rest round the side that is seen. Their light is laid into the glow map.
+ */
+export function buildLanterns(
+	stone: THREE.Material,
+	bronze: THREE.Material,
+	glass: THREE.Material
+) {
+	const { R, lawn: RL, wallTop } = ISLAND;
+	const group = new THREE.Group();
+	const lights: THREE.Vector3[] = [];
+	const at = [0.19, -0.19, 1.05, -1.05, 1.95, -1.95];
+	const rMid = (R + RL) / 2;
+	const postGeo = new THREE.CylinderGeometry(0.11, 0.14, 0.42, 8);
+	const capGeo = new THREE.ConeGeometry(0.15, 0.13, 6);
+	const baseGeo = new THREE.CylinderGeometry(0.1, 0.12, 0.05, 6);
+	const glassGeo = new THREE.CylinderGeometry(0.105, 0.09, 0.24, 6);
+	for (const a of at) {
+		const x = Math.sin(a) * rMid,
+			z = Math.cos(a) * rMid;
+		const y0 = wallTop + 0.12;
+		const post = new THREE.Mesh(postGeo, stone);
+		post.position.set(x, y0 + 0.21, z);
+		const base = new THREE.Mesh(baseGeo, bronze);
+		base.position.set(x, y0 + 0.445, z);
+		const g = new THREE.Mesh(glassGeo, glass);
+		g.position.set(x, y0 + 0.59, z);
+		const cap = new THREE.Mesh(capGeo, bronze);
+		cap.position.set(x, y0 + 0.775, z);
+		for (const m of [post, base, cap]) {
+			m.castShadow = true;
+			m.receiveShadow = true;
+		}
+		group.add(post, base, g, cap);
+		lights.push(new THREE.Vector3(x, y0 + 0.59, z));
+	}
+	return { group, lights };
+}

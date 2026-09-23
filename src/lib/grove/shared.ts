@@ -1,12 +1,16 @@
 import * as THREE from 'three';
+import { GLOW_GLSL } from './glow';
 
 // ─── What every material in the grove shares ──────────────────────────────
 // One clock, one wind, one lamp. These objects are handed to every patched
 // material by reference, so setting a value here reaches all of them.
 export const U = {
 	uTime: { value: 0 },
-	/** 0 by day, 1 by night. By night the grove is a greyscale drawing. */
+	/** 0 by day, 1 by night */
 	uNight: { value: 0 },
+	/** the fireflies' and lanterns' light, laid over the island from above */
+	uGlowMap: { value: null as THREE.Texture | null },
+	uGlowOn: { value: 1 },
 	uWind: { value: 1 },
 	/** where the pointer's ray meets the lawn, and how hard it is pushing */
 	uPtr: { value: new THREE.Vector3(0, -100, 0) },
@@ -82,15 +86,36 @@ export function patch<M extends THREE.Material>(m: M, key: string, ...patches: P
 }
 
 /**
- * By night the colour thins toward blue, as it does in moonlight when the eye
- * starts to see with its rods: a little, not a pencil study — the lamps are
- * warm and the night is meant to be a pleasant place. Applied after lighting
- * and before tone mapping, on every lit surface.
+ * Every lit surface: by night the colour thins toward blue, as it does in
+ * moonlight when the eye starts to see with its rods — a little, not a pencil
+ * study; and at any hour it takes its share of the fireflies' and lanterns'
+ * light from the glow map. Applied after lighting and before tone mapping.
  */
 export const nightPatch: Patch = (shader) => {
 	shader.uniforms.uNight = U.uNight;
+	shader.uniforms.uGlowMap = U.uGlowMap;
+	shader.uniforms.uGlowOn = U.uGlowOn;
+	shader.vertexShader = shader.vertexShader
+		.replace('void main() {', 'varying vec3 vGlowW;\nvoid main() {')
+		.replace(
+			'#include <project_vertex>',
+			`#include <project_vertex>
+			#ifdef USE_INSTANCING
+				vGlowW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+			#else
+				vGlowW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+			#endif`
+		);
 	shader.fragmentShader = shader.fragmentShader
-		.replace('void main() {', 'uniform float uNight;\nvoid main() {')
+		.replace(
+			'void main() {',
+			`uniform float uNight;\nvarying vec3 vGlowW;\n${GLOW_GLSL}\nvoid main() {`
+		)
+		.replace(
+			'#include <lights_fragment_end>',
+			`#include <lights_fragment_end>
+			reflectedLight.directDiffuse += diffuseColor.rgb * glowAt(vGlowW);`
+		)
 		.replace(
 			'#include <opaque_fragment>',
 			`#include <opaque_fragment>

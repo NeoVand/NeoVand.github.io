@@ -20,7 +20,8 @@ import {
 	rockTextures,
 	flagTextures
 } from './textures';
-import { buildIsland, ISLAND, type IslandParts } from './island';
+import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
+import { Glow } from './glow';
 import { buildRotunda, type RotundaParts } from './rotunda';
 import { buildGramophone, type Gramophone } from './gramophone';
 import { buildStand, prepareStand, sharedCanopy, type Stand, type PlantItem } from './flora/plants';
@@ -114,6 +115,14 @@ export class Grove {
 	private world = new THREE.Group();
 	island!: IslandParts;
 	pavilion!: RotundaParts;
+	private glow = new Glow();
+	private lanterns: THREE.Vector3[] = [];
+	private glassMat = new THREE.MeshStandardMaterial({
+		color: 0x2a2014,
+		emissive: new THREE.Color(1.0, 0.64, 0.3),
+		emissiveIntensity: 0,
+		roughness: 0.3
+	});
 	/** the lantern in the rotunda: warm, lit at dusk, brighter by night */
 	private lamp = new THREE.PointLight(0xffa04a, 0, 9, 2);
 	gramophone!: Gramophone;
@@ -315,6 +324,11 @@ export class Grove {
 		this.pavilion = buildRotunda(brick, stone, bronze);
 		this.world.add(this.pavilion.group);
 		this.lamp.position.copy(this.pavilion.lantern);
+		const lan = buildLanterns(stone, bronze, this.glassMat);
+		this.world.add(lan.group);
+		this.lanterns = lan.lights;
+		this.pavilion.lanternGlass.material = this.glassMat;
+		U.uGlowMap.value = this.glow.tex;
 		this.lamp.castShadow = false;
 		this.world.add(this.lamp);
 		this.gramophone = buildGramophone(brass, woodTexture(aniso));
@@ -543,11 +557,7 @@ export class Grove {
 		U.uWind.value = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
 		this.lamp.intensity = lerp(14, 2.2, m);
-		(this.pavilion.lanternGlass.material as THREE.MeshStandardMaterial).emissiveIntensity = lerp(
-			9,
-			3,
-			m
-		);
+		this.glassMat.emissiveIntensity = lerp(5.5, 2.2, m);
 	}
 
 	setDay(day: boolean) {
@@ -960,6 +970,29 @@ export class Grove {
 		this.light.target.position.set(0, 0, 0);
 
 		this.air.update(dt, visible);
+		if (visible) this.lightUp();
+	}
+
+	/** Lay the lanterns' and the fireflies' light into the glow map. */
+	private lampCol = new THREE.Color(1.0, 0.62, 0.3);
+	private flyCol = new THREE.Color(0.95, 1.0, 0.55);
+	private lightUp() {
+		const night = 1 - this.dayMix;
+		const g = this.glow;
+		g.begin();
+		const li = lerp(0.35, 1.6, night);
+		for (const p of this.lanterns) g.add(p, this.lampCol, li, 2.6);
+		g.add(this.pavilion.lantern, this.lampCol, li * 0.5, 2.2);
+		if (night > 0.02) {
+			const { pos, glow } = this.air.fireflies;
+			const v = new THREE.Vector3();
+			for (let i = 0; i < glow.length; i++) {
+				if (pos[i * 3 + 1] < -50 || glow[i] < 0.02) continue;
+				v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+				g.add(v, this.flyCol, glow[i] * 0.55, 1.1);
+			}
+		}
+		g.end();
 	}
 
 	/** Hold the frame rate by giving up resolution, and take it back when there is room. */

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { U, patch } from '../shared';
+import { U, patch, nightPatch } from '../shared';
 import { FLORA_WIND, windUniforms } from './wind';
 
 // ─── Leaves, flowers, and the wood's skin ─────────────────────────────────
@@ -188,16 +188,20 @@ export function leafMaterial(
 		metalness: 0,
 		side: THREE.DoubleSide
 	});
-	patch(m, 'leaf-' + top.getHexString() + under.getHexString(), leafPatch(u), (s) => {
-		s.uniforms.uTop = { value: top };
-		s.uniforms.uUnder = { value: under };
-		s.uniforms.uVary = { value: vary };
-		s.uniforms.uSunView = U.uSunView;
-		s.uniforms.uSunColor = U.uSunColor;
-		s.fragmentShader = s.fragmentShader
-			.replace(
-				'void main() {',
-				`uniform vec3 uTop;
+	patch(
+		m,
+		'leaf-' + top.getHexString() + under.getHexString(),
+		leafPatch(u),
+		(s) => {
+			s.uniforms.uTop = { value: top };
+			s.uniforms.uUnder = { value: under };
+			s.uniforms.uVary = { value: vary };
+			s.uniforms.uSunView = U.uSunView;
+			s.uniforms.uSunColor = U.uSunColor;
+			s.fragmentShader = s.fragmentShader
+				.replace(
+					'void main() {',
+					`uniform vec3 uTop;
 				uniform vec3 uUnder;
 				uniform float uVary;
 				uniform vec3 uSunView;
@@ -206,20 +210,20 @@ export function leafMaterial(
 				varying float vSeed;
 				varying vec2 vLeafUv;
 				void main() {`
-			)
-			.replace(
-				'#include <color_fragment>',
-				`#include <color_fragment>
+				)
+				.replace(
+					'#include <color_fragment>',
+					`#include <color_fragment>
 				vec3 leafC = gl_FrontFacing ? uTop : uUnder;
 				float wv = fract(vSeed * 7.13) - 0.5;
 				leafC *= 1.0 + wv * uVary;
 				leafC.r *= 1.0 + (fract(vSeed * 3.71) - 0.5) * uVary * 0.8;
 				float rib = smoothstep(0.1, 0.0, abs(vLeafUv.x - 0.5)) * 0.25;
 				diffuseColor.rgb = leafC * (1.0 + rib);`
-			)
-			.replace(
-				'#include <lights_fragment_end>',
-				`#include <lights_fragment_end>
+				)
+				.replace(
+					'#include <lights_fragment_end>',
+					`#include <lights_fragment_end>
 				{
 					// the crown's own shade: sky light goes first, sunlight less so
 					float sky = vSky;
@@ -233,8 +237,10 @@ export function leafMaterial(
 					float thru = clamp(-dot(normal, uSunView), 0.0, 1.0);
 					totalEmissiveRadiance += diffuseColor.rgb * uSunColor * (into * 1.1 + thru * 0.35) * sky * sky;
 				}`
-			);
-	});
+				);
+		},
+		nightPatch
+	);
 	return m;
 }
 
@@ -296,16 +302,22 @@ export function barkMaterial(
 		roughness: 0.93,
 		metalness: 0
 	});
-	patch(m, 'bark', barkPatch(u), (s) => {
-		s.fragmentShader = s.fragmentShader
-			.replace('void main() {', 'varying float vSky;\nvoid main() {')
-			.replace(
-				'#include <lights_fragment_end>',
-				`#include <lights_fragment_end>
+	patch(
+		m,
+		'bark',
+		barkPatch(u),
+		(s) => {
+			s.fragmentShader = s.fragmentShader
+				.replace('void main() {', 'varying float vSky;\nvoid main() {')
+				.replace(
+					'#include <lights_fragment_end>',
+					`#include <lights_fragment_end>
 				reflectedLight.indirectDiffuse *= mix(0.22, 1.0, vSky);
 				reflectedLight.directDiffuse *= mix(0.6, 1.0, vSky);`
-			);
-	});
+				);
+		},
+		nightPatch
+	);
 	return m;
 }
 

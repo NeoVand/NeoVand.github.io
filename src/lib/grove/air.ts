@@ -202,7 +202,7 @@ export class Air {
 		this.birds.castShadow = true;
 		this.birds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-		// fireflies: white, not green — by night the grove is a pencil study
+		// fireflies: a pale gold, bright enough to bloom
 		const fg = new THREE.BufferGeometry();
 		this.flyPos = new Float32Array(N * 3);
 		this.flyGlow = new Float32Array(N);
@@ -231,7 +231,7 @@ export class Air {
 				varying float vGlow;
 				void main() {
 					float a = texture2D(uMap, gl_PointCoord).a;
-					gl_FragColor = vec4(vec3(0.95, 0.98, 1.0) * a * vGlow * 1.6, 1.0);
+					gl_FragColor = vec4(vec3(1.0, 0.95, 0.6) * a * vGlow * 5.0, 1.0);
 				}`,
 			transparent: true,
 			depthWrite: false,
@@ -448,6 +448,11 @@ export class Air {
 		for (const cr of this.c)
 			if (cr.party === party && cr.state === 'perch' && cr.site?.kind === 'twig')
 				this.fly(cr, this.pickSite(cr, next), this.r() * 0.6);
+	}
+
+	/** where the fireflies are and how bright, for the light they give */
+	get fireflies() {
+		return { pos: this.flyPos, glow: this.flyGlow };
 	}
 
 	// ── a frame ───────────────────────────────────────────────────────────
