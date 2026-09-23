@@ -35,7 +35,8 @@
 					day: lights.day,
 					reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
 					seed: q.has('seed') ? +q.get('seed')! : undefined,
-					onGramophone: toggleMusic
+					onGramophone: toggleMusic,
+					level: music.level
 				});
 				await g.ready();
 				if (disposed) return;

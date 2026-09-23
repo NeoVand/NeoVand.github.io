@@ -168,6 +168,74 @@ const leafFragment = (shader: THREE.WebGLProgramParametersWithUniforms) => {
 		);
 };
 
+export interface CardSet {
+	anchors: number[];
+	quats: number[];
+	scales: number[];
+	ss: number[];
+	flexes: number[];
+	tints: number[];
+	crowns: number[];
+}
+
+/**
+ * Cards of painted leaves, one draw for all of them: the trees' crowns, and
+ * the ivy on the pavilion, which is the same thing held against a wall.
+ */
+export function leafCards(
+	c: CardSet,
+	map: THREE.Texture,
+	u: TreeHandles['u'],
+	bounds: THREE.Sphere,
+	shadows = true
+) {
+	const base = new THREE.PlaneGeometry(1, 1);
+	const geo = new THREE.InstancedBufferGeometry();
+	geo.index = base.index;
+	geo.setAttribute('position', base.getAttribute('position'));
+	geo.setAttribute('normal', base.getAttribute('normal'));
+	geo.setAttribute('uv', base.getAttribute('uv'));
+	const inst = (arr: number[], size: number) =>
+		new THREE.InstancedBufferAttribute(new Float32Array(arr), size);
+	geo.setAttribute('iAnchor', inst(c.anchors, 3));
+	geo.setAttribute('iQuat', inst(c.quats, 4));
+	geo.setAttribute('iScale', inst(c.scales, 1));
+	geo.setAttribute('iS', inst(c.ss, 1));
+	geo.setAttribute('iFlex', inst(c.flexes, 1));
+	geo.setAttribute('iTint', inst(c.tints, 1));
+	geo.setAttribute('iCrown', inst(c.crowns, 3));
+	geo.instanceCount = c.scales.length;
+	geo.boundingSphere = bounds;
+
+	const mat = patch(
+		new THREE.MeshLambertMaterial({
+			map,
+			alphaTest: 0.42,
+			alphaToCoverage: true,
+			side: THREE.DoubleSide
+		}),
+		'leaf',
+		(sh) => leafVertex(sh, u, true),
+		leafFragment,
+		nightPatch
+	);
+	const depth = patch(
+		new THREE.MeshDepthMaterial({
+			depthPacking: THREE.RGBADepthPacking,
+			side: THREE.DoubleSide,
+			map,
+			alphaTest: 0.42
+		}),
+		'leaf-depth',
+		(sh) => leafVertex(sh, u, false)
+	);
+	const mesh = new THREE.Mesh(geo, mat);
+	mesh.customDepthMaterial = depth;
+	mesh.castShadow = shadows;
+	mesh.receiveShadow = true;
+	return mesh;
+}
+
 export interface TreeMaterials {
 	barkMap: THREE.Texture;
 	barkNormal: THREE.Texture;
@@ -358,51 +426,16 @@ export function buildStand(
 	bark.castShadow = true;
 	bark.receiveShadow = true;
 
-	const leafBase = new THREE.PlaneGeometry(1, 1);
-	const leafGeo = new THREE.InstancedBufferGeometry();
-	leafGeo.index = leafBase.index;
-	leafGeo.setAttribute('position', leafBase.getAttribute('position'));
-	leafGeo.setAttribute('normal', leafBase.getAttribute('normal'));
-	leafGeo.setAttribute('uv', leafBase.getAttribute('uv'));
-	const inst = (arr: number[], size: number) =>
-		new THREE.InstancedBufferAttribute(new Float32Array(arr), size);
-	leafGeo.setAttribute('iAnchor', inst(anchors, 3));
-	leafGeo.setAttribute('iQuat', inst(quats, 4));
-	leafGeo.setAttribute('iScale', inst(scales, 1));
-	leafGeo.setAttribute('iS', inst(ss, 1));
-	leafGeo.setAttribute('iFlex', inst(flexes, 1));
-	leafGeo.setAttribute('iTint', inst(tints, 1));
-	leafGeo.setAttribute('iCrown', inst(crowns, 3));
-	leafGeo.instanceCount = scales.length;
-	leafGeo.boundingSphere = sphere.clone();
-
-	const map = foliageFor(items[0].sp);
-	const leafMat = patch(
-		new THREE.MeshLambertMaterial({
-			map,
-			alphaTest: 0.42,
-			alphaToCoverage: true,
-			side: THREE.DoubleSide
-		}),
-		'leaf',
-		(sh) => leafVertex(sh, u, true),
-		leafFragment,
-		nightPatch
+	const leaves = leafCards(
+		{ anchors, quats, scales, ss, flexes, tints, crowns },
+		foliageFor(items[0].sp),
+		u,
+		sphere.clone()
 	);
-	const leafDepth = patch(
-		new THREE.MeshDepthMaterial({
-			depthPacking: THREE.RGBADepthPacking,
-			side: THREE.DoubleSide,
-			map,
-			alphaTest: 0.42
-		}),
-		'leaf-depth',
-		(sh) => leafVertex(sh, u, false)
-	);
-	const leaves = new THREE.Mesh(leafGeo, leafMat);
-	leaves.customDepthMaterial = leafDepth;
-	leaves.castShadow = true;
-	leaves.receiveShadow = true;
+	const leafGeo = leaves.geometry;
+	const leafMat = leaves.material as THREE.Material;
+	const leafDepth = leaves.customDepthMaterial!;
+	const leafBase = { dispose() {} };
 
 	const group = new THREE.Group();
 	group.add(bark, leaves);

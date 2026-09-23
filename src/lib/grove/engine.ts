@@ -10,6 +10,8 @@ import { SPECIES, SHRUB } from './lsystem';
 import { patch, nightPatch } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
+import { buildIvy, type Ivy } from './ivy';
+import { Notes } from './notes';
 
 // ─── The grove, in three dimensions ───────────────────────────────────────
 // One renderer behind the whole page. At the top of it the island hangs in
@@ -22,6 +24,8 @@ export interface GroveOptions {
 	reduced: boolean;
 	seed?: number;
 	onGramophone?: () => void;
+	/** how loud the music is, 0..1, for the notes out of the horn */
+	level?: () => number;
 }
 
 type Layout = 'side' | 'stack';
@@ -54,6 +58,7 @@ export class Grove {
 	trees: TreeHandles[] = [];
 	shrubs!: TreeHandles;
 	air!: Air;
+	ivy!: Ivy;
 	private mats!: {
 		brick: THREE.MeshStandardMaterial;
 		copper: THREE.MeshStandardMaterial;
@@ -96,16 +101,22 @@ export class Grove {
 	private frameTimes: number[] = [];
 	private ray = new THREE.Raycaster();
 	private playing = false;
+	private live = false;
 	private crankA = 0;
 	private shadowTick = 0;
 	private rand: () => number;
 	private listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [];
 	onGramophone?: () => void;
+	private level: () => number;
+	private notes = new Notes();
+	private mouth = new THREE.Vector3();
+	private mouthDir = new THREE.Vector3();
 
 	constructor(opts: GroveOptions) {
 		this.reduced = opts.reduced;
 		this.dayMix = this.dayTo = opts.day ? 1 : 0;
 		this.onGramophone = opts.onGramophone;
+		this.level = opts.level ?? (() => 0);
 		this.rand = rng(opts.seed ?? Date.now() & 0xffff);
 		const r = new THREE.WebGLRenderer({
 			canvas: opts.canvas,
@@ -193,10 +204,13 @@ export class Grove {
 		this.world.add(this.island.group);
 		this.pavilion = buildPavilion(brick, copper);
 		this.world.add(this.pavilion.group);
+		this.ivy = buildIvy(Math.floor(this.rand() * 1e6));
+		this.world.add(this.ivy.group);
 		this.gramophone = buildGramophone(copper, woodTexture(aniso));
 		this.gramophone.group.position.set(0.05, this.pavilion.floorY, 0.1);
 		this.gramophone.group.rotation.y = 0.18;
 		this.world.add(this.gramophone.group);
+		this.world.add(this.notes.points);
 
 		this.plant();
 	}
@@ -560,6 +574,10 @@ export class Grove {
 			/* older engines: the first frame compiles instead */
 		}
 		this.draw();
+		// nothing is drawn until everything is compiled, or the first frame
+		// compiles what is left while the page waits, and skips the shadows
+		this.live = true;
+		this.wake();
 	}
 
 	private draw() {
@@ -588,12 +606,13 @@ export class Grove {
 				t.u.uGrow.value = 0;
 			}
 		}
+		if (!this.reduced) this.ivy.u.uGrow.value = 0;
 		this.air.begin();
 		this.wake();
 	}
 
 	wake() {
-		if (this.running || document.hidden) return;
+		if (this.running || document.hidden || !this.live) return;
 		this.running = true;
 		this.last = performance.now();
 		this.raf = requestAnimationFrame(this.frame_);
@@ -698,12 +717,31 @@ export class Grove {
 			}
 		}
 
+		// the ivy creeps up the brick while the trees come up
+		if (introGrow >= 0 && introGrow < this.intro.dur + 3) {
+			const k = easeInOut(clamp((introGrow - 0.4) / 3.4, 0, 1));
+			this.ivy.u.uGrow.value = k * (this.ivy.sMax + 1);
+		}
+
 		// the machine
 		if (this.playing) {
 			this.crankA += dt * 5.2;
 			this.gramophone.crank.rotation.x = this.crankA;
 			this.gramophone.record.rotation.y -= dt * 3.5;
 		}
+		// and what comes out of it
+		const g = this.gramophone.group;
+		this.mouth.copy(this.gramophone.mouth).applyMatrix4(g.matrixWorld);
+		this.mouthDir.copy(this.gramophone.mouthDir).transformDirection(g.matrixWorld);
+		const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+		this.notes.update(
+			dt,
+			this.playing ? this.level() : 0,
+			this.playing && !this.reduced,
+			this.mouth,
+			this.mouthDir,
+			((this.H * this.dpr) / (2 * tan)) * 0.34
+		);
 
 		// the light's view-space direction, for leaves lit from behind
 		U.uSunView.value
