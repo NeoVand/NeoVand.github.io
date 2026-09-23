@@ -113,6 +113,8 @@ export function leafGeometry(t: ReturnType<typeof bladeTemplate>, inst: LeafInst
 export interface Growth {
 	uGrow: { value: number };
 	uGrowAll: { value: number };
+	/** the plant's spring: its tilt, radians, as a horizontal vector */
+	uSpring: { value: THREE.Vector2 };
 }
 
 const LEAF_VERT_HEAD = /* glsl */ `
@@ -143,7 +145,7 @@ const LEAF_MOVE = /* glsl */ `
 
 function leafPatch(u: Growth) {
 	return (s: THREE.WebGLProgramParametersWithUniforms) => {
-		Object.assign(s.uniforms, windUniforms(), { uGrow: u.uGrow });
+		Object.assign(s.uniforms, windUniforms(), { uGrow: u.uGrow, uSpring: u.uSpring });
 		s.vertexShader =
 			LEAF_VERT_HEAD +
 			s.vertexShader
@@ -276,7 +278,11 @@ const BARK_MOVE = /* glsl */ `
 
 function barkPatch(u: Growth) {
 	return (s: THREE.WebGLProgramParametersWithUniforms) => {
-		Object.assign(s.uniforms, windUniforms(), { uGrow: u.uGrow, uGrowAll: u.uGrowAll });
+		Object.assign(s.uniforms, windUniforms(), {
+			uGrow: u.uGrow,
+			uGrowAll: u.uGrowAll,
+			uSpring: u.uSpring
+		});
 		s.vertexShader =
 			BARK_HEAD +
 			s.vertexShader.replace(

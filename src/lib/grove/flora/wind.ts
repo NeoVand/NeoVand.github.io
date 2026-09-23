@@ -31,6 +31,8 @@ uniform vec4 uRustle;
 uniform float uRustleAmp;
 uniform vec3 uPtr;
 uniform float uPtrAmp;
+// the plant's own spring: how far it is tilted, and which way (radians)
+uniform vec2 uSpring;
 
 vec3 rotAxis(vec3 v, vec3 a, float ang) {
 	float c = cos(ang), s = sin(ang);
@@ -55,13 +57,22 @@ float rustleAt(vec3 p) {
 vec3 bendTree(vec3 p, vec4 base, float flex) {
 	// how far from the foot, up for what stands and down for what hangs
 	float h = clamp(abs(p.y - base.y) / abs(base.w), 0.0, 1.4);
-	float w = h * h;
+	// a plant that clings to a wall (its height given negative) barely stirs
+	float cling = base.w < 0.0 ? 0.25 : 1.0;
+	float w = h * h * cling;
 	vec3 dir = normalize(vec3(uWindDir.x, 0.0, uWindDir.y));
 	float travel = dot(p.xz, uWindDir) * 0.18;
 	float g = gust(uTime, travel);
 	float lean = (0.35 + 0.65 * g) * uWind * 0.045 * w;
 	vec3 axis = normalize(cross(vec3(0.0, 1.0, 0.0), dir));
 	vec3 q = base.xyz + rotAxis(p - base.xyz, axis, lean);
+	// a hand on it: the whole plant tilts about its foot, the top most
+	float sa = length(uSpring);
+	if (sa > 1e-5) {
+		vec3 sd = vec3(uSpring.x, 0.0, uSpring.y) / sa;
+		vec3 sax = normalize(cross(vec3(0.0, 1.0, 0.0), sd));
+		q = base.xyz + rotAxis(q - base.xyz, sax, sa * (0.35 * h + 0.65 * w));
+	}
 	// the slow sway, a field in space: masses of the crown move together
 	vec3 f = p * 0.55;
 	vec3 sway = vec3(

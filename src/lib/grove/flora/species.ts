@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { rng, lerp } from '../rng';
-import { Turtle, newSkeleton, pipeRadii, type Skeleton } from './turtle';
+import { Turtle, newSkeleton, taperRadii, type Skeleton } from './turtle';
 
 // ─── What grows here ──────────────────────────────────────────────────────
 // Each species is a grammar and a palette. The grammar is productions: what
@@ -27,17 +27,25 @@ export interface Species {
 	palette: Palette;
 	/** gnarl of the bark's silhouette, 0 smooth .. 1 old olive */
 	gnarl: number;
-	/** how thick the thinnest twig is, and the pipe exponent */
+	/** how thick the foot of the trunk is, the thinnest twig, the pipe
+	 *  exponent, and the flare at the foot */
+	base: number;
 	tip: number;
 	pipe: number;
+	flare: number;
 	/** how much the whole plant gives in the wind */
 	flex: number;
 	/** rows in a blade, at most, and whether the leaves cast shadows */
 	rows: number;
 	castLeaves: boolean;
+	/** held against a wall, so the wind barely moves it */
+	cling?: boolean;
 }
 
 const up = new THREE.Vector3(0, 1, 0);
+
+/** the wall the ivy grows over: set by the island */
+export const VINE_WALL = { R: 7.0, lawn: 6.7, wallTop: 0.42 };
 
 /**
  * The olive. A short, thick trunk that twists as it rises and parts low into
@@ -57,8 +65,10 @@ export const OLIVE: Species = {
 		barkTint: new THREE.Color(0.78, 0.74, 0.7)
 	},
 	gnarl: 1,
-	tip: 0.0085,
-	pipe: 2.6,
+	base: 0.13,
+	tip: 0.008,
+	pipe: 2.4,
+	flare: 0.7,
 	flex: 0.8,
 	rows: 5,
 	castLeaves: true,
@@ -185,7 +195,7 @@ export const OLIVE: Species = {
 			b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(26, 40));
 			limb(b, R(0.85, 1.0), 1);
 		}
-		pipeRadii(sk, this.tip, this.pipe);
+		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 		return sk;
 	}
 };
@@ -207,8 +217,10 @@ export const CYPRESS: Species = {
 		barkTint: new THREE.Color(0.55, 0.45, 0.38)
 	},
 	gnarl: 0.2,
+	base: 0.09,
 	tip: 0.006,
 	pipe: 2.4,
+	flare: 0.4,
 	flex: 0.6,
 	rows: 3,
 	castLeaves: true,
@@ -246,20 +258,26 @@ export const CYPRESS: Species = {
 							.addScaledVector(up, 0.4)
 							.normalize();
 						const face = out.clone().multiplyScalar(0.8).addScaledVector(up, 0.3);
-						b.leaf(dir, face, R(0.2, 0.27) * (1 - j * 0.12), 0);
+						// smaller toward the top, so the flame draws to a point
+						const small = 0.4 + 0.6 * Math.min(1, reach / 0.55);
+						b.leaf(dir, face, R(0.2, 0.27) * (1 - j * 0.12) * small, 0);
 					}
 				}
 			}
 		}
-		// the tip, a last tuft
-		for (let k = 0; k < 5; k++) {
-			const dir = up
-				.clone()
-				.add(new THREE.Vector3(R(-0.3, 0.3), 0, R(-0.3, 0.3)))
-				.normalize();
-			t.leaf(dir, new THREE.Vector3(R(-1, 1), 0, R(-1, 1)), R(0.18, 0.24), 0);
+		// the leader goes on a little above the last whorl, and ends in a
+		// slim spire of small sprays
+		for (let k = 0; k < 4; k++) {
+			t.forward(0.09, 1, 0.3, 1, r);
+			for (let m = 0; m < 3; m++) {
+				const dir = up
+					.clone()
+					.add(new THREE.Vector3(R(-0.25, 0.25), 0, R(-0.25, 0.25)))
+					.normalize();
+				t.leaf(dir, new THREE.Vector3(R(-1, 1), 0, R(-1, 1)), R(0.1, 0.14) * (1 - k * 0.18), 0);
+			}
 		}
-		pipeRadii(sk, this.tip, this.pipe);
+		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 		return sk;
 	}
 };
@@ -277,8 +295,10 @@ function shrub(name: string, blossom: THREE.Color, flowering: number): Species {
 			barkTint: new THREE.Color(0.5, 0.42, 0.36)
 		},
 		gnarl: 0.3,
+		base: 0.035,
 		tip: 0.004,
 		pipe: 2.4,
+		flare: 0,
 		flex: 1,
 		rows: 3,
 		castLeaves: false,
@@ -324,7 +344,7 @@ function shrub(name: string, blossom: THREE.Color, flowering: number): Species {
 				};
 				grow(s, R(0.8, 1), 0);
 			}
-			pipeRadii(sk, this.tip, this.pipe);
+			taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 			return sk;
 		}
 	};
@@ -348,53 +368,92 @@ export const VINE: Species = {
 		barkTint: new THREE.Color(0.4, 0.34, 0.28)
 	},
 	gnarl: 0,
+	base: 0.012,
 	tip: 0.004,
 	pipe: 2.2,
+	flare: 0,
 	flex: 1,
 	rows: 3,
 	castLeaves: false,
+	cling: true,
 	derive(seed) {
 		const r = rng(seed);
 		const R = (a: number, b: number) => lerp(a, b, r());
 		const sk = newSkeleton();
 		const axes = { n: 0 };
-		// local +z is outward from the island
-		const strand = (t: Turtle, len: number, depth: number): void => {
-			const n = Math.floor(len / 0.08);
-			for (let i = 0; i < n; i++) {
-				// over the lip and then straight down, with a little wander
-				t.forward(0.08, 1, i < 2 ? -0.5 : -0.25, 7, r);
-				t.p.z = Math.max(t.p.z, 0.02 + (t.p.y < -0.05 ? 0.05 : 0));
-				const out = new THREE.Vector3(0, 0, 1);
-				for (let m = 0; m < 4; m++) {
-					const dir = new THREE.Vector3(R(-1, 1), R(-0.6, 0.3), 0.4).normalize();
-					const leafAt = t.clone();
-					leafAt.p.x += R(-0.06, 0.06);
-					leafAt.leaf(
-						dir,
-						out.clone().add(new THREE.Vector3(R(-0.3, 0.3), R(0, 0.4), 0)),
-						R(0.08, 0.13),
-						0
-					);
-				}
-				if (r() < 0.05)
-					t.leaf(new THREE.Vector3(0, 0.3, 1), new THREE.Vector3(0, 0, 1), R(0.05, 0.07), 1);
-				if (depth < 2 && r() < 0.1) {
-					const b = t.branch();
-					b.roll(R(-60, 60));
-					strand(b, len * R(0.3, 0.6), depth + 1);
+		// The plant stands at the foot of the wall's outer face: local +z is
+		// out from the island, y is height above the lawn. It is rooted in the
+		// border inside the wall, climbs the inner face, goes over the coping
+		// hugging it, and falls down the outer face, close against the stone.
+		const { R: RI, lawn: RL, wallTop } = VINE_WALL;
+		const inner = RL - RI; // the inner face, in local z
+		const cz = (RL - 0.04 + RI + 0.06) / 2 - RI,
+			cr = (RI + 0.06 - (RL - 0.04)) / 2;
+		const out = new THREE.Vector3(0, 0, 1);
+		const t = new Turtle(sk, axes);
+		const x0 = R(-0.12, 0.12);
+		t.p.set(x0, 0, inner - R(0.15, 0.35));
+		const path: THREE.Vector3[] = [
+			new THREE.Vector3(x0, 0.03, inner - 0.04),
+			new THREE.Vector3(x0, wallTop - 0.02, inner - 0.035)
+		];
+		for (let k = 1; k < 8; k++) {
+			const th = Math.PI - (k / 8) * Math.PI;
+			path.push(
+				new THREE.Vector3(
+					x0,
+					wallTop + Math.sin(th) * (cr * 0.55 + 0.03),
+					cz + Math.cos(th) * (cr + 0.03)
+				)
+			);
+		}
+		path.push(new THREE.Vector3(x0, wallTop - 0.05, 0.09));
+		const leafy = (tt: Turtle, face: THREE.Vector3, k: number, size: number) => {
+			for (let m = 0; m < k; m++) {
+				const dir = new THREE.Vector3(R(-1, 1), R(-0.8, 0.4), 0)
+					.addScaledVector(face, 0.3)
+					.normalize();
+				const at = tt.clone();
+				at.p.addScaledVector(new THREE.Vector3(1, 0, 0), R(-0.07, 0.07));
+				at.leaf(
+					dir,
+					face.clone().add(new THREE.Vector3(R(-0.35, 0.35), R(-0.1, 0.35), R(-0.2, 0.2))),
+					size * R(0.8, 1.2),
+					0
+				);
+			}
+		};
+		for (const q of path) {
+			t.toward(q);
+			// on the lawn side and over the top, the leaves face up and out
+			const f = q.z < 0 ? new THREE.Vector3(0, 1, 0.3).normalize() : out;
+			leafy(t, f, 3, 0.1);
+		}
+		// down the outer face, a strand or two, close to the stone
+		const fall = (tt: Turtle, len: number, depth: number, x: number): void => {
+			let y = tt.p.y;
+			const bottom = Math.max(-1.15, y - len);
+			let z = 0.035;
+			while (y > bottom) {
+				y -= 0.08;
+				x += R(-0.025, 0.025);
+				z = 0.03 + Math.abs(Math.sin(y * 7 + seed)) * 0.02;
+				tt.toward(new THREE.Vector3(x, y, z));
+				leafy(tt, out, 3, 0.11);
+				if (r() < 0.035) tt.leaf(new THREE.Vector3(0, 0.3, 1), out, R(0.05, 0.07), 1);
+				if (depth < 1 && r() < 0.07) {
+					const b = tt.branch();
+					fall(b, (y - bottom) * R(0.4, 0.8), depth + 1, x + R(-0.15, 0.15));
 				}
 			}
 		};
-		// two or three strands from each root, of different lengths
-		const k = 2 + Math.floor(r() * 2);
-		for (let i = 0; i < k; i++) {
-			const t = new Turtle(sk, axes).branch();
-			t.p.x = R(-0.2, 0.2);
-			t.pitch(-80).turn(R(-25, 25));
-			strand(t, R(0.5, 2.8), 0);
+		fall(t, R(0.5, 1.5), 0, x0);
+		if (r() < 0.6) {
+			const b = t.branch();
+			b.p.set(x0, wallTop - 0.05, 0.09);
+			fall(b, R(0.4, 1.2), 1, x0 + R(-0.25, 0.25));
 		}
-		pipeRadii(sk, this.tip, this.pipe);
+		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 		return sk;
 	}
 };

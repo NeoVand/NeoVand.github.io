@@ -19,6 +19,39 @@ export interface Gramophone {
 	rim: THREE.Vector3;
 	lid: [THREE.Vector3, THREE.Vector3];
 	hit: THREE.Box3;
+	/** how strongly it is lit up for a hand over it, 0..1 */
+	hover: { value: number };
+}
+
+// ─── Lit up under the hand ────────────────────────────────────────────────
+// When a hand comes over the machine its edges catch a warm light, as brass
+// does when it is turned to a lamp: a rim, strongest where the surface turns
+// away from the eye, so it reads as a line round the whole of it without a
+// second drawing of anything.
+function rimmed(group: THREE.Object3D, hover: { value: number }) {
+	const seen = new Set<THREE.Material>();
+	group.traverse((o) => {
+		const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+		if (!m || seen.has(m)) return;
+		seen.add(m);
+		const prev = m.onBeforeCompile.bind(m);
+		const key = m.customProgramCacheKey();
+		m.onBeforeCompile = (sh, r) => {
+			prev(sh, r);
+			sh.uniforms.uHover = hover;
+			sh.fragmentShader = sh.fragmentShader
+				.replace('void main() {', 'uniform float uHover;\nvoid main() {')
+				.replace(
+					'#include <lights_fragment_end>',
+					`#include <lights_fragment_end>
+					{
+						float f = 1.0 - abs(dot(normal, normalize(vViewPosition)));
+						totalEmissiveRadiance += vec3(1.0, 0.72, 0.36) * (smoothstep(0.55, 0.95, f) * 2.4 + 0.04) * uHover;
+					}`
+				);
+		};
+		m.customProgramCacheKey = () => key + '-rim';
+	});
 }
 
 function horn(curve: THREE.Curve<THREE.Vector3>, rings: number, seg: number) {
@@ -167,6 +200,9 @@ export function buildGramophone(copper: THREE.Material, wood: THREE.Texture): Gr
 		}
 	});
 
+	const hover = { value: 0 };
+	rimmed(group, hover);
+
 	const mouth = curve.getPointAt(1);
 	const mouthDir = curve.getTangentAt(1);
 	const hit = new THREE.Box3().setFromObject(group);
@@ -179,6 +215,7 @@ export function buildGramophone(copper: THREE.Material, wood: THREE.Texture): Gr
 		mouthDir,
 		rim: mouth.clone().add(new THREE.Vector3(0, 0.36, 0)),
 		lid: [new THREE.Vector3(-0.2, top + 0.23, 0.22), new THREE.Vector3(0.2, top + 0.23, 0.22)],
-		hit
+		hit,
+		hover
 	};
 }

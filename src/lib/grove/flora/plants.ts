@@ -100,7 +100,7 @@ export function placeLeaves(items: PlantItem[], skels: Skeleton[], density: numb
 		const r = rng(it.seed ^ 0x5bd1e995);
 		_q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), it.rotY);
 		_m.compose(it.pos, _q, _s.set(it.scale, it.scale, it.scale));
-		const h = sk.height * it.scale;
+		const h = sk.height * it.scale * (it.species.cling ? -1 : 1);
 		for (const l of sk.leaves) {
 			if (l.kind === 0 && r() > density) continue;
 			const set = l.kind === 1 ? flowers : leaves;
@@ -182,6 +182,7 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 	items.forEach((it, n) =>
 		addBark(bark, skels[n], { pos: it.pos, rotY: it.rotY, scale: it.scale } as Placement, {
 			gnarl: it.species.gnarl,
+			cling: it.species.cling,
 			minRadius: opt.minRadius,
 			seed: (it.seed % 1000) * 0.37
 		})
@@ -191,7 +192,11 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 		bark.sky[i] = canopy.sky(_v);
 	}
 
-	const u: Growth = { uGrow: { value: 2 }, uGrowAll: { value: 1 } };
+	const u: Growth = {
+		uGrow: { value: 2 },
+		uGrowAll: { value: 1 },
+		uSpring: { value: new THREE.Vector2() }
+	};
 	const sp = items[0].species;
 	const group = new THREE.Group();
 	const barkMesh = new THREE.Mesh(

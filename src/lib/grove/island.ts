@@ -82,8 +82,8 @@ function vn3(x: number, y: number, z: number, salt: number) {
 function rockMass(seed: number) {
 	const { R, rockTop, depth } = ISLAND;
 	// coarse on purpose: broken limestone is big flat faces, not a sponge
-	const NT = 76,
-		NY = 30;
+	const NT = 120,
+		NY = 44;
 	const pos: number[] = [],
 		ao: number[] = [];
 	const P = (ix: number, iy: number) => {
@@ -126,24 +126,28 @@ function rockMass(seed: number) {
 		for (let ix = 0; ix < NT; ix++) row.push(P(ix, iy));
 		grid.push(row);
 	}
-	// flat faces: every triangle its own
-	const tri = (a: { p: THREE.Vector3; ao: number }, b: typeof a, c: typeof a) => {
-		pos.push(a.p.x, a.p.y, a.p.z, b.p.x, b.p.y, b.p.z, c.p.x, c.p.y, c.p.z);
-		ao.push(a.ao, b.ao, c.ao);
-	};
+	// shared corners, so the light goes smoothly over the crag: flat facets
+	// facing the sky read as grey tiles stuck to it
+	for (let iy = 0; iy <= NY; iy++)
+		for (let ix = 0; ix < NT; ix++) {
+			const v = grid[iy][ix];
+			pos.push(v.p.x, v.p.y, v.p.z);
+			ao.push(v.ao);
+		}
+	const idx: number[] = [];
 	for (let iy = 0; iy < NY; iy++)
 		for (let ix = 0; ix < NT; ix++) {
-			const a = grid[iy][ix],
-				b = grid[iy][(ix + 1) % NT],
-				c = grid[iy + 1][ix],
-				d = grid[iy + 1][(ix + 1) % NT];
+			const a = iy * NT + ix,
+				b = iy * NT + ((ix + 1) % NT),
+				c = (iy + 1) * NT + ix,
+				d = (iy + 1) * NT + ((ix + 1) % NT);
 			// outward: round (+theta) crossed with down (-y) is out
-			tri(a, b, c);
-			tri(b, d, c);
+			idx.push(a, b, c, b, d, c);
 		}
 	const g = new THREE.BufferGeometry();
 	g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
 	g.setAttribute('aAo', new THREE.Float32BufferAttribute(ao, 1));
+	g.setIndex(idx);
 	g.computeVertexNormals();
 	return g;
 }

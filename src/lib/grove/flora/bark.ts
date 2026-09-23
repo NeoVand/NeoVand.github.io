@@ -49,7 +49,7 @@ export function newBark(): BarkBuffers {
 }
 
 function sidesFor(r: number) {
-	return r > 0.12 ? 14 : r > 0.06 ? 10 : r > 0.03 ? 7 : r > 0.015 ? 5 : 4;
+	return r > 0.12 ? 18 : r > 0.06 ? 12 : r > 0.03 ? 8 : r > 0.015 ? 6 : 4;
 }
 
 /** a smooth, repeatable wobble round and along a stem */
@@ -65,7 +65,7 @@ export function addBark(
 	out: BarkBuffers,
 	sk: Skeleton,
 	at: Placement,
-	opts: { gnarl: number; minRadius: number; seed: number }
+	opts: { gnarl: number; minRadius: number; seed: number; cling?: boolean }
 ) {
 	const m = new THREE.Matrix4().compose(
 		at.pos,
@@ -73,7 +73,7 @@ export function addBark(
 		new THREE.Vector3(at.scale, at.scale, at.scale)
 	);
 	const nm = new THREE.Matrix3().getNormalMatrix(m);
-	const height = sk.height * at.scale;
+	const height = sk.height * at.scale * (opts.cling ? -1 : 1);
 	// axes: every node, grouped by the axis it lies on, in order
 	const axes = new Map<number, number[]>();
 	for (let i = 1; i < sk.pos.length; i++) {
@@ -120,9 +120,9 @@ export function addBark(
 			let r = sk.radius[k === 0 ? nodes[0] : id];
 			const p = sk.pos[id];
 			const s = sk.arc[id];
-			// the foot flares, and the thick stems are fluted and knuckled
-			const flare = 1 + 0.9 * Math.exp(-Math.max(p.y, 0) / 0.28) * Math.min(1, r / 0.08);
-			const g = opts.gnarl * Math.min(1, r / 0.1) * 0.22;
+			// the thick stems are fluted and a little knuckled (the flare at the
+			// foot is in the radius already)
+			const g = opts.gnarl * Math.min(1, r / 0.1) * 0.1;
 			c.copy(p).applyMatrix4(m);
 			const par = sk.parent[id] >= 0 ? sk.parent[id] : id;
 			pc.copy(sk.pos[k === 0 ? id : par]).applyMatrix4(m);
@@ -131,15 +131,11 @@ export function addBark(
 				const ang = (j / sides) * Math.PI * 2;
 				const ca = Math.cos(ang),
 					sa = Math.sin(ang);
-				// roots: ridges low down, a few round the foot
-				const ridge =
-					Math.pow(Math.max(0, Math.cos(ang * 4 + opts.seed)), 3) *
-					0.55 *
-					Math.exp(-Math.max(p.y, 0) / 0.22);
-				const rr =
-					r *
-					flare *
-					(1 + g * wobble(opts.seed + id * 0.01, ang, s * 2.2) + ridge * Math.min(1, r / 0.08));
+				// five lobes on the old wood, and the buttresses of the roots
+				// where the foot flares
+				const foot = Math.exp(-Math.max(p.y, 0) / 0.25) * Math.min(1, r / 0.08);
+				const lobe = Math.sin(ang * 5 + opts.seed) * (0.05 * Math.min(1, r / 0.08) + 0.12 * foot);
+				const rr = r * (1 + g * wobble(opts.seed + id * 0.01, ang, s * 2.2) + lobe);
 				n.copy(N).multiplyScalar(ca).addScaledVector(B, sa);
 				v.copy(p).addScaledVector(n, rr).applyMatrix4(m);
 				out.position.push(v.x, v.y, v.z);

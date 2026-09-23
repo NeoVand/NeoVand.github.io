@@ -70,7 +70,7 @@ const moonAt = (azDeg: number, elDeg: number) => {
 		el = THREE.MathUtils.degToRad(elDeg);
 	return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 };
-const MOON_DIR = moonAt(12, 6.5);
+const MOON_DIR = moonAt(12, 4.6);
 const SUN_AZ = { side: -20, stack: -12 };
 // an afternoon sun, above the top of the picture: the sky blue overhead and
 // only the air round the sun warm
@@ -189,6 +189,16 @@ export class Grove {
 	private frameTimes: number[] = [];
 	private ray = new THREE.Raycaster();
 	private playing = false;
+	/** a tree in the hand, and every tree's spring */
+	private grab: { tree: Stand; id: number; x: number; y: number; moved: boolean } | null = null;
+	private springs = new Map<
+		Stand,
+		{ x: number; z: number; vx: number; vz: number; tx: number; tz: number }
+	>();
+	private lastMove: { x: number; y: number } | null = null;
+	private overGram = false;
+	private gramFlash = 0;
+	private gramGlow = 0;
 	private live = false;
 	private crankA = 0;
 	private shadowTick = 0;
@@ -376,7 +386,7 @@ export class Grove {
 			barkNormal: this.mats.bark.normalMap!,
 			rows: 3,
 			density: phone ? 0.5 : 0.8,
-			minRadius: phone ? 0.009 : 0.006
+			minRadius: phone ? 0.017 : 0.012
 		};
 		const seed = () => Math.floor(r() * 1e6);
 		const at = (a: number, rad: number, y = 0) =>
@@ -455,13 +465,8 @@ export class Grove {
 		for (let k = 0; k < (phone ? 18 : 26); k++) {
 			const a = lerp(-1.75, 1.75, (k + r() * 0.8) / (phone ? 18 : 26));
 			if (Math.abs(a) < 0.16) continue;
-			vines.push({
-				species: VINE,
-				seed: seed(),
-				pos: at(a, R - 0.02, wallTop + 0.08),
-				rotY: a,
-				scale: lerp(0.9, 1.3, r())
-			});
+			// rooted at the foot of the wall's outer face, in its own frame
+			vines.push({ species: VINE, seed: seed(), pos: at(a, R, 0), rotY: a, scale: 1 });
 		}
 
 		// each olive a stand of its own, so a touch finds the one it touched
@@ -717,6 +722,47 @@ export class Grove {
 		this.on(cv, 'pointermove', ((e: PointerEvent) => {
 			this.setPointer(e);
 			this.pointerOn = e.pointerType === 'mouse';
+			// the machine lights its outline when a mouse comes over it
+			if (e.pointerType === 'mouse' && !this.drag) {
+				const over = this.pick() === 'gramophone';
+				if (over !== this.overGram) {
+					this.overGram = over;
+					cv.style.cursor = over ? 'pointer' : '';
+				}
+			}
+			if (this.grab && this.grab.id === e.pointerId) {
+				// bending a tree by hand: the drag across the screen, as a tilt
+				const g = this.grab;
+				const dx = (e.clientX - g.x) / this.H,
+					dy = (e.clientY - g.y) / this.H;
+				if (Math.hypot(dx, dy) > 0.01) g.moved = true;
+				const right = this.flatDir(
+					new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion)
+				);
+				const fwd = this.flatDir(this.camera.getWorldDirection(new THREE.Vector3()));
+				const t = right.multiplyScalar(dx * 1.6).addScaledVector(fwd, -dy * 1.1);
+				const m = t.length();
+				if (m > 0.32) t.multiplyScalar(0.32 / m);
+				const sp = this.spring(g.tree);
+				sp.tx = t.x;
+				sp.tz = t.z;
+			} else if (e.pointerType === 'mouse' && !this.drag && e.buttons === 0) {
+				// a mouse passing through a crown pushes it along the way it goes
+				const over = this.pick();
+				if (over && over !== 'gramophone' && this.lastMove) {
+					const dx = e.clientX - this.lastMove.x,
+						dy = e.clientY - this.lastMove.y;
+					const right = this.flatDir(
+						new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion)
+					);
+					const fwd = this.flatDir(this.camera.getWorldDirection(new THREE.Vector3()));
+					const sp = this.spring(over);
+					const k = 0.0016;
+					sp.vx += (right.x * dx - fwd.x * dy * 0.5) * k;
+					sp.vz += (right.z * dx - fwd.z * dy * 0.5) * k;
+				}
+			}
+			this.lastMove = { x: e.clientX, y: e.clientY };
 			if (this.drag && this.drag.id === e.pointerId) {
 				const dx = e.clientX - this.drag.x;
 				if (Math.abs(dx) > 4) this.drag.moved = true;
@@ -726,22 +772,37 @@ export class Grove {
 			}
 			this.wake();
 		}) as EventListener);
-		this.on(cv, 'pointerleave', () => (this.pointerOn = false));
+		this.on(cv, 'pointerleave', () => {
+			this.pointerOn = false;
+			this.overGram = false;
+			cv.style.cursor = '';
+		});
 		this.on(cv, 'pointerdown', ((e: PointerEvent) => {
 			this.setPointer(e);
 			const hit = this.pick();
 			if (hit === 'gramophone') {
+				// a touch has no hover: the outline flashes as it is pressed
+				this.gramFlash = 1;
 				this.onGramophone?.();
 				return;
 			}
 			if (hit) {
-				// a touch shakes the crown from where the hand went in, and
-				// anything perched in it is off
+				// a touch shakes the crown from where the hand went in, sets
+				// the tree swaying away from it, and anything perched in it is
+				// off; and the hand has hold of it, to bend it
 				this.pressed = hit;
 				const at = this.touchPoint(hit);
 				rustleFrom(at, 1);
 				if (!this.reduced) this.petals.shed(hit, at, 16);
 				this.air.pressed(hit);
+				const sp = this.spring(hit);
+				const away = this.flatDir(this.camera.getWorldDirection(new THREE.Vector3()));
+				sp.vx += away.x * 0.32;
+				sp.vz += away.z * 0.32;
+				this.grab = { tree: hit, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+				cv.setPointerCapture(e.pointerId);
+				this.wake();
+				return;
 			}
 			this.drag = {
 				id: e.pointerId,
@@ -756,6 +817,17 @@ export class Grove {
 		}) as EventListener);
 		const up = ((e: PointerEvent) => {
 			if (this.drag?.id === e.pointerId) this.drag = null;
+			if (this.grab?.id === e.pointerId) {
+				// let go: it springs back, and a hard bend shakes more loose
+				const g = this.grab;
+				const sp = this.spring(g.tree);
+				const bent = Math.hypot(sp.x, sp.z);
+				if (g.moved && bent > 0.06 && !this.reduced) {
+					this.petals.shed(g.tree, this.touchPoint(g.tree), Math.round(bent * 60));
+					rustleFrom(g.tree.crown.clone().setY(g.tree.height * 0.7), Math.min(1.4, bent * 5));
+				}
+				this.grab = null;
+			}
 			this.pressed = null;
 			this.wake();
 		}) as EventListener;
@@ -768,6 +840,42 @@ export class Grove {
 	}
 
 	/** What is under the pointer: the machine, a tree, or nothing. */
+	private spring(t: Stand) {
+		let s = this.springs.get(t);
+		if (!s) this.springs.set(t, (s = { x: 0, z: 0, vx: 0, vz: 0, tx: 0, tz: 0 }));
+		return s;
+	}
+
+	private flatDir(v: THREE.Vector3) {
+		v.y = 0;
+		return v.lengthSq() > 1e-8 ? v.normalize() : v.set(0, 0, 1);
+	}
+
+	/**
+	 * The trees' springs: a tree swings back through where it stood and rings
+	 * down, a little under a second a swing, as a small tree does; held, it
+	 * follows the hand stiffly; let go, it swings from wherever it was.
+	 */
+	private stepSprings(dt: number) {
+		const h = Math.min(dt, 1 / 30);
+		for (const [t, s] of this.springs) {
+			const held = this.grab?.tree === t;
+			if (!held) s.tx = s.tz = 0;
+			const w = 2 * Math.PI * (held ? 2.2 : 0.8);
+			const c = 2 * (held ? 0.9 : 0.16) * w;
+			s.vx += (-(s.x - s.tx) * w * w - s.vx * c) * h;
+			s.vz += (-(s.z - s.tz) * w * w - s.vz * c) * h;
+			s.x += s.vx * h;
+			s.z += s.vz * h;
+			const m = Math.hypot(s.x, s.z);
+			if (m > 0.4) {
+				s.x *= 0.4 / m;
+				s.z *= 0.4 / m;
+			}
+			t.u.uSpring.value.set(s.x, s.z);
+		}
+	}
+
 	/** where the pointer's ray passes into a crown */
 	private touchPoint(t: Stand) {
 		this.ray.setFromCamera(this.pointerNdc, this.camera);
@@ -985,6 +1093,11 @@ export class Grove {
 			this.gramophone.crank.rotation.x = this.crankA;
 			this.gramophone.record.rotation.y -= dt * 3.5;
 		}
+		this.stepSprings(dt);
+		// lit up under the hand, eased in and out
+		this.gramFlash = Math.max(0, this.gramFlash - dt * 1.4);
+		this.gramGlow = damp(this.gramGlow, this.overGram ? 1 : this.gramFlash, 9, dt);
+		this.gramophone.hover.value = this.gramGlow;
 		// and what comes out of it
 		const g = this.gramophone.group;
 		this.mouth.copy(this.gramophone.mouth).applyMatrix4(g.matrixWorld);

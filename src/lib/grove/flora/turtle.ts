@@ -105,6 +105,20 @@ export class Turtle {
 		return this;
 	}
 
+	/** head straight for a point and grow to it */
+	toward(target: THREE.Vector3, steps = 1) {
+		const d = target.clone().sub(this.p);
+		const len = d.length();
+		if (len < 1e-5) return this;
+		this.h.copy(d.divideScalar(len));
+		this.level();
+		if (Math.abs(this.h.y) > 0.999) {
+			this.l.set(-1, 0, 0);
+			this.u.crossVectors(this.h, this.l).normalize();
+		}
+		return this.forward(len, steps);
+	}
+
 	/**
 	 * Wood forward, in `steps` pieces. Between pieces the heading bends
 	 * toward the sky by `tropism` (away from it if negative) and wanders by
@@ -177,23 +191,38 @@ export function newSkeleton(): Skeleton {
 }
 
 /**
- * Radii, from the tips down: a node is as thick as what grows from it, by
- * r^p = sum r_i^p, with a thin twig at every tip and a slow taper along an
- * unbranched run so that no length of wood is a perfect cylinder.
+ * Radii. The pipe model says a limb is as thick as the limbs it becomes put
+ * together, and that is right in proportion; but counted from the tips it
+ * makes a trunk as thick as its thousand twigs, and it steps the radius down
+ * at every fork, so the wood looks jointed. So the proportions are the pipe
+ * model's, measured in the wood each node carries rather than its tips, and
+ * scaled so the foot is `base`; then each stem is smoothed along its length
+ * and never allowed to thicken, and a branch starts no thicker than most of
+ * the stem it leaves, buried in it. At the foot, Weber and Penn's flare.
  */
-export function pipeRadii(sk: Skeleton, tip: number, p: number) {
+export function taperRadii(
+	sk: Skeleton,
+	opt: { base: number; tip: number; p: number; flare?: number; lobes?: number }
+) {
 	const n = sk.pos.length;
-	const acc = new Float64Array(n);
+	// the wood each node carries: its own segment and everything beyond it
+	const mass = new Float64Array(n);
 	const kids = new Int32Array(n);
 	for (let i = 1; i < n; i++) kids[sk.parent[i]]++;
 	sk.tips = [];
 	for (let i = 0; i < n; i++) if (kids[i] === 0) sk.tips.push(i);
-	// children always come after their parents, so one pass backwards does it
-	for (let i = n - 1; i >= 0; i--) {
-		const r = kids[i] === 0 ? tip : Math.pow(acc[i], 1 / p) * 1.012;
-		sk.radius[i] = r;
-		const par = sk.parent[i];
-		if (par >= 0) acc[par] += Math.pow(r, p);
+	for (let i = n - 1; i >= 1; i--) {
+		mass[i] += Math.max(1e-4, sk.arc[i] - sk.arc[sk.parent[i]]);
+		mass[sk.parent[i]] += mass[i];
+	}
+	mass[0] = Math.max(mass[0], 1e-4);
+	const pipe = (i: number) => Math.max(opt.tip, opt.base * Math.pow(mass[i] / mass[0], 1 / opt.p));
+	// every stem, in order along it
+	const axes = new Map<number, number[]>();
+	for (let i = 0; i < n; i++) {
+		let l = axes.get(sk.axis[i]);
+		if (!l) axes.set(sk.axis[i], (l = []));
+		l.push(i);
 	}
 	let h = 0,
 		a = 0;
@@ -203,4 +232,43 @@ export function pipeRadii(sk: Skeleton, tip: number, p: number) {
 	}
 	sk.height = h;
 	sk.maxArc = a;
+	// stems are made in order, parents first
+	const ids = [...axes.keys()].sort((x, y) => x - y);
+	for (const id of ids) {
+		const nodes = axes.get(id)!;
+		const raw = nodes.map(pipe);
+		// smoothed along the stem, three nodes either way
+		const sm = raw.map((_, k) => {
+			let s = 0,
+				w = 0;
+			for (let j = -3; j <= 3; j++) {
+				const q = raw[Math.min(raw.length - 1, Math.max(0, k + j))];
+				const wt = 4 - Math.abs(j);
+				s += q * wt;
+				w += wt;
+			}
+			return s / w;
+		});
+		// no thicker than where it springs from
+		const at = sk.parent[nodes[0]];
+		let cap = id === 0 || at < 0 ? Infinity : sk.radius[at] * 0.85;
+		for (let k = 0; k < nodes.length; k++) {
+			const r = Math.max(opt.tip, Math.min(sm[k], cap));
+			sk.radius[nodes[k]] = r;
+			cap = r;
+		}
+	}
+	// the flare, in the lowest eighth of the trunk
+	const flare = opt.flare ?? 0;
+	if (flare > 0)
+		for (const i of axes.get(0) ?? []) {
+			const z = sk.pos[i].y / Math.max(h, 1e-3);
+			const y = Math.max(0, 1 - 8 * z);
+			sk.radius[i] *= (flare * (Math.pow(100, y) - 1)) / 100 + 1;
+		}
+}
+
+/** @deprecated the old count from the tips; see taperRadii */
+export function pipeRadii(sk: Skeleton, tip: number, p: number) {
+	taperRadii(sk, { base: tip * 12, tip, p });
 }
