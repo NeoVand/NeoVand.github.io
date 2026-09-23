@@ -1,0 +1,245 @@
+/* ─── Type ────────────────────────────────────────────────────────────────
+   Inter for everything that is read, Young Serif for the name and the
+   headings: a soft round serif with some warmth in it, against Inter's even
+   hand. Both self-hosted, both under the SIL Open Font License. */
+@font-face {
+	font-family: 'Inter';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/media/fonts/inter-var.woff2') format('woff2');
+}
+@font-face {
+	font-family: 'Young Serif';
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url('/media/fonts/young-serif-400.woff2') format('woff2');
+}
+
+/* ─── The two lights ──────────────────────────────────────────────────────
+   Night is the default and the page's own; the lamp adds .day. By night the
+   running text is set a shade heavier, because light type on a dark ground
+   halates and reads thinner than it is. */
+:root {
+	--wn: 22;
+	--bg: #000;
+	--title: #fff;
+	--text: #e3e3e5;
+	--muted: #9a9ca3;
+	--faint: #6b6e75;
+	--hair: rgba(255, 255, 255, 0.09);
+	--pane: rgba(255, 255, 255, 0.055);
+	--pane-2: rgba(255, 255, 255, 0.11);
+	--pane-edge: rgba(255, 255, 255, 0.16);
+	--pane-top: rgba(255, 255, 255, 0.1);
+	--blur: 2px;
+	--cast: rgba(0, 0, 0, 0.35);
+	--copper: #d9b8a2;
+	--focus: #cfd8e8;
+	--ease: cubic-bezier(0.25, 0, 0, 1);
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--serif: 'Young Serif', Georgia, 'Times New Roman', serif;
+	--sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--gutter: max(20px, env(safe-area-inset-left, 0px));
+	--gutter-r: max(20px, env(safe-area-inset-right, 0px));
+	color-scheme: dark;
+}
+:root.day {
+	--wn: 0;
+	--bg: #8fa9cc;
+	--title: #0b1620;
+	--text: #15212c;
+	--muted: #34475a;
+	--faint: #4d6073;
+	--hair: rgba(20, 36, 52, 0.13);
+	--pane: rgba(255, 255, 255, 0.36);
+	--pane-2: rgba(255, 255, 255, 0.56);
+	--pane-edge: rgba(255, 255, 255, 0.72);
+	--pane-top: rgba(255, 255, 255, 0.5);
+	--blur: 12px;
+	--cast: rgba(40, 30, 40, 0.16);
+	--copper: #8a4424;
+	--focus: #1e3346;
+	color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html {
+	background: var(--bg);
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+/* the lights change over: colours ride the same curve as the sky */
+html.theming *,
+html.theming *::before,
+html.theming *::after {
+	transition:
+		color 900ms var(--ease),
+		background-color 900ms var(--ease),
+		border-color 900ms var(--ease),
+		fill 900ms var(--ease),
+		stroke 900ms var(--ease) !important;
+}
+
+body {
+	font-family: var(--sans);
+	font-size: 16px;
+	line-height: 1.6;
+	font-weight: calc(400 + var(--wn));
+	color: var(--text);
+	background: transparent;
+	font-optical-sizing: auto;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	overflow-x: clip;
+	min-height: 100svh;
+}
+
+a {
+	color: inherit;
+}
+img,
+video,
+canvas,
+svg {
+	display: block;
+}
+button {
+	font: inherit;
+	color: inherit;
+}
+strong,
+b {
+	font-weight: calc(600 + var(--wn));
+	color: var(--title);
+}
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+	border-radius: 6px;
+}
+
+.visually-hidden {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+/* ─── Glass ───────────────────────────────────────────────────────────────
+   A pane rather than a tinted rectangle: a rim that catches the light on two
+   arcs and is compressed along the sides, an inner light along the top
+   edge, and the sky coming through behind. Blur is kept small by night — a
+   star is about one device pixel, and blur kills it quadratically. */
+.glass {
+	position: relative;
+	background: var(--pane);
+	-webkit-backdrop-filter: blur(var(--blur)) saturate(1.25);
+	backdrop-filter: blur(var(--blur)) saturate(1.25);
+	box-shadow:
+		inset 0 1px 0 var(--pane-top),
+		inset 0 0 0 1px var(--hair),
+		0 1px 2px var(--cast);
+}
+.glass::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	padding: 1px;
+	background: linear-gradient(
+		146deg,
+		var(--pane-edge) 0%,
+		transparent 32%,
+		transparent 68%,
+		var(--pane-edge) 100%
+	);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box exclude,
+		linear-gradient(#000 0 0);
+	pointer-events: none;
+}
+
+.pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 38px;
+	padding: 0 16px;
+	border-radius: 999px;
+	font-size: 13.5px;
+	font-weight: calc(500 + var(--wn));
+	letter-spacing: -0.005em;
+	color: var(--title);
+	text-decoration: none;
+	cursor: pointer;
+	border: 0;
+	transition:
+		background-color 200ms var(--ease),
+		transform 200ms var(--ease);
+}
+.pill:hover {
+	background: var(--pane-2);
+}
+.pill:active {
+	transform: translateY(1px);
+}
+.pill svg {
+	width: 15px;
+	height: 15px;
+	flex: none;
+}
+
+/* sections that sit over the sky */
+.wrap {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding-left: calc(var(--gutter) + 8px);
+	padding-right: calc(var(--gutter-r) + 8px);
+}
+.section {
+	position: relative;
+	padding: 72px 0 24px;
+}
+.section-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 20px;
+	margin-bottom: 26px;
+}
+.section-title {
+	font-family: var(--serif);
+	font-weight: 400;
+	font-size: clamp(26px, 3vw, 36px);
+	line-height: 1.1;
+	letter-spacing: -0.01em;
+	color: var(--title);
+}
+.section-note {
+	font-size: 14px;
+	color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+	}
+}

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<meta name="theme-color" content="#000000" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
+		<link
+			rel="icon"
+			type="image/png"
+			sizes="32x32"
+			href="%sveltekit.assets%/media/favicon-32.png"
+		/>
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/media/apple-touch-icon.png" />
+		<link
+			rel="preload"
+			href="%sveltekit.assets%/media/fonts/inter-var.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<link
+			rel="preload"
+			href="%sveltekit.assets%/media/fonts/young-serif-400.woff2"
+			as="font"
+			type="font/woff2"
+			crossorigin
+		/>
+		<script>
+			// The lights, decided before first paint so a remembered choice never
+			// shows the wrong palette for a frame. The page keeps the visitor's own
+			// hour only to decide whether they start on or off; the day itself is
+			// one fixed hour, a summer evening with the sun low and the light gone
+			// amber. A pull on the cord is remembered for eight hours. ?hour=3
+			// previews the night, ?hour=14 the day.
+			(() => {
+				const RISE = 6.5,
+					SET = 19.5;
+				let forced = NaN;
+				try {
+					forced = parseFloat(new URLSearchParams(location.search).get('hour'));
+				} catch (e) {}
+				const now = new Date();
+				const hour =
+					forced === forced ? ((forced % 24) + 24) % 24 : now.getHours() + now.getMinutes() / 60;
+				let day = hour >= RISE && hour < SET;
+				if (forced !== forced) {
+					try {
+						const kept = localStorage.getItem('lights'),
+							at = +localStorage.getItem('lightsAt') || 0;
+						if (kept && Date.now() - at < 8 * 3600e3) day = kept === 'day';
+					} catch (e) {}
+				}
+				const root = document.documentElement;
+				root.classList.toggle('day', day);
+				const bar = document.querySelector('meta[name="theme-color"]');
+				if (bar) bar.setAttribute('content', day ? '#5d7aa8' : '#000000');
+				// the page is built behind a curtain and comes up whole; only a
+				// script sets this, so with JS off there is no curtain to lift
+				root.classList.add('veiled');
+			})();
+		</script>
+		<style>
+			/* The veil. Everything is built behind it — the sky, the grove, a
+			   page of cards — and it lifts once the first frame of the scene has
+			   drawn, so the page arrives whole and in motion. It is the page's own
+			   ground: black by night, the evening's blue by day. */
+			#veil {
+				display: none;
+			}
+			html.veiled {
+				overflow: hidden;
+			}
+			html.veiled #veil {
+				position: fixed;
+				inset: 0;
+				z-index: 1000;
+				display: block;
+				background: #000;
+				touch-action: none;
+				overscroll-behavior: contain;
+				transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);
+			}
+			html.veiled.day #veil {
+				background: #7e9cc4;
+			}
+			html.veil-gone #veil {
+				opacity: 0;
+				pointer-events: none;
+			}
+			#veil-canvas {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				display: block;
+				transition: transform 1300ms cubic-bezier(0.25, 0, 0, 1);
+				will-change: transform;
+			}
+			html.veil-gone #veil-canvas {
+				transform: scale(1.1);
+			}
+			@media (prefers-reduced-motion: reduce) {
+				html.veil-gone #veil-canvas {
+					transform: none;
+				}
+			}
+		</style>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div id="veil" aria-hidden="true"><canvas id="veil-canvas"></canvas></div>
+		<script>
+			// ─── The veil's tesseract ───────────────────────────────────────────
+			// A hypercube turning in four dimensions, drawn in two: sixteen
+			// corners, thirty-two edges and twenty-four square faces, each face a
+			// pane of glass shaded by where it faces, laid down back to front so
+			// the inner cell shows through the outer as the figure turns itself
+			// inside out. Carried over whole from the flat grove.
+			(() => {
+				const canvas = document.getElementById('veil-canvas');
+				const root = document.documentElement;
+				if (!canvas || !root.classList.contains('veiled')) return;
+				if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+				const ctx = canvas.getContext('2d');
+				if (!ctx) return;
+
+				const V = [];
+				for (let i = 0; i < 16; i++)
+					V.push([i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1, i & 8 ? 1 : -1]);
+				const FACES = [];
+				for (let a = 0; a < 4; a++)
+					for (let b = a + 1; b < 4; b++) {
+						const [c, d] = [0, 1, 2, 3].filter((k) => k !== a && k !== b);
+						for (let sc = -1; sc <= 1; sc += 2)
+							for (let sd = -1; sd <= 1; sd += 2) {
+								const at = (va, vb) =>
+									V.findIndex((v) => v[a] === va && v[b] === vb && v[c] === sc && v[d] === sd);
+								FACES.push([at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)]);
+							}
+					}
+				const rot = (p, i, j, t) => {
+					const c = Math.cos(t),
+						s = Math.sin(t),
+						a = p[i],
+						b = p[j];
+					p[i] = a * c - b * s;
+					p[j] = a * s + b * c;
+				};
+				const P3 = V.map(() => [0, 0, 0]),
+					P2 = V.map(() => [0, 0]);
+				function project(t) {
+					for (let i = 0; i < 16; i++) {
+						const p = V[i].slice();
+						rot(p, 0, 3, t * 0.42);
+						rot(p, 1, 2, t * 0.27);
+						rot(p, 0, 2, 0.6 + t * 0.05);
+						const k4 = 2.4 / (2.4 - p[3] * 0.85);
+						let x = p[0] * k4,
+							y = p[1] * k4,
+							z = p[2] * k4;
+						let y2 = y * 0.94 - z * 0.34,
+							z2 = y * 0.34 + z * 0.94;
+						y = y2;
+						z = z2;
+						let x2 = x * 0.88 + z * 0.47;
+						z2 = -x * 0.47 + z * 0.88;
+						x = x2;
+						z = z2;
+						const k3 = 4.4 / (4.4 - z);
+						P3[i][0] = x;
+						P3[i][1] = y;
+						P3[i][2] = z;
+						P2[i][0] = x * k3;
+						P2[i][1] = y * k3;
+					}
+				}
+				const L = [0.42, -0.62, 0.66];
+				const bloom = document.createElement('canvas');
+				bloom.width = bloom.height = 128;
+				{
+					const g = bloom.getContext('2d');
+					const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+					gr.addColorStop(0.0, 'rgba(255,255,255,0.95)');
+					gr.addColorStop(0.08, 'rgba(235,242,255,0.60)');
+					gr.addColorStop(0.28, 'rgba(195,213,255,0.22)');
+					gr.addColorStop(0.6, 'rgba(170,195,255,0.06)');
+					gr.addColorStop(1.0, 'rgba(170,195,255,0)');
+					g.fillStyle = gr;
+					g.fillRect(0, 0, 128, 128);
+				}
+				const order = FACES.map((f, i) => i);
+				let lit = 0;
+				function draw(t, w, h, dpr) {
+					project(t);
+					const day = root.classList.contains('day');
+					const S = Math.min(w, h) * 0.082,
+						cx = w / 2,
+						cy = h / 2;
+					ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+					ctx.clearRect(0, 0, w, h);
+					ctx.lineJoin = 'round';
+					const depth = FACES.map(
+						(f) => (P3[f[0]][2] + P3[f[1]][2] + P3[f[2]][2] + P3[f[3]][2]) / 4
+					);
+					order.sort((i, j) => depth[i] - depth[j]);
+					for (const fi of order) {
+						const f = FACES[fi];
+						const a = P3[f[0]],
+							b = P3[f[1]],
+							d = P3[f[3]];
+						const ux = b[0] - a[0],
+							uy = b[1] - a[1],
+							uz = b[2] - a[2];
+						const vx = d[0] - a[0],
+							vy = d[1] - a[1],
+							vz = d[2] - a[2];
+						let nx = uy * vz - uz * vy,
+							ny = uz * vx - ux * vz,
+							nz = ux * vy - uy * vx;
+						const nl = Math.hypot(nx, ny, nz) || 1;
+						nx /= nl;
+						ny /= nl;
+						nz /= nl;
+						if (nz < 0) {
+							nx = -nx;
+							ny = -ny;
+							nz = -nz;
+						}
+						const shade = 0.16 + 0.84 * Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+						const glass = day
+							? 0.08 + 0.34 * shade + lit * 0.05
+							: 0.025 + 0.13 * shade + lit * 0.03;
+						ctx.beginPath();
+						ctx.moveTo(cx + P2[f[0]][0] * S, cy + P2[f[0]][1] * S);
+						for (let k = 1; k < 4; k++) ctx.lineTo(cx + P2[f[k]][0] * S, cy + P2[f[k]][1] * S);
+						ctx.closePath();
+						ctx.fillStyle = day
+							? `rgba(255,255,255,${glass.toFixed(3)})`
+							: `rgba(190,206,240,${glass.toFixed(3)})`;
+						ctx.fill();
+						if (!day) {
+							ctx.shadowColor = 'rgba(170,195,255,0.35)';
+							ctx.shadowBlur = 4 * dpr;
+						}
+						ctx.lineWidth = 1.1;
+						ctx.strokeStyle = day
+							? `rgba(18,30,48,${(0.55 + lit * 0.3).toFixed(3)})`
+							: `rgba(228,234,250,${(0.66 + lit * 0.3).toFixed(3)})`;
+						ctx.stroke();
+						ctx.shadowBlur = 0;
+					}
+					ctx.globalCompositeOperation = day ? 'source-over' : 'lighter';
+					for (let i = 0; i < 16; i++) {
+						const x = cx + P2[i][0] * S,
+							y = cy + P2[i][1] * S;
+						const near = (P3[i][2] + 2) / 4;
+						const r = (day ? 12 : 20) * (0.7 + 0.6 * near) * (1 + lit * 0.35);
+						ctx.globalAlpha = (day ? 0.6 : 0.9) * (0.55 + 0.45 * near);
+						ctx.drawImage(bloom, x - r, y - r, r * 2, r * 2);
+					}
+					ctx.globalAlpha = 1;
+					ctx.globalCompositeOperation = 'source-over';
+					for (let i = 0; i < 16; i++) {
+						const x = cx + P2[i][0] * S,
+							y = cy + P2[i][1] * S;
+						const k = 1.2 + (1.2 * (P3[i][2] + 2)) / 4;
+						ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,255,255,0.95)';
+						ctx.beginPath();
+						ctx.arc(x, y, k, 0, Math.PI * 2);
+						ctx.fill();
+					}
+				}
+				let raf = 0;
+				const born = performance.now();
+				function frame(now) {
+					if (!document.getElementById('veil')) {
+						raf = 0;
+						return;
+					}
+					raf = requestAnimationFrame(frame);
+					const want = root.classList.contains('veil-full') ? 1 : 0;
+					lit += (want - lit) * 0.06;
+					const dpr = Math.min(devicePixelRatio || 1, 2);
+					const w = innerWidth,
+						h = innerHeight;
+					if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+						canvas.width = Math.round(w * dpr);
+						canvas.height = Math.round(h * dpr);
+					}
+					draw((now - born) / 1000, w, h, dpr);
+				}
+				raf = requestAnimationFrame(frame);
+				document.addEventListener('visibilitychange', () => {
+					if (document.hidden) {
+						cancelAnimationFrame(raf);
+						raf = 0;
+					} else if (!raf && document.getElementById('veil')) raf = requestAnimationFrame(frame);
+				});
+			})();
+
+			// ─── Lifting it ─────────────────────────────────────────────────────
+			// The app calls __veil.open() once the scene has drawn its first
+			// frame. The figure is given a little while to be seen turning
+			// first, and the veil is never held longer than MAX, whatever fails.
+			(() => {
+				const root = document.documentElement;
+				const veil = document.getElementById('veil');
+				let lift = () => {};
+				const V = (window.__veil = {
+					gone: false,
+					lifted: new Promise((r) => (lift = r)),
+					open: () => {}
+				});
+				if (!veil || !root.classList.contains('veiled')) {
+					V.gone = true;
+					lift();
+					return;
+				}
+				veil.addEventListener('pointerdown', (e) => e.stopPropagation());
+				const still = (e) => {
+					if (e.cancelable) e.preventDefault();
+				};
+				veil.addEventListener('wheel', still, { passive: false });
+				veil.addEventListener('touchmove', still, { passive: false });
+				const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+				const MIN = reduced ? 400 : 2000,
+					MAX = 9000;
+				const born = performance.now();
+				let done = false;
+				function go() {
+					if (done) return;
+					done = true;
+					root.classList.add('veil-full');
+					setTimeout(
+						() => {
+							root.classList.add('veil-gone');
+							V.gone = true;
+							setTimeout(lift, reduced ? 0 : 240);
+							setTimeout(
+								() => {
+									root.classList.remove('veiled');
+									veil.remove();
+								},
+								reduced ? 320 : 1160
+							);
+						},
+						reduced ? 60 : 380
+					);
+				}
+				V.open = () => setTimeout(go, Math.max(0, MIN - (performance.now() - born)));
+				setTimeout(go, MAX);
+			})();
+		</script>
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>
