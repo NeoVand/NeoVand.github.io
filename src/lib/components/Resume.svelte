@@ -143,6 +143,13 @@
 		-webkit-backdrop-filter: blur(22px) saturate(1.2);
 		backdrop-filter: blur(22px) saturate(1.2);
 	}
+	/* by day, frosted white: the day's blue at this density goes violet over
+	   the warm sky behind it */
+	:global(html.day) .sheet {
+		--pane: rgba(248, 251, 253, 0.7);
+		-webkit-backdrop-filter: blur(22px) saturate(1.05);
+		backdrop-filter: blur(22px) saturate(1.05);
+	}
 	.tools {
 		margin-bottom: 28px;
 	}

@@ -76,6 +76,9 @@ uniform vec3 uMoon;
 uniform float uStars; // 0 in the environment capture, 1 on screen
 uniform float uSea;   // the scale of the cloud below
 uniform sampler2D uCloud;
+uniform float uLift;
+uniform float uSkySat;
+uniform float uHigh;
 uniform sampler2D uLutDay;
 uniform float uE;
 uniform float uCover; // how much of the cloud below is open sky
@@ -291,7 +294,7 @@ void main() {
 	// the high cloud goes where it would be finer than a pixel, near the
 	// horizon: there it is only streaks that crawl as the view moves
 	float rFp = (length(rX) + length(rY)) * 0.19;
-	if (e > 0.0) hc = highC(roofP, rX, rY) * smoothstep(0.02, 0.12, e) * (1.0 - smoothstep(0.04, 0.16, rFp));
+	if (e > 0.0) hc = highC(roofP, rX, rY) * uHigh * smoothstep(0.02, 0.12, e) * (1.0 - smoothstep(0.04, 0.16, rFp));
 	vec3 up3 = vec3(0.0, 1.0, 0.0);
 
 	vec3 col = vec3(0.0);
@@ -300,7 +303,17 @@ void main() {
 
 	if (uMix > 0.001) {
 		vec3 day;
-		vec4 air = sky(uLutDay, d, s);
+		// Above the horizon the table is read higher than the eye looks: the
+		// picture shows only the first few degrees of sky, where the real
+		// thing is still milky, and a sky that deepens to blue toward the top
+		// of the frame is what an afternoon over the cloud is remembered as.
+		vec3 dA = d;
+		if (e > 0.0) {
+			float eL = 1.0 - pow(1.0 - e, uLift);
+			dA = vec3(0.0, eL, 0.0);
+			dA.xz = d.xz / max(length(d.xz), 1e-4) * sqrt(max(0.0, 1.0 - eL * eL));
+		}
+		vec4 air = sky(uLutDay, dA, s);
 		vec3 zen = sky(uLutDay, up3, s).rgb * E;
 		vec3 away = sky(uLutDay, normalize(vec3(-s.x, 0.02, -s.z)), s).rgb * E;
 		vec3 near = sky(uLutDay, normalize(vec3(s.x, 0.02, s.z)), s).rgb * E;
@@ -308,6 +321,8 @@ void main() {
 		vec3 amb = zen * 0.72 + away * 0.2 + near * 0.08;
 		if (e >= 0.0) {
 			day = air.rgb * E;
+			// and a little richer than the table, which the grade would pale
+			day = max(mix(vec3(dot(day, vec3(0.2126, 0.7152, 0.0722))), day, uSkySat), 0.0);
 			if (hc > 0.0) {
 				// lit from below and the side by a sun at the horizon: gilt
 				// bellies near it, blue-grey ones away from it
@@ -347,6 +362,7 @@ void main() {
 		col += day * uMix;
 	}
 
+	float moonVis = 0.0;
 	if (uMix < 0.999) {
 		// The blue hour is mostly light scattered many times over, which the
 		// table (one bounce) does not carry: so the night's air is drawn, not
@@ -386,22 +402,19 @@ void main() {
 			float haze = 1.0 - exp(-hit.t * 0.026);
 			night = mix(night, horN + moonAir, haze);
 		}
-		// the moon: a full disc, darker toward the limb, the grey seas across it
-		float rr;
-		float md = disc(d, uMoon, 0.0165, rr);
-		vec3 mp = (d - uMoon) / 0.0165;
-		vec2 muv = mp.xy * 0.45 + vec2(0.3, 0.6);
-		float seas = smoothstep(0.42, 0.72, texture(uCloud, muv * 0.5).b);
-		float limb = sqrt(max(0.0, 1.0 - rr * rr));
-		float overM = (e < 0.0 ? 1.0 - hit.ok : 1.0) * (1.0 - hc * 0.75);
-		night = mix(night, vec3(1.0, 0.975, 0.93) * (2.4 - 0.7 * seas) * (0.72 + 0.28 * limb), md * overM);
+		// the moon itself is drawn over the sheet at the screen's own
+		// resolution (BACK_F); here only whether it can be seen, into alpha:
+		// it sets behind the cloud, and is gone before it could show through
+		// a gap beneath the horizon
+		float overM = (e < 0.0 ? (1.0 - hit.ok) * (1.0 - smoothstep(0.0, 0.05, -e)) : 1.0) * (1.0 - hc * 0.75);
+		moonVis = overM;
 		// its halo in the damp air
 		float ma = length(d - uMoon);
 		night += vec3(0.5, 0.56, 0.72) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
 		col += night * (1.0 - uMix);
 	}
 
-	gl_FragColor = vec4(max(col, 0.0), 1.0);
+	gl_FragColor = vec4(max(col, 0.0), moonVis);
 }
 `;
 
@@ -536,17 +549,68 @@ void main() {
 const BACK_F = /* glsl */ `
 uniform sampler2D uSky;
 uniform vec2 uTexel;
+uniform sampler2D uMoonTex;
+uniform vec3 uMoon;
+uniform float uMoonOn;
+uniform vec2 uMoonGain;
+uniform mat4 uProjInv;
+uniform mat4 uCamWorld;
 varying vec2 vUv;
 void main() {
 	// four taps on a rotated grid, half a texel out: the edges of cloud
 	// against cloud behind it are a hard step in the sheet, and this is
 	// their antialiasing
 	vec2 a = uTexel * vec2(0.42, 0.18), b = uTexel * vec2(-0.18, 0.42);
-	vec3 c = texture2D(uSky, vUv + a).rgb + texture2D(uSky, vUv - a).rgb
-		+ texture2D(uSky, vUv + b).rgb + texture2D(uSky, vUv - b).rgb;
-	gl_FragColor = vec4(c * 0.25, 1.0);
+	vec4 s = texture2D(uSky, vUv + a) + texture2D(uSky, vUv - a)
+		+ texture2D(uSky, vUv + b) + texture2D(uSky, vUv - b);
+	vec3 c = s.rgb * 0.25;
+	if (uMoonOn > 0.001) {
+		// The moon, as the old site had it: a painting of the full moon, laid
+		// on its disc in the disc's own frame. It is drawn here, at the
+		// screen's resolution, since in the sheet it would be soft; the sheet
+		// says, in alpha, how much cloud is in front of it.
+		vec4 v = uProjInv * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
+		vec3 d = normalize((uCamWorld * vec4(v.xyz / v.w, 0.0)).xyz);
+		float x = length(d - uMoon);
+		if (x < 0.02) {
+			float w = max(fwidth(x), 1e-5);
+			float md = 1.0 - smoothstep(0.0165 - w, 0.0165 + w, x);
+			vec3 mR = normalize(cross(uMoon, vec3(0.0, 1.0, 0.0)));
+			vec3 mU = cross(mR, uMoon);
+			vec2 mp = vec2(dot(d - uMoon, mR), dot(d - uMoon, mU)) / 0.0165;
+			float face = texture2D(uMoonTex, 0.5 + mp * 0.4258).r;
+			vec3 moon = vec3(1.0, 0.975, 0.93) * uMoonGain.x * pow(face, uMoonGain.y);
+			c = mix(c, moon, md * s.a * 0.25 * uMoonOn);
+		}
+	}
+	gl_FragColor = vec4(c, 1.0);
 }
 `;
+
+/**
+ * The moon the old site had (Open Clipart, CC0), drawn into a canvas once it
+ * has loaded; until then a plain pale disc. Its grey is read as it is, not as
+ * sRGB, since it is a picture of brightness rather than a colour.
+ */
+function moonTexture() {
+	const c = document.createElement('canvas');
+	c.width = c.height = 512;
+	const g = c.getContext('2d')!;
+	g.fillStyle = '#c8c8c8';
+	g.fillRect(0, 0, 512, 512);
+	const tex = new THREE.CanvasTexture(c);
+	tex.minFilter = THREE.LinearMipmapLinearFilter;
+	tex.anisotropy = 4;
+	const img = new Image();
+	img.onload = () => {
+		g.fillStyle = '#000';
+		g.fillRect(0, 0, 512, 512);
+		g.drawImage(img, 0, 0, 512, 512);
+		tex.needsUpdate = true;
+	};
+	img.src = '/media/moon.svg';
+	return tex;
+}
 
 export function createSky() {
 	const cloud = new THREE.WebGLRenderTarget(512, 512, {
@@ -575,6 +639,9 @@ export function createSky() {
 		uStars: { value: 1 },
 		uSea: { value: 0.32 },
 		uCloud: { value: cloud.texture },
+		uLift: { value: 7.5 },
+		uSkySat: { value: 1.45 },
+		uHigh: { value: 1 },
 		uLutDay: { value: lutDay.texture },
 		uE: { value: 16 },
 		uCover: { value: 0.52 },
@@ -619,7 +686,16 @@ export function createSky() {
 	const backdrop = new THREE.Mesh(
 		tri,
 		new THREE.ShaderMaterial({
-			uniforms: { uSky: { value: target.texture }, uTexel: { value: new THREE.Vector2(0.5, 0.5) } },
+			uniforms: {
+				uSky: { value: target.texture },
+				uTexel: { value: new THREE.Vector2(0.5, 0.5) },
+				uMoonTex: { value: moonTexture() },
+				uMoon: uniforms.uMoon,
+				uMoonOn: { value: 0 },
+				uMoonGain: { value: new THREE.Vector2(2.6, 2.5) },
+				uProjInv: { value: new THREE.Matrix4() },
+				uCamWorld: { value: new THREE.Matrix4() }
+			},
 			vertexShader: BACK_V,
 			fragmentShader: BACK_F,
 			depthWrite: false,
@@ -629,6 +705,17 @@ export function createSky() {
 	);
 	backdrop.renderOrder = -1000;
 	backdrop.frustumCulled = false;
+	// the camera the sheet was last drawn from, which the moon must share
+	let skyCam: THREE.Camera | null = null;
+	backdrop.onBeforeRender = (_r, _s, camera) => {
+		const u = (backdrop.material as THREE.ShaderMaterial).uniforms;
+		const c = skyCam ?? camera;
+		u.uProjInv.value.copy(c.projectionMatrixInverse);
+		u.uCamWorld.value.copy(c.matrixWorld);
+		// the moon stays out in the first of the daylight, as it does, and
+		// has set by the time the day is full
+		u.uMoonOn.value = 1 - THREE.MathUtils.smoothstep(uniforms.uMix.value, 0.7, 1);
+	};
 
 	let baked = false;
 	const lutMat = new THREE.ShaderMaterial({
@@ -700,6 +787,7 @@ export function createSky() {
 		/** draw the sheet: all of it, or one colour of the chequer */
 		render(renderer: THREE.WebGLRenderer, camera: THREE.Camera, parity = -1) {
 			uniforms.uParity.value = parity;
+			skyCam = camera;
 			const prev = renderer.getRenderTarget();
 			const clear = renderer.autoClear;
 			renderer.autoClear = false;

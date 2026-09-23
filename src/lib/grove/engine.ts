@@ -23,7 +23,7 @@ import {
 } from './textures';
 import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
-import { buildRotunda, type RotundaParts } from './rotunda';
+import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
 import { buildGramophone, type Gramophone } from './gramophone';
 import {
 	buildStand,
@@ -71,14 +71,23 @@ const moonAt = (azDeg: number, elDeg: number) => {
 		el = THREE.MathUtils.degToRad(elDeg);
 	return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 };
-const MOON_DIR = moonAt(12, 4.6);
-const SUN_AZ = { side: -20, stack: -12 };
-// an afternoon sun, above the top of the picture: the sky blue overhead and
-// only the air round the sun warm
-const SUN_EL = 10;
+const MOON: Record<Layout, [number, number]> = { side: [12, 4.6], stack: [2, 7.2] };
+/** where the moon goes when the lights come up: down under the cloud */
+const MOON_SET_EL = -5;
+// An afternoon sun, well round to the left and out of the picture, so the
+// sky in it is blue all the way up and only its left edge warms. (Nearer the
+// middle, its glow in the haze whitens the whole top of a narrow phone.)
+const SUN_AZ = { side: -72, stack: -66 };
+const SUN_EL = 22;
 /** where the disc goes when the lights go down: under the cloud */
 const SUN_SET_EL = -7;
+// The light on the island is set for the island, not taken from the disc:
+// from the left and behind, high enough for short shadows, so the crowns
+// are rimmed and the island's face takes the light across it.
+const KEY_AZ = { side: -60, stack: -52 };
 const KEY_EL = 32;
+/** how far the sky is tipped up behind the island, in degrees, by layout */
+const SKY_TILT = { side: 0, stack: 9 };
 
 /** The grade, after the tone map and in display terms: a little more
  *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
@@ -125,7 +134,8 @@ export class Grove {
 	private hemi: THREE.HemisphereLight;
 	private envDay: THREE.Texture | null = null;
 	private envNight: THREE.Texture | null = null;
-	private moonDir = MOON_DIR.clone();
+	private moonDir = moonAt(...MOON.side);
+	private skyCam = new THREE.PerspectiveCamera();
 	private world = new THREE.Group();
 	island!: IslandParts;
 	pavilion!: RotundaParts;
@@ -198,6 +208,8 @@ export class Grove {
 		Stand,
 		{ x: number; z: number; vx: number; vz: number; tx: number; tz: number }
 	>();
+	/** how far each tree may lean toward the rotunda (radians), and which way that is */
+	private reach = new Map<Stand, { nx: number; nz: number; max: number }>();
 	private lastMove: { x: number; y: number } | null = null;
 	private overGram = false;
 	private gramFlash = 0;
@@ -418,7 +430,9 @@ export class Grove {
 			seed: seed(),
 			pos: at(sgn * lerp(1.32, 1.5, r()), lerp(4.3, 4.8, r())),
 			rotY: r() * Math.PI * 2,
-			scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r())
+			scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r()),
+			// pruned clear of the rotunda, with room for the leaves on the shoots
+			avoid: (p: THREE.Vector3) => rotundaClearance(p) < 0.42
 		}));
 		// cypresses behind, off the axis so the dome stands clear between them
 		const cypresses: PlantItem[] = [
@@ -497,6 +511,7 @@ export class Grove {
 			this.growth.set(st, { g: 1, to: 1, pop: 0, popV: 0 });
 		}
 		this.trees = [stands[0], stands[1]];
+		for (let i = 0; i < 2; i++) this.keepOff(stands[i], preps[i].placed.worldPos);
 		this.garden = stands;
 		this.canopy = canopy;
 		this.shadeLawn();
@@ -576,9 +591,15 @@ export class Grove {
 		// the disc sinks under the cloud as the lights go down
 		const k = smoothstep(0, 1, m);
 		this.sky.uniforms.uSun.value.copy(moonAt(this.sunAz, lerp(SUN_SET_EL, SUN_EL, k)));
+		// and the moon goes down into it as the sun comes up, staying out in
+		// the first of the daylight, so that it is seen to go
+		const [mAz, mEl] = MOON[this.layout];
+		this.sky.uniforms.uMoon.value.copy(
+			moonAt(mAz, lerp(mEl, MOON_SET_EL, Math.sqrt(clamp(m, 0, 1))))
+		);
 		// the key comes from the side the sun is on, well round from it, so
 		// the island's face takes the gold and its shadows fall across it
-		const key = moonAt(this.sunAz - 40, KEY_EL);
+		const key = moonAt(KEY_AZ[this.layout], KEY_EL);
 		const moonLight = this.moonDir.clone().setY(Math.max(this.moonDir.y, 0.28)).normalize();
 		const dir = moonLight.lerp(key, k).normalize();
 		this.light.position.copy(dir).multiplyScalar(30);
@@ -676,9 +697,8 @@ export class Grove {
 		this.dist = Math.max(dW, dH);
 		this.hv = 2 * this.dist * tan;
 		const [fx, fy] = this.layout === 'side' ? [0.31, 0.5] : [0.5, 0.27];
-		this.moonDir.copy(this.layout === 'side' ? MOON_DIR : moonAt(3.5, 7.5));
+		this.moonDir.copy(moonAt(...MOON[this.layout]));
 		this.sunAz = SUN_AZ[this.layout];
-		this.sky.uniforms.uMoon.value.copy(this.moonDir);
 		this.applyDay(this.dayMix);
 		this.camera.setViewOffset(w, h, (0.5 - fx) * w, (0.5 - fy) * h, w, h);
 		this.camera.near = Math.max(0.5, this.dist - 30);
@@ -888,6 +908,34 @@ export class Grove {
 	 * down, a little under a second a swing, as a small tree does; held, it
 	 * follows the hand stiffly; let go, it swings from wherever it was.
 	 */
+	/**
+	 * A bent tree must not put its leaves through the rotunda. A leaf moves
+	 * about the foot by the tilt times how much of it the tilt reaches, so
+	 * the leaf that would meet the wall first sets how far the tree can lean
+	 * that way. Beyond that the crown meets the building and stops.
+	 */
+	private keepOff(t: Stand, leaves: THREE.Vector3[]) {
+		const it = t.items[0];
+		const b = it.pos;
+		const bl = Math.hypot(b.x, b.z);
+		const nx = -b.x / bl,
+			nz = -b.z / bl;
+		const H = t.skeletons[0].height * it.scale;
+		let max = 0.4;
+		for (const p of leaves) {
+			const c = rotundaClearance(p);
+			if (c > 2.5) continue;
+			const rl = Math.hypot(p.x, p.z);
+			// how squarely a lean toward the rotunda carries this leaf at it
+			const at = -(nx * p.x + nz * p.z) / Math.max(rl, 1e-3);
+			if (at <= 0.05) continue;
+			const h = THREE.MathUtils.clamp((p.y - b.y) / H, 0, 1.4);
+			const reach = (0.35 * h + 0.65 * h * h) * (p.y - b.y) * at;
+			if (reach > 1e-3) max = Math.min(max, (c - 0.1) / reach);
+		}
+		this.reach.set(t, { nx, nz, max: Math.max(0.02, max) });
+	}
+
 	private stepSprings(dt: number) {
 		const h = Math.min(dt, 1 / 30);
 		for (const [t, s] of this.springs) {
@@ -903,6 +951,20 @@ export class Grove {
 			if (m > 0.4) {
 				s.x *= 0.4 / m;
 				s.z *= 0.4 / m;
+			}
+			// the crown comes up against the rotunda, and gives back a little
+			const k = this.reach.get(t);
+			if (k) {
+				const c = s.x * k.nx + s.z * k.nz;
+				if (c > k.max) {
+					s.x -= (c - k.max) * k.nx;
+					s.z -= (c - k.max) * k.nz;
+					const v = s.vx * k.nx + s.vz * k.nz;
+					if (v > 0) {
+						s.vx -= 1.3 * v * k.nx;
+						s.vz -= 1.3 * v * k.nz;
+					}
+				}
 			}
 			t.u.uSpring.value.set(s.x, s.z);
 		}
@@ -972,7 +1034,20 @@ export class Grove {
 	skyDirty = true;
 	private draw() {
 		this.sky.update(this.renderer);
-		this.sky.render(this.renderer, this.camera);
+		// Where the words stack under it, the island stands high in a tall
+		// picture, looked down on, and the horizon would be the top edge: all
+		// haze and no sky. So there the sky is drawn from a camera tipped up
+		// a little, which puts blue over the garden and the horizon behind the
+		// rock. Nothing on the island touches the horizon to give it away.
+		let cam = this.camera;
+		const tilt = SKY_TILT[this.layout];
+		if (tilt) {
+			this.skyCam.copy(this.camera);
+			this.skyCam.rotateX(THREE.MathUtils.degToRad(tilt));
+			this.skyCam.updateMatrixWorld();
+			cam = this.skyCam;
+		}
+		this.sky.render(this.renderer, cam);
 		this.composer.render();
 	}
 
@@ -1152,7 +1227,7 @@ export class Grove {
 			this.playing && !this.reduced,
 			this.mouth,
 			this.mouthDir,
-			((this.H * this.dpr) / (2 * tan)) * 0.62
+			((this.H * this.dpr) / (2 * tan)) * 0.36
 		);
 
 		// the light's view-space direction, for leaves lit from behind
@@ -1189,7 +1264,8 @@ export class Grove {
 			for (let i = 0; i < glow.length; i++) {
 				if (pos[i * 3 + 1] < -50 || glow[i] < 0.02) continue;
 				v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
-				g.add(v, this.flyCol, glow[i] * 0.3, 0.9);
+				// a firefly lights the leaf it is by, not the garden
+				g.add(v, this.flyCol, glow[i] * 0.07, 0.4);
 			}
 		}
 		g.end();
@@ -1199,17 +1275,24 @@ export class Grove {
 	private adapt(ms: number, dt: number) {
 		// never mid-scroll: a change of resolution reallocates every buffer,
 		// and that is a hitch just where the eye is following the motion
-		if (this.scrolling) {
+		// and not deep in the page, where the frames are held back on purpose
+		if (this.scrolling || !this.world.visible) {
 			this.frameTimes.length = 0;
 			return;
 		}
 		this.frameTimes.push(dt * 1000);
 		if (this.frameTimes.length < 90) return;
-		const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
+		// Judged against the display, not against sixty: the shortest usual
+		// interval is its refresh, 8 ms on a 120 Hz screen, and a frame that
+		// takes half again as long has missed one. A few misses are judder
+		// the eye sees the moment the page moves.
+		const s = this.frameTimes.slice().sort((a, b) => a - b);
 		this.frameTimes.length = 0;
+		const tick = s[Math.floor(s.length * 0.1)];
+		const late = s.filter((d) => d > tick * 1.5).length / s.length;
 		let next = this.dpr;
-		if (avg > 24 && this.dpr > 1) next = Math.max(1, this.dpr - 0.25);
-		else if (avg < 15 && ms < 8 && this.dpr < this.dprCap)
+		if ((late > 0.12 || tick > 22) && this.dpr > 1) next = Math.max(1, this.dpr - 0.25);
+		else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < this.dprCap)
 			next = Math.min(this.dprCap, this.dpr + 0.25);
 		if (next !== this.dpr) {
 			this.dpr = next;

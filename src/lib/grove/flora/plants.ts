@@ -29,6 +29,8 @@ export interface PlantItem {
 	pos: THREE.Vector3;
 	rotY: number;
 	scale: number;
+	/** where, in the world, the plant may not grow */
+	avoid?: (p: THREE.Vector3) => boolean;
 }
 
 export interface Perch {
@@ -82,7 +84,18 @@ const _m = new THREE.Matrix4(),
 	_s = new THREE.Vector3();
 
 export function deriveAll(items: PlantItem[]) {
-	return items.map((it) => it.species.derive(it.seed));
+	return items.map((it) => {
+		if (!it.avoid) return it.species.derive(it.seed);
+		// the grammar works in the plant's own frame: carry its points out
+		const m = new THREE.Matrix4().compose(
+			it.pos,
+			new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), it.rotY),
+			new THREE.Vector3(it.scale, it.scale, it.scale)
+		);
+		const w = new THREE.Vector3();
+		const avoid = it.avoid;
+		return it.species.derive(it.seed, (p) => avoid(w.copy(p).applyMatrix4(m)));
+	});
 }
 
 /**

@@ -393,3 +393,22 @@ export function buildRotunda(brick: THREE.Material, stone: THREE.Material, bronz
 		lanternGlass: glass
 	} satisfies RotundaParts;
 }
+
+/**
+ * How far a point is from the rotunda, roughly: the drum out to the cornice
+ * as a cylinder, and the dome as the half-ellipsoid it is. Negative inside.
+ * The garden keeps its trees off the building by it.
+ */
+export function rotundaClearance(p: THREE.Vector3) {
+	const { floor, ap, wallH } = ROT;
+	const corner = ap / Math.cos(Math.PI / 6);
+	const rh = Math.hypot(p.x, p.z);
+	const topY = floor + wallH + 0.61;
+	if (p.y < topY) return rh - (corner + 0.34);
+	const a = corner + 0.06,
+		b = 1.72;
+	const dy = p.y - topY;
+	const k = Math.hypot(rh / a, dy / b);
+	// the usual estimate of the distance to an ellipse, good near its skin
+	return ((k - 1) * k) / Math.max(1e-4, Math.hypot(rh / (a * a), dy / (b * b)));
+}

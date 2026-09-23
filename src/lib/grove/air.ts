@@ -6,8 +6,8 @@ import { U, patch, nightPatch } from './shared';
 import { rng, clamp, damp, lerp, smoothstep } from './rng';
 
 // ─── The air ──────────────────────────────────────────────────────────────
-// The same two dozen creatures, drawn by whichever light the lamp gives: by
-// day a dove, by night a firefly. They keep to the grove in two parties,
+// By day two dozen doves; by night as many fireflies, which keep to the
+// garden on their own (below). The doves keep to the grove in two parties,
 // one to a tree, and a party crosses to another tree every twenty seconds or
 // so; grab the tree a party is on and it is off almost together, some of it
 // breaking for the pavilion, which nobody can pull over.
@@ -46,10 +46,6 @@ interface Creature {
 	c2: THREE.Vector3;
 	ft: number;
 	fdur: number;
-	// fireflies wander
-	drift: THREE.Vector3;
-	driftT: number;
-	blink: number;
 	/** still off stage, waiting for its entrance */
 	arriving: boolean;
 }
@@ -148,6 +144,16 @@ export class Air {
 	private flies: THREE.Points;
 	private flyPos: Float32Array;
 	private flyGlow: Float32Array;
+	/** each firefly's patch of air, where it is going, and its flashing */
+	private ff: {
+		home: THREE.Vector3;
+		to: THREE.Vector3;
+		move: number;
+		ph: number;
+		flash: number;
+		wait: number;
+		len: number;
+	}[] = [];
 	private c: Creature[] = [];
 	private r = rng(91);
 	private day: number;
@@ -224,9 +230,9 @@ export class Air {
 				void main() {
 					vGlow = aGlow;
 					vec4 mv = modelViewMatrix * vec4(position, 1.0);
-					// a firefly is a point of light, not a ball: a few pixels,
-					// however near it comes
-					gl_PointSize = clamp(uScale / -mv.z, 2.0, 9.0 * uDpr);
+					// a bright point in a soft halo of its own light: a few
+					// pixels across, however near it comes
+					gl_PointSize = clamp(uScale / -mv.z, 10.0 * uDpr, 24.0 * uDpr);
 					gl_Position = projectionMatrix * mv;
 				}`,
 			fragmentShader: /* glsl */ `
@@ -234,9 +240,10 @@ export class Air {
 				varying float vGlow;
 				void main() {
 					float d = length(gl_PointCoord - 0.5) * 2.0;
-					float core = exp(-d * d * 14.0);
-					float halo = exp(-d * d * 3.0) * 0.18;
-					gl_FragColor = vec4(vec3(0.82, 1.0, 0.42) * (core * 2.6 + halo) * vGlow, 1.0);
+					// the core bright enough to bloom, the halo round it faint
+					float core = exp(-d * d * 70.0);
+					float halo = exp(-d * d * 7.0) * max(1.0 - d, 0.0);
+					gl_FragColor = vec4(vec3(0.8, 1.0, 0.4) * (core * 7.0 + halo * 0.7) * vGlow, 1.0);
 				}`,
 			transparent: true,
 			depthWrite: false,
@@ -267,12 +274,48 @@ export class Air {
 				c2: new THREE.Vector3(),
 				ft: 0,
 				fdur: 1,
-				drift: new THREE.Vector3(),
-				driftT: 0,
-				blink: this.r() * 10,
 				arriving: false
 			});
 		}
+		for (let i = 0; i < N; i++) {
+			const home = this.flyHome();
+			this.ff.push({
+				home,
+				to: home.clone(),
+				move: lerp(4, 12, this.r()),
+				ph: this.r() * 100,
+				flash: -1,
+				wait: this.r() * 4,
+				len: 0.5
+			});
+		}
+	}
+
+	/**
+	 * Somewhere a firefly might be: mostly low over the lawn and among the
+	 * shrubs by the wall, some up in the lower crowns; never in the rotunda's
+	 * walls, and never out over the edge.
+	 */
+	private flyHome(near?: THREE.Vector3) {
+		const p = new THREE.Vector3();
+		for (let k = 0; k < 20; k++) {
+			if (near) {
+				p.set(near.x + (this.r() - 0.5) * 2.4, 0, near.z + (this.r() - 0.5) * 2.4);
+				p.y = clamp(near.y + (this.r() - 0.5) * 0.8, 0.25, 3.6);
+			} else {
+				const a = this.r() * Math.PI * 2,
+					rad = lerp(2.9, 6.2, Math.sqrt(this.r()));
+				const high = this.r() < 0.25;
+				p.set(
+					Math.sin(a) * rad,
+					high ? lerp(1.8, 3.6, this.r()) : lerp(0.25, 1.5, this.r()),
+					Math.cos(a) * rad
+				);
+			}
+			const rh = Math.hypot(p.x, p.z);
+			if (rh > 2.9 && rh < 6.2) return p;
+		}
+		return p.set(0, 0.8, 4.2);
 	}
 
 	// ── where a bird can be ───────────────────────────────────────────────
@@ -562,28 +605,44 @@ export class Air {
 			this.m.scale(this.tmp.set(s, s, s));
 			this.m.setPosition(cr.pos.x, cr.pos.y + 0.04 * cr.pose, cr.pos.z);
 			this.birds.setMatrixAt(cr.id, this.m);
-
-			// the firefly: drifts about its perch, and blinks
-			cr.driftT -= dt;
-			if (cr.driftT < 0) {
-				cr.driftT = lerp(2, 5, this.r());
-				const roam = this.r() < 0.35 ? 1.4 : 0.15;
-				cr.drift.set(
-					(this.r() - 0.5) * roam,
-					(this.r() - 0.2) * roam * 0.7,
-					(this.r() - 0.5) * roam
-				);
+		}
+		// The fireflies: each wanders a patch of air on slow sines, and now
+		// and then drifts off to another patch nearby; and each flashes on
+		// its own clock, a slow swell and fade, dark most of the time.
+		const on = smoothstep(0.1, 0.9, night);
+		for (let i = 0; i < this.ff.length; i++) {
+			const f = this.ff[i];
+			const k = i * 3;
+			if (!reduced) {
+				f.move -= dt;
+				if (f.move < 0) {
+					f.move = lerp(5, 14, this.r());
+					f.to.copy(this.flyHome(f.home));
+				}
+				f.home.x = damp(f.home.x, f.to.x, 0.35, dt);
+				f.home.y = damp(f.home.y, f.to.y, 0.35, dt);
+				f.home.z = damp(f.home.z, f.to.z, 0.35, dt);
 			}
-			const k = cr.id * 3;
-			const fx = cr.pos.x + cr.drift.x * cr.pose,
-				fy = cr.pos.y + 0.08 + cr.drift.y * cr.pose,
-				fz = cr.pos.z + cr.drift.z * cr.pose;
-			this.flyPos[k] = damp(this.flyPos[k], fx, 1.2, dt);
-			this.flyPos[k + 1] = damp(this.flyPos[k + 1], fy, 1.2, dt);
-			this.flyPos[k + 2] = damp(this.flyPos[k + 2], fz, 1.2, dt);
-			if (hidden) this.flyPos[k + 1] = -500;
-			const b = Math.pow(0.5 + 0.5 * Math.sin(time * (1.1 + (cr.id % 5) * 0.23) + cr.blink), 6);
-			this.flyGlow[cr.id] = (0.25 + 0.75 * b) * smoothstep(0.1, 0.9, night);
+			const t = reduced ? f.ph : time + f.ph;
+			this.flyPos[k] = f.home.x + Math.sin(t * 0.31) * 0.5 + Math.sin(t * 0.73 + 1.3) * 0.22;
+			this.flyPos[k + 1] = f.home.y + Math.sin(t * 0.47 + 0.4) * 0.2 + Math.sin(t * 1.1) * 0.07;
+			this.flyPos[k + 2] = f.home.z + Math.cos(t * 0.37 + 2.1) * 0.5 + Math.sin(t * 0.61) * 0.22;
+			let b = 0;
+			if (f.flash >= 0) {
+				f.flash += dt;
+				const u = f.flash / f.len;
+				if (u >= 1) {
+					f.flash = -1;
+					f.wait = lerp(0.6, 3, this.r());
+				} else b = Math.pow(Math.sin(Math.PI * u), 2);
+			} else {
+				f.wait -= dt;
+				if (f.wait < 0) {
+					f.flash = 0;
+					f.len = lerp(0.6, 1.3, this.r());
+				}
+			}
+			this.flyGlow[i] = (reduced ? 0.45 : 0.22 + 0.78 * b) * on;
 		}
 		this.birds.instanceMatrix.needsUpdate = true;
 		this.wingAttr.needsUpdate = true;
@@ -592,7 +651,7 @@ export class Air {
 		const H = this.grove.renderer.domElement.height;
 		const fov = THREE.MathUtils.degToRad(this.grove.camera.fov);
 		const fu = (this.flies.material as THREE.ShaderMaterial).uniforms;
-		fu.uScale.value = (0.07 * H) / (2 * Math.tan(fov / 2));
+		fu.uScale.value = (0.55 * H) / (2 * Math.tan(fov / 2));
 		fu.uDpr.value = this.grove.renderer.getPixelRatio();
 		this.flies.visible = night > 0.02;
 		this.birds.visible = this.day > 0.02;

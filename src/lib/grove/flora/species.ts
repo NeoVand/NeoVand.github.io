@@ -21,7 +21,11 @@ export interface Palette {
 
 export interface Species {
 	name: string;
-	derive(seed: number): Skeleton;
+	/**
+	 * Grow one plant. `avoid`, in the plant's own frame, is where its wood
+	 * and leaves may not go: a building beside it, say.
+	 */
+	derive(seed: number, avoid?: (p: THREE.Vector3) => boolean): Skeleton;
 	/** leaf blade: half-width and length as a fraction of its scale, cup, droop */
 	blade: { w: number; cup: number; droop: number };
 	palette: Palette;
@@ -80,7 +84,7 @@ function domeTree(o: DomeTree): Species {
 		flex: 0.8,
 		rows: 5,
 		castLeaves: true,
-		derive(seed) {
+		derive(seed, avoid) {
 			const r = rng(seed);
 			const R = (a: number, b: number) => lerp(a, b, r());
 			const sk = newSkeleton();
@@ -95,6 +99,9 @@ function domeTree(o: DomeTree): Species {
 				ry = R(1.45, 1.65);
 			const inside = (p: THREE.Vector3) =>
 				Math.hypot((p.x - heart.x) / rx, (p.y - heart.y) / ry, (p.z - heart.z) / rx);
+			// past the dome, or where the gardener keeps it off the building
+			const beyond = (p: THREE.Vector3) => inside(p) > 1 || (avoid ? avoid(p) : false);
+			const _n = new THREE.Vector3();
 			const flowering = R(o.flowering[0], o.flowering[1]);
 
 			const leafPair = (s: Turtle, size: number) => {
@@ -119,6 +126,8 @@ function domeTree(o: DomeTree): Species {
 			// turned a quarter from the last, and flowers at some of the tips
 			const shoot = (s: Turtle, n: number, size: number) => {
 				for (let i = 0; i < n; i++) {
+					// a shoot stops short of the wall it would grow into
+					if (avoid && avoid(_n.copy(s.p).addScaledVector(s.h, 0.1))) break;
 					s.forward(R(0.06, 0.085), 1, 0.02, 7, r);
 					s.roll(90 + R(-12, 12));
 					leafPair(s, size);
@@ -150,15 +159,14 @@ function domeTree(o: DomeTree): Species {
 				let len = 0.85 * Math.pow(v, 0.75);
 				// no further than the dome allows
 				const end = s.p.clone().addScaledVector(s.h, len);
-				const over = inside(end);
-				const pruned = over > 1;
+				const pruned = beyond(end);
 				if (pruned) {
 					// back along the heading to the envelope
 					let lo = 0,
 						hi = len;
 					for (let i = 0; i < 8; i++) {
 						const m = (lo + hi) / 2;
-						if (inside(s.p.clone().addScaledVector(s.h, m)) > 1) hi = m;
+						if (beyond(s.p.clone().addScaledVector(s.h, m))) hi = m;
 						else lo = m;
 					}
 					len = Math.max(0.05, lo);

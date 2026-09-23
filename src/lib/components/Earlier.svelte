@@ -157,6 +157,11 @@
 		-webkit-backdrop-filter: blur(24px) saturate(1.2);
 		backdrop-filter: blur(24px) saturate(1.2);
 	}
+	:global(html.day) .panel {
+		background: rgba(248, 251, 253, 0.8);
+		-webkit-backdrop-filter: blur(24px) saturate(1.05);
+		backdrop-filter: blur(24px) saturate(1.05);
+	}
 	.panel[open] {
 		animation: rise 260ms var(--ease-out);
 	}

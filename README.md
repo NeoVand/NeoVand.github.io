@@ -26,18 +26,18 @@ drawn.
 
 ## The engine — `src/lib/grove/`
 
-| File | What it is |
-| --- | --- |
-| `engine.ts` | The `Grove`: renderer, camera and layout, the light rig, the frame loop, input, adaptive resolution. |
-| `sky.ts` | The sky. A single-scattering atmosphere (Rayleigh, Mie, ozone; Schüler's Chapman approximation) summed into a sky-view table when the sun moves; a sea of cumulus ray-marched through a baked height field, with low-sun shadows; altocumulus overhead. By night, stars, the moon and a moonlit sea. |
-| `island.ts` | The limestone wall, the crag the island is broken from, the lawn, the flags, the wall lanterns. |
-| `rotunda.ts` | Six open brick arches on stone columns, a leaded dome with verdigris, the hanging lantern. |
-| `gramophone.ts`, `notes.ts` | The machine, and the golden notes that come out of it on the music's loudness. |
-| `flora/` | The garden (below). |
-| `air.ts` | Doves by day and fireflies by night: perching, bounding flight, blinking. |
-| `glow.ts` | The fireflies' and lanterns' light, laid each frame into a small map over the island that every lit surface reads once. |
-| `textures.ts` | Every texture, drawn procedurally: brick, ashlar, rock, flags, lawn, bark, walnut. |
-| `masonry.ts` | Surfaces of revolution laid course by course, with whole bricks to a course. |
+| File                        | What it is                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `engine.ts`                 | The `Grove`: renderer, camera and layout, the light rig, the frame loop, input, adaptive resolution.                                                                                                                                                                                                                                                                                                                            |
+| `sky.ts`                    | The sky. A single-scattering atmosphere (Rayleigh, Mie, ozone; Schüler's Chapman approximation) summed into a sky-view table when the sun moves; a sea of cumulus ray-marched through a baked height field, with low-sun shadows; altocumulus overhead. By night, stars, a moonlit sea, and the old site's moon (`static/media/moon.svg`), drawn at full resolution over the sky and setting behind the cloud as the day comes. |
+| `island.ts`                 | The limestone wall, the crag the island is broken from, the lawn, the flags, the wall lanterns.                                                                                                                                                                                                                                                                                                                                 |
+| `rotunda.ts`                | Six open brick arches on stone columns, a leaded dome with verdigris, the hanging lantern.                                                                                                                                                                                                                                                                                                                                      |
+| `gramophone.ts`, `notes.ts` | The machine, and the golden notes that come out of it on the music's loudness.                                                                                                                                                                                                                                                                                                                                                  |
+| `flora/`                    | The garden (below).                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `air.ts`                    | Doves by day, perching and flying in bounds; fireflies by night, wandering the garden and flashing.                                                                                                                                                                                                                                                                                                                             |
+| `glow.ts`                   | The fireflies' and lanterns' light, laid each frame into a small map over the island that every lit surface reads once.                                                                                                                                                                                                                                                                                                         |
+| `textures.ts`               | Every texture, drawn procedurally: brick, ashlar, rock, flags, lawn, bark, walnut.                                                                                                                                                                                                                                                                                                                                              |
+| `masonry.ts`                | Surfaces of revolution laid course by course, with whole bricks to a course.                                                                                                                                                                                                                                                                                                                                                    |
 
 ### The garden
 
@@ -56,6 +56,9 @@ the olive, the Italian cypress, two flowering shrubs, and ivy.
   perched doves on their twigs (`flora/wind.ts`).
 - **A touch** sends a gust through the crown from where the hand went in,
   shakes petals loose (`flora/petals.ts`), and sets the doves in it flying.
+  A tree can be grabbed and bent; it springs back and rings down.
+- **The rotunda** is kept clear: the olives are pruned back from it as they
+  grow, and a bent crown comes up against the building and stops.
 
 The ideas behind the leaves, canopy light and wind come from Elia Boutorabi's
 [Arbor](https://github.com/eliaboutorabi/trees). The code here is written
@@ -65,14 +68,15 @@ fresh for WebGL; none of it is copied.
 
 The scene is drawn in linear HDR into a multisampled half-float buffer. One
 `postprocessing` pass then does mipmap bloom, AgX tone mapping and a gentle
-grade. The sky is drawn into its own smaller sheet and laid behind the scene;
-while the view holds still it is redrawn half at a time, in a checkerboard.
-Shadows update every other frame.
+grade. The sky is drawn into its own smaller sheet and laid behind the scene.
+Shadows update every other frame, and hold still while the page scrolls.
 
 ### Keeping to 60 fps
 
-`adapt()` trades pixel ratio for frame time. Below the fold the scene is
-paced down to 20 fps, since only the sky shows there. Phones get fewer leaves
+`adapt()` trades pixel ratio for frame time, judged against the display's
+own refresh (so a 120 Hz screen counts a 12 ms frame as a miss), and never
+while the page is scrolling. Below the fold, at rest, the scene is paced down
+to 20 fps, since only the sky shows there. Phones get fewer leaves
 and fewer rows per blade. At phone size, and on desktop at a pixel ratio of
 1.5, the scene holds 60 fps on an Apple-silicon Mac in headless Chromium (with
 Metal ANGLE) and WebKit. Real phones still need checking by hand.

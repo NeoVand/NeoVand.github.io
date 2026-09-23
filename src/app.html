@@ -54,7 +54,7 @@
 				const root = document.documentElement;
 				root.classList.toggle('day', day);
 				const bar = document.querySelector('meta[name="theme-color"]');
-				if (bar) bar.setAttribute('content', day ? '#9fb7d6' : '#0e1731');
+				if (bar) bar.setAttribute('content', day ? '#aec4d3' : '#0e1731');
 				// the page is built behind a curtain and comes up whole; only a
 				// script sets this, so with JS off there is no curtain to lift
 				root.classList.add('veiled');
@@ -82,7 +82,7 @@
 				transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);
 			}
 			html.veiled.day #veil {
-				background: #9fb7d6;
+				background: #aec4d3;
 			}
 			html.veil-gone #veil {
 				opacity: 0;

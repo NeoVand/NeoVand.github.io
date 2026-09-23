@@ -19,11 +19,14 @@
 		void lights.day;
 		redraw();
 	});
-	const W = 90,
-		H = 300,
+	// the sheet the cord is drawn on is wide, so a swing is never cut off by
+	// its edge; it runs to the edge of the window, and the cord hangs from a
+	// point as far in from that edge as it always has
+	const W = 280,
+		H = 320,
 		SEG = 8.5;
-	const ax = W / 2,
-		ay = -4;
+	let ax = W - 67;
+	const ay = -4;
 	/** how far the cord has to come out of the fitting to click */
 	const TRIP = 20;
 	/** and how far it can come out at all */
@@ -31,7 +34,9 @@
 
 	onMount(() => {
 		// shorter where the page stacks, so it hangs clear of the island's crowns
-		const N = matchMedia('(max-width: 899px), (max-aspect-ratio: 21/20)').matches ? 8 : 16;
+		const stacked = matchMedia('(max-width: 899px), (max-aspect-ratio: 21/20)').matches;
+		const N = stacked ? 8 : 16;
+		ax = W - (stacked ? 55 : 67);
 		const g = canvas.getContext('2d')!;
 		const dpr = Math.min(2, devicePixelRatio || 1);
 		canvas.width = W * dpr;
@@ -72,8 +77,8 @@
 			}
 			const top = ay + out;
 			for (let i = 1; i < N; i++) {
-				const vx = (x[i] - px[i]) * 0.985,
-					vy = (y[i] - py[i]) * 0.985;
+				const vx = (x[i] - px[i]) * 0.975,
+					vy = (y[i] - py[i]) * 0.975;
 				px[i] = x[i];
 				py[i] = y[i];
 				x[i] += vx;
@@ -96,6 +101,25 @@
 					if (!(grab && i + 1 === N - 1)) {
 						x[i + 1] -= ox * (i === 0 ? 2 : 1);
 						y[i + 1] -= oy * (i === 0 ? 2 : 1);
+					}
+				}
+				// a braided cord has a little stiffness: no bead comes nearer
+				// the one two along than most of two lengths, so it curves and
+				// never folds into a zigzag
+				for (let i = 0; i < N - 2; i++) {
+					const dx = x[i + 2] - x[i],
+						dy = y[i + 2] - y[i];
+					const d = Math.hypot(dx, dy) || 1e-6;
+					const min = SEG * 1.86;
+					if (d >= min) continue;
+					const diff = ((d - min) / d) * 0.25;
+					if (i > 0) {
+						x[i] += dx * diff;
+						y[i] += dy * diff;
+					}
+					if (!(grab && i + 2 === N - 1)) {
+						x[i + 2] -= dx * diff;
+						y[i + 2] -= dy * diff;
 					}
 				}
 			}
@@ -183,21 +207,33 @@
 			// a tap is a tap however much the finger wobbles; a drag is a drag in
 			// any direction
 			if (Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) > 9) grab.moved = true;
-			// the knob stays within reach of the fitting, and the cord comes out of
-			// the fitting as far as the pull needs, up to its travel
-			const kx = Math.max(10, Math.min(W - 10, lx + grab.dx));
+			// Only a pull down draws the cord out of the fitting; a hand moving
+			// the knob sideways swings it on its arc, as a real cord does, and
+			// never clicks the switch by accident.
+			const kx = Math.max(10, Math.min(W - 6, lx + grab.dx));
 			const ky = ly + grab.dy;
-			const dx = kx - ax;
-			const reach = Math.sqrt(Math.max(0, L * L - dx * dx));
-			out = Math.max(0, Math.min(TRAVEL, ky - (ay + reach)));
+			out = Math.max(0, Math.min(TRAVEL, ky - (ay + L)));
 			outV = 0;
-			x[N - 1] = kx;
-			y[N - 1] = Math.min(ky, ay + out + reach);
+			const len = L + out;
+			const dx = Math.max(-len * 0.5, Math.min(len * 0.5, kx - ax));
+			x[N - 1] = ax + dx;
+			y[N - 1] = Math.min(ky, ay + out + Math.sqrt(Math.max(0, len * len - dx * dx)));
 		};
 		const release = (e: PointerEvent, cancelled: boolean) => {
 			if (!grab || grab.id !== e.pointerId) return;
 			const g0 = grab;
 			grab = null;
+			// let go, it swings from where it was, no faster than a hand could
+			// have thrown it: the last jerk of a pointer is not a throw
+			const i = N - 1;
+			const vx = x[i] - px[i],
+				vy = y[i] - py[i];
+			const v = Math.hypot(vx, vy),
+				vmax = 5;
+			if (v > vmax) {
+				px[i] = x[i] - (vx / v) * vmax;
+				py[i] = y[i] - (vy / v) * vmax;
+			}
 			const tap = !g0.moved && performance.now() - g0.t0 < 600;
 			// a cancelled touch was never a tap
 			if (tap && !cancelled && !g0.tripped) tug();
@@ -281,9 +317,10 @@
 	.lamp {
 		position: fixed;
 		top: 0;
-		right: max(22px, calc(env(safe-area-inset-right, 0px) + 10px));
-		width: 90px;
-		height: 300px;
+		/* the cord hangs 67px in from the window's right edge, as it did */
+		right: max(0px, calc(env(safe-area-inset-right, 0px) - 12px));
+		width: 280px;
+		height: 320px;
 		z-index: 20;
 		pointer-events: none;
 	}
@@ -311,8 +348,8 @@
 	@media (max-width: 899px), (max-aspect-ratio: 21/20) {
 		.lamp {
 			position: absolute;
-			height: 220px;
-			right: max(10px, calc(env(safe-area-inset-right, 0px) + 4px));
+			height: 240px;
+			right: max(0px, calc(env(safe-area-inset-right, 0px) - 6px));
 		}
 	}
 </style>
