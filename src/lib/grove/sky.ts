@@ -406,7 +406,7 @@ void main() {
 		// resolution (BACK_F); here only whether it can be seen, into alpha:
 		// it sets behind the cloud, and is gone before it could show through
 		// a gap beneath the horizon
-		float overM = (e < 0.0 ? (1.0 - hit.ok) * (1.0 - smoothstep(0.0, 0.05, -e)) : 1.0) * (1.0 - hc * 0.75);
+		float overM = (e < 0.0 ? (1.0 - hit.ok) * (1.0 - smoothstep(0.0, 0.035, -e)) : 1.0) * (1.0 - hc * 0.75);
 		moonVis = overM;
 		// its halo in the damp air
 		float ma = length(d - uMoon);
@@ -714,7 +714,7 @@ export function createSky() {
 		u.uCamWorld.value.copy(c.matrixWorld);
 		// the moon stays out in the first of the daylight, as it does, and
 		// has set by the time the day is full
-		u.uMoonOn.value = 1 - THREE.MathUtils.smoothstep(uniforms.uMix.value, 0.7, 1);
+		u.uMoonOn.value = 1 - THREE.MathUtils.smoothstep(uniforms.uMix.value, 0.55, 0.85);
 	};
 
 	let baked = false;
