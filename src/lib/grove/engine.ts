@@ -761,8 +761,10 @@ export class Grove {
 		// the light over the cloud, wherever down the page the eye is now
 		const keepEye = u.uEye.value,
 			keepMist = u.uMist.value;
+		const keepUnder = u.uUnder.value;
 		u.uEye.value = 1;
 		u.uMist.value = 0;
+		u.uUnder.value = 0;
 		u.uStars.value = 0;
 		u.uMix.value = 1;
 		this.envDay = pm.fromScene(envScene, 0, 0.1, 100).texture;
@@ -772,6 +774,7 @@ export class Grove {
 		u.uStars.value = 1;
 		u.uEye.value = keepEye;
 		u.uMist.value = keepMist;
+		u.uUnder.value = keepUnder;
 		u.uSun.value.copy(keepSun);
 		this.sky.update(this.renderer);
 		this.envRoom = pm.fromScene(lampRoom(), 0, 0.05, 50).texture;
@@ -875,8 +878,11 @@ export class Grove {
 	setScroll(y: number) {
 		this.scroll = y;
 		this.scrolledAt = performance.now();
+		this.pageMax = Math.max(1, document.documentElement.scrollHeight - innerHeight);
 		this.wake();
 	}
+	/** how far the page scrolls, for the length of the descent */
+	private pageMax = 1;
 	private scrolledAt = -1e9;
 	/** the page is moving, or has only just stopped */
 	private get scrolling() {
@@ -992,21 +998,34 @@ export class Grove {
 	}
 
 	/**
-	 * Going down the page is going down past the island and into the cloud.
-	 * The sky tips away as the island rises, so the moon and the stars go up
-	 * out of the picture with it and the sea of cloud comes up under the
-	 * eye; then the eye sinks to the tops, and through them, and the rest of
-	 * the page is read in the cloud's own soft light, going by in folds.
+	 * Going down the page is going down past the island, through the cloud,
+	 * and out of the bottom of it. The sky tips away as the island rises, so
+	 * the moon and the stars go up out of the picture with it and the sea of
+	 * cloud comes up under the eye; the eye sinks to the tops and into them,
+	 * and while it is in the white the view comes level again; then it comes
+	 * out underneath, into the air under the cloud, and goes on down through
+	 * it for the rest of the page.
 	 */
-	private descend(p: number) {
+	private descend() {
 		const u = this.sky.uniforms;
-		this.skyTip = THREE.MathUtils.degToRad(-20) * smoothstep(0.05, 1.15, p);
-		u.uEye.value = 1 - 0.52 * smoothstep(0.45, 1.9, p);
-		u.uMist.value = smoothstep(1.55, 2.15, p);
-		// the folds go by fastest on the way through, slowly after
 		const all = this.scrollSmooth / this.H;
+		const deg = THREE.MathUtils.degToRad;
+		// down toward the sea, and then, hidden in the cloud, level again and
+		// a little up, so the ceiling shows over the words
+		const over = deg(-20) * smoothstep(0.05, 1.15, all);
+		const under = deg(2 - (SKY_TILT[this.layout] - 8));
+		this.skyTip = lerp(over, under, smoothstep(1.62, 1.82, all));
+		u.uEye.value = 1 - 0.52 * smoothstep(0.45, 1.6, all);
+		// in, all white for a moment, and out
+		u.uMist.value = smoothstep(1.3, 1.62, all) * (1 - smoothstep(1.85, 2.3, all));
+		u.uUnder.value = smoothstep(1.62, 1.82, all);
+		// how far under the cloud: the whole rest of the page is the one
+		// descent, however long the page is on this screen
+		const rest = Math.max(1, this.pageMax / this.H - 1.8);
+		u.uAlt.value = 0.12 + (Math.max(0, all - 1.8) / rest) * 5.2;
+		// the folds rush by on the way through
 		u.uDrift.value =
-			0.2 * all + 0.7 * clamp(all - 1.4, 0, 0.8) + (this.reduced ? 0 : this.clock * 0.005);
+			0.2 * all + 1.1 * clamp(all - 1.3, 0, 0.7) + (this.reduced ? 0 : this.clock * 0.005);
 	}
 
 	/** Debugging: look at a point from a distance, or null to let go. */
@@ -1525,7 +1544,7 @@ export class Grove {
 		this.yaw += (px * 0.03 - 0) * dt;
 
 		const p = this.placeCamera(dt);
-		this.descend(p);
+		this.descend();
 		this.aimKey();
 		const visible = p < 1.85;
 		this.world.visible = visible;

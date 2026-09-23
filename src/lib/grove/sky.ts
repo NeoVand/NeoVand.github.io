@@ -90,6 +90,8 @@ uniform float uParity;  // -1 draws every pixel; 0 or 1, half of them, chequered
 uniform float uEye;     // how high over the cloud the eye is: 1 at the island, less going down
 uniform float uMist;    // how far into the cloud: 0 over it, 1 inside
 uniform float uDrift;   // the mist going by, with the scroll
+uniform float uUnder;   // 0 over the cloud, 1 out of the bottom of it
+uniform float uAlt;     // how far under the cloud's base the eye has come down
 
 ${ATMO}
 
@@ -281,12 +283,58 @@ float mistFold(vec3 d) {
 	return 0.7 + 0.6 * smoothstep(0.15, 0.85, f);
 }
 
+// ── under the cloud ──
+// Out of the bottom of the cloud the sky goes on: the sea's underside is a
+// ceiling overhead, grey in its bellies and lit where it is thin, and the
+// air goes down and down below it, bluer, to a loose deck of cloud far
+// beneath. By night the same, and dark.
+struct Pal {
+	vec3 hor;   // the air at the horizon
+	vec3 deep;  // straight down
+	vec3 belly; // the cloud's underside
+	vec3 lit;   // light through it where it is thin
+	vec3 low;   // the deck below
+};
+const float LOW_DECK = 7.5;
+
+// (read with the footprint's own gradients, taken before any branch: in a
+// branch the neighbours' footprints are not there to be had)
+float ceilD(vec2 q, vec2 gx, vec2 gy) {
+	float a = textureGrad(uCloud, q * 0.14 + vec2(uTime * 0.0016, 0.21), gx * 0.14, gy * 0.14).a;
+	float b = textureGrad(uCloud, q * 0.42 + vec2(0.3, uTime * 0.0009), gx * 0.42, gy * 0.42).r;
+	return smoothstep(0.3, 0.74, a * 0.55 + b * 0.45);
+}
+
+vec3 underWorld(vec3 d, Pal P) {
+	float e = d.y;
+	float A = uAlt;
+	// the two planes' footprints
+	float tc = A / max(e, 0.002);
+	vec2 qc = d.xz * tc, cX = dFdx(qc), cY = dFdy(qc);
+	float tl = (LOW_DECK - A) / max(-e, 0.002);
+	vec2 ql = d.xz * tl, lX = dFdx(ql), lY = dFdy(ql);
+	// the air: pale at the horizon, deepening downward
+	vec3 c = mix(P.hor, P.deep, pow(clamp(-e, 0.0, 1.0), 0.55));
+	if (e > 0.0) {
+		float dens = ceilD(qc, cX, cY);
+		vec3 ceil = mix(P.lit, P.belly, dens);
+		c = mix(ceil, P.hor, 1.0 - exp(-tc * 0.08));
+	} else {
+		float a = textureGrad(uCloud, ql * 0.1 + vec2(0.61, 0.2), lX * 0.1, lY * 0.1).a;
+		float b = textureGrad(uCloud, ql * 0.3, lX * 0.3, lY * 0.3).r;
+		float puff = smoothstep(0.52, 0.84, a * 0.5 + b * 0.5);
+		c = mix(c, P.low * (0.7 + 0.3 * b), puff * exp(-tl * 0.045) * 0.9);
+	}
+	// no line where the ceiling meets the air, or the deck
+	return mix(c, P.hor, exp(-abs(e) * 38.0) * 0.8);
+}
+
 void main() {
 	vec3 d = normalize(vDir);
 	float e = d.y;
 	float t = uTime;
 	SEA_B = uEye;
-	bool deep = uMist > 0.999;
+	bool deep = uMist > 0.999 || uUnder > 0.999;
 	float fold = uMist > 0.001 ? mistFold(d) : 1.0;
 	// brighter toward the top of the view, where the light comes in from
 	float lift = 0.74 + 0.4 * smoothstep(-0.65, 0.05, e);
@@ -380,8 +428,22 @@ void main() {
 		float limb = 0.5 + 0.5 * sqrt(max(0.0, 1.0 - rr * rr));
 		float over = (e < 0.0 ? 1.0 - hit.ok : 1.0) * (1.0 - hc);
 		day += uSunEye * E * 7.0 * sd * limb * over;
+		if (uUnder > 0.001) {
+			Pal P;
+			// the air under the cloud as blue as the sky over it: the same
+			// table, read as high as the sky over the island is
+			vec3 hi = sky(uLutDay, normalize(vec3(d.x, 0.5, d.z)), s).rgb * E;
+			hi = max(mix(vec3(dot(hi, vec3(0.2126, 0.7152, 0.0722))), hi, uSkySat * 1.15), 0.0);
+			vec3 mid = sky(uLutDay, normalize(vec3(d.x, 0.14, d.z)), s).rgb * E;
+			P.hor = mid * 0.92;
+			P.deep = hi * 0.8;
+			P.belly = amb * 0.34 + hi * 0.12;
+			P.lit = mix(hi * 1.1, uSunCloud * E * 0.62 * 0.22, 0.35);
+			P.low = uSunCloud * E * 0.62 * 0.2 + amb * 0.62;
+			day = mix(day, underWorld(d, P), uUnder);
+		}
 		// in the cloud, the day is its lit white
-		vec3 mistD = mix(uSunCloud * E * 0.62 * 0.2 + amb * 0.62, zen * 1.25, 0.5) * lift * fold;
+		vec3 mistD = mix(uSunCloud * E * 0.62 * 0.2 + amb * 0.62, zen * 1.3, 0.62) * lift * fold;
 		day = mix(day, mistD, uMist);
 		col += day * uMix;
 	}
@@ -435,10 +497,19 @@ void main() {
 		// its halo in the damp air
 		float ma = length(d - uMoon);
 		night += vec3(0.5, 0.56, 0.72) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
-		// in the cloud by night, the moon's light through it, grey-blue
-		vec3 mistN = (uMoonLight * 0.15 + amb * 0.62 + moonAir * 0.5) * lift * fold;
+		if (uUnder > 0.001) {
+			Pal P;
+			P.hor = horN * 1.05 + moonAir * 0.3;
+			P.deep = zenN * 0.5;
+			P.belly = zenN * 0.75;
+			P.lit = horN * 1.5 + uMoonLight * 0.06;
+			P.low = horN * 0.8 + uMoonLight * 0.015;
+			night = mix(night, underWorld(d, P), uUnder);
+		}
+		// in the cloud by night, the moon's light through it: dim, grey-blue
+		vec3 mistN = (uMoonLight * 0.06 + amb * 0.4 + moonAir * 0.3) * lift * fold;
 		night = mix(night, mistN, uMist);
-		moonVis *= 1.0 - smoothstep(0.0, 0.5, uMist);
+		moonVis *= (1.0 - smoothstep(0.0, 0.5, uMist)) * (1.0 - uUnder);
 		col += night * (1.0 - uMix);
 	}
 
@@ -685,7 +756,9 @@ export function createSky() {
 		uParity: { value: -1 },
 		uEye: { value: 1 },
 		uMist: { value: 0 },
-		uDrift: { value: 0 }
+		uDrift: { value: 0 },
+		uUnder: { value: 0 },
+		uAlt: { value: 0.1 }
 	};
 	const mat = new THREE.ShaderMaterial({
 		uniforms,
