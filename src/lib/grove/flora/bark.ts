@@ -92,8 +92,9 @@ export function addBark(
 		pc = new THREE.Vector3(),
 		n = new THREE.Vector3();
 	const maxArc = sk.maxArc;
-	for (const nodes of axes.values()) {
+	for (const [axisId, nodes] of axes) {
 		const chain = [sk.parent[nodes[0]], ...nodes];
+		const limb = axisId !== sk.axis[0];
 		const r0 = sk.radius[nodes[0]];
 		if (r0 * at.scale < opts.minRadius) continue;
 		const sides = sidesFor(r0 * at.scale);
@@ -118,6 +119,9 @@ export function addBark(
 			// the ring at the branch point takes the child's radius, not the
 			// parent's, and sits a little back inside the parent
 			let r = sk.radius[k === 0 ? nodes[0] : id];
+			// a limb swells a little where it leaves its parent, the collar
+			// that welds it on
+			if (limb && k === 1) r *= 1.16;
 			const p = sk.pos[id];
 			const s = sk.arc[id];
 			// the thick stems are fluted and a little knuckled (the flare at the
@@ -160,6 +164,31 @@ export function addBark(
 					out.index.push(a0, a1, b0i, a1, b1, b0i);
 				}
 			}
+		}
+		// and at its end a short cone closing it, so no stem ends in an open
+		// ring: every stem now ends at a tip
+		{
+			const last = chain[chain.length - 1];
+			const rEnd = sk.radius[last];
+			const ring = base + (chain.length - 1) * (sides + 1);
+			const tip = out.position.length / 3;
+			const pl = sk.pos[last];
+			v.copy(pl)
+				.addScaledVector(T, rEnd * 1.6)
+				.applyMatrix4(m);
+			out.position.push(v.x, v.y, v.z);
+			n.copy(T).applyMatrix3(nm).normalize();
+			out.normal.push(n.x, n.y, n.z);
+			out.uv.push(around * 0.5, ((sk.arc[last] + rEnd) * at.scale) / 0.32);
+			c.copy(pl).applyMatrix4(m);
+			pc.copy(sk.pos[sk.parent[last] >= 0 ? sk.parent[last] : last]).applyMatrix4(m);
+			out.center.push(c.x, c.y, c.z);
+			out.parent.push(pc.x, pc.y, pc.z);
+			const bl = sk.parent[last] >= 0 ? sk.arc[sk.parent[last]] : sk.arc[last];
+			out.birth.push(bl / maxArc, sk.arc[last] / maxArc);
+			out.base.push(at.pos.x, at.pos.y, at.pos.z, height);
+			out.sky.push(1);
+			for (let j = 0; j < sides; j++) out.index.push(ring + j, ring + j + 1, tip);
 		}
 	}
 }

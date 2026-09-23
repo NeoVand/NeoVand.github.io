@@ -216,6 +216,27 @@ export function taperRadii(
 		mass[sk.parent[i]] += mass[i];
 	}
 	mass[0] = Math.max(mass[0], 1e-4);
+	// A stem never simply stops where it forks. Read as the grammar writes
+	// it, a fork ends its stem and starts every limb as a stem of its own, so
+	// the wood would end in an open ring with thinner tubes begun inside it.
+	// Instead the strongest limb out of every fork carries the stem on, on
+	// the same axis, so the wood runs through the fork in one piece and only
+	// the lesser limbs spring from its side.
+	const children: number[][] = Array.from({ length: n }, () => []);
+	for (let i = 1; i < n; i++) children[sk.parent[i]].push(i);
+	for (let i = 0; i < n; i++) {
+		const ch = children[i];
+		if (!ch.length || ch.some((c) => sk.axis[c] === sk.axis[i])) continue;
+		let best = ch[0];
+		for (const c of ch) if (mass[c] > mass[best]) best = c;
+		const from = sk.axis[best],
+			to = sk.axis[i];
+		for (let j = best; j < n; j++)
+			if (sk.axis[j] === from) {
+				sk.axis[j] = to;
+				sk.order[j] = sk.order[i];
+			}
+	}
 	const pipe = (i: number) => Math.max(opt.tip, opt.base * Math.pow(mass[i] / mass[0], 1 / opt.p));
 	// every stem, in order along it
 	const axes = new Map<number, number[]>();
