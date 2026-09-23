@@ -82,10 +82,10 @@ export function patch<M extends THREE.Material>(m: M, key: string, ...patches: P
 }
 
 /**
- * By night the colour goes out of everything but a little blue, as it does
- * under a moon: the flat grove drew its night as a pencil study, and a single
- * coloured thing in it read as a spot of paint. Applied after lighting and
- * before tone mapping, on every lit surface.
+ * By night the colour thins toward blue, as it does in moonlight when the eye
+ * starts to see with its rods: a little, not a pencil study — the lamps are
+ * warm and the night is meant to be a pleasant place. Applied after lighting
+ * and before tone mapping, on every lit surface.
  */
 export const nightPatch: Patch = (shader) => {
 	shader.uniforms.uNight = U.uNight;
@@ -96,7 +96,7 @@ export const nightPatch: Patch = (shader) => {
 			`#include <opaque_fragment>
 			{
 				float l = dot(gl_FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-				gl_FragColor.rgb = mix(gl_FragColor.rgb, l * vec3(0.86, 0.93, 1.08), uNight * 0.86);
+				gl_FragColor.rgb = mix(gl_FragColor.rgb, l * vec3(0.82, 0.92, 1.12), uNight * 0.3);
 			}`
 		);
 };

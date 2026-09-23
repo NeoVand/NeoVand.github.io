@@ -2,15 +2,29 @@ import * as THREE from 'three';
 import { U } from './shared';
 
 // ─── The sky ──────────────────────────────────────────────────────────────
-// The flat grove's weather, carried into three dimensions: the same gyroid
-// FBM for the cloud, the same three sheets of stars with the Milky Way
-// arriving as a crowding of them, the same meteor every half-minute or so.
-// What changes is that it is read off the direction of a ray rather than a
-// place on the screen, so it holds still in the world while the camera
-// moves through it. The cloud overhead is a plane the ray meets, which is
-// exactly the perspective the old shader faked with its 1/uv.y; and the
-// island floats, so below the horizon there is more sky — a sea of cloud,
-// lit from the side by a sun that is almost down.
+// Light first, then weather. The air is modelled as it is: Rayleigh, Mie and
+// ozone in a shell round a planet, each thinning with height, and sunlight
+// scattered once on its way to the eye. That is integrated into a small
+// sky-view table (Hillaire's) whenever the sun moves, with Schüler's
+// approximation to the Chapman function for the sun's own path through the
+// air; the screen then only reads the table. It gives what a hand-mixed
+// gradient never quite does: a blue sky overhead while the sun is on the
+// horizon, a hot glow round it, the far side pink, and — with the sun six
+// degrees under the cloud — the blue hour, lit from the top of the sky down.
+// The island's light is the same sums, done on the CPU, so the sky and what
+// it lights cannot disagree.
+//
+// Below the horizon is a sea of cumulus. Its tops are a height field baked
+// once into a small tileable texture (cauliflower domes on domes, gathered
+// into towers and valleys by a slow noise) and the eye's ray is marched
+// into it, so near puffs hide far ones and the tops stand up; each is lit
+// by the sun from almost level, with the long shadows that makes, and by
+// the sky above, and the air between (from the same table, which stops its
+// downward rays at the cloud) lies over it. Overhead there is a thin field
+// of altocumulus, gilt underneath near the sun.
+//
+// Everything is linear HDR: the sheet is half-float, and the post pass
+// tone-maps sky and island together, so the sun's disc can bloom.
 
 const VERT = /* glsl */ `
 varying vec3 vDir;
@@ -18,6 +32,37 @@ void main() {
 	vDir = position;
 	vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 	gl_Position = p.xyww;
+}
+`;
+
+// the air, in kilometres: an eye three up, cloud tops at one and a half
+const ATMO = /* glsl */ `
+const float PI = 3.14159265;
+const float LN2 = 0.6931472;
+const float RP = 6360.0, RA = 6420.0;
+const float EYE = 3.0, CLOUD = 1.6, HIGH = 6.5;
+const vec3 BR = vec3(5.802e-3, 13.558e-3, 33.1e-3);   // Rayleigh, H 8
+const float BMS = 5.5e-3, BME = 6.1e-3;               // an evening's Mie, H 1.2
+const vec3 BO = vec3(0.650e-3, 1.881e-3, 0.085e-3);   // ozone, a layer at 25
+float phaseR(float mu) { return 3.0 / (16.0 * PI) * (1.0 + mu * mu); }
+float phaseHG(float mu, float g) {
+	float g2 = g * g;
+	return (1.0 - g2) / (4.0 * PI * pow(max(1.0 + g2 - 2.0 * g * mu, 1e-4), 1.5));
+}
+// Schüler: the Chapman function times the density, X and h in half-heights
+float chapman(float X, float h, float c) {
+	float s = sqrt(X + h);
+	if (c >= 0.0) return s / (s * c + 1.0) * exp2(-h);
+	float x0 = sqrt(1.0 - c * c) * (X + h);
+	return 2.0 * sqrt(x0) * exp2(X - x0) - s / (1.0 - s * c) * exp2(-h);
+}
+// optical depth from a point at radius r to the sun, cosChi off its zenith
+vec3 sunTau(float r, float cosChi) {
+	float h = r - RP;
+	float cR = chapman(RP / (8.0 * LN2), h / (8.0 * LN2), cosChi) * 8.0;
+	float cM = chapman(RP / (1.2 * LN2), h / (1.2 * LN2), cosChi) * 1.2;
+	// ozone rides with the Rayleigh column, scaled to its own
+	return (BR + BO * 1.875) * cR + BME * cM;
 }
 `;
 
@@ -30,54 +75,139 @@ uniform vec3 uSun;
 uniform vec3 uMoon;
 uniform float uStars; // 0 in the environment capture, 1 on screen
 uniform float uSea;   // the scale of the cloud below
+uniform sampler2D uCloud;
+uniform sampler2D uLutDay;
+uniform vec3 uSunEye;   // sunlight as it reaches the eye, the cloud, the high cloud
+uniform vec3 uSunCloud;
+uniform vec3 uSunHigh;
+uniform vec3 uMoonLight;
+uniform float uParity;  // -1 draws every pixel; 0 or 1, half of them, chequered
 
-float gyroid(vec3 p) { return dot(sin(p), cos(p.yzx)); }
-float fbmG(vec3 p, float t, float w, float aa) {
-	float r = 0.0, a = 0.5;
-	for (int i = 0; i < 4; i++) {
-		p.z += t + r * w;
-		r += abs(gyroid(p / a)) * a;
-		a /= aa;
-	}
-	return r;
+${ATMO}
+
+// the sky-view table: azimuth from the sun across, elevation up, with the
+// rows crowded toward the horizon where the colour changes fastest
+vec4 sky(sampler2D lut, vec3 d, vec3 s) {
+	vec2 dh = normalize(d.xz + vec2(1e-6, 0.0));
+	vec2 sh = normalize(s.xz + vec2(1e-6, 0.0));
+	float phi = acos(clamp(dot(dh, sh), -1.0, 1.0));
+	float el = asin(clamp(d.y, -1.0, 1.0));
+	float v = 0.5 + 0.5 * sign(el) * sqrt(abs(el) / (PI * 0.5));
+	return texture(lut, vec2(phi / PI, v));
 }
+
 float h21(vec2 p) {
 	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
 	q += dot(q, q.yzx + 33.33);
 	return fract((q.x + q.y) * q.z);
 }
-vec2 h22(vec2 p) {
-	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
-	q += dot(q, q.yzx + 33.33);
-	return fract((q.xx + q.yz) * q.zy);
+
+// ── the cloud sea ──
+// The layer's tops lie between SEA_B below the eye and SEA_B - SEA_A; the
+// eye is SEA_B above its floor, in units the texture is scaled into.
+const float SEA_B = 1.0;
+const float SEA_A = 0.34;
+vec2 gX, gY; // the floor plane's footprint per pixel, for filtering
+// a slow swell over the whole sheet, so it never repeats in rows: it
+// changes over many puffs, so one reading serves a whole ray
+float swell(vec2 p, float k) {
+	vec2 c = p * uSea * 0.071 + vec2(0.63, 0.12);
+	return 0.45 + 1.1 * textureGrad(uCloud, c, gX * uSea * 0.071 * k, gY * uSea * 0.071 * k).a;
 }
-// a cloud top seen from above is a heap of domes: each cell of a Worley
-// field is one puff, and three octaves of them make the cauliflower
-// Each returns the height and its slope together — the slope of a dome is
-// known exactly — so the light on a cloud costs one pass, not two samples.
-vec3 dome(vec2 p) {
-	vec2 i = floor(p), f = fract(p);
-	vec3 best = vec3(0.0);
-	for (int y = -1; y <= 1; y++)
-		for (int x = -1; x <= 1; x++) {
-			vec2 g = vec2(float(x), float(y));
-			vec2 o = h22(i + g);
-			float r = 0.55 + 0.35 * o.x;
-			vec2 dv = (g + o - f) / r;
-			float s = max(0.0, 1.0 - dot(dv, dv));
-			float k = 0.6 + 0.4 * o.y;
-			float h = sqrt(s) * k;
-			if (h > best.x) best = vec3(h, k * dv / (r * max(sqrt(s), 0.08)));
+float SW = 1.0;
+float seaH(vec2 p, float k) {
+	vec2 a = p * uSea + vec2(uTime * 0.0021, uTime * 0.0008);
+	vec2 b = p * uSea * 0.37 + vec2(0.31, 0.77) - vec2(uTime * 0.0007, 0.0);
+	float h1 = textureGrad(uCloud, a, gX * uSea * k, gY * uSea * k).r;
+	float h2 = textureGrad(uCloud, b, gX * uSea * 0.37 * k, gY * uSea * 0.37 * k).r;
+	return clamp((h1 * 0.78 + h2 * 0.52 - 0.18) * SW, 0.0, 1.0);
+}
+
+struct Hit { vec2 p; float h; float t; float ok; };
+
+Hit marchSea(vec3 d) {
+	Hit r;
+	float de = -d.y;
+	float t0 = (SEA_B - SEA_A) / de;
+	float t1 = SEA_B / de;
+	float tb = t1;
+	float prevY = 0.0, prevS = 0.0, prevT = t0;
+	r.ok = 0.0; r.t = t1; r.p = d.xz * t1; r.h = 0.0;
+	SW = swell(d.xz * mix(t0, t1, 0.4), 1.0);
+	// finer where the ray skims the tops, or the far cloud comes out in
+	// terraces
+	int N = de < 0.12 ? 16 : 10;
+	for (int i = 0; i <= 16; i++) {
+		if (i > N) break;
+		float t = mix(t0, t1, float(i) / float(N));
+		vec2 p = d.xz * t;
+		float y = SEA_B - de * t;          // height of the ray above the floor
+		float s = SEA_A * seaH(p, t / tb); // height of the tops here
+		if (y <= s) {
+			// between the last step and this one: where they cross
+			float tt = t;
+			if (i > 0) {
+				// narrow the crossing down between the last two steps
+				float lo = prevT, hi = t;
+				for (int j = 0; j < 4; j++) {
+					float mid = 0.5 * (lo + hi);
+					float ym = SEA_B - de * mid;
+					if (ym <= SEA_A * seaH(d.xz * mid, mid / tb)) hi = mid; else lo = mid;
+				}
+				tt = 0.5 * (lo + hi);
+			}
+			r.t = tt;
+			r.p = d.xz * tt;
+			r.h = seaH(r.p, tt / tb);
+			r.ok = 1.0;
+			return r;
 		}
-	return best;
+		prevY = y; prevS = s; prevT = t;
+	}
+	return r;
 }
-vec3 puffs(vec2 p, float lod) {
-	vec3 a = dome(p) * 0.62;
-	vec3 b = dome(p * 2.3 + 3.7) * (0.28 * lod);
-	b.yz *= 2.3;
-	vec3 c = dome(p * 5.1 + 9.1) * (0.12 * lod * lod);
-	c.yz *= 5.1;
-	return a + b + c;
+
+// the light on a cloud top: from a light that is almost level, with the long
+// shadows of the tops between; from the sky above; and through the thin edges
+vec3 shadeSea(Hit hit, vec3 d, vec3 l, vec3 lightCol, vec3 amb, float tb) {
+	float k = hit.t / tb;
+	float e = 0.02;
+	float hx = seaH(hit.p + vec2(e, 0.0), k) - hit.h;
+	float hz = seaH(hit.p + vec2(0.0, e), k) - hit.h;
+	vec3 n = normalize(vec3(-hx * SEA_A / e, 1.0, -hz * SEA_A / e));
+	// shadow: walk toward the light over the tops
+	float y0 = hit.h * SEA_A;
+	float vis = 1.0;
+	vec2 ld = normalize(l.xz + 1e-5);
+	float rise = l.y / max(length(l.xz), 1e-3);
+	for (int i = 1; i <= 3; i++) {
+		float s = 0.07 * float(i * i);
+		float hs = seaH(hit.p + ld * s, k) * SEA_A;
+		vis *= smoothstep(-0.03, 0.02, (y0 + rise * s) - hs);
+	}
+	float ndl = dot(n, l);
+	float wrap = clamp((ndl + 0.35) / 1.35, 0.0, 1.0);
+	float mu = dot(d, l);
+	// the edges are thin and the light comes through them toward the eye
+	float thin = 1.0 - smoothstep(0.1, 0.55, hit.h);
+	float glow = phaseHG(mu, 0.6) * 4.0 * PI * thin * 0.6;
+	float ao = mix(0.35, 1.0, smoothstep(0.0, 0.8, hit.h));
+	// irradiance to radiance: a white Lambertian top under a light of this
+	// colour is that colour over pi
+	vec3 c = lightCol * (wrap * vis / 3.14159 + glow * vis * 0.25);
+	c += amb * ao * (0.5 + 0.5 * n.y);
+	return c * 0.9;
+}
+
+// ── the high cloud ──
+float highC(vec2 p, vec2 gx, vec2 gy) {
+	// drifts of cloud: slow fbm for where it is, finer for its ragged
+	// edges, and a little of the puffs for texture within
+	vec2 a = p * 0.19 + vec2(uTime * 0.0035, -uTime * 0.0011);
+	vec4 c = textureGrad(uCloud, a, gx * 0.19, gy * 0.19);
+	vec4 c2 = textureGrad(uCloud, p * 0.047 + vec2(0.4, 0.1), gx * 0.047, gy * 0.047);
+	float f = c2.a * 0.72 + c.b * 0.42 + c.g * 0.12;
+	return smoothstep(0.56, 0.86, f);
 }
 
 vec3 starField(vec2 p, float t, float band) {
@@ -89,14 +219,14 @@ vec3 starField(vec2 p, float t, float band) {
 		vec2 id = floor(g);
 		vec2 f = fract(g) - 0.5;
 		float h = h21(id + fi * 31.7);
-		float on = step(0.855 + fi * 0.045 - band * 0.09, h);
+		float on = step(0.86 + fi * 0.045 - band * 0.09, h);
 		vec2 off = vec2(h21(id + fi * 7.1 + 2.3), h21(id + fi * 7.1 + 5.9)) - 0.5;
 		float d = length(f - off * 0.72) / dens;
-		float core = exp(-d * (760.0 - fi * 90.0));
-		float halo = exp(-d * 190.0) * 0.07;
-		float tw = 0.45 + 0.55 * sin(t * (0.5 + h * 1.7) + h * 63.0);
-		float lum = (0.18 + 0.62 * h21(id + fi * 13.3)) * (1.0 - fi * 0.32);
-		vec3 tint = mix(vec3(0.74, 0.83, 1.0), vec3(1.0, 0.91, 0.76), h21(id + fi * 3.7));
+		float core = exp(-d * (820.0 - fi * 90.0));
+		float halo = exp(-d * 210.0) * 0.05;
+		float tw = 0.55 + 0.45 * sin(t * (0.5 + h * 1.7) + h * 63.0);
+		float lum = (0.2 + 0.8 * h21(id + fi * 13.3)) * (1.0 - fi * 0.3);
+		vec3 tint = mix(vec3(0.74, 0.83, 1.0), vec3(1.0, 0.9, 0.76), h21(id + fi * 3.7));
 		acc += tint * (core + halo) * on * tw * lum;
 	}
 	return acc;
@@ -117,149 +247,261 @@ vec3 meteor(vec2 p, float t, float seed) {
 	float hh = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
 	float d = length(pa - ba * hh);
 	float streak = exp(-d * 2200.0) + exp(-d * 640.0) * 0.10;
-	return streak * pow(hh, 2.6) * sin(u * 3.14159) * live * vec3(0.86, 0.92, 1.0) * 0.65;
+	return streak * pow(hh, 2.6) * sin(u * 3.14159) * live * vec3(0.86, 0.92, 1.0) * 1.2;
+}
+
+// a disc with an edge exactly a pixel soft however small the sheet
+float disc(vec3 d, vec3 c, float r, out float rr) {
+	float x = length(d - c);   // chord: precise where acos is not
+	rr = x / r;
+	float w = max(fwidth(x), 1e-5);
+	return 1.0 - smoothstep(r - w, r + w, x);
 }
 
 void main() {
 	vec3 d = normalize(vDir);
 	float e = d.y;
-	vec3 col = vec3(0.0);
 	float t = uTime;
+	// footprints on the two planes, taken here where every pixel runs them
+	float dn = max(-e, 0.004);
+	vec2 floorP = d.xz * (SEA_B / dn);
+	gX = dFdx(floorP);
+	gY = dFdy(floorP);
+	float up = max(e, 0.004);
+	vec2 roofP = d.xz / (up + 0.035);
+	vec2 rX = dFdx(roofP), rY = dFdy(roofP);
+	// while the view holds still, each frame redraws half the sheet
+	if (uParity >= 0.0 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) + uParity, 2.0) < 1.0) discard;
 
-	// ── day: a quarter to eight on a summer evening ──
+	// the sun, sinking under the cloud as the lights go down
+	vec3 s = uSun;
+	const float E = 30.0;   // the sun's irradiance, in the units the grade expects
+
+	Hit hit;
+	hit.ok = 0.0;
+	if (e < 0.0) hit = marchSea(d);
+	float tb = SEA_B / dn;
+
+	float hc = 0.0;
+	if (e > 0.0) hc = highC(roofP, rX, rY) * smoothstep(0.004, 0.06, e);
+	vec3 up3 = vec3(0.0, 1.0, 0.0);
+
+	vec3 col = vec3(0.0);
+
 	if (uMix > 0.001) {
-		vec3 hor = vec3(0.985, 0.78, 0.60);
-		vec3 zen = vec3(0.34, 0.47, 0.69);
-		float sa = acos(clamp(dot(d, uSun), -1.0, 1.0));
-		// the horizon is warmest under the sun and cooler round the back
-		float toward = dot(normalize(vec2(d.x, d.z) + 1e-5), normalize(uSun.xz)) * 0.5 + 0.5;
-		vec3 horz = mix(vec3(0.80, 0.76, 0.78), hor, 0.35 + 0.65 * toward);
-		vec3 sky = mix(horz, zen, smoothstep(-0.02, 0.62, e));
-		sky += vec3(1.0, 0.66, 0.36) * exp(-sa * 3.0) * 0.32;
-		sky += vec3(1.0, 0.80, 0.55) * exp(-sa * 16.0) * 0.45;
-
-		vec3 day = sky;
-		if (e > 0.0) {
-			// cloud on a plane overhead
-			vec2 pc = d.xz / (e + 0.06);
-			float tc = t * 0.016;
-			vec3 q = vec3(pc * 0.42, 0.0);
-			q.xy += vec2(tc * 2.0, 0.0);
-			q.y += fbmG(q * 10.0, -tc * 3.0, 0.0, 1.9) * 0.07;
-			float c = fbmG(q, tc, 0.3, 1.7) * 0.5 - 0.5;
-			c *= smoothstep(0.02, 0.32, e);
-			vec3 shade = vec3(0.72, 0.68, 0.78);
-			vec3 lit = vec3(1.0, 0.84, 0.66);
-			vec3 cloud = mix(shade, vec3(0.97, 0.93, 0.92), smoothstep(0.02, 0.34, c));
-			cloud = mix(cloud, lit, exp(-sa * 1.4) * 0.9);
-			day = mix(sky, cloud, smoothstep(0.0, 0.16, c) * 0.92);
-			// long thin streaks of stratus just over the horizon, gilt from below
-			float az = atan(d.x, -d.z);
-			float band = smoothstep(0.012, 0.035, e) * smoothstep(0.16, 0.06, e);
-			float st = fbmG(vec3(az * 7.0 + tc * 0.4, e * 90.0, 0.0), tc * 0.3, 0.2, 2.1);
-			st = smoothstep(0.95, 1.55, st) * band;
-			vec3 streak = mix(vec3(0.84, 0.66, 0.66), vec3(1.0, 0.8, 0.56), 0.35 + 0.65 * toward);
-			day = mix(day, streak, st * 0.7);
+		vec3 day;
+		vec4 air = sky(uLutDay, d, s);
+		vec3 zen = sky(uLutDay, up3, s).rgb * E;
+		vec3 away = sky(uLutDay, normalize(vec3(-s.x, 0.02, -s.z)), s).rgb * E;
+		vec3 near = sky(uLutDay, normalize(vec3(s.x, 0.02, s.z)), s).rgb * E;
+		// the light of the whole sky on a level white surface, over pi
+		vec3 amb = zen * 0.72 + away * 0.2 + near * 0.08;
+		if (e >= 0.0) {
+			day = air.rgb * E;
+			if (hc > 0.0) {
+				// lit from below and the side by a sun at the horizon: gilt
+				// bellies near it, blue-grey ones away from it
+				float mu = dot(d, s);
+				float toward = hc - highC(roofP + normalize(s.xz) * 0.9, rX, rY);
+				float edge = clamp(0.35 - toward * 1.6, 0.0, 1.0);
+				vec3 lit = uSunHigh * E * (phaseHG(mu, 0.5) * 0.55 + 0.035) * (0.35 + 0.65 * edge);
+				vec3 cc = lit + zen * 0.78 * (1.1 - hc * 0.35);
+				day = mix(day, cc, hc * 0.88);
+			}
 		} else {
-			// the sea of cloud below: a field of heights, lit from the side.
-			// Its slope toward the sun is read off a second sample taken a
-			// step along the sun's bearing, which is all the normal a cloud top
-			// lit from almost level needs.
-			float de = -e;
-			vec2 pc = d.xz / (de + 0.015);
-			float tc = t * 0.012;
-			vec2 q = pc * uSea + vec2(tc, tc * 0.35);
-			// fine octaves give way with distance, before they can shimmer
-			float lod = smoothstep(0.03, 0.16, de);
-			vec2 sd2 = normalize(uSun.xz);
-			vec3 hp = puffs(q, lod);
-			float top = smoothstep(0.08, 0.75, hp.x);
-			float slope = dot(hp.yz, sd2);
-			float lit = clamp(0.55 + slope * 0.55, 0.0, 1.0);
-			vec3 gap = vec3(0.38, 0.39, 0.56);
-			vec3 shade = vec3(0.66, 0.62, 0.74);
-			vec3 sunlit = vec3(1.0, 0.83, 0.68);
-			vec3 sea = mix(gap, shade, top);
-			sea = mix(sea, sunlit, top * lit * (0.45 + 0.55 * toward));
-			// a gilt edge on the tops nearest the sun
-			sea += vec3(1.0, 0.72, 0.45) * pow(lit, 5.0) * top * (0.25 + 0.75 * exp(-sa * 1.6)) * 0.35;
-			sea += vec3(1.0, 0.62, 0.34) * exp(-sa * 2.4) * 0.25;
-			// thinning into the haze at the horizon
-			day = mix(sea, horz, exp(-de * 9.0) * 0.92);
+			vec3 cloud = shadeSea(hit, d, s, uSunCloud * E, amb, tb);
+			// the gaps: cloud further down, in its own shadow, blue
+			vec3 gap = amb * 0.42;
+			day = mix(gap, cloud, hit.ok);
+			// and the air between, from the table, which stops at the cloud
+			day = day * air.a + air.rgb * E;
 		}
-		// the sun, a little softer than white
-		float sa2 = acos(clamp(dot(d, uSun), -1.0, 1.0));
-		day += vec3(1.0, 0.86, 0.66) * smoothstep(0.022, 0.017, sa2) * 1.4;
+		// the sun: a disc darkened toward its limb, which is what makes it
+		// round rather than a hole in the sky
+		float rr;
+		float sd = disc(d, s, 0.0095, rr);
+		float limb = 0.5 + 0.5 * sqrt(max(0.0, 1.0 - rr * rr));
+		float over = (e < 0.0 ? 1.0 - hit.ok : 1.0) * (1.0 - hc);
+		day += uSunEye * E * 7.0 * sd * limb * over;
 		col += day * uMix;
 	}
 
-	// ── night ──
 	if (uMix < 0.999) {
-		vec3 sky = vec3(0.0);
-		if (e > -0.02) {
+		// The blue hour is mostly light scattered many times over, which the
+		// table (one bounce) does not carry: so the night's air is drawn, not
+		// computed — indigo overhead, a paler band low down, the moon's glow.
+		vec3 night;
+		vec3 zenN = vec3(0.0075, 0.012, 0.037);
+		vec3 horN = vec3(0.036, 0.044, 0.088);
+		float mu = dot(d, uMoon);
+		vec3 moonAir = uMoonLight * (phaseHG(mu, 0.8) * 0.35 + phaseR(mu) * 0.12) * 0.05;
+		vec3 amb = zenN * 1.7 + horN * 0.35;
+		if (e >= 0.0) {
+			night = mix(horN, zenN, pow(e, 0.45)) + moonAir;
 			float az = atan(d.z, d.x);
 			float el = asin(clamp(e, -1.0, 1.0));
-			// the flat sky counted two units to a screen's height; a screen here
-			// is about half a radian, so the same density is nearly four to one
 			vec2 p = vec2(az * cos(el), el) * 3.8;
 			vec3 bandN = normalize(vec3(0.35, 0.55, -0.76));
 			float band = exp(-pow(dot(d, bandN) * 3.2, 2.0));
-			float neb = smoothstep(0.34, 1.0, fbmG(d * 9.0, t * 0.004, 0.25, 1.9));
-			band *= 0.30 + 0.70 * neb;
-			float fade = smoothstep(-0.02, 0.12, e);
-			sky += band * vec3(0.016, 0.018, 0.030) * fade;
-			sky += starField(p, t, band) * fade * uStars;
-			sky += meteor(vec2(az, el), t, 0.0) * uStars;
+			band *= 0.35 + 0.65 * textureGrad(uCloud, d.xz * 0.9 + d.y * 0.3, rX * 0.01, rY * 0.01).b;
+			float fade = smoothstep(0.0, 0.14, e) * (1.0 - hc * 0.9);
+			night += band * vec3(0.010, 0.012, 0.022) * fade;
+			night += starField(p, t, band) * fade * uStars * 0.9;
+			night += meteor(vec2(az, el), t, 0.0) * uStars * fade;
+			if (hc > 0.0) {
+				// the high cloud by moonlight: grey, silvered near the moon
+				vec3 cc = uMoonLight * (0.03 + phaseHG(mu, 0.6) * 0.8) + amb * 0.55;
+				night = mix(night, cc, hc * 0.85);
+			}
+		} else {
+			vec3 cloud = shadeSea(hit, d, uMoon, uMoonLight, amb, tb);
+			vec3 gap = amb * 0.4;
+			night = mix(gap, cloud, hit.ok);
+			// the moon's lane across the tops beneath it
+			float lane = exp(-abs(atan(d.x, -d.z) - atan(uMoon.x, -uMoon.z)) * 6.0 / (dn * 4.0 + 0.12));
+			night += uMoonLight * 0.05 * lane * hit.ok * smoothstep(0.2, 0.8, hit.h);
+			// into the band low down with distance
+			float haze = 1.0 - exp(-hit.t * 0.026);
+			night = mix(night, horN + moonAir, haze);
 		}
-		float ma = acos(clamp(dot(d, uMoon), -1.0, 1.0));
-		if (e < 0.0) {
-			// the same sea of cloud, in moonlight: silver on the tops that face
-			// the moon, and a path of light laid across it underneath
-			float de = -e;
-			vec2 pc = d.xz / (de + 0.015);
-			float tc = t * 0.012;
-			vec2 q = pc * uSea + vec2(tc, tc * 0.35);
-			float lod = smoothstep(0.03, 0.16, de);
-			vec2 md = normalize(uMoon.xz);
-			vec3 hp = puffs(q, lod);
-			float top = smoothstep(0.08, 0.75, hp.x);
-			float lit = clamp(0.5 + dot(hp.yz, md) * 0.55, 0.0, 1.0);
-			float mtoward = dot(normalize(d.xz + 1e-5), md) * 0.5 + 0.5;
-			// cloud, not water: soft grey masses, their tops only a little silvered
-			vec3 sea = mix(vec3(0.008, 0.01, 0.016), vec3(0.05, 0.056, 0.072), top);
-			sea += vec3(0.07, 0.08, 0.1) * top * lit * (0.35 + 0.65 * mtoward);
-			// the moon's path: a broad pale lane across the cloud under it
-			float path = exp(-abs(atan(d.x, -d.z) - atan(uMoon.x, -uMoon.z)) * 5.0 / (de * 4.0 + 0.15));
-			sea += vec3(0.10, 0.11, 0.14) * path * (0.3 + 0.7 * top);
-			sky = mix(sea, vec3(0.04, 0.045, 0.06), exp(-de * 12.0) * 0.9);
-		}
-		// the moon: a lit disc, a little mottled, and a halo
-		// the moon: a full disc, darker toward the limb, with the grey seas
-		// laid across it — broad and soft, the way they look without a lens
-		const float MR = 0.026;
-		float disc = smoothstep(MR, MR - 0.0018, ma);
-		vec3 mp = (d - uMoon) / MR;
-		float seas = smoothstep(0.55, 1.05, fbmG(mp * 1.7 + vec3(1.3, 2.1, 0.4), 0.0, 0.15, 1.8));
-		float limb = sqrt(max(0.0, 1.0 - pow(ma / MR, 2.0)));
-		sky *= 1.0 - disc;
-		sky += disc * vec3(0.94, 0.95, 0.97) * (0.93 - 0.2 * seas) * (0.78 + 0.22 * limb);
-		sky += vec3(0.62, 0.68, 0.82) * exp(-ma * 26.0) * 0.14;
-		sky += vec3(0.30, 0.36, 0.50) * exp(-ma * 5.0) * 0.07;
-		col += sky * (1.0 - uMix);
+		// the moon: a full disc, darker toward the limb, the grey seas across it
+		float rr;
+		float md = disc(d, uMoon, 0.0165, rr);
+		vec3 mp = (d - uMoon) / 0.0165;
+		vec2 muv = mp.xy * 0.45 + vec2(0.3, 0.6);
+		float seas = smoothstep(0.42, 0.72, texture(uCloud, muv * 0.5).b);
+		float limb = sqrt(max(0.0, 1.0 - rr * rr));
+		float overM = (e < 0.0 ? 1.0 - hit.ok : 1.0) * (1.0 - hc * 0.75);
+		night = mix(night, vec3(1.0, 0.975, 0.93) * (2.4 - 0.7 * seas) * (0.72 + 0.28 * limb), md * overM);
+		// its halo in the damp air
+		float ma = length(d - uMoon);
+		night += vec3(0.5, 0.56, 0.72) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
+		col += night * (1.0 - uMix);
 	}
 
-	// authored in display colour, as the flat sky was; taken to linear so the
-	// same values light the scene when the sky is captured as its environment
-	gl_FragColor = vec4(pow(max(col, 0.0), vec3(2.2)), 1.0);
-	#include <colorspace_fragment>
+	gl_FragColor = vec4(max(col, 0.0), 1.0);
 }
 `;
 
-// The sky is soft — cloud, and stars drawn with a smooth falloff — so it is
-// drawn into a smaller sheet than the screen and laid behind the scene by a
-// copy that costs nothing: the flat site capped its sky under a retina
-// viewport's worth of pixels for the same reason. The noise that breaks up
-// banding goes on in the copy, in the screen's own pixels and colour.
+// The sky-view table. Each texel is one direction: azimuth from the sun
+// across, elevation up (rows crowded toward the horizon). Along it, sunlight
+// scattered once toward the eye, summed in 24 steps; downward rays stop at
+// the cloud tops, and alpha keeps how much of the cloud shows through the air.
+const LUT_F = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform float uSunEl;
+${ATMO}
+void main() {
+	float phi = vUv.x * PI;
+	float sv = vUv.y * 2.0 - 1.0;
+	float el = sign(sv) * sv * sv * PI * 0.5;
+	vec3 d = vec3(sin(phi) * cos(el), sin(el), cos(phi) * cos(el));
+	vec3 sun = vec3(0.0, sin(uSunEl), cos(uSunEl));
+	vec3 o = vec3(0.0, RP + EYE, 0.0);
+	float tMax;
+	if (d.y < 0.0) tMax = min((EYE - CLOUD) / max(-d.y, 1e-4), 700.0);
+	else {
+		float b = dot(o, d);
+		float c = dot(o, o) - RA * RA;
+		tMax = -b + sqrt(max(b * b - c, 0.0));
+	}
+	float mu = dot(d, sun);
+	float pR = phaseR(mu), pM = phaseHG(mu, 0.8);
+	vec3 L = vec3(0.0), tau = vec3(0.0);
+	const int N = 24;
+	for (int i = 0; i < N; i++) {
+		float t0 = tMax * pow(float(i) / float(N), 2.0);
+		float t1 = tMax * pow(float(i + 1) / float(N), 2.0);
+		float ds = t1 - t0;
+		vec3 p = o + d * (0.5 * (t0 + t1));
+		float r = length(p);
+		float h = r - RP;
+		float dR = exp(-h / 8.0), dM = exp(-h / 1.2), dO = max(0.0, 1.0 - abs(h - 25.0) / 15.0);
+		vec3 ext = BR * dR + BME * dM + BO * dO;
+		vec3 Ts = exp(-(tau + ext * ds * 0.5 + sunTau(r, dot(p / r, sun))));
+		L += Ts * (BR * dR * pR + BMS * dM * pM) * ds;
+		tau += ext * ds;
+	}
+	// a little for all the light scattered more than once
+	L += L * vec3(0.18, 0.22, 0.3);
+	gl_FragColor = vec4(L, dot(exp(-tau), vec3(0.2126, 0.7152, 0.0722)));
+}
+`;
+
+// The cloud's shapes, baked once: a tileable RGBA sheet the sky reads with
+// hardware filtering, which is both cheaper than noise evaluated per pixel
+// and free of the shimmer noise has when its features fall under a pixel.
+//   r  cumulus tops: domes on domes, gathered into towers and valleys
+//   g  altocumulus: small puffs in drifts
+//   b  fine fbm, for the moon's seas and the Milky Way's dust
+//   a  a slow fbm, to vary the high cloud's cover
+const BAKE_F = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+vec2 h22(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.xx + q.yz) * q.zy);
+}
+// every noise wraps on the unit square: cells are taken modulo the period
+float domes(vec2 uv, float P, float seed) {
+	vec2 p = uv * P;
+	vec2 i = floor(p), f = fract(p);
+	float best = 0.0;
+	for (int y = -1; y <= 1; y++)
+		for (int x = -1; x <= 1; x++) {
+			vec2 g = vec2(float(x), float(y));
+			vec2 o = h22(mod(i + g, P) + seed);
+			float r = 0.62 + 0.36 * o.x;
+			vec2 dv = (g + o - f) / r;
+			float s = 1.0 - dot(dv, dv);
+			if (s > 0.0) best = max(best, sqrt(s) * (0.55 + 0.45 * o.y));
+		}
+	return best;
+}
+float grad(vec2 uv, float P, float seed) {
+	vec2 p = uv * P;
+	vec2 i = floor(p), f = fract(p);
+	vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+	float n = 0.0;
+	for (int y = 0; y <= 1; y++)
+		for (int x = 0; x <= 1; x++) {
+			vec2 g = vec2(float(x), float(y));
+			vec2 a = h22(mod(i + g, P) + seed) * 6.2831853;
+			float v = dot(vec2(cos(a.x), sin(a.x)), f - g);
+			n += v * (x == 0 ? 1.0 - u.x : u.x) * (y == 0 ? 1.0 - u.y : u.y);
+		}
+	return n * 1.4;
+}
+float fbm(vec2 uv, float P, float seed) {
+	float s = 0.0, a = 0.5;
+	for (int i = 0; i < 5; i++) {
+		s += grad(uv, P, seed + float(i) * 17.0) * a;
+		P *= 2.0;
+		a *= 0.5;
+	}
+	return s;
+}
+void main() {
+	vec2 uv = vUv;
+	vec2 w = vec2(fbm(uv, 3.0, 1.0), fbm(uv, 3.0, 9.0)) * 0.035;
+	float big = domes(uv + w, 5.0, 3.0);
+	float mid = domes(uv + w * 1.6, 11.0, 7.0);
+	float small = domes(uv + w * 2.2, 23.0, 11.0);
+	float fine = domes(uv, 47.0, 13.0);
+	float heap = big * 0.56 + mid * 0.3 + small * 0.15 + fine * 0.06;
+	float cover = smoothstep(-0.42, 0.5, fbm(uv, 2.0, 21.0));
+	float r = heap * (0.38 + 0.62 * cover) + 0.1 * cover;
+	float alto = domes(uv + w * 3.0, 29.0, 31.0) * smoothstep(-0.25, 0.45, fbm(uv, 4.0, 41.0));
+	float b = fbm(uv, 8.0, 51.0) * 0.5 + 0.5;
+	float a = fbm(uv, 2.0, 61.0) * 0.5 + 0.5;
+	gl_FragColor = vec4(r, alto, b, a);
+}
+`;
+
+// The sky is soft, so it is drawn into a smaller sheet than the screen and
+// laid behind the scene by a copy that costs nothing.
 const BACK_V = /* glsl */ `
 varying vec2 vUv;
 void main() {
@@ -269,29 +511,52 @@ void main() {
 `;
 const BACK_F = /* glsl */ `
 uniform sampler2D uSky;
-uniform float uTime;
+uniform vec2 uTexel;
 varying vec2 vUv;
-float h21(vec2 p) {
-	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
-	q += dot(q, q.yzx + 33.33);
-	return fract((q.x + q.y) * q.z);
-}
 void main() {
-	gl_FragColor = texture2D(uSky, vUv);
-	#include <colorspace_fragment>
-	gl_FragColor.rgb += (h21(gl_FragCoord.xy + fract(uTime)) - 0.5) / 255.0;
-	gl_FragColor.a = 1.0;
+	// four taps on a rotated grid, half a texel out: the edges of cloud
+	// against cloud behind it are a hard step in the sheet, and this is
+	// their antialiasing
+	vec2 a = uTexel * vec2(0.42, 0.18), b = uTexel * vec2(-0.18, 0.42);
+	vec3 c = texture2D(uSky, vUv + a).rgb + texture2D(uSky, vUv - a).rgb
+		+ texture2D(uSky, vUv + b).rgb + texture2D(uSky, vUv - b).rgb;
+	gl_FragColor = vec4(c * 0.25, 1.0);
 }
 `;
 
 export function createSky() {
+	const cloud = new THREE.WebGLRenderTarget(512, 512, {
+		depthBuffer: false,
+		wrapS: THREE.RepeatWrapping,
+		wrapT: THREE.RepeatWrapping,
+		minFilter: THREE.LinearMipmapLinearFilter,
+		magFilter: THREE.LinearFilter,
+		generateMipmaps: true
+	});
+	const lutOpts = {
+		depthBuffer: false,
+		type: THREE.HalfFloatType,
+		minFilter: THREE.LinearFilter,
+		magFilter: THREE.LinearFilter,
+		wrapS: THREE.ClampToEdgeWrapping,
+		wrapT: THREE.ClampToEdgeWrapping,
+		generateMipmaps: false
+	};
+	const lutDay = new THREE.WebGLRenderTarget(256, 192, lutOpts);
 	const uniforms = {
 		uTime: U.uTime,
 		uMix: { value: 1 },
-		uSun: { value: new THREE.Vector3(0.7, 0.12, -0.7).normalize() },
+		uSun: { value: new THREE.Vector3(0.7, 0.06, -0.7).normalize() },
 		uMoon: { value: new THREE.Vector3(-0.55, 0.52, -0.65).normalize() },
 		uStars: { value: 1 },
-		uSea: { value: 0.28 }
+		uSea: { value: 0.32 },
+		uCloud: { value: cloud.texture },
+		uLutDay: { value: lutDay.texture },
+		uSunEye: { value: new THREE.Color() },
+		uSunCloud: { value: new THREE.Color() },
+		uSunHigh: { value: new THREE.Color() },
+		uMoonLight: { value: new THREE.Color(0.3, 0.36, 0.5) },
+		uParity: { value: -1 }
 	};
 	const mat = new THREE.ShaderMaterial({
 		uniforms,
@@ -313,10 +578,9 @@ export function createSky() {
 	const scene = new THREE.Scene();
 	scene.add(mesh);
 
-	// the sheet: sRGB bytes, so the gradient keeps its steps in the darks
 	const target = new THREE.WebGLRenderTarget(2, 2, {
 		depthBuffer: false,
-		colorSpace: THREE.SRGBColorSpace,
+		type: THREE.HalfFloatType,
 		minFilter: THREE.LinearFilter,
 		magFilter: THREE.LinearFilter,
 		generateMipmaps: false
@@ -329,7 +593,7 @@ export function createSky() {
 	const backdrop = new THREE.Mesh(
 		tri,
 		new THREE.ShaderMaterial({
-			uniforms: { uSky: { value: target.texture }, uTime: U.uTime },
+			uniforms: { uSky: { value: target.texture }, uTexel: { value: new THREE.Vector2(0.5, 0.5) } },
 			vertexShader: BACK_V,
 			fragmentShader: BACK_F,
 			depthWrite: false,
@@ -340,22 +604,98 @@ export function createSky() {
 	backdrop.renderOrder = -1000;
 	backdrop.frustumCulled = false;
 
+	let baked = false;
+	const lutMat = new THREE.ShaderMaterial({
+		uniforms: { uSunEl: { value: 0 } },
+		vertexShader: BACK_V,
+		fragmentShader: LUT_F
+	});
+	const lutQuad = new THREE.Mesh(tri, lutMat);
+	lutQuad.frustumCulled = false;
+	const lutScene = new THREE.Scene();
+	lutScene.add(lutQuad);
+	const flat = new THREE.Camera();
+	let drawn = 99;
+	const drawLut = (renderer: THREE.WebGLRenderer, rt: THREE.WebGLRenderTarget, el: number) => {
+		lutMat.uniforms.uSunEl.value = el;
+		const prev = renderer.getRenderTarget();
+		renderer.setRenderTarget(rt);
+		renderer.render(lutScene, flat);
+		renderer.setRenderTarget(prev);
+	};
 	return {
 		mesh,
 		uniforms,
 		backdrop,
+		/** draw the cloud's shapes into their sheet, once */
+		bake(renderer: THREE.WebGLRenderer) {
+			if (baked) return;
+			baked = true;
+			cloud.texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+			const q = new THREE.Mesh(
+				tri,
+				new THREE.ShaderMaterial({ vertexShader: BACK_V, fragmentShader: BAKE_F })
+			);
+			q.frustumCulled = false;
+			const s = new THREE.Scene();
+			s.add(q);
+			const prev = renderer.getRenderTarget();
+			renderer.setRenderTarget(cloud);
+			renderer.render(s, new THREE.Camera());
+			renderer.setRenderTarget(prev);
+			(q.material as THREE.Material).dispose();
+		},
+		/** redraw the tables if the sun has moved, and the light it gives */
+		update(renderer: THREE.WebGLRenderer) {
+			const el = Math.asin(THREE.MathUtils.clamp(uniforms.uSun.value.y, -1, 1));
+			if (Math.abs(el - drawn) > 1e-4) {
+				drawn = el;
+				drawLut(renderer, lutDay, el);
+				sunLight(el, 3.0, uniforms.uSunEye.value);
+				sunLight(el, 1.6, uniforms.uSunCloud.value);
+				sunLight(el, 6.5, uniforms.uSunHigh.value);
+			}
+		},
 		/** size the sheet: the screen's pixels, up to a budget */
 		setSize(px: number, py: number, budget: number) {
 			const s = Math.min(1, Math.sqrt(budget / Math.max(1, px * py)));
 			const w = Math.max(2, Math.round(px * s)),
 				h = Math.max(2, Math.round(py * s));
 			if (target.width !== w || target.height !== h) target.setSize(w, h);
+			(backdrop.material as THREE.ShaderMaterial).uniforms.uTexel.value.set(1 / w, 1 / h);
 		},
-		render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+		/** draw the sheet: all of it, or one colour of the chequer */
+		render(renderer: THREE.WebGLRenderer, camera: THREE.Camera, parity = -1) {
+			uniforms.uParity.value = parity;
 			const prev = renderer.getRenderTarget();
+			const clear = renderer.autoClear;
+			renderer.autoClear = false;
 			renderer.setRenderTarget(target);
 			renderer.render(scene, camera);
 			renderer.setRenderTarget(prev);
+			renderer.autoClear = clear;
 		}
 	};
+}
+
+/** Sunlight after the air, at an altitude in kilometres, for a sun at an
+ *  elevation in radians: the sky shader's own sums (Rayleigh, Mie, ozone,
+ *  Schüler's Chapman), done once on the CPU for the island's light. */
+export function sunLight(el: number, alt = 3.0, out = new THREE.Color()) {
+	const RP = 6360,
+		LN2 = Math.LN2;
+	const chapman = (X: number, h: number, c: number) => {
+		const s = Math.sqrt(X + h);
+		if (c >= 0) return (s / (s * c + 1)) * Math.pow(2, -h);
+		const x0 = Math.sqrt(1 - c * c) * (X + h);
+		return 2 * Math.sqrt(x0) * Math.pow(2, X - x0) - (s / (1 - s * c)) * Math.pow(2, -h);
+	};
+	const c = Math.sin(el);
+	const cR = chapman(RP / (8 * LN2), alt / (8 * LN2), c) * 8;
+	const cM = chapman(RP / (1.2 * LN2), alt / (1.2 * LN2), c) * 1.2;
+	const BR = [5.802e-3, 13.558e-3, 33.1e-3],
+		BO = [0.65e-3, 1.881e-3, 0.085e-3],
+		BME = 6.1e-3;
+	const tau = (i: number) => (BR[i] + BO[i] * 1.875) * cR + BME * cM;
+	return out.setRGB(Math.exp(-tau(0)), Math.exp(-tau(1)), Math.exp(-tau(2)));
 }

@@ -1,6 +1,16 @@
 import * as THREE from 'three';
 import { U } from './shared';
-import { createSky } from './sky';
+import { createSky, sunLight } from './sky';
+import {
+	BloomEffect,
+	Effect,
+	BlendFunction,
+	EffectComposer,
+	EffectPass,
+	RenderPass,
+	ToneMappingEffect,
+	ToneMappingMode
+} from 'postprocessing';
 import { brickTextures, lawnTexture, barkTextures, woodTexture } from './textures';
 import { buildIsland, ISLAND, type IslandParts } from './island';
 import { buildPavilion, type PavilionParts } from './pavilion';
@@ -30,22 +40,63 @@ export interface GroveOptions {
 
 type Layout = 'side' | 'stack';
 
-const SUN_DIR = new THREE.Vector3(0.9, 0.22, -0.36).normalize();
-// The moon hangs low over the cloud, in the picture: between the island and
-// the words where they stand side by side, over the island where they stack.
-// It is a mood, not an almanac.
+// Directions in the sky, by azimuth from straight ahead (positive to the
+// right) and elevation. The sun is on the horizon, a little to the left of
+// the island, and lights it from the left and behind, so the crowns glow at
+// their edges; the light on the island is taken from a little higher than
+// the disc, or its shadows would be twenty metres long. The moon hangs low
+// over the cloud: between the island and the words where they stand side by
+// side, over the island where they stack. It is a mood, not an almanac.
 const moonAt = (azDeg: number, elDeg: number) => {
 	const az = THREE.MathUtils.degToRad(azDeg),
 		el = THREE.MathUtils.degToRad(elDeg);
 	return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 };
 const MOON_DIR = moonAt(12, 6.5);
+const SUN_AZ = { side: -11, stack: -5 };
+const SUN_EL = 1.6;
+/** where the disc goes when the lights go down: under the cloud */
+const SUN_SET_EL = -7;
+const KEY_EL = 14;
+
+/** The grade, after the tone map and in display terms: a little more
+ *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
+ *  shadows. Then every pixel opaque, whatever wrote alpha before it. */
+class Grade extends Effect {
+	constructor() {
+		super(
+			'Grade',
+			`uniform float uSat;
+			uniform float uCon;
+			uniform float uWarm;
+			void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+				vec3 c = pow(max(inputColor.rgb, 0.0), vec3(1.0 / 2.2));
+				float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+				c = mix(vec3(l), c, uSat);
+				c = mix(c, c * c * (3.0 - 2.0 * c), uCon);
+				c *= mix(vec3(0.97, 0.99, 1.05), vec3(1.04, 1.0, 0.95), smoothstep(0.15, 0.85, l) * uWarm + (1.0 - uWarm) * 0.5);
+				outputColor = vec4(pow(max(c, 0.0), vec3(2.2)), 1.0);
+			}`,
+			{
+				blendFunction: BlendFunction.SET,
+				uniforms: new Map([
+					['uSat', new THREE.Uniform(1.14)],
+					['uCon', new THREE.Uniform(0.22)],
+					['uWarm', new THREE.Uniform(1.0)]
+				])
+			}
+		);
+	}
+}
 
 export class Grove {
 	renderer: THREE.WebGLRenderer;
 	scene = new THREE.Scene();
 	camera: THREE.PerspectiveCamera;
 	sky = createSky();
+	private composer: EffectComposer;
+	private bloom: BloomEffect;
+	private sunAz = SUN_AZ.side;
 	private light: THREE.DirectionalLight;
 	private hemi: THREE.HemisphereLight;
 	private envDay: THREE.Texture | null = null;
@@ -120,13 +171,17 @@ export class Grove {
 		this.rand = rng(opts.seed ?? Date.now() & 0xffff);
 		const r = new THREE.WebGLRenderer({
 			canvas: opts.canvas,
-			antialias: true,
+			// the frame is drawn off screen, multisampled, and tone-mapped on
+			// the way out; the canvas itself needs neither
+			antialias: false,
+			depth: false,
 			alpha: false,
 			powerPreference: 'high-performance',
 			stencil: false
 		});
 		r.outputColorSpace = THREE.SRGBColorSpace;
-		r.toneMapping = THREE.ACESFilmicToneMapping;
+		r.toneMapping = THREE.NoToneMapping;
+		// read by the tone-mapping pass, which is where exposure lives now
 		r.toneMappingExposure = 1.0;
 		r.shadowMap.enabled = true;
 		r.shadowMap.type = THREE.PCFShadowMap;
@@ -139,18 +194,35 @@ export class Grove {
 		this.dpr = this.dprCap;
 
 		this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
-		this.sky.uniforms.uSun.value.copy(SUN_DIR);
 		this.sky.uniforms.uMoon.value.copy(this.moonDir);
-		// The sky fills every pixel with an opaque colour first. Leaves cut out
-		// by alpha-to-coverage then write their partial alpha into the canvas,
-		// and a browser that composites the canvas's alpha (WebKit does, even
-		// asked not to) shows the page's own ground through every leaf edge as
-		// a speck of blue. So nothing after the sky writes alpha; draw() turns
-		// it back on at the end of the frame, for the shadow pass, which packs
-		// depth into all four channels.
-		const gl = r.getContext();
-		this.sky.backdrop.onAfterRender = () => gl.colorMask(true, true, true, false);
 		this.scene.add(this.sky.backdrop);
+
+		// The frame: drawn in linear light into a half-float, multisampled
+		// buffer, then one pass that blooms what is brighter than white, tone
+		// maps the lot with AgX, dithers, and seals the alpha (a browser that
+		// composites a canvas's alpha, as WebKit does even when asked not to,
+		// would otherwise show the page through every leaf's edge).
+		this.composer = new EffectComposer(r, {
+			frameBufferType: THREE.HalfFloatType,
+			multisampling: Math.min(4, r.capabilities.maxSamples)
+		});
+		this.composer.addPass(new RenderPass(this.scene, this.camera));
+		this.bloom = new BloomEffect({
+			mipmapBlur: true,
+			levels: 6,
+			luminanceThreshold: 1.25,
+			luminanceSmoothing: 0.12,
+			intensity: 0.5,
+			radius: 0.7
+		});
+		const pass = new EffectPass(
+			this.camera,
+			this.bloom,
+			new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
+			new Grade()
+		);
+		pass.dithering = true;
+		this.composer.addPass(pass);
 		this.scene.add(this.world);
 
 		this.light = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -326,6 +398,10 @@ export class Grove {
 		envScene.add(cap);
 		const u = this.sky.uniforms;
 		const keep = u.uMix.value;
+		const keepSun = u.uSun.value.clone();
+		// the day's light is taken with the sun where the day has it
+		u.uSun.value.copy(moonAt(this.sunAz, SUN_EL));
+		this.sky.update(this.renderer);
 		u.uStars.value = 0;
 		u.uMix.value = 1;
 		this.envDay = pm.fromScene(envScene, 0, 0.1, 100).texture;
@@ -333,6 +409,8 @@ export class Grove {
 		this.envNight = pm.fromScene(envScene, 0, 0.1, 100).texture;
 		u.uMix.value = keep;
 		u.uStars.value = 1;
+		u.uSun.value.copy(keepSun);
+		this.sky.update(this.renderer);
 		pm.dispose();
 	}
 
@@ -343,19 +421,27 @@ export class Grove {
 		// the light swings from the moon's quarter to the sun's
 		// the moon is behind the island from here, so by night it is drawn in
 		// its rim light, with a cool fill from the sky to keep its shape
+		// the disc sinks under the cloud as the lights go down
+		const k = smoothstep(0, 1, m);
+		this.sky.uniforms.uSun.value.copy(moonAt(this.sunAz, lerp(SUN_SET_EL, SUN_EL, k)));
+		// the key comes from the side the sun is on, well round from it, so
+		// the island's face takes the gold and its shadows fall across it
+		const key = moonAt(this.sunAz - 64, KEY_EL);
 		const moonLight = this.moonDir.clone().setY(Math.max(this.moonDir.y, 0.28)).normalize();
-		const dir = moonLight.lerp(SUN_DIR, smoothstep(0, 1, m)).normalize();
+		const dir = moonLight.lerp(key, k).normalize();
 		this.light.position.copy(dir).multiplyScalar(30);
-		const sunCol = new THREE.Color(1.0, 0.72, 0.48);
+		// the sun's colour is the sky's: what is left of white after the air
+		const sunCol = sunLight(THREE.MathUtils.degToRad(6), 1.5);
+		sunCol.multiplyScalar(1 / Math.max(sunCol.r, sunCol.g, sunCol.b));
 		const moonCol = new THREE.Color(0.7, 0.8, 1.0);
 		this.light.color.copy(moonCol).lerp(sunCol, m);
-		this.light.intensity = lerp(2.2, 3.1, m);
+		this.light.intensity = lerp(2.2, 3.4, m);
 		// by night the cloud below is lit by the moon, and gives some of it back
 		this.hemi.color.set(0x55688c).lerp(new THREE.Color(0xa9c0e0), m);
 		this.hemi.groundColor.set(0x3a465e).lerp(new THREE.Color(0x9a6a4c), m);
 		this.hemi.intensity = lerp(1.7, 0.75, m);
 		U.uSunColor.value.copy(this.light.color).multiplyScalar(lerp(0.18, 1, m));
-		this.renderer.toneMappingExposure = lerp(1.45, 1.0, m);
+		this.renderer.toneMappingExposure = lerp(0.9, 1.0, m);
 		const env = m > 0.5 ? this.envDay : this.envNight;
 		this.scene.environment = env;
 		this.scene.environmentIntensity =
@@ -398,6 +484,8 @@ export class Grove {
 		this.layout = w >= 900 && w / h > 1.05 ? 'side' : 'stack';
 		this.renderer.setPixelRatio(this.dpr);
 		this.renderer.setSize(w, h, false);
+		this.setSamples();
+		this.composer.setSize(w, h, false);
 		this.sizeSky();
 		this.camera.aspect = w / h;
 		// fit the island and its trees into the part of the screen it owns
@@ -411,6 +499,7 @@ export class Grove {
 		this.hv = 2 * this.dist * tan;
 		const [fx, fy] = this.layout === 'side' ? [0.31, 0.5] : [0.5, 0.27];
 		this.moonDir.copy(this.layout === 'side' ? MOON_DIR : moonAt(3.5, 7.5));
+		this.sunAz = SUN_AZ[this.layout];
 		this.sky.uniforms.uMoon.value.copy(this.moonDir);
 		this.applyDay(this.dayMix);
 		this.camera.setViewOffset(w, h, (0.5 - fx) * w, (0.5 - fy) * h, w, h);
@@ -565,6 +654,8 @@ export class Grove {
 
 	// ── the loop ──────────────────────────────────────────────────────────
 	async ready() {
+		this.sky.bake(this.renderer);
+		this.sky.update(this.renderer);
 		await this.bakeEnvironment();
 		this.applyDay(this.dayMix);
 		this.placeCamera(0);
@@ -580,10 +671,30 @@ export class Grove {
 		this.wake();
 	}
 
+	// While the camera holds still (its idle drift is a sixth of a pixel a
+	// frame, and the cloud crawls) the sheet of sky is redrawn half at a
+	// time, as a chequer, so every frame carries the same half of its cost;
+	// when anything that would show it moves, all of it, every frame.
+	private skyQ = new THREE.Quaternion(0, 0, 0, 0);
+	private skyTick = 0;
+	skyDirty = true;
 	private draw() {
-		this.sky.render(this.renderer, this.camera);
-		this.renderer.render(this.scene, this.camera);
-		this.renderer.getContext().colorMask(true, true, true, true);
+		this.sky.update(this.renderer);
+		this.skyTick ^= 1;
+		// the half not drawn is a frame old: fine unless the view has turned
+		// more than a pixel or so since the last frame
+		const turned = this.skyQ.angleTo(this.camera.quaternion) > 5e-4;
+		this.skyQ.copy(this.camera.quaternion);
+		const full = turned || this.skyDirty || Math.abs(this.dayMix - this.dayTo) > 1e-4;
+		this.sky.render(this.renderer, this.camera, full ? -1 : this.skyTick);
+		this.skyDirty = false;
+		this.composer.render();
+	}
+
+	/** Where pixels are small, two samples smooth an edge as well as four. */
+	private setSamples() {
+		const n = Math.min(this.dpr >= 1.75 ? 2 : 4, this.renderer.capabilities.maxSamples);
+		if (this.composer.multisampling !== n) this.composer.multisampling = n;
 	}
 
 	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
@@ -591,7 +702,8 @@ export class Grove {
 	private sizeSky() {
 		const px = this.W * this.dpr,
 			py = this.H * this.dpr;
-		this.sky.setSize(px, py, lerp(2.2e6, 1.3e6, this.dayMix));
+		this.sky.setSize(px, py, lerp(1.25e6, 0.75e6, this.dayMix));
+		this.skyDirty = true;
 	}
 
 	/** Begin the opening: the trees grow in, the camera settles, birds come. */
@@ -767,6 +879,8 @@ export class Grove {
 			this.dpr = next;
 			this.renderer.setPixelRatio(next);
 			this.renderer.setSize(this.W, this.H, false);
+			this.setSamples();
+			this.composer.setSize(this.W, this.H, false);
 			this.sizeSky();
 		}
 	}
@@ -783,6 +897,7 @@ export class Grove {
 	dispose() {
 		this.stop();
 		for (const [t, type, fn, o] of this.listeners) t.removeEventListener(type, fn, o);
+		this.composer.dispose();
 		this.renderer.dispose();
 	}
 }

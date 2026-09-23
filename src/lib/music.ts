@@ -71,16 +71,39 @@ function fade(g: GainNode, to: number, secs: number) {
 	g.gain.linearRampToValueAtTime(to, now + secs);
 }
 
+// Every request takes a ticket; anything still pending when a later request
+// arrives stands down, so the last thing asked for is what happens.
+let ticket = 0;
+let stopped: (() => void) | null = null;
+
+/** Called if the music stops on its own (a record that would not start). */
+export function onStop(fn: () => void) {
+	stopped = fn;
+}
+
 export async function play(day: boolean) {
+	const my = ++ticket;
 	const c = audio();
-	if (c.state === 'suspended') await c.resume();
 	const which = day ? 'day' : 'night';
 	const t = track(which);
+	// the element is started in the same turn as the gesture that asked for
+	// it, before anything is awaited, or Safari will not let it play
+	const started = t.el.play();
+	const resumed = c.state === 'suspended' ? c.resume() : Promise.resolve();
 	hiss(0.3, 0.035);
 	current = which;
+	let ok = true;
 	try {
-		await t.el.play();
+		await Promise.all([started, resumed]);
 	} catch {
+		ok = false;
+	}
+	if (my !== ticket) {
+		// superseded while it started: whoever came later owns the music now
+		if (current !== which) t.el.pause();
+		return ok;
+	}
+	if (!ok) {
 		current = null;
 		return false;
 	}
@@ -89,24 +112,50 @@ export async function play(day: boolean) {
 }
 
 export function pause() {
+	++ticket;
 	if (!ctx || !current) return;
-	const t = tracks[current]!;
-	fade(t.gain, 0, 0.35);
-	const el = t.el;
-	setTimeout(() => el.pause(), 380);
+	const which = current;
+	const t = tracks[which]!;
 	current = null;
+	fade(t.gain, 0, 0.35);
+	setTimeout(() => {
+		if (current !== which) t.el.pause();
+	}, 380);
 }
 
 /** The lights changed while a record was on: change records. */
-export async function changeover(day: boolean) {
+export function changeover(day: boolean) {
 	if (!ctx || !current) return;
-	const was = tracks[current]!;
-	fade(was.gain, 0, 0.5);
-	const el = was.el;
-	setTimeout(() => el.pause(), 520);
-	current = null;
-	setTimeout(() => hiss(0.55, 0.05), 380);
-	setTimeout(() => play(day), 820);
+	const which = day ? 'day' : 'night';
+	if (which === current) return;
+	const my = ++ticket;
+	const was = current;
+	const w = tracks[was]!;
+	fade(w.gain, 0, 0.5);
+	setTimeout(() => {
+		if (current !== was) w.el.pause();
+	}, 520);
+	// the other record goes on now, silent, while the lamp's pull still
+	// counts as a gesture; it comes up after the needle noise
+	current = which;
+	const t = track(which);
+	fade(t.gain, 0, 0.05);
+	const started = t.el.play().then(
+		() => true,
+		() => false
+	);
+	setTimeout(() => {
+		if (my === ticket) hiss(0.55, 0.05);
+	}, 380);
+	setTimeout(async () => {
+		const ok = await started;
+		if (my !== ticket) return;
+		if (ok && current === which) fade(t.gain, 1, 0.8);
+		else if (!ok) {
+			current = null;
+			stopped?.();
+		}
+	}, 820);
 }
 
 /** How loud the bottom of the spectrum is, 0..1, for the notes. */

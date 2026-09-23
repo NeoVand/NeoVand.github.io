@@ -140,12 +140,14 @@
 	}
 	.name {
 		font-family: var(--serif);
-		font-size: clamp(44px, 4.6vw, 74px);
+		/* one line: the name is 8.3em wide in this face, so it is sized to the
+		   column it sits in rather than wrapped */
+		font-size: clamp(34px, 4.25vw, 64px);
+		white-space: nowrap;
 		line-height: 1;
 		letter-spacing: -0.012em;
 		color: var(--title);
 		margin-bottom: 26px;
-		text-wrap: balance;
 	}
 	.bio-wrap {
 		position: relative;
@@ -229,7 +231,7 @@
 			padding: 57svh calc(var(--gutter-r) + 4px) 32px calc(var(--gutter) + 4px);
 		}
 		.name {
-			font-size: clamp(38px, 10vw, 56px);
+			font-size: min(56px, calc((100vw - 60px) / 8.4));
 			margin-bottom: 18px;
 		}
 		.bio {

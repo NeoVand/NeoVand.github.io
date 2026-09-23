@@ -16,13 +16,18 @@
 		if (lights.playing) {
 			music.pause();
 			lights.playing = false;
-		} else {
-			lights.playing = await music.play(lights.day);
+			return;
 		}
+		// playing from the moment it is asked for, so a pull on the lamp while
+		// the record is still starting changes records rather than missing it
+		lights.playing = true;
+		const ok = await music.play(lights.day);
+		if (!ok) lights.playing = false;
 	}
 
 	onMount(() => {
 		let disposed = false;
+		music.onStop(() => (lights.playing = false));
 		let g: Grove | null = null;
 		const veil = (window as unknown as { __veil?: { open(): void; lifted: Promise<void> } }).__veil;
 		(async () => {
@@ -74,7 +79,13 @@
 
 	// the keyboard's way to the lamp: L
 	function onKey(e: KeyboardEvent) {
-		if (e.key === 'l' && !e.metaKey && !e.ctrlKey && !(e.target instanceof HTMLInputElement))
+		if (
+			e.key === 'l' &&
+			!e.repeat &&
+			!e.metaKey &&
+			!e.ctrlKey &&
+			!(e.target instanceof HTMLInputElement)
+		)
 			setDay(!lights.day);
 	}
 </script>

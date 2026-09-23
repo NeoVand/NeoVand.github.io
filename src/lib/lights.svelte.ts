@@ -3,7 +3,12 @@
 // the gramophone, which is music. The class on <html> is set before first
 // paint by app.html; this only mirrors it and changes it.
 
-export const lights = $state({ day: false, playing: false });
+// read from the page as soon as this is imported, so nothing is ever drawn
+// or compared against a stale value before the page's own onMount has run
+export const lights = $state({
+	day: typeof document !== 'undefined' && document.documentElement.classList.contains('day'),
+	playing: false
+});
 
 export function readLights() {
 	lights.day = document.documentElement.classList.contains('day');
@@ -12,7 +17,7 @@ export function readLights() {
 let themeT = 0;
 export function setDay(on: boolean, remember = true) {
 	const root = document.documentElement;
-	if (on === root.classList.contains('day')) return;
+	if (on === lights.day && on === root.classList.contains('day')) return;
 	root.classList.add('theming');
 	root.classList.toggle('day', on);
 	lights.day = on;

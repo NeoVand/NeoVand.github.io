@@ -4,10 +4,12 @@
 
 	// ─── The lamp pull ──────────────────────────────────────────────────────
 	// A verlet cord: a chain of beads with distance constraints and a heavy
-	// knob on the end, with enough slack in the solver that it stretches when
-	// you haul on it. Pull the knob past the trip line and the lights change
-	// over; tap it and it gives itself a tug. It hangs from the top of the
-	// window beside the page, or from the top of the page where the columns
+	// knob on the end. It comes out of a fitting above the window on a spring,
+	// the way a real pull switch does: haul on the knob and the cord slides
+	// down out of the fitting rather than stretching, and past the trip line
+	// the switch clicks and the lights change over; let go and the spring takes
+	// it back up. A tap does the same pull by itself. It hangs from the top of
+	// the window beside the page, or from the top of the page where the columns
 	// stack, so that it never rides down over the ends of the lines.
 
 	let canvas: HTMLCanvasElement;
@@ -22,6 +24,10 @@
 		SEG = 8.5;
 	const ax = W / 2,
 		ay = -4;
+	/** how far the cord has to come out of the fitting to click */
+	const TRIP = 20;
+	/** and how far it can come out at all */
+	const TRAVEL = 34;
 
 	onMount(() => {
 		// shorter where the page stacks, so it hangs clear of the island's crowns
@@ -39,13 +45,32 @@
 			x[i] = px[i] = ax;
 			y[i] = py[i] = ay + i * SEG;
 		}
+		const L = (N - 1) * SEG;
+		const rest = ay + L;
+		// how far the cord is out of the fitting, and how fast it is moving
+		let out = 0,
+			outV = 0;
 		let raf = 0,
 			still = 0,
-			grab: { id: number; dx: number; dy: number; moved: boolean; y0: number } | null = null;
-		let tripped = false;
-		const rest = ay + (N - 1) * SEG;
+			grab: {
+				id: number;
+				dx: number;
+				dy: number;
+				x0: number;
+				y0: number;
+				t0: number;
+				moved: boolean;
+				tripped: boolean;
+			} | null = null;
 
 		function step() {
+			// the spring in the fitting
+			if (!grab) {
+				outV += (-out * 0.09 - outV * 0.32) * 1;
+				out = Math.max(0, out + outV);
+				if (out === 0 && outV < 0) outV = 0;
+			}
+			const top = ay + out;
 			for (let i = 1; i < N; i++) {
 				const vx = (x[i] - px[i]) * 0.985,
 					vy = (y[i] - py[i]) * 0.985;
@@ -56,14 +81,12 @@
 			}
 			for (let k = 0; k < 14; k++) {
 				x[0] = ax;
-				y[0] = ay;
+				y[0] = top;
 				for (let i = 0; i < N - 1; i++) {
 					const dx = x[i + 1] - x[i],
 						dy = y[i + 1] - y[i];
 					const d = Math.hypot(dx, dy) || 1e-6;
-					// a little give, so a hard pull stretches the cord
-					const want = SEG * (grab ? 1.12 : 1);
-					const diff = ((d - want) / d) * 0.5;
+					const diff = ((d - SEG) / d) * 0.5;
 					const ox = dx * diff,
 						oy = dy * diff;
 					if (i > 0) {
@@ -76,6 +99,12 @@
 					}
 				}
 			}
+			// a hand on the knob clicks the switch once per pull
+			if (grab && !grab.tripped && out > TRIP) {
+				grab.tripped = true;
+				click();
+				toggleDay();
+			}
 		}
 
 		function draw() {
@@ -84,13 +113,14 @@
 			const day = lights.day;
 			g.lineCap = 'round';
 			g.lineJoin = 'round';
-			g.strokeStyle = day ? 'rgba(40,58,74,0.85)' : 'rgba(150,150,156,0.7)';
+			g.strokeStyle = day ? 'rgba(40,58,74,0.85)' : 'rgba(170,170,178,0.72)';
 			g.lineWidth = 1.3;
 			g.beginPath();
-			g.moveTo(x[0], y[0]);
-			for (let i = 1; i < N; i++) g.lineTo(x[i], y[i]);
+			// the cord that has come out of the fitting hangs straight from it
+			g.moveTo(ax, -10);
+			for (let i = 0; i < N; i++) g.lineTo(x[i], y[i]);
 			g.stroke();
-			// the knob: a turned bead, brass by day and grey by night
+			// the knob: a turned bead, brass by day and pewter by night
 			const kx = x[N - 1],
 				ky = y[N - 1] + 7;
 			const gr = g.createRadialGradient(kx - 2.5, ky - 3, 1, kx, ky, 8.5);
@@ -99,9 +129,9 @@
 				gr.addColorStop(0.35, '#e7b93e');
 				gr.addColorStop(1, '#8a5f12');
 			} else {
-				gr.addColorStop(0, '#e6e6ea');
-				gr.addColorStop(0.4, '#8f9097');
-				gr.addColorStop(1, '#2f3034');
+				gr.addColorStop(0, '#f1ece0');
+				gr.addColorStop(0.4, '#a79f8e');
+				gr.addColorStop(1, '#3a362f');
 			}
 			g.fillStyle = gr;
 			g.beginPath();
@@ -113,7 +143,7 @@
 		function frame() {
 			step();
 			draw();
-			let motion = 0;
+			let motion = Math.abs(outV) + out * 0.1;
 			for (let i = 0; i < N; i++) motion += Math.abs(x[i] - px[i]) + Math.abs(y[i] - py[i]);
 			still = motion < 0.02 && !grab ? still + 1 : 0;
 			raf = still > 30 ? 0 : requestAnimationFrame(frame);
@@ -127,49 +157,74 @@
 			return [e.clientX - r.left, e.clientY - r.top];
 		}
 		const down = (e: PointerEvent) => {
+			if (grab) return;
 			const [lx, ly] = local(e);
-			grab = { id: e.pointerId, dx: x[N - 1] - lx, dy: y[N - 1] - ly, moved: false, y0: e.clientY };
-			tripped = false;
-			knob.setPointerCapture(e.pointerId);
+			grab = {
+				id: e.pointerId,
+				dx: x[N - 1] - lx,
+				dy: y[N - 1] - ly,
+				x0: e.clientX,
+				y0: e.clientY,
+				t0: performance.now(),
+				moved: false,
+				tripped: false
+			};
+			try {
+				knob.setPointerCapture(e.pointerId);
+			} catch {
+				/* a pointer the browser has already let go of */
+			}
 			wake();
 			e.preventDefault();
 		};
 		const move = (e: PointerEvent) => {
 			if (!grab || grab.id !== e.pointerId) return;
 			const [lx, ly] = local(e);
-			if (Math.abs(e.clientY - grab.y0) > 4) grab.moved = true;
-			x[N - 1] = lx + grab.dx;
-			y[N - 1] = Math.min(rest + 90, ly + grab.dy);
-			if (!tripped && y[N - 1] > rest + 34) {
-				tripped = true;
-				click();
-				toggleDay();
-			}
+			// a tap is a tap however much the finger wobbles; a drag is a drag in
+			// any direction
+			if (Math.hypot(e.clientX - grab.x0, e.clientY - grab.y0) > 9) grab.moved = true;
+			// the knob stays within reach of the fitting, and the cord comes out of
+			// the fitting as far as the pull needs, up to its travel
+			const kx = Math.max(10, Math.min(W - 10, lx + grab.dx));
+			const ky = ly + grab.dy;
+			const dx = kx - ax;
+			const reach = Math.sqrt(Math.max(0, L * L - dx * dx));
+			out = Math.max(0, Math.min(TRAVEL, ky - (ay + reach)));
+			outV = 0;
+			x[N - 1] = kx;
+			y[N - 1] = Math.min(ky, ay + out + reach);
 		};
-		const up = (e: PointerEvent) => {
+		const release = (e: PointerEvent, cancelled: boolean) => {
 			if (!grab || grab.id !== e.pointerId) return;
-			const moved = grab.moved;
+			const g0 = grab;
 			grab = null;
-			if (!moved && !tripped) tug();
+			const tap = !g0.moved && performance.now() - g0.t0 < 600;
+			// a cancelled touch was never a tap
+			if (tap && !cancelled && !g0.tripped) tug();
 			wake();
 		};
 		function tug() {
-			// a tap: the cord gives itself a pull
-			py[N - 1] -= reduced ? 0 : 9;
+			// a tap is one click, however quickly they come; the cord is drawn
+			// down out of the fitting and springs back
 			click();
 			toggleDay();
+			if (reduced) return;
+			outV = Math.max(outV, 0) + 9;
 			wake();
 		}
 		const key = (e: KeyboardEvent) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+			if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) {
 				e.preventDefault();
 				tug();
 			}
 		};
+		const up = (e: PointerEvent) => release(e, false);
+		const cancel = (e: PointerEvent) => release(e, true);
 		knob.addEventListener('pointerdown', down);
 		knob.addEventListener('pointermove', move);
 		knob.addEventListener('pointerup', up);
-		knob.addEventListener('pointercancel', up);
+		knob.addEventListener('pointercancel', cancel);
+		knob.addEventListener('lostpointercapture', cancel);
 		knob.addEventListener('keydown', key);
 
 		let actx: AudioContext | null = null;
