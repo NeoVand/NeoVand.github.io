@@ -77,6 +77,8 @@ uniform float uStars; // 0 in the environment capture, 1 on screen
 uniform float uSea;   // the scale of the cloud below
 uniform sampler2D uCloud;
 uniform sampler2D uLutDay;
+uniform float uE;
+uniform float uCover; // how much of the cloud below is open sky
 uniform vec3 uSunEye;   // sunlight as it reaches the eye, the cloud, the high cloud
 uniform vec3 uSunCloud;
 uniform vec3 uSunHigh;
@@ -112,7 +114,9 @@ vec2 gX, gY; // the floor plane's footprint per pixel, for filtering
 // changes over many puffs, so one reading serves a whole ray
 float swell(vec2 p, float k) {
 	vec2 c = p * uSea * 0.071 + vec2(0.63, 0.12);
-	return 0.45 + 1.1 * textureGrad(uCloud, c, gX * uSea * 0.071 * k, gY * uSea * 0.071 * k).a;
+	float m = textureGrad(uCloud, c, gX * uSea * 0.071 * k, gY * uSea * 0.071 * k).a;
+	// and where it opens altogether, onto clear air
+	return (0.55 + 0.9 * m) * smoothstep(uCover, uCover + 0.3, m);
 }
 float SW = 1.0;
 float seaH(vec2 p, float k) {
@@ -143,7 +147,7 @@ Hit marchSea(vec3 d) {
 		vec2 p = d.xz * t;
 		float y = SEA_B - de * t;          // height of the ray above the floor
 		float s = SEA_A * seaH(p, t / tb); // height of the tops here
-		if (y <= s) {
+		if (y <= s && s > 0.004) {
 			// between the last step and this one: where they cross
 			float tt = t;
 			if (i > 0) {
@@ -174,7 +178,8 @@ vec3 shadeSea(Hit hit, vec3 d, vec3 l, vec3 lightCol, vec3 amb, float tb) {
 	float e = 0.02;
 	float hx = seaH(hit.p + vec2(e, 0.0), k) - hit.h;
 	float hz = seaH(hit.p + vec2(0.0, e), k) - hit.h;
-	vec3 n = normalize(vec3(-hx * SEA_A / e, 1.0, -hz * SEA_A / e));
+	// the tops drawn a little rounder than they are, so each puff reads
+	vec3 n = normalize(vec3(-hx * SEA_A * 1.8 / e, 1.0, -hz * SEA_A * 1.8 / e));
 	// shadow: walk toward the light over the tops
 	float y0 = hit.h * SEA_A;
 	float vis = 1.0;
@@ -191,11 +196,11 @@ vec3 shadeSea(Hit hit, vec3 d, vec3 l, vec3 lightCol, vec3 amb, float tb) {
 	// the edges are thin and the light comes through them toward the eye
 	float thin = 1.0 - smoothstep(0.1, 0.55, hit.h);
 	float glow = phaseHG(mu, 0.6) * 4.0 * PI * thin * 0.6;
-	float ao = mix(0.35, 1.0, smoothstep(0.0, 0.8, hit.h));
+	float ao = mix(0.22, 1.0, smoothstep(0.0, 0.8, hit.h));
 	// irradiance to radiance: a white Lambertian top under a light of this
 	// colour is that colour over pi
 	vec3 c = lightCol * (wrap * vis / 3.14159 + glow * vis * 0.25);
-	c += amb * ao * (0.5 + 0.5 * n.y);
+	c += amb * ao * (0.35 + 0.45 * n.y);
 	return c * 0.9;
 }
 
@@ -207,7 +212,7 @@ float highC(vec2 p, vec2 gx, vec2 gy) {
 	vec4 c = textureGrad(uCloud, a, gx * 0.19, gy * 0.19);
 	vec4 c2 = textureGrad(uCloud, p * 0.047 + vec2(0.4, 0.1), gx * 0.047, gy * 0.047);
 	float f = c2.a * 0.72 + c.b * 0.42 + c.g * 0.12;
-	return smoothstep(0.56, 0.86, f);
+	return smoothstep(0.66, 0.92, f);
 }
 
 vec3 starField(vec2 p, float t, float band) {
@@ -275,7 +280,7 @@ void main() {
 
 	// the sun, sinking under the cloud as the lights go down
 	vec3 s = uSun;
-	const float E = 30.0;   // the sun's irradiance, in the units the grade expects
+	float E = uE;   // the sun's irradiance, in the units the grade expects
 
 	Hit hit;
 	hit.ok = 0.0;
@@ -309,12 +314,16 @@ void main() {
 				day = mix(day, cc, hc * 0.88);
 			}
 		} else {
-			vec3 cloud = shadeSea(hit, d, s, uSunCloud * E, amb, tb);
-			// the gaps: cloud further down, in its own shadow, blue
-			vec3 gap = amb * 0.42;
-			day = mix(gap, cloud, hit.ok);
-			// and the air between, from the table, which stops at the cloud
-			day = day * air.a + air.rgb * E;
+			vec3 cloud = shadeSea(hit, d, s, uSunCloud * E * 0.62, amb, tb);
+			// the gaps: clear air all the way down, pale near the horizon
+			// and deepening to blue as the eye looks further down into it
+			vec3 low = sky(uLutDay, normalize(vec3(d.x, 0.04, d.z)), s).rgb * E;
+			vec3 gap = mix(low * 0.95, mix(zen, low, 0.4) * 1.12, smoothstep(0.0, 0.2, -e));
+			// a cloud's edge is thin, and the blue shows through it
+			day = mix(gap, cloud, hit.ok * smoothstep(0.004, 0.12, hit.h));
+			// and the air between, from the table, which stops at the cloud;
+			// held light, or the whole sea goes to milk
+			day = day * mix(air.a, 1.0, 0.6) + air.rgb * E * 0.32;
 		}
 		// the sun: a disc darkened toward its limb, which is what makes it
 		// round rather than a hole in the sky
@@ -331,8 +340,8 @@ void main() {
 		// table (one bounce) does not carry: so the night's air is drawn, not
 		// computed — indigo overhead, a paler band low down, the moon's glow.
 		vec3 night;
-		vec3 zenN = vec3(0.0075, 0.012, 0.037);
-		vec3 horN = vec3(0.036, 0.044, 0.088);
+		vec3 zenN = vec3(0.0042, 0.0068, 0.022);
+		vec3 horN = vec3(0.019, 0.024, 0.05);
 		float mu = dot(d, uMoon);
 		vec3 moonAir = uMoonLight * (phaseHG(mu, 0.8) * 0.35 + phaseR(mu) * 0.12) * 0.05;
 		vec3 amb = zenN * 1.7 + horN * 0.35;
@@ -356,7 +365,7 @@ void main() {
 		} else {
 			vec3 cloud = shadeSea(hit, d, uMoon, uMoonLight, amb, tb);
 			vec3 gap = amb * 0.4;
-			night = mix(gap, cloud, hit.ok);
+			night = mix(gap, cloud, hit.ok * smoothstep(0.004, 0.12, hit.h));
 			// the moon's lane across the tops beneath it
 			float lane = exp(-abs(atan(d.x, -d.z) - atan(uMoon.x, -uMoon.z)) * 6.0 / (dn * 4.0 + 0.12));
 			night += uMoonLight * 0.05 * lane * hit.ok * smoothstep(0.2, 0.8, hit.h);
@@ -391,6 +400,8 @@ const LUT_F = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
 uniform float uSunEl;
+uniform float uMie;
+uniform float uPath;
 ${ATMO}
 void main() {
 	float phi = vUv.x * PI;
@@ -400,11 +411,11 @@ void main() {
 	vec3 sun = vec3(0.0, sin(uSunEl), cos(uSunEl));
 	vec3 o = vec3(0.0, RP + EYE, 0.0);
 	float tMax;
-	if (d.y < 0.0) tMax = min((EYE - CLOUD) / max(-d.y, 1e-4), 700.0);
+	if (d.y < 0.0) tMax = min((EYE - CLOUD) / max(-d.y, 1e-4), uPath);
 	else {
 		float b = dot(o, d);
 		float c = dot(o, o) - RA * RA;
-		tMax = -b + sqrt(max(b * b - c, 0.0));
+		tMax = min(-b + sqrt(max(b * b - c, 0.0)), uPath);
 	}
 	float mu = dot(d, sun);
 	float pR = phaseR(mu), pM = phaseHG(mu, 0.8);
@@ -418,9 +429,9 @@ void main() {
 		float r = length(p);
 		float h = r - RP;
 		float dR = exp(-h / 8.0), dM = exp(-h / 1.2), dO = max(0.0, 1.0 - abs(h - 25.0) / 15.0);
-		vec3 ext = BR * dR + BME * dM + BO * dO;
+		vec3 ext = BR * dR + BME * uMie * dM + BO * dO;
 		vec3 Ts = exp(-(tau + ext * ds * 0.5 + sunTau(r, dot(p / r, sun))));
-		L += Ts * (BR * dR * pR + BMS * dM * pM) * ds;
+		L += Ts * (BR * dR * pR + BMS * uMie * dM * pM) * ds;
 		tau += ext * ds;
 	}
 	// a little for all the light scattered more than once
@@ -552,10 +563,12 @@ export function createSky() {
 		uSea: { value: 0.32 },
 		uCloud: { value: cloud.texture },
 		uLutDay: { value: lutDay.texture },
+		uE: { value: 16 },
+		uCover: { value: 0.52 },
 		uSunEye: { value: new THREE.Color() },
 		uSunCloud: { value: new THREE.Color() },
 		uSunHigh: { value: new THREE.Color() },
-		uMoonLight: { value: new THREE.Color(0.3, 0.36, 0.5) },
+		uMoonLight: { value: new THREE.Color(0.2, 0.245, 0.35) },
 		uParity: { value: -1 }
 	};
 	const mat = new THREE.ShaderMaterial({
@@ -606,7 +619,9 @@ export function createSky() {
 
 	let baked = false;
 	const lutMat = new THREE.ShaderMaterial({
-		uniforms: { uSunEl: { value: 0 } },
+		// a clear afternoon: little haze, and the horizon's path held short so
+		// the low sky stays blue rather than going to milk
+		uniforms: { uSunEl: { value: 0 }, uMie: { value: 0.35 }, uPath: { value: 160 } },
 		vertexShader: BACK_V,
 		fragmentShader: LUT_F
 	});
@@ -626,6 +641,11 @@ export function createSky() {
 	return {
 		mesh,
 		uniforms,
+		lutUniforms: lutMat.uniforms,
+		/** redraw the table on the next update */
+		redraw() {
+			drawn = 99;
+		},
 		backdrop,
 		/** draw the cloud's shapes into their sheet, once */
 		bake(renderer: THREE.WebGLRenderer) {

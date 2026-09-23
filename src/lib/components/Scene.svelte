@@ -147,7 +147,7 @@
 		pointer-events: none;
 	}
 	.scene.failed {
-		background: linear-gradient(#b9c2c2, #f0c99d 55%, #e3b789);
+		background: linear-gradient(#6f93c4, #b9cde4 60%, #e8dccb);
 	}
 	:global(html:not(.day)) .scene.failed {
 		background: linear-gradient(#0a1128, #1a2548 60%, #28335a);

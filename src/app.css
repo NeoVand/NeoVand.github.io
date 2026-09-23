@@ -29,11 +29,11 @@
 	--muted: #9a9ca3;
 	--faint: #6b6e75;
 	--hair: rgba(255, 255, 255, 0.09);
-	--pane: rgba(255, 255, 255, 0.055);
-	--pane-2: rgba(255, 255, 255, 0.11);
-	--pane-edge: rgba(255, 255, 255, 0.16);
+	--pane: rgba(16, 24, 52, 0.38);
+	--pane-2: rgba(40, 52, 92, 0.5);
+	--pane-edge: rgba(255, 255, 255, 0.2);
 	--pane-top: rgba(255, 255, 255, 0.1);
-	--blur: 2px;
+	--blur: 16px;
 	--cast: rgba(0, 0, 0, 0.35);
 	--copper: #d9b8a2;
 	--focus: #cfd8e8;
@@ -47,7 +47,7 @@
 }
 :root.day {
 	--wn: 0;
-	--bg: #d8b894;
+	--bg: #9fb7d6;
 	--title: #0b1620;
 	--text: #15212c;
 	--muted: #34475a;
@@ -58,7 +58,7 @@
 	--pane-edge: rgba(255, 255, 255, 0.72);
 	--pane-top: rgba(255, 255, 255, 0.5);
 	--blur: 12px;
-	--cast: rgba(40, 30, 40, 0.16);
+	--cast: rgba(30, 44, 70, 0.14);
 	--copper: #8a4424;
 	--focus: #1e3346;
 	color-scheme: light;

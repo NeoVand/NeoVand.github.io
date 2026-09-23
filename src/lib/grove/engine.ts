@@ -24,7 +24,14 @@ import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
 import { buildRotunda, type RotundaParts } from './rotunda';
 import { buildGramophone, type Gramophone } from './gramophone';
-import { buildStand, prepareStand, sharedCanopy, type Stand, type PlantItem } from './flora/plants';
+import {
+	buildStand,
+	prepareStand,
+	sharedCanopy,
+	SHADOW_LAYER,
+	type Stand,
+	type PlantItem
+} from './flora/plants';
 import type { Canopy } from './flora/canopy';
 import { OLIVE, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
@@ -64,11 +71,13 @@ const moonAt = (azDeg: number, elDeg: number) => {
 	return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 };
 const MOON_DIR = moonAt(12, 6.5);
-const SUN_AZ = { side: -11, stack: -5 };
-const SUN_EL = 1.6;
+const SUN_AZ = { side: -20, stack: -12 };
+// an afternoon sun, above the top of the picture: the sky blue overhead and
+// only the air round the sun warm
+const SUN_EL = 10;
 /** where the disc goes when the lights go down: under the cloud */
 const SUN_SET_EL = -7;
-const KEY_EL = 14;
+const KEY_EL = 32;
 
 /** The grade, after the tone map and in display terms: a little more
  *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
@@ -91,8 +100,8 @@ class Grade extends Effect {
 			{
 				blendFunction: BlendFunction.SET,
 				uniforms: new Map([
-					['uSat', new THREE.Uniform(1.14)],
-					['uCon', new THREE.Uniform(0.22)],
+					['uSat', new THREE.Uniform(1.18)],
+					['uCon', new THREE.Uniform(0.34)],
 					['uWarm', new THREE.Uniform(1.0)]
 				])
 			}
@@ -106,6 +115,7 @@ export class Grove {
 	camera: THREE.PerspectiveCamera;
 	sky = createSky();
 	private composer: EffectComposer;
+	private grade = new Grade();
 	private bloom: BloomEffect;
 	private sunAz = SUN_AZ.side;
 	private light: THREE.DirectionalLight;
@@ -237,16 +247,18 @@ export class Grove {
 		this.bloom = new BloomEffect({
 			mipmapBlur: true,
 			levels: 6,
-			luminanceThreshold: 1.25,
+			// only lamps, fireflies and the sun bloom: a lit cloud blooming
+			// is a veil over everything
+			luminanceThreshold: 2.6,
 			luminanceSmoothing: 0.12,
-			intensity: 0.5,
+			intensity: 0.45,
 			radius: 0.7
 		});
 		const pass = new EffectPass(
 			this.camera,
 			this.bloom,
 			new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
-			new Grade()
+			this.grade
 		);
 		pass.dithering = true;
 		this.composer.addPass(pass);
@@ -264,6 +276,7 @@ export class Grove {
 		this.light.shadow.bias = -0.0004;
 		this.light.shadow.normalBias = 0.03;
 		this.light.shadow.radius = 3;
+		this.light.shadow.camera.layers.enable(SHADOW_LAYER);
 		this.scene.add(this.light, this.light.target);
 		this.hemi = new THREE.HemisphereLight(0xa8bddb, 0x8a6048, 0.6);
 		this.scene.add(this.hemi);
@@ -337,9 +350,10 @@ export class Grove {
 		this.lamp.castShadow = false;
 		this.world.add(this.lamp);
 		this.gramophone = buildGramophone(brass, woodTexture(aniso));
-		this.gramophone.group.position.set(0, this.pavilion.floorY, -0.45);
-		this.gramophone.group.scale.setScalar(1.25);
-		this.gramophone.group.rotation.y = 0.35;
+		// on the floor just inside the front arch, the horn turned to the door
+		this.gramophone.group.position.set(0.12, this.pavilion.floorY, 0.4);
+		this.gramophone.group.scale.setScalar(1.15);
+		this.gramophone.group.rotation.y = 0.3;
 		this.world.add(this.gramophone.group);
 		this.world.add(this.notes.points);
 		this.world.add(this.petals.mesh);
@@ -360,8 +374,8 @@ export class Grove {
 		const opt = {
 			barkMap: this.mats.bark.map!,
 			barkNormal: this.mats.bark.normalMap!,
-			rows: phone ? 3 : 5,
-			density: phone ? 0.55 : 0.85,
+			rows: 3,
+			density: phone ? 0.5 : 0.8,
 			minRadius: phone ? 0.009 : 0.006
 		};
 		const seed = () => Math.floor(r() * 1e6);
@@ -541,22 +555,24 @@ export class Grove {
 		this.sky.uniforms.uSun.value.copy(moonAt(this.sunAz, lerp(SUN_SET_EL, SUN_EL, k)));
 		// the key comes from the side the sun is on, well round from it, so
 		// the island's face takes the gold and its shadows fall across it
-		const key = moonAt(this.sunAz - 64, KEY_EL);
+		const key = moonAt(this.sunAz - 40, KEY_EL);
 		const moonLight = this.moonDir.clone().setY(Math.max(this.moonDir.y, 0.28)).normalize();
 		const dir = moonLight.lerp(key, k).normalize();
 		this.light.position.copy(dir).multiplyScalar(30);
 		// the sun's colour is the sky's: what is left of white after the air
-		const sunCol = sunLight(THREE.MathUtils.degToRad(6), 1.5);
+		const sunCol = sunLight(THREE.MathUtils.degToRad(KEY_EL), 1.5);
 		sunCol.multiplyScalar(1 / Math.max(sunCol.r, sunCol.g, sunCol.b));
 		const moonCol = new THREE.Color(0.7, 0.8, 1.0);
 		this.light.color.copy(moonCol).lerp(sunCol, m);
 		this.light.intensity = lerp(2.2, 3.4, m);
 		// by night the cloud below is lit by the moon, and gives some of it back
-		this.hemi.color.set(0x55688c).lerp(new THREE.Color(0xa9c0e0), m);
-		this.hemi.groundColor.set(0x3a465e).lerp(new THREE.Color(0x9a6a4c), m);
+		this.hemi.color.set(0x55688c).lerp(new THREE.Color(0x9fbbe6), m);
+		this.hemi.groundColor.set(0x3a465e).lerp(new THREE.Color(0x8e8a86), m);
 		this.hemi.intensity = lerp(1.7, 0.75, m);
 		U.uSunColor.value.copy(this.light.color).multiplyScalar(lerp(0.18, 1, m));
-		this.renderer.toneMappingExposure = lerp(0.9, 1.0, m);
+		this.renderer.toneMappingExposure = lerp(0.82, 1.0, m);
+		// warm lamps against cool shadows by night; by day, neutral
+		this.grade.uniforms.get('uWarm')!.value = lerp(0.85, 0.2, m);
 		const env = m > 0.5 ? this.envDay : this.envNight;
 		this.scene.environment = env;
 		this.scene.environmentIntensity =
@@ -831,7 +847,7 @@ export class Grove {
 
 	/** Where pixels are small, two samples smooth an edge as well as four. */
 	private setSamples() {
-		const n = Math.min(this.dpr >= 1.75 ? 2 : 4, this.renderer.capabilities.maxSamples);
+		const n = Math.min(this.dpr >= 1.4 ? 2 : 4, this.renderer.capabilities.maxSamples);
 		if (this.composer.multisampling !== n) this.composer.multisampling = n;
 	}
 
@@ -1003,7 +1019,7 @@ export class Grove {
 
 	/** Lay the lanterns' and the fireflies' light into the glow map. */
 	private lampCol = new THREE.Color(1.0, 0.62, 0.3);
-	private flyCol = new THREE.Color(0.95, 1.0, 0.55);
+	private flyCol = new THREE.Color(0.8, 1.0, 0.45);
 	private lightUp() {
 		const night = 1 - this.dayMix;
 		const g = this.glow;
@@ -1017,7 +1033,7 @@ export class Grove {
 			for (let i = 0; i < glow.length; i++) {
 				if (pos[i * 3 + 1] < -50 || glow[i] < 0.02) continue;
 				v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
-				g.add(v, this.flyCol, glow[i] * 0.55, 1.1);
+				g.add(v, this.flyCol, glow[i] * 0.3, 0.9);
 			}
 		}
 		g.end();

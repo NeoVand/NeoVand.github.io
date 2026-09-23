@@ -73,6 +73,9 @@ export interface StandOptions {
 	canopy?: Canopy;
 }
 
+/** the layer drawn only into the shadow map */
+export const SHADOW_LAYER = 1;
+
 const _m = new THREE.Matrix4(),
 	_q = new THREE.Quaternion(),
 	_v = new THREE.Vector3(),
@@ -213,10 +216,41 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 		leafGeo,
 		leafMaterial(u, sp.palette.leafTop, sp.palette.leafUnder, sp.palette.leafVary, 0.52)
 	);
-	leafMesh.customDepthMaterial = leafDepth(u);
-	leafMesh.castShadow = sp.castLeaves;
+	leafMesh.castShadow = false;
 	leafMesh.receiveShadow = true;
 	group.add(leafMesh);
+	// The shadow the crown casts is drawn from a third of its leaves, each
+	// grown to cover for the two left out: a dappled shadow of a crown is
+	// the same whichever third of its leaves casts it, and the shadow pass
+	// is the second time every leaf is drawn. It lives on a layer only the
+	// light's camera sees.
+	if (sp.castLeaves) {
+		const sub = newLeaves();
+		const nL = leaves.pos.length / 3;
+		for (let i = 0; i < nL; i += 3) {
+			sub.pos.push(leaves.pos[i * 3], leaves.pos[i * 3 + 1], leaves.pos[i * 3 + 2]);
+			sub.quat.push(
+				leaves.quat[i * 4],
+				leaves.quat[i * 4 + 1],
+				leaves.quat[i * 4 + 2],
+				leaves.quat[i * 4 + 3]
+			);
+			sub.data.push(leaves.data[i * 4] * 1.7, leaves.data[i * 4 + 1], leaves.data[i * 4 + 2], 1);
+			sub.base.push(
+				leaves.base[i * 4],
+				leaves.base[i * 4 + 1],
+				leaves.base[i * 4 + 2],
+				leaves.base[i * 4 + 3]
+			);
+		}
+		const sg = leafGeometry(bladeTemplate(sp.blade, 3), sub);
+		sg.boundingSphere = bounds;
+		const caster = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ colorWrite: false }));
+		caster.customDepthMaterial = leafDepth(u);
+		caster.castShadow = true;
+		caster.layers.set(SHADOW_LAYER);
+		group.add(caster);
+	}
 
 	let flowerMesh: THREE.Mesh | null = null;
 	if (flowers.pos.length) {

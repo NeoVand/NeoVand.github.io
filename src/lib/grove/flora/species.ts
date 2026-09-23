@@ -50,8 +50,8 @@ export const OLIVE: Species = {
 	name: 'olive',
 	blade: { w: 0.2, cup: 0.12, droop: 0.12 },
 	palette: {
-		leafTop: new THREE.Color(0.2, 0.27, 0.15),
-		leafUnder: new THREE.Color(0.52, 0.57, 0.47),
+		leafTop: new THREE.Color(0.19, 0.29, 0.13),
+		leafUnder: new THREE.Color(0.5, 0.57, 0.44),
 		leafVary: 0.22,
 		blossom: new THREE.Color(0.98, 0.95, 0.86),
 		barkTint: new THREE.Color(0.78, 0.74, 0.7)
@@ -68,87 +68,121 @@ export const OLIVE: Species = {
 		const sk = newSkeleton();
 		const axes = { n: 0 };
 		const t = new Turtle(sk, axes);
-		// the crown's middle, to turn leaves toward the outside and the light
-		const heart = new THREE.Vector3(0, 3.4, 0);
-		const flowering = R(0.1, 0.2);
+		// A garden olive is kept: pruned to a dome, open at the heart for the
+		// light, and thick with leaf at its skin. The dome is an envelope the
+		// wood may not pass; what reaches it stops and breaks into leafy
+		// shoots, which is what the pruning knife makes of it.
+		const heart = new THREE.Vector3(R(-0.15, 0.15), R(2.75, 3.0), R(-0.15, 0.15));
+		const rx = R(2.15, 2.45),
+			ry = R(1.45, 1.65);
+		const inside = (p: THREE.Vector3) =>
+			Math.hypot((p.x - heart.x) / rx, (p.y - heart.y) / ry, (p.z - heart.z) / rx);
+		const flowering = R(0.12, 0.22);
 
-		const shoot = (s: Turtle, v: number) => {
-			// a leafy shoot: a few short internodes, a pair of leaves at each,
-			// each pair turned a quarter from the last
-			const n = 4 + Math.floor(r() * 3);
-			s.pitch(R(-12, 12));
-			for (let i = 0; i < n; i++) {
-				s.forward(R(0.07, 0.1), 1, -0.08, 6, r);
-				s.roll(90 + R(-12, 12));
-				const out = s.p.clone().sub(heart).normalize();
-				for (const side of [-1, 1]) {
-					const dir = s.h
-						.clone()
-						.multiplyScalar(0.55)
-						.addScaledVector(s.l, side * 0.85)
-						.addScaledVector(up, 0.1)
-						.normalize();
-					const face = up
-						.clone()
-						.multiplyScalar(0.7)
-						.addScaledVector(out, 0.55)
-						.add(new THREE.Vector3(R(-0.3, 0.3), R(-0.2, 0.2), R(-0.3, 0.3)));
-					s.leaf(dir, face, R(0.1, 0.14) * (0.85 + v), 0);
-				}
-			}
-			// the tip: a last pair along the shoot, or a spray of flowers
-			if (r() < flowering) {
-				const m = 3 + Math.floor(r() * 4);
-				for (let k = 0; k < m; k++) {
-					const b = s.clone();
-					b.roll(k * 137.5).pitch(R(20, 55));
-					b.p.addScaledVector(b.h, R(0.02, 0.06));
-					b.leaf(b.h, up.clone().add(b.h), R(0.055, 0.08), 1);
-				}
-			} else {
-				const out = s.p.clone().sub(heart).normalize();
-				s.leaf(s.h, up.clone().addScaledVector(out, 0.5), R(0.11, 0.14), 0);
+		const leafPair = (s: Turtle, size: number) => {
+			const out = s.p.clone().sub(heart).normalize();
+			for (const side of [-1, 1]) {
+				const dir = s.h
+					.clone()
+					.multiplyScalar(0.5)
+					.addScaledVector(s.l, side * 0.85)
+					.addScaledVector(up, 0.15)
+					.normalize();
+				const face = up
+					.clone()
+					.multiplyScalar(0.75)
+					.addScaledVector(out, 0.6)
+					.add(new THREE.Vector3(R(-0.3, 0.3), R(-0.2, 0.2), R(-0.3, 0.3)));
+				s.leaf(dir, face, size * R(0.85, 1.15), 0);
 			}
 		};
 
+		// a leafy shoot: short internodes, a pair of leaves at each, each pair
+		// turned a quarter from the last, and flowers at some of the tips
+		const shoot = (s: Turtle, n: number, size: number) => {
+			for (let i = 0; i < n; i++) {
+				s.forward(R(0.06, 0.085), 1, 0.02, 7, r);
+				s.roll(90 + R(-12, 12));
+				leafPair(s, size);
+			}
+			if (r() < flowering) {
+				const m = 4 + Math.floor(r() * 4);
+				for (let k = 0; k < m; k++) {
+					const b = s.clone();
+					b.roll(k * 137.5).pitch(R(20, 60));
+					b.p.addScaledVector(b.h, R(0.02, 0.07));
+					b.leaf(b.h, up.clone().add(b.h), R(0.06, 0.085), 1);
+				}
+			} else leafPair(s, size * 0.9);
+		};
+
+		// where the wood meets the dome: a spray of three or four shoots
+		const pad = (s: Turtle) => {
+			const k = 2 + Math.floor(r() * 2);
+			const phase = r() * 360;
+			for (let i = 0; i < k; i++) {
+				const b = s.branch();
+				b.roll(phase + i * (360 / k) + R(-20, 20)).pitch(R(20, 50));
+				shoot(b, 3 + Math.floor(r() * 3), R(0.15, 0.18));
+			}
+			shoot(s, 4 + Math.floor(r() * 2), R(0.15, 0.18));
+		};
+
 		const limb = (s: Turtle, v: number, depth: number): void => {
-			const len = 0.9 * Math.pow(v, 0.75);
-			// strong wood reaches up; the young wood spreads and lets itself down
-			s.forward(len, Math.max(1, Math.round(len / 0.18)), 0.07 * v - 0.012, 3 + 9 * v, r);
-			if (v < 0.16 || depth > 8) {
-				shoot(s, v);
+			let len = 0.85 * Math.pow(v, 0.75);
+			// no further than the dome allows
+			const end = s.p.clone().addScaledVector(s.h, len);
+			const over = inside(end);
+			const pruned = over > 1;
+			if (pruned) {
+				// back along the heading to the envelope
+				let lo = 0,
+					hi = len;
+				for (let i = 0; i < 8; i++) {
+					const m = (lo + hi) / 2;
+					if (inside(s.p.clone().addScaledVector(s.h, m)) > 1) hi = m;
+					else lo = m;
+				}
+				len = Math.max(0.05, lo);
+			}
+			// strong wood reaches up; young wood lifts its tips to the light
+			s.forward(len, Math.max(1, Math.round(len / 0.16)), 0.05 * v + 0.012, 3 + 9 * v, r);
+			if (pruned || v < 0.15 || depth > 8) {
+				pad(s);
 				return;
 			}
-			// the younger wood carries spurs of leaf along it, not only at its end
-			if (v < 0.36) {
-				const spurs = r() < 0.6 ? 1 : 2;
+			// the outer wood carries leafy spurs along it, and the inner does
+			// not, so the crown has a skin of leaf and a heart of wood
+			const depthIn = inside(s.p);
+			if (v < 0.5 && depthIn > 0.55) {
+				const spurs = 1 + Math.floor(r() * 2);
 				for (let k = 0; k < spurs; k++) {
 					const b = s.branch();
-					b.roll(R(0, 360)).pitch(R(35, 60));
-					shoot(b, 0.1);
+					b.roll(R(0, 360)).pitch(R(35, 65));
+					shoot(b, 2 + Math.floor(r() * 3), R(0.14, 0.17));
 				}
 			}
 			const kids = v > 0.45 ? 3 : 2;
 			const phase = r() * 360;
 			for (let k = 0; k < kids; k++) {
 				const b = s.branch();
-				b.roll(phase + k * (360 / kids) + R(-25, 25)).pitch(R(30, 52));
-				limb(b, v * R(0.55, 0.7), depth + 1);
+				b.roll(phase + k * (360 / kids) + R(-25, 25)).pitch(R(28, 50));
+				limb(b, v * R(0.56, 0.7), depth + 1);
 			}
 			// and the limb goes on, a little less strong, a little bent
-			s.roll(R(-40, 40)).pitch(R(-12, 12));
+			s.roll(R(-40, 40)).pitch(R(-10, 10));
 			limb(s, v * R(0.68, 0.78), depth + 1);
 		};
 
 		// the trunk: a lean, a twist as it rises, and a parting into leaders
-		t.roll(R(0, 360)).pitch(R(4, 11));
-		const trunk = R(0.9, 1.35);
+		t.roll(R(0, 360)).pitch(R(4, 10));
+		const trunk = R(0.95, 1.3);
 		t.forward(trunk, 6, 0.05, 7, r);
-		const leaders = r() < 0.55 ? 2 : 3;
+		const leaders = r() < 0.5 ? 2 : 3;
 		const phase = r() * 360;
 		for (let k = 0; k < leaders; k++) {
 			const b = t.branch();
-			b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(24, 40));
+			b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(26, 40));
 			limb(b, R(0.85, 1.0), 1);
 		}
 		pipeRadii(sk, this.tip, this.pipe);

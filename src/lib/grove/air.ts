@@ -4,7 +4,6 @@ import type { Stand as TreeHandles } from './flora/plants';
 import { bendTree } from './flora/wind';
 import { U, patch, nightPatch } from './shared';
 import { rng, clamp, damp, lerp, smoothstep } from './rng';
-import { sparkTexture } from './textures';
 
 // ─── The air ──────────────────────────────────────────────────────────────
 // The same two dozen creatures, drawn by whichever light the lamp gives: by
@@ -203,7 +202,7 @@ export class Air {
 		this.birds.castShadow = true;
 		this.birds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-		// fireflies: a pale gold, bright enough to bloom
+		// fireflies: points of yellow-green, blinking
 		const fg = new THREE.BufferGeometry();
 		this.flyPos = new Float32Array(N * 3);
 		this.flyGlow = new Float32Array(N);
@@ -216,23 +215,28 @@ export class Air {
 			new THREE.BufferAttribute(this.flyGlow, 1).setUsage(THREE.DynamicDrawUsage)
 		);
 		const fm = new THREE.ShaderMaterial({
-			uniforms: { uMap: { value: sparkTexture() }, uScale: { value: 1 } },
+			uniforms: { uScale: { value: 1 }, uDpr: { value: 1 } },
 			vertexShader: /* glsl */ `
 				attribute float aGlow;
 				uniform float uScale;
+				uniform float uDpr;
 				varying float vGlow;
 				void main() {
 					vGlow = aGlow;
 					vec4 mv = modelViewMatrix * vec4(position, 1.0);
-					gl_PointSize = uScale * (0.35 + 0.65 * aGlow) / -mv.z;
+					// a firefly is a point of light, not a ball: a few pixels,
+					// however near it comes
+					gl_PointSize = clamp(uScale / -mv.z, 2.0, 9.0 * uDpr);
 					gl_Position = projectionMatrix * mv;
 				}`,
 			fragmentShader: /* glsl */ `
-				uniform sampler2D uMap;
+
 				varying float vGlow;
 				void main() {
-					float a = texture2D(uMap, gl_PointCoord).a;
-					gl_FragColor = vec4(vec3(1.0, 0.95, 0.6) * a * vGlow * 5.0, 1.0);
+					float d = length(gl_PointCoord - 0.5) * 2.0;
+					float core = exp(-d * d * 14.0);
+					float halo = exp(-d * d * 3.0) * 0.18;
+					gl_FragColor = vec4(vec3(0.82, 1.0, 0.42) * (core * 2.6 + halo) * vGlow, 1.0);
 				}`,
 			transparent: true,
 			depthWrite: false,
@@ -587,8 +591,9 @@ export class Air {
 		(this.flies.geometry.getAttribute('aGlow') as THREE.BufferAttribute).needsUpdate = true;
 		const H = this.grove.renderer.domElement.height;
 		const fov = THREE.MathUtils.degToRad(this.grove.camera.fov);
-		(this.flies.material as THREE.ShaderMaterial).uniforms.uScale.value =
-			(0.55 * H) / (2 * Math.tan(fov / 2));
+		const fu = (this.flies.material as THREE.ShaderMaterial).uniforms;
+		fu.uScale.value = (0.07 * H) / (2 * Math.tan(fov / 2));
+		fu.uDpr.value = this.grove.renderer.getPixelRatio();
 		this.flies.visible = night > 0.02;
 		this.birds.visible = this.day > 0.02;
 	}

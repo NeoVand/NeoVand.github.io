@@ -3,7 +3,7 @@ import { patch, nightPatch } from './shared';
 
 // ─── The gramophone ───────────────────────────────────────────────────────
 // It stands in the pavilion, facing out through the front arch, and it is
-// the page's other switch. A walnut cabinet on a turned pedestal, a record,
+// the page's other switch. A walnut cabinet on the floor, a record,
 // a tone arm, a crank off the right side — the only thing on it that moves
 // while it plays — and a horn spun from copper in twelve petals, flaring up
 // and out toward whoever is looking, which is where the notes come from.
@@ -95,33 +95,9 @@ export function buildGramophone(copper: THREE.Material, wood: THREE.Texture): Gr
 		nightPatch
 	);
 
-	// the pedestal, turned
-	const ped: [number, number][] = [
-		[0, 0],
-		[0.26, 0],
-		[0.26, 0.05],
-		[0.2, 0.08],
-		[0.09, 0.12],
-		[0.06, 0.2],
-		[0.085, 0.3],
-		[0.05, 0.42],
-		[0.06, 0.52],
-		[0.12, 0.56],
-		[0.3, 0.58],
-		[0.3, 0.62],
-		[0, 0.62]
-	];
-	const pedestal = new THREE.Mesh(
-		new THREE.LatheGeometry(
-			ped.map(([r, y]) => new THREE.Vector2(r, y)),
-			40
-		),
-		walnut
-	);
-	group.add(pedestal);
-
 	// the cabinet, with a moulded lid
-	const top = 0.62;
+	// it stands on the floor, where the doorway shows the whole of it
+	const top = 0.0;
 	const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.2, 0.42), walnut);
 	box.position.y = top + 0.1;
 	group.add(box);
