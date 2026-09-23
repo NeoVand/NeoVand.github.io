@@ -17,8 +17,8 @@ export const ROT = {
 	/** apothem of the hexagon of walls, their thickness, the springing and the arch */
 	ap: 1.92,
 	t: 0.34,
-	spring: 1.66,
-	half: 0.74,
+	spring: 1.52,
+	half: 0.88,
 	wallH: 2.52
 };
 

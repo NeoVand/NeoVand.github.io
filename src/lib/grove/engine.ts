@@ -24,6 +24,7 @@ import {
 import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
 import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
+import { buildFairyLights, type FairyLights } from './fairylights';
 import { buildGramophone, type Gramophone } from './gramophone';
 import {
 	buildStand,
@@ -186,6 +187,7 @@ export class Grove {
 	private world = new THREE.Group();
 	island!: IslandParts;
 	pavilion!: RotundaParts;
+	private fairy!: FairyLights;
 	private glow = new Glow();
 	private petals = new Petals();
 	private lanterns: THREE.Vector3[] = [];
@@ -430,6 +432,8 @@ export class Grove {
 		this.world.add(this.island.group);
 		this.pavilion = buildRotunda(brick, stone, bronze);
 		this.world.add(this.pavilion.group);
+		this.fairy = buildFairyLights(this.pavilion);
+		this.world.add(this.fairy.group);
 		// just under the lantern's foot, or the foot would shadow the floor
 		this.lamp.position.copy(this.pavilion.lantern).setY(this.pavilion.lantern.y - 0.18);
 		this.lamp.target.position.set(
@@ -1363,6 +1367,7 @@ export class Grove {
 			.transformDirection(this.camera.matrixWorldInverse);
 		this.light.target.position.set(0, 0, 0);
 
+		this.fairy.update(1 - this.dayMix, this.clock, this.reduced);
 		this.air.update(dt, visible);
 		if (visible) {
 			this.lightUp();
@@ -1377,6 +1382,7 @@ export class Grove {
 	/** Lay the lanterns' and the fireflies' light into the glow map. */
 	private lampCol = new THREE.Color(1.0, 0.62, 0.3);
 	private flyCol = new THREE.Color(0.8, 1.0, 0.45);
+	private fairyCol = new THREE.Color(1.0, 0.72, 0.4);
 	private lightUp() {
 		const night = 1 - this.dayMix;
 		const g = this.glow;
@@ -1385,6 +1391,8 @@ export class Grove {
 		for (const p of this.lanterns) g.add(p, this.lampCol, li, 2.6);
 		// only the soft part of its light: the spot does the rest, with shadows
 		g.add(this.pavilion.lantern, this.lampCol, li * 0.3, 2.2);
+		// the fairy lights, a warm wash on the brick under each swag
+		if (night > 0.02) for (const p of this.fairy.glowAt) g.add(p, this.fairyCol, night * 0.3, 1.3);
 		if (night > 0.02) {
 			const { pos, glow } = this.air.fireflies;
 			const v = new THREE.Vector3();
