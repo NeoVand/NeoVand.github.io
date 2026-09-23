@@ -79,6 +79,12 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 		glowAt.push(swag[Math.floor(swag.length / 2)].clone());
 	}
 
+	// and at the very top, on the finial's point, one larger lamp: the first
+	// to come on, and what keeps the crown of the dome from going dark
+	const tip = rot.crown.clone().setY(rot.crown.y + 0.08);
+	strings.push({ p: [tip], order: [0] });
+	glowAt.push(tip.clone().setY(tip.y - 0.9));
+
 	const group = new THREE.Group();
 
 	// the wire, dark, and only just there by day
@@ -156,7 +162,10 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 	});
 	const bulbs = new THREE.InstancedMesh(geo, mat, all.length);
 	const m = new THREE.Matrix4();
-	all.forEach((p, i) => bulbs.setMatrixAt(i, m.makeTranslation(p.x, p.y, p.z)));
+	all.forEach((p, i) => {
+		m.makeScale(p === tip ? 2.6 : 1, p === tip ? 2.6 : 1, p === tip ? 2.6 : 1).setPosition(p);
+		bulbs.setMatrixAt(i, m);
+	});
 	bulbs.frustumCulled = false;
 	group.add(bulbs);
 

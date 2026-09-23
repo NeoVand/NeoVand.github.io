@@ -153,14 +153,9 @@
 		border-radius: 18px;
 		padding: 32px 36px 36px;
 		color: var(--text);
-		background: color-mix(in srgb, var(--bg) 78%, transparent);
-		-webkit-backdrop-filter: blur(24px) saturate(1.2);
-		backdrop-filter: blur(24px) saturate(1.2);
-	}
-	:global(html.day) .panel {
-		background: rgba(248, 251, 253, 0.8);
-		-webkit-backdrop-filter: blur(24px) saturate(1.05);
-		backdrop-filter: blur(24px) saturate(1.05);
+		background: var(--sheet-2);
+		-webkit-backdrop-filter: blur(24px) saturate(var(--frost-sat));
+		backdrop-filter: blur(24px) saturate(var(--frost-sat));
 	}
 	.panel[open] {
 		animation: rise 260ms var(--ease-out);

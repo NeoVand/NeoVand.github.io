@@ -65,11 +65,16 @@ export function rosetteTemplate() {
 		const side = new THREE.Vector3().crossVectors(up, out).normalize();
 		const nOut = new THREE.Vector3().crossVectors(out, side).normalize();
 		const base = pos.length / 3;
+		// a round petal, broad enough to overlap its neighbours at the heart:
+		// the flower reads as a scalloped disc, not a star of slivers a pixel
+		// wide that sparkle as they move
 		const pts = [
 			[0, 0, 0],
-			[0.22, 0.38, 0.26],
+			[0.3, 0.35, 0.22],
+			[0.28, 0.72, 0.2],
 			[0, 1, 0],
-			[-0.22, 0.38, 0.26]
+			[-0.28, 0.72, 0.2],
+			[-0.3, 0.35, 0.22]
 		];
 		for (const [sx, t, lift] of pts) {
 			const p = out
@@ -81,7 +86,7 @@ export function rosetteTemplate() {
 			nrm.push(nOut.x, nOut.y, nOut.z);
 			uv.push(0.5 + sx, t);
 		}
-		idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+		for (let j = 1; j < pts.length - 1; j++) idx.push(base, base + j, base + j + 1);
 	}
 	return { pos, nrm, uv, idx };
 }
@@ -123,6 +128,9 @@ attribute vec4 iQuat;
 attribute vec4 iData;
 attribute vec4 iBase;
 uniform float uGrow;
+uniform float uBufH;
+uniform float uMinPx;
+varying float vCov;
 varying float vSky;
 varying float vSeed;
 varying vec2 vLeafUv;
@@ -130,9 +138,25 @@ ${FLORA_WIND}
 vec3 qrot(vec4 q, vec3 v) { return v + 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 `;
 
+// A flower is never drawn smaller than a couple of pixels across: smaller,
+// it flickers in and out as anything moves. Grown to that size it takes the
+// colour of the leaves round it in proportion, so that from afar a flowering
+// shrub has the same brightness it would have were every flower drawn true.
+const MIN_PX = /* glsl */ `
+	float leafGrow = 1.0;
+	#ifdef MIN_PX
+	{
+		vec4 vp = modelViewMatrix * vec4(iPos, 1.0);
+		float px = iData.x * projectionMatrix[1][1] * uBufH * 0.5 / max(-vp.z, 0.1);
+		leafGrow = max(1.0, uMinPx / max(px, 0.05));
+		vCov = 1.0 / (leafGrow * leafGrow);
+	}
+	#endif
+`;
+
 // the leaf's whole motion, shared by its colour pass and its shadow pass
 const LEAF_MOVE = /* glsl */ `
-	float lg = smoothstep(iData.y, iData.y + 0.06, uGrow);
+	float lg = smoothstep(iData.y, iData.y + 0.06, uGrow) * leafGrow;
 	float seed = iData.z;
 	float ft = uTime * (2.0 + seed * 1.7) + seed * 40.0;
 	float rs = rustleAt(iPos);
@@ -143,9 +167,15 @@ const LEAF_MOVE = /* glsl */ `
 	vec3 transformed = bendTree(iPos + lp, iBase, 1.0);
 `;
 
-function leafPatch(u: Growth) {
+function leafPatch(u: Growth, minPx = 0) {
 	return (s: THREE.WebGLProgramParametersWithUniforms) => {
-		Object.assign(s.uniforms, windUniforms(), { uGrow: u.uGrow, uSpring: u.uSpring });
+		Object.assign(s.uniforms, windUniforms(), {
+			uGrow: u.uGrow,
+			uSpring: u.uSpring,
+			uBufH: U.uBufH,
+			uMinPx: { value: minPx }
+		});
+		if (minPx > 0) s.defines = { ...(s.defines ?? {}), MIN_PX: '' };
 		s.vertexShader =
 			LEAF_VERT_HEAD +
 			s.vertexShader
@@ -163,7 +193,9 @@ function leafPatch(u: Growth) {
 				)
 				.replace(
 					'#include <begin_vertex>',
-					LEAF_MOVE +
+					'vCov = 1.0;\n' +
+						MIN_PX +
+						LEAF_MOVE +
 						`
 				vSky = iData.w;
 				vSeed = seed;
@@ -182,7 +214,9 @@ export function leafMaterial(
 	top: THREE.Color,
 	under: THREE.Color,
 	vary: number,
-	sheen = 0.5
+	sheen = 0.5,
+	/** for flowers: the least size in pixels, and the leaves they are seen against */
+	small?: { minPx: number; ground: THREE.Color }
 ) {
 	const m = new THREE.MeshStandardMaterial({
 		color: 0xffffff,
@@ -192,9 +226,10 @@ export function leafMaterial(
 	});
 	patch(
 		m,
-		'leaf-' + top.getHexString() + under.getHexString(),
-		leafPatch(u),
+		'leaf-' + top.getHexString() + under.getHexString() + (small ? '-min' : ''),
+		leafPatch(u, small?.minPx ?? 0),
 		(s) => {
+			s.uniforms.uGround = { value: small?.ground ?? top };
 			s.uniforms.uTop = { value: top };
 			s.uniforms.uUnder = { value: under };
 			s.uniforms.uVary = { value: vary };
@@ -204,6 +239,8 @@ export function leafMaterial(
 				.replace(
 					'void main() {',
 					`uniform vec3 uTop;
+				uniform vec3 uGround;
+				varying float vCov;
 				uniform vec3 uUnder;
 				uniform float uVary;
 				uniform vec3 uSunView;
@@ -221,7 +258,7 @@ export function leafMaterial(
 				leafC *= 1.0 + wv * uVary;
 				leafC.r *= 1.0 + (fract(vSeed * 3.71) - 0.5) * uVary * 0.8;
 				float rib = (1.0 - smoothstep(0.0, 0.1, abs(vLeafUv.x - 0.5))) * 0.25;
-				diffuseColor.rgb = leafC * (1.0 + rib);`
+				diffuseColor.rgb = mix(uGround, leafC * (1.0 + rib), vCov);`
 				)
 				.replace(
 					'#include <lights_fragment_end>',

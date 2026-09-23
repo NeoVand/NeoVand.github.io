@@ -578,8 +578,12 @@ void main() {
 			vec3 mR = normalize(cross(uMoon, vec3(0.0, 1.0, 0.0)));
 			vec3 mU = cross(mR, uMoon);
 			vec2 mp = vec2(dot(d - uMoon, mR), dot(d - uMoon, mU)) / 0.0165;
-			float face = texture2D(uMoonTex, 0.5 + mp * 0.4258).r;
-			vec3 moon = vec3(1.0, 0.975, 0.93) * uMoonGain.x * pow(face, uMoonGain.y);
+			// read a little inside the painting's own edge, and with the old
+			// site's brightness(1.28) contrast(1.06): its darkest sea stays
+			// well above the night, so the limb is a clean circle all round
+			float face = texture2D(uMoonTex, 0.5 + mp * 0.415).r;
+			float v = clamp((face * 1.28 - 0.5) * 1.06 + 0.5, 0.0, 1.0);
+			vec3 moon = vec3(1.0, 0.975, 0.93) * uMoonGain.x * pow(v, uMoonGain.y);
 			c = mix(c, moon, md * s.a * 0.25 * uMoonOn);
 		}
 	}
@@ -603,7 +607,8 @@ function moonTexture() {
 	tex.anisotropy = 4;
 	const img = new Image();
 	img.onload = () => {
-		g.fillStyle = '#000';
+		// under it the painting's own mid grey, so nothing dark rings the rim
+		g.fillStyle = '#8c8c8c';
 		g.fillRect(0, 0, 512, 512);
 		g.drawImage(img, 0, 0, 512, 512);
 		tex.needsUpdate = true;
@@ -692,7 +697,7 @@ export function createSky() {
 				uMoonTex: { value: moonTexture() },
 				uMoon: uniforms.uMoon,
 				uMoonOn: { value: 0 },
-				uMoonGain: { value: new THREE.Vector2(2.6, 2.5) },
+				uMoonGain: { value: new THREE.Vector2(2.4, 2.2) },
 				uProjInv: { value: new THREE.Matrix4() },
 				uCamWorld: { value: new THREE.Matrix4() }
 			},

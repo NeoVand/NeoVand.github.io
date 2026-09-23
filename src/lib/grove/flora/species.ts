@@ -348,16 +348,24 @@ export const CYPRESS: Species = {
 			t.forward(H / steps, 1, 0.3, 1.2, r);
 			if (f < 0.04) continue;
 			const reach = reachAt(f);
-			// sprays straight off the leader, which is what hides it
-			tuft(t, f > 0.75 ? 5 : 3, Math.max(0.15, 0.24 * Math.min(1, reach / 0.4)), 0.55);
-			if (reach < 0.1) continue;
+			// sprays straight off the leader, which is what hides it, smaller
+			// and closer together as the flame draws in to its point
+			tuft(
+				t,
+				f > 0.9 ? 7 : f > 0.75 ? 5 : 3,
+				Math.max(0.09, 0.24 * Math.min(1, reach / 0.4)),
+				0.55 + 0.15 * Math.max(0, (f - 0.85) / 0.15)
+			);
+			// and short side sprays almost to the top, so the outline narrows
+			// without a bare neck under the point
+			if (reach < 0.03) continue;
 			const n = 4;
 			for (let k = 0; k < n; k++) {
 				phase += 137.5;
 				const b = t.branch();
 				b.roll(phase).pitch(R(34, 48));
 				const len = reach * R(0.8, 1.1);
-				const segs = len > 0.4 ? 3 : 2;
+				const segs = len > 0.4 ? 3 : len > 0.12 ? 2 : 1;
 				for (let j = 0; j < segs; j++) {
 					b.forward(len / segs, 1, 0.12, 5, r);
 					const out = b.p.clone().setY(0).normalize();
@@ -368,17 +376,19 @@ export const CYPRESS: Species = {
 							.addScaledVector(up, 0.4)
 							.normalize();
 						const face = out.clone().multiplyScalar(0.8).addScaledVector(up, 0.3);
-						const small = 0.55 + 0.45 * Math.min(1, reach / 0.5);
+						const small = 0.4 + 0.6 * Math.min(1, reach / 0.5);
 						b.leaf(dir, face, R(0.2, 0.26) * (1 - j * 0.1) * small, 0);
 					}
 				}
 			}
 		}
-		// the point: the last of the leader, closed over by sprays turned up
-		t.forward(0.12, 1, 0.3, 0, r);
-		tuft(t, 6, 0.17, 0.85);
-		t.forward(0.1, 1, 0.3, 0, r);
-		tuft(t, 4, 0.13, 0.92);
+		// the point: the last of the leader in short steps, each closed over
+		// by a ring of small sprays turned a little further up, so it runs on
+		// out of the body rather than sitting on it
+		for (let k = 0; k < 4; k++) {
+			t.forward(0.06, 1, 0.3, 0, r);
+			tuft(t, 6 - k, 0.11 - k * 0.012, 0.66 + k * 0.07);
+		}
 		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
 		return sk;
 	}

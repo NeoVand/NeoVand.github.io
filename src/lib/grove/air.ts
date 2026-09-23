@@ -648,11 +648,12 @@ export class Air {
 		this.wingAttr.needsUpdate = true;
 		(this.flies.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 		(this.flies.geometry.getAttribute('aGlow') as THREE.BufferAttribute).needsUpdate = true;
-		const H = this.grove.renderer.domElement.height;
+		// in the picture's own pixels, which are not the canvas's
+		const H = this.grove.H * this.grove.bufferScale;
 		const fov = THREE.MathUtils.degToRad(this.grove.camera.fov);
 		const fu = (this.flies.material as THREE.ShaderMaterial).uniforms;
 		fu.uScale.value = (0.55 * H) / (2 * Math.tan(fov / 2));
-		fu.uDpr.value = this.grove.renderer.getPixelRatio();
+		fu.uDpr.value = this.grove.bufferScale;
 		this.flies.visible = night > 0.02;
 		this.birds.visible = this.day > 0.02;
 	}

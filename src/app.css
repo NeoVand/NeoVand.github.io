@@ -17,6 +17,103 @@
 	src: url('/media/fonts/young-serif-400.woff2') format('woff2');
 }
 
+/* The theme's tokens, registered, so that they are what changes over when
+   the lamp is pulled: animated once, on the root, and every word and pane
+   that uses them follows. (Transitions on every element would not do: a
+   word inside a word inside a paragraph each chase their parent's colour a
+   frame behind, the lag compounds down the tree, and the colour arrives
+   all at once at the end.) */
+@property --wn {
+	syntax: '<number>';
+	inherits: true;
+	initial-value: 0;
+}
+@property --blur {
+	syntax: '<length>';
+	inherits: true;
+	initial-value: 16px;
+}
+@property --frost-sat {
+	syntax: '<number>';
+	inherits: true;
+	initial-value: 1.2;
+}
+@property --bg {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #0b1328;
+}
+@property --title {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #fff;
+}
+@property --text {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #e3e3e5;
+}
+@property --muted {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #9a9ca3;
+}
+@property --faint {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #6b6e75;
+}
+@property --hair {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --pane {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --pane-2 {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --pane-edge {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --pane-top {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --sheet {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --sheet-2 {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --cast {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: transparent;
+}
+@property --copper {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #d9b8a2;
+}
+@property --focus {
+	syntax: '<color>';
+	inherits: true;
+	initial-value: #cfd8e8;
+}
+
 /* ─── The two lights ──────────────────────────────────────────────────────
    Night is the default and the page's own; the lamp adds .day. By night the
    running text is set a shade heavier, because light type on a dark ground
@@ -34,10 +131,15 @@
 	--pane-edge: rgba(255, 255, 255, 0.2);
 	--pane-top: rgba(255, 255, 255, 0.1);
 	--blur: 16px;
+	/* the résumé's sheet and the panels over the page: denser than a card */
+	--sheet: rgba(11, 19, 40, 0.72);
+	--sheet-2: rgba(11, 19, 40, 0.78);
+	--frost-sat: 1.2;
 	--cast: rgba(0, 0, 0, 0.35);
 	--copper: #d9b8a2;
 	--focus: #cfd8e8;
 	--ease: cubic-bezier(0.25, 0, 0, 1);
+	--theme-t: 2400ms cubic-bezier(0.65, 0, 0.35, 1);
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--serif: 'Young Serif', Georgia, 'Times New Roman', serif;
 	--sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -58,6 +160,11 @@
 	--pane-edge: rgba(255, 255, 255, 0.72);
 	--pane-top: rgba(255, 255, 255, 0.5);
 	--blur: 12px;
+	/* by day, frosted white: the day's blue at this density goes violet over
+	   the sky behind it */
+	--sheet: rgba(248, 251, 253, 0.7);
+	--sheet-2: rgba(248, 251, 253, 0.8);
+	--frost-sat: 1.05;
 	--cast: rgba(30, 44, 70, 0.14);
 	--copper: #8a4424;
 	--focus: #1e3346;
@@ -77,16 +184,28 @@ html {
 	-webkit-text-size-adjust: 100%;
 	text-size-adjust: 100%;
 }
-/* the lights change over: colours ride the same curve as the sky */
-html.theming *,
-html.theming *::before,
-html.theming *::after {
+/* the lights change over: the tokens ride the same curve as the sky, over
+   the same 2.4 s, so the words and what is behind them cross together */
+html.theming {
 	transition:
-		color 1600ms var(--ease),
-		background-color 1600ms var(--ease),
-		border-color 1600ms var(--ease),
-		fill 1600ms var(--ease),
-		stroke 1600ms var(--ease) !important;
+		--wn var(--theme-t),
+		--blur var(--theme-t),
+		--frost-sat var(--theme-t),
+		--bg var(--theme-t),
+		--title var(--theme-t),
+		--text var(--theme-t),
+		--muted var(--theme-t),
+		--faint var(--theme-t),
+		--hair var(--theme-t),
+		--pane var(--theme-t),
+		--pane-2 var(--theme-t),
+		--pane-edge var(--theme-t),
+		--pane-top var(--theme-t),
+		--sheet var(--theme-t),
+		--sheet-2 var(--theme-t),
+		--cast var(--theme-t),
+		--copper var(--theme-t),
+		--focus var(--theme-t);
 }
 
 body {

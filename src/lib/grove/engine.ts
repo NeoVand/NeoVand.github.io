@@ -25,6 +25,7 @@ import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
 import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
 import { buildFairyLights, type FairyLights } from './fairylights';
+import { PresentPass } from './present';
 import { buildGramophone, type Gramophone } from './gramophone';
 import {
 	buildStand,
@@ -228,7 +229,7 @@ export class Grove {
 	private dayT = -1;
 	private layout: Layout = 'side';
 	private W = 1;
-	private H = 1;
+	H = 1;
 	private dist = 30;
 	private hv = 16;
 	private scroll = 0;
@@ -250,8 +251,12 @@ export class Grove {
 	private pressed: Stand | null = null;
 	private growth = new Map<Stand, { g: number; to: number; pop: number; popV: number }>();
 	private intro = { t: -1, dur: 3.4 };
+	/** the scale the picture is drawn at, which adapt() trades for time */
 	private dpr = 1;
 	private dprCap = 2;
+	/** the canvas's own density: the screen's, up to 2 */
+	private native = 1;
+	private present!: PresentPass;
 	private frameTimes: number[] = [];
 	private ray = new THREE.Raycaster();
 	private playing = false;
@@ -352,6 +357,9 @@ export class Grove {
 		// on a dense screen, a cheap edge filter in place of multisampling
 		this.fxaa = new EffectPass(this.camera, new FXAAEffect());
 		this.composer.addPass(this.fxaa);
+		// and last, onto the screen at its own density
+		this.present = new PresentPass();
+		this.composer.addPass(this.present);
 		this.composer.autoRenderToScreen = false;
 		this.mainPass = pass;
 		this.scene.add(this.world);
@@ -797,13 +805,13 @@ export class Grove {
 		// a budget of pixels, not a ratio: a large, dense screen is drawn a
 		// little under its own density, which with the multisampling is still
 		// sharp, and holds the frame rate where a ratio would not
-		this.dprCap = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / (w * h)));
+		this.native = Math.min(window.devicePixelRatio || 1, 2);
+		this.dprCap = Math.min(this.native, Math.sqrt(2.4e6 / (w * h)));
 		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
 		this.dpr = Math.min(this.dpr, this.dprCap);
-		this.renderer.setPixelRatio(this.dpr);
 		this.renderer.setSize(w, h, false);
 		this.setSamples();
-		this.composer.setSize(w, h, false);
+		this.sizeBuffers();
 		this.sizeSky();
 		this.camera.aspect = w / h;
 		// fit the island and its trees into the part of the screen it owns
@@ -1187,11 +1195,32 @@ export class Grove {
 		const n = dense ? 0 : Math.min(2, this.renderer.capabilities.maxSamples);
 		if (this.composer.multisampling !== n) this.composer.multisampling = n;
 		if (this.fxaa) {
-			// whichever pass is last draws to the screen
 			this.fxaa.enabled = dense;
-			this.fxaa.renderToScreen = dense;
-			this.mainPass.renderToScreen = !dense;
+			this.fxaa.renderToScreen = false;
+			this.mainPass.renderToScreen = false;
 		}
+	}
+
+	/**
+	 * The canvas and the picture's buffers at the drawing scale. The canvas
+	 * is left for the browser to bring up to the screen: filling a canvas of
+	 * the screen's own size costs more, mostly in the browser, which blurs
+	 * every pane of frosted glass over it afresh each frame. Instead the last
+	 * pass sharpens the picture ahead of that stretch, which undoes most of
+	 * its softening for next to nothing.
+	 */
+	private sizeBuffers() {
+		const bw = Math.max(1, Math.round(this.W * this.dpr)),
+			bh = Math.max(1, Math.round(this.H * this.dpr));
+		this.renderer.setPixelRatio(this.dpr);
+		this.renderer.setSize(this.W, this.H, false);
+		const c = this.composer;
+		c.inputBuffer.setSize(bw, bh);
+		c.outputBuffer.setSize(bw, bh);
+		for (const p of c.passes) p.setSize(bw, bh);
+		U.uBufH.value = bh;
+		// drawn at the screen's density there is nothing to make up for
+		this.present.sharpness = this.dpr >= this.native - 0.01 ? 0 : 0.55;
 	}
 
 	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
@@ -1435,12 +1464,15 @@ export class Grove {
 			next = Math.min(this.dprCap, this.dpr + 0.25);
 		if (next !== this.dpr) {
 			this.dpr = next;
-			this.renderer.setPixelRatio(next);
-			this.renderer.setSize(this.W, this.H, false);
 			this.setSamples();
-			this.composer.setSize(this.W, this.H, false);
+			this.sizeBuffers();
 			this.sizeSky();
 		}
+	}
+
+	/** the scale the picture's buffers are drawn at, for anything sized in their pixels */
+	get bufferScale() {
+		return this.dpr;
 	}
 
 	get stats() {

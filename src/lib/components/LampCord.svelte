@@ -15,10 +15,27 @@
 	let canvas: HTMLCanvasElement;
 	let knob: HTMLButtonElement;
 	let redraw = () => {};
+	// how far between night (0) and day (1) the cord's colours are: they
+	// change over on the page's own curve and time, not at once
+	let tone = lights.day ? 1 : 0;
+	let toneRaf = 0;
 	$effect(() => {
-		void lights.day;
-		redraw();
+		const to = lights.day ? 1 : 0;
+		const from = tone,
+			t0 = performance.now();
+		cancelAnimationFrame(toneRaf);
+		const step = (now: number) => {
+			const k = Math.min(1, (now - t0) / 2400);
+			const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+			tone = from + (to - from) * e;
+			redraw();
+			if (k < 1) toneRaf = requestAnimationFrame(step);
+		};
+		toneRaf = requestAnimationFrame(step);
+		return () => cancelAnimationFrame(toneRaf);
 	});
+	const mixRGBA = (a: number[], b: number[], k: number) =>
+		`rgba(${a.map((v, i) => (i < 3 ? Math.round(v + (b[i] - v) * k) : (v + (b[i] - v) * k).toFixed(3))).join(',')})`;
 	// the sheet the cord is drawn on is wide, so a swing is never cut off by
 	// its edge; it runs to the edge of the window, and the cord hangs from a
 	// point as far in from that edge as it always has
@@ -134,10 +151,10 @@
 		function draw() {
 			g.setTransform(dpr, 0, 0, dpr, 0, 0);
 			g.clearRect(0, 0, W, H);
-			const day = lights.day;
+			const k = tone;
 			g.lineCap = 'round';
 			g.lineJoin = 'round';
-			g.strokeStyle = day ? 'rgba(40,58,74,0.85)' : 'rgba(170,170,178,0.72)';
+			g.strokeStyle = mixRGBA([170, 170, 178, 0.72], [40, 58, 74, 0.85], k);
 			g.lineWidth = 1.3;
 			g.beginPath();
 			// the cord that has come out of the fitting hangs straight from it
@@ -148,15 +165,10 @@
 			const kx = x[N - 1],
 				ky = y[N - 1] + 7;
 			const gr = g.createRadialGradient(kx - 2.5, ky - 3, 1, kx, ky, 8.5);
-			if (day) {
-				gr.addColorStop(0, '#fff3c4');
-				gr.addColorStop(0.35, '#e7b93e');
-				gr.addColorStop(1, '#8a5f12');
-			} else {
-				gr.addColorStop(0, '#f1ece0');
-				gr.addColorStop(0.4, '#a79f8e');
-				gr.addColorStop(1, '#3a362f');
-			}
+			// pewter #f1ece0 · #a79f8e · #3a362f, brass #fff3c4 · #e7b93e · #8a5f12
+			gr.addColorStop(0, mixRGBA([241, 236, 224, 1], [255, 243, 196, 1], k));
+			gr.addColorStop(0.38, mixRGBA([167, 159, 142, 1], [231, 185, 62, 1], k));
+			gr.addColorStop(1, mixRGBA([58, 54, 47, 1], [138, 95, 18, 1], k));
 			g.fillStyle = gr;
 			g.beginPath();
 			g.ellipse(kx, ky, 6.5, 8, 0, 0, Math.PI * 2);

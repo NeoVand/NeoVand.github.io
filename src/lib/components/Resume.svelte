@@ -139,16 +139,9 @@
 		border-radius: 24px;
 		padding: 34px 40px 44px;
 		/* denser than a card: this is a page of reading, not a glimpse */
-		--pane: color-mix(in srgb, var(--bg) 72%, transparent);
-		-webkit-backdrop-filter: blur(22px) saturate(1.2);
-		backdrop-filter: blur(22px) saturate(1.2);
-	}
-	/* by day, frosted white: the day's blue at this density goes violet over
-	   the warm sky behind it */
-	:global(html.day) .sheet {
-		--pane: rgba(248, 251, 253, 0.7);
-		-webkit-backdrop-filter: blur(22px) saturate(1.05);
-		backdrop-filter: blur(22px) saturate(1.05);
+		--pane: var(--sheet);
+		-webkit-backdrop-filter: blur(22px) saturate(var(--frost-sat));
+		backdrop-filter: blur(22px) saturate(var(--frost-sat));
 	}
 	.tools {
 		margin-bottom: 28px;

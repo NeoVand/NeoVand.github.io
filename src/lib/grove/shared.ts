@@ -17,7 +17,9 @@ export const U = {
 	uPtrAmp: { value: 0 },
 	/** the light's direction in view space, for leaves lit from behind */
 	uSunView: { value: new THREE.Vector3(0, 1, 0) },
-	uSunColor: { value: new THREE.Color(1, 0.8, 0.6) }
+	uSunColor: { value: new THREE.Color(1, 0.8, 0.6) },
+	/** the height of the picture's buffers, in pixels, for things sized on screen */
+	uBufH: { value: 1000 }
 };
 
 type Patch = (shader: THREE.WebGLProgramParametersWithUniforms) => void;

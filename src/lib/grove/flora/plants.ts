@@ -275,7 +275,13 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 		const fg = leafGeometry(rosetteTemplate(), flowers);
 		fg.boundingSphere = bounds;
 		const c = sp.palette.blossom;
-		flowerMesh = new THREE.Mesh(fg, leafMaterial(u, c, c.clone().multiplyScalar(0.9), 0.08, 0.7));
+		flowerMesh = new THREE.Mesh(
+			fg,
+			leafMaterial(u, c, c.clone().multiplyScalar(0.9), 0.08, 0.7, {
+				minPx: 2.4,
+				ground: sp.palette.leafTop
+			})
+		);
 		flowerMesh.customDepthMaterial = leafDepth(u);
 		flowerMesh.castShadow = sp.castLeaves;
 		flowerMesh.receiveShadow = true;
