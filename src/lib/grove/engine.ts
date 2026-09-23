@@ -11,17 +11,25 @@ import {
 	ToneMappingEffect,
 	ToneMappingMode
 } from 'postprocessing';
-import { brickTextures, lawnTexture, barkTextures, woodTexture } from './textures';
+import {
+	brickTextures,
+	lawnTexture,
+	barkTextures,
+	woodTexture,
+	ashlarTextures,
+	rockTextures,
+	flagTextures
+} from './textures';
 import { buildIsland, ISLAND, type IslandParts } from './island';
-import { buildPavilion, type PavilionParts } from './pavilion';
+import { buildRotunda, type RotundaParts } from './rotunda';
 import { buildGramophone, type Gramophone } from './gramophone';
-import { buildStand, type Stand } from './flora/plants';
-import { OLIVE } from './flora/species';
+import { buildStand, prepareStand, sharedCanopy, type Stand, type PlantItem } from './flora/plants';
+import type { Canopy } from './flora/canopy';
+import { OLIVE, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
 import { patch, nightPatch } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
-import { buildIvy, type Ivy } from './ivy';
 import { Notes } from './notes';
 
 // ─── The grove, in three dimensions ───────────────────────────────────────
@@ -105,15 +113,20 @@ export class Grove {
 	private moonDir = MOON_DIR.clone();
 	private world = new THREE.Group();
 	island!: IslandParts;
-	pavilion!: PavilionParts;
+	pavilion!: RotundaParts;
+	/** the lantern in the rotunda: warm, lit at dusk, brighter by night */
+	private lamp = new THREE.PointLight(0xffa04a, 0, 9, 2);
 	gramophone!: Gramophone;
 	trees: Stand[] = [];
+	/** every stand on the island, and the light inside them all */
+	garden: Stand[] = [];
+	canopy: Canopy | null = null;
 	air!: Air;
-	ivy!: Ivy;
 	private mats!: {
 		brick: THREE.MeshStandardMaterial;
 		copper: THREE.MeshStandardMaterial;
 		bark: { map: THREE.Texture; normalMap: THREE.Texture };
+		stone: THREE.Material;
 	};
 
 	readonly reduced: boolean;
@@ -270,17 +283,44 @@ export class Grove {
 			'copper',
 			nightPatch
 		);
-		this.mats = { brick, copper, bark };
+		this.mats = { brick, copper, bark, stone: brick };
+		const ashlar = ashlarTextures(aniso);
+		const stone = patch(
+			new THREE.MeshStandardMaterial({
+				map: ashlar.map,
+				normalMap: ashlar.normalMap,
+				roughness: 0.88,
+				metalness: 0
+			}),
+			'stone',
+			nightPatch
+		);
+		this.mats.stone = stone;
+		const bronze = patch(
+			new THREE.MeshStandardMaterial({ color: 0x6e5230, metalness: 1, roughness: 0.4 }),
+			'bronze',
+			nightPatch
+		);
+		const brass = patch(
+			new THREE.MeshStandardMaterial({ color: 0xd8a650, metalness: 1, roughness: 0.26 }),
+			'brass',
+			nightPatch
+		);
 
-		this.island = buildIsland(brick, copper, lawnTexture(aniso));
+		this.island = buildIsland(
+			{ ashlar, rock: rockTextures(aniso), flags: flagTextures(aniso), lawn: lawnTexture(aniso) },
+			this.rand() * 10
+		);
 		this.world.add(this.island.group);
-		this.pavilion = buildPavilion(brick, copper);
+		this.pavilion = buildRotunda(brick, stone, bronze);
 		this.world.add(this.pavilion.group);
-		this.ivy = buildIvy(Math.floor(this.rand() * 1e6));
-		this.world.add(this.ivy.group);
-		this.gramophone = buildGramophone(copper, woodTexture(aniso));
-		this.gramophone.group.position.set(0.05, this.pavilion.floorY, 0.1);
-		this.gramophone.group.rotation.y = 0.18;
+		this.lamp.position.copy(this.pavilion.lantern);
+		this.lamp.castShadow = false;
+		this.world.add(this.lamp);
+		this.gramophone = buildGramophone(brass, woodTexture(aniso));
+		this.gramophone.group.position.set(0, this.pavilion.floorY, -0.45);
+		this.gramophone.group.scale.setScalar(1.25);
+		this.gramophone.group.rotation.y = 0.35;
 		this.world.add(this.gramophone.group);
 		this.world.add(this.notes.points);
 
@@ -288,6 +328,12 @@ export class Grove {
 	}
 
 	/** Deal the stand: every species at least once, the rest at random. */
+	/**
+	 * The garden, after the old ones it remembers: two olives either side of
+	 * the doorway; cypresses behind, dark against the sky; flowering shrubs
+	 * along the wall where they can spill over it, roses by the steps with
+	 * urns of them; and ivy over the coping, falling down the rock.
+	 */
 	private plant() {
 		const r = this.rand;
 		const phone = Math.min(window.innerWidth, window.innerHeight) < 700;
@@ -295,32 +341,135 @@ export class Grove {
 			barkMap: this.mats.bark.map!,
 			barkNormal: this.mats.bark.normalMap!,
 			rows: phone ? 3 : 5,
-			density: phone ? 0.62 : 1,
+			density: phone ? 0.55 : 0.85,
 			minRadius: phone ? 0.009 : 0.006
 		};
-		// two olives either side of the doorway and a little behind it, the way
-		// they stand in front of the old garden houses
+		const seed = () => Math.floor(r() * 1e6);
+		const at = (a: number, rad: number, y = 0) =>
+			new THREE.Vector3(Math.sin(a) * rad, y, Math.cos(a) * rad);
+		const { R, lawn: RL, wallTop } = ISLAND;
+
+		// olives either side of the doorway, a little behind it
 		const side = r() < 0.5 ? 1 : -1;
-		this.trees = [side, -side].map((sgn, i) => {
-			const a = sgn * lerp(0.95, 1.2, r());
-			const rad = lerp(4.1, 4.6, r());
-			const t = buildStand(
-				[
-					{
-						species: OLIVE,
-						seed: Math.floor(r() * 1e6),
-						pos: new THREE.Vector3(Math.sin(a) * rad, 0, Math.cos(a) * rad),
-						rotY: r() * Math.PI * 2,
-						scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r())
-					}
-				],
-				opt
-			);
-			this.world.add(t.group);
-			this.growth.set(t, { g: 1, to: 1, pop: 0, popV: 0 });
-			return t;
-		});
+		const olives: PlantItem[] = [side, -side].map((sgn, i) => ({
+			species: OLIVE,
+			seed: seed(),
+			pos: at(sgn * lerp(0.95, 1.2, r()), lerp(4.1, 4.6, r())),
+			rotY: r() * Math.PI * 2,
+			scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r())
+		}));
+		// cypresses behind, off the axis so the dome stands clear between them
+		const cypresses: PlantItem[] = [
+			[2.25, 5.3],
+			[-2.45, 5.5],
+			[2.95, 4.9]
+		].map(([a, rad], i) => ({
+			species: CYPRESS,
+			seed: seed(),
+			pos: at(a * (side > 0 ? 1 : -1) + (r() - 0.5) * 0.15, rad),
+			rotY: r() * Math.PI * 2,
+			scale: lerp(0.95, 1.12, r()) * (i === 2 ? 1.1 : 1)
+		}));
+		// shrubs along the wall, most along the front where they are seen,
+		// leaving the path clear
+		const whites: PlantItem[] = [];
+		const roses: PlantItem[] = [];
+		let guard = 0;
+		const taken: THREE.Vector3[] = [...olives, ...cypresses].map((o) => o.pos);
+		while (whites.length < (phone ? 9 : 12) && guard++ < 600) {
+			const front = r() < 0.72;
+			const a = front
+				? lerp(0.22, 1.9, r()) * (r() < 0.5 ? 1 : -1)
+				: lerp(1.9, Math.PI, r()) * (r() < 0.5 ? 1 : -1);
+			// close in to the wall, so they lean over it
+			const p = at(a, RL - lerp(0.2, 0.42, r()));
+			if (taken.some((q) => q.distanceTo(p) < 1.15)) continue;
+			taken.push(p);
+			whites.push({
+				species: WHITE_SHRUB,
+				seed: seed(),
+				pos: p,
+				rotY: r() * 6.28,
+				scale: lerp(1.25, 1.65, r())
+			});
+		}
+		// roses at the foot of the steps
+		for (const sgn of [-1, 1]) {
+			roses.push({
+				species: ROSE_SHRUB,
+				seed: seed(),
+				pos: new THREE.Vector3(sgn * lerp(1.65, 1.95, r()), 0, lerp(2.75, 3.0, r())),
+				rotY: r() * 6.28,
+				scale: lerp(0.8, 0.95, r())
+			});
+		}
+		// urns either side of the path, with roses in them
+		const urnY = 0.74;
+		for (const sgn of [-1, 1]) {
+			const p = new THREE.Vector3(sgn * 1.12, 0, 3.55);
+			this.world.add(this.urn(p));
+			roses.push({
+				species: ROSE_SHRUB,
+				seed: seed(),
+				pos: p.clone().setY(urnY),
+				rotY: r() * 6.28,
+				scale: 0.55
+			});
+		}
+		// ivy over the coping, on the side that is seen
+		const vines: PlantItem[] = [];
+		for (let k = 0; k < (phone ? 18 : 26); k++) {
+			const a = lerp(-1.75, 1.75, (k + r() * 0.8) / (phone ? 18 : 26));
+			if (Math.abs(a) < 0.16) continue;
+			vines.push({
+				species: VINE,
+				seed: seed(),
+				pos: at(a, R - 0.02, wallTop + 0.08),
+				rotY: a,
+				scale: lerp(0.9, 1.3, r())
+			});
+		}
+
+		const groups = [olives, cypresses, whites, roses, vines];
+		const preps = groups.map((g) => prepareStand(g, opt.density));
+		const canopy = sharedCanopy(preps);
+		const stands = preps.map((p, i) => buildStand(groups[i], { ...opt, canopy }, p));
+		for (const st of stands) {
+			this.world.add(st.group);
+			this.growth.set(st, { g: 1, to: 1, pop: 0, popV: 0 });
+		}
+		this.trees = [stands[0], stands[1]];
+		this.garden = stands;
+		this.canopy = canopy;
 		this.shadeLawn();
+	}
+
+	/** a stone urn on a plinth, for flowers either side of the path */
+	private urn(p: THREE.Vector3) {
+		const prof: [number, number][] = [
+			[0, 0],
+			[0.2, 0],
+			[0.2, 0.08],
+			[0.14, 0.12],
+			[0.1, 0.2],
+			[0.12, 0.26],
+			[0.22, 0.34],
+			[0.28, 0.46],
+			[0.3, 0.58],
+			[0.34, 0.66],
+			[0.36, 0.72],
+			[0.32, 0.74],
+			[0.3, 0.7],
+			[0.0, 0.7]
+		];
+		const g = new THREE.LatheGeometry(
+			prof.map(([x, y]) => new THREE.Vector2(x, y)),
+			28
+		);
+		const m = new THREE.Mesh(g, this.mats.stone);
+		m.position.copy(p);
+		m.castShadow = m.receiveShadow = true;
+		return m;
 	}
 
 	/** Darken the grass under each crown and round the pavilion's foot. */
@@ -392,6 +541,13 @@ export class Grove {
 		this.scene.environmentIntensity =
 			lerp(1.2, 0.55, m) * Math.min(1, Math.abs(m - 0.5) * 4 + 0.25);
 		U.uWind.value = lerp(0.55, 1, m);
+		// the lantern: already lit at dusk, the one warm thing by night
+		this.lamp.intensity = lerp(14, 2.2, m);
+		(this.pavilion.lanternGlass.material as THREE.MeshStandardMaterial).emissiveIntensity = lerp(
+			9,
+			3,
+			m
+		);
 	}
 
 	setDay(day: boolean) {
@@ -436,8 +592,10 @@ export class Grove {
 		// fit the island and its trees into the part of the screen it owns
 		const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
 		const [fw, fh] = this.layout === 'side' ? [0.52, 0.8] : [0.86, 0.44];
+		// the whole island, from the tops of the cypresses to the point of the
+		// rock: it is a thing floating, and it has to be seen whole to read so
 		const subjectW = 17,
-			subjectH = 12;
+			subjectH = 17.2;
 		const dW = subjectW / (fw * 2 * tan * this.camera.aspect);
 		const dH = subjectH / (fh * 2 * tan);
 		this.dist = Math.max(dW, dH);
@@ -478,10 +636,10 @@ export class Grove {
 		// The camera only sinks; it does not tip. Going below the island is
 		// enough to see its underside, and a level camera keeps the horizon and
 		// the moon where they were, behind the page as well as the picture.
-		const pitch = THREE.MathUtils.degToRad(6.5 + lift) + this.pitchNudge;
+		const pitch = THREE.MathUtils.degToRad(8 + lift) + this.pitchNudge;
 		const drift = this.reduced ? 0 : Math.sin(this.clock * 0.045) * 0.06;
 		const yaw = this.yaw + drift + lerp(-0.35, 0, k);
-		const target = new THREE.Vector3(0, 3.0 - descend, 0);
+		const target = new THREE.Vector3(0, -0.9 - descend, 0);
 		const d = this.dist * back;
 		this.camera.position.set(
 			target.x + Math.sin(yaw) * Math.cos(pitch) * d,
@@ -670,7 +828,6 @@ export class Grove {
 				t.u.uGrow.value = 0;
 			}
 		}
-		if (!this.reduced) this.ivy.u.uGrow.value = 0;
 		this.air.begin();
 		this.wake();
 	}
@@ -773,12 +930,6 @@ export class Grove {
 			const g = easeInOut(clamp(st.g, 0, 1));
 			t.u.uGrow.value = g * (t.sMax + 1.2) - 0.4 + st.pop * 0.25;
 			t.u.uGrowAll.value = 0.3 + 0.7 * g;
-		}
-
-		// the ivy creeps up the brick while the trees come up
-		if (introGrow >= 0 && introGrow < this.intro.dur + 3) {
-			const k = easeInOut(clamp((introGrow - 0.4) / 3.4, 0, 1));
-			this.ivy.u.uGrow.value = k * (this.ivy.sMax + 1);
 		}
 
 		// the machine

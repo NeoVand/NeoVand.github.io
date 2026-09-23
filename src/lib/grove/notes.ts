@@ -73,9 +73,18 @@ export class Notes {
 
 	constructor() {
 		const geo = new THREE.BufferGeometry();
-		geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
-		geo.setAttribute('aLife', new THREE.BufferAttribute(this.life, 1).setUsage(THREE.DynamicDrawUsage));
-		geo.setAttribute('aKind', new THREE.BufferAttribute(this.kind, 1).setUsage(THREE.DynamicDrawUsage));
+		geo.setAttribute(
+			'position',
+			new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage)
+		);
+		geo.setAttribute(
+			'aLife',
+			new THREE.BufferAttribute(this.life, 1).setUsage(THREE.DynamicDrawUsage)
+		);
+		geo.setAttribute(
+			'aKind',
+			new THREE.BufferAttribute(this.kind, 1).setUsage(THREE.DynamicDrawUsage)
+		);
 		for (let i = 0; i < MAX; i++) {
 			this.vel.push(new THREE.Vector3());
 			this.pos[i * 3 + 1] = -999;
@@ -122,7 +131,14 @@ export class Notes {
 	}
 
 	/** Spend the music's loudness as notes, from `mouth` along `dir`. */
-	update(dt: number, level: number, playing: boolean, mouth: THREE.Vector3, dir: THREE.Vector3, px: number) {
+	update(
+		dt: number,
+		level: number,
+		playing: boolean,
+		mouth: THREE.Vector3,
+		dir: THREE.Vector3,
+		px: number
+	) {
 		this.mat.uniforms.uScale.value = px;
 		const night = U.uNight.value;
 		(this.mat.uniforms.uInk.value as THREE.Color).setRGB(

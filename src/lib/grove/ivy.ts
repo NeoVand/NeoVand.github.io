@@ -24,14 +24,37 @@ export interface Ivy {
 
 export function buildIvy(seed: number): Ivy {
 	const r = rng(seed);
-	const leaf: CardSet = { anchors: [], quats: [], scales: [], ss: [], flexes: [], tints: [], crowns: [] };
-	const rose: CardSet = { anchors: [], quats: [], scales: [], ss: [], flexes: [], tints: [], crowns: [] };
+	const leaf: CardSet = {
+		anchors: [],
+		quats: [],
+		scales: [],
+		ss: [],
+		flexes: [],
+		tints: [],
+		crowns: []
+	};
+	const rose: CardSet = {
+		anchors: [],
+		quats: [],
+		scales: [],
+		ss: [],
+		flexes: [],
+		tints: [],
+		crowns: []
+	};
 	const q = new THREE.Quaternion();
 	const z = new THREE.Vector3(0, 0, 1);
 	const roll = new THREE.Quaternion();
 	let sMax = 0;
 
-	const put = (set: CardSet, p: THREE.Vector3, n: THREE.Vector3, size: number, s: number, flex: number) => {
+	const put = (
+		set: CardSet,
+		p: THREE.Vector3,
+		n: THREE.Vector3,
+		size: number,
+		s: number,
+		flex: number
+	) => {
 		set.anchors.push(p.x, p.y, p.z);
 		const c = p.clone().addScaledVector(n, -1);
 		set.crowns.push(c.x, c.y, c.z);
@@ -68,11 +91,17 @@ export function buildIvy(seed: number): Ivy {
 		let s = 0;
 		for (let y = 0.05; y < top; y += 0.1) {
 			const wander = Math.sin(y * 2.7 + ph) * 0.12;
-			p.copy(nrm).multiplyScalar(face + 0.04).addScaledVector(tang, wander).setY(y);
+			p.copy(nrm)
+				.multiplyScalar(face + 0.04)
+				.addScaledVector(tang, wander)
+				.setY(y);
 			s += 0.1;
 			const k = 1 + Math.floor(r() * 2.2);
 			for (let j = 0; j < k; j++) {
-				const o = p.clone().addScaledVector(tang, (r() - 0.5) * 0.3).addScaledVector(nrm, r() * 0.06);
+				const o = p
+					.clone()
+					.addScaledVector(tang, (r() - 0.5) * 0.3)
+					.addScaledVector(nrm, r() * 0.06);
 				o.y += (r() - 0.5) * 0.08;
 				put(leaf, o, nrm, 0.42, s, 0.05);
 			}
@@ -86,7 +115,9 @@ export function buildIvy(seed: number): Ivy {
 			for (let a = 0; a < run; a += 0.1) {
 				const ang = phi + (dir * a) / Ro;
 				const n2 = new THREE.Vector3(Math.sin(ang), 0, Math.cos(ang));
-				p.copy(n2).multiplyScalar(Ro + 0.2).setY(eaveY + Math.sin(a * 5 + ph) * 0.06);
+				p.copy(n2)
+					.multiplyScalar(Ro + 0.2)
+					.setY(eaveY + Math.sin(a * 5 + ph) * 0.06);
 				ss += 0.1;
 				put(leaf, p, n2, 0.4, ss, 0.08);
 				if (r() < 0.35) {
@@ -95,7 +126,10 @@ export function buildIvy(seed: number): Ivy {
 					const len = 0.3 + r() * 0.9;
 					for (let d = 0; d < len; d += 0.09) {
 						hs += 0.09;
-						const hp = p.clone().addScaledVector(n2, 0.05).setY(eaveY - 0.12 - d);
+						const hp = p
+							.clone()
+							.addScaledVector(n2, 0.05)
+							.setY(eaveY - 0.12 - d);
 						put(leaf, hp, n2, 0.32, hs, 0.1 + (d / len) * 0.5);
 					}
 				}
@@ -115,7 +149,9 @@ export function buildIvy(seed: number): Ivy {
 		// a tuft on the coping, and the fall down the wall
 		let s = 0;
 		for (let j = 0; j < 4; j++) {
-			p.copy(n2).multiplyScalar((lawn + R) / 2 + (r() - 0.5) * 0.2).setY(0.2 + r() * 0.05);
+			p.copy(n2)
+				.multiplyScalar((lawn + R) / 2 + (r() - 0.5) * 0.2)
+				.setY(0.2 + r() * 0.05);
 			put(leaf, p, new THREE.Vector3(0, 1, 0).lerp(n2, 0.5).normalize(), 0.4, s, 0.15);
 		}
 		const len = 0.4 + r() * 1.3;
@@ -124,7 +160,9 @@ export function buildIvy(seed: number): Ivy {
 			s += 0.08;
 			const ang = a + (sway * d) / R;
 			const n3 = new THREE.Vector3(Math.sin(ang), 0, Math.cos(ang));
-			p.copy(n3).multiplyScalar(R + 0.1 + d * 0.03).setY(0.05 - d);
+			p.copy(n3)
+				.multiplyScalar(R + 0.1 + d * 0.03)
+				.setY(0.05 - d);
 			put(leaf, p, n3, 0.36, s, 0.1 + (d / len) * 0.4);
 		}
 	}

@@ -424,3 +424,232 @@ export function sparkTexture() {
 	t.colorSpace = THREE.SRGBColorSpace;
 	return t;
 }
+
+// ─── Stone ────────────────────────────────────────────────────────────────
+// Three stones for the island, all pale limestone: the ashlar of the wall
+// round the lip, the crag the island is broken from, and the flags of the
+// path. Each is drawn once into a tileable sheet with a height map beside it
+// for its normals.
+
+/** worley distances on a lattice that wraps with period p: nearest, second */
+function worley(x: number, y: number, p: number, salt: number): [number, number, number] {
+	const xi = Math.floor(x),
+		yi = Math.floor(y);
+	let d1 = 9,
+		d2 = 9,
+		id = 0;
+	for (let j = -1; j <= 1; j++)
+		for (let i = -1; i <= 1; i++) {
+			const cx = xi + i,
+				cy = yi + j;
+			const wx = ((cx % p) + p) % p,
+				wy = ((cy % p) + p) % p;
+			const k = wx + wy * 7919;
+			const px = cx + 0.15 + hash(k, salt) * 0.7,
+				py = cy + 0.15 + hash(k, salt + 1) * 0.7;
+			const d = Math.hypot(px - x, py - y);
+			if (d < d1) {
+				d2 = d1;
+				d1 = d;
+				id = k;
+			} else if (d < d2) d2 = d;
+		}
+	return [d1, d2, id];
+}
+
+function fbm(x: number, y: number, p: number, salt: number, oct = 4) {
+	let s = 0,
+		a = 0.5,
+		f = 1;
+	for (let o = 0; o < oct; o++) {
+		s += vnoise(x * f, y * f, p * f, salt + o * 7) * a;
+		f *= 2;
+		a *= 0.5;
+	}
+	return s / (1 - Math.pow(0.5, oct));
+}
+
+/** limestone ashlar: 2.4 m by 1.2 m, four courses of dressed blocks */
+export const ASHLAR = { w: 2.4, h: 1.2 };
+export function ashlarTextures(aniso: number) {
+	const W = 1024,
+		H = 512,
+		ch = 128,
+		joint = 5;
+	const color = canvas(W, H);
+	const g = color.getContext('2d')!;
+	const img = g.createImageData(W, H);
+	const d = img.data;
+	const hgt = new Float32Array(W * H);
+	// each course cut into blocks of its own lengths, wrapping round the tile
+	const cuts: number[][] = [];
+	for (let c = 0; c < H / ch; c++) {
+		const row = [0];
+		let x = hash(c, 5) * 120;
+		row[0] = x;
+		while (x < W + row[0] - 150) {
+			x += 170 + hash(c * 31 + row.length, 9) * 220;
+			row.push(x);
+		}
+		row[row.length - 1] = W + row[0];
+		cuts.push(row);
+	}
+	for (let y = 0; y < H; y++) {
+		const c = Math.floor(y / ch),
+			ly = y - c * ch;
+		const row = cuts[c];
+		for (let x = 0; x < W; x++) {
+			let xx = x;
+			if (xx < row[0]) xx += W;
+			let b = 0;
+			while (b < row.length - 2 && xx >= row[b + 1]) b++;
+			const x0 = row[b],
+				x1 = row[b + 1];
+			const k = c * 97 + b * 13 + 3;
+			// edges a little broken: the arris is chipped, not ruled
+			const chip = (vnoise(x / 6, y / 6, Math.round(W / 6), 17) - 0.5) * 4;
+			const hx = Math.min(xx - x0, x1 - xx) - joint / 2 + chip;
+			const hy = Math.min(ly, ch - ly) - joint / 2 + chip * 0.7;
+			const sd = Math.min(hx, hy);
+			const n1 = fbm(x / 64, y / 64, W / 64, 3, 4);
+			const pit = hash(x + y * W, 71);
+			const i = (y * W + x) * 4;
+			let r: number, gg: number, bb: number, hh: number;
+			if (sd > 0) {
+				const [cr, cg, cb] = hsl(34 + hash(k, 1) * 12, 16 + hash(k, 2) * 12, 66 + hash(k, 3) * 12);
+				// the weather: streaks run down from the top of each block
+				const streak = vnoise(x / 11, 0.5 + c * 3.1, Math.round(W / 11), 23);
+				const stain = (1 - ly / ch) * 0.1 * streak + (n1 - 0.5) * 0.14;
+				const edge = clamp(sd / 6, 0, 1);
+				const shade = 1 - stain - (1 - edge) * 0.12 + (pit < 0.05 ? -0.12 : 0);
+				r = cr * shade;
+				gg = cg * shade;
+				bb = cb * shade * 0.98;
+				hh = 0.6 + 0.4 * Math.sqrt(edge) + (n1 - 0.5) * 0.12 + (pit < 0.04 ? -0.12 : 0);
+			} else {
+				const ao = clamp(1 + sd / 4, 0, 1);
+				const m = 0.62 + 0.3 * (1 - ao) + (n1 - 0.5) * 0.1;
+				r = 0.62 * m;
+				gg = 0.6 * m;
+				bb = 0.55 * m;
+				hh = 0.15;
+			}
+			d[i] = clamp(r, 0, 1) * 255;
+			d[i + 1] = clamp(gg, 0, 1) * 255;
+			d[i + 2] = clamp(bb, 0, 1) * 255;
+			d[i + 3] = 255;
+			hgt[y * W + x] = hh;
+		}
+	}
+	g.putImageData(img, 0, 0);
+	return {
+		map: finish(new THREE.CanvasTexture(color), true, aniso),
+		normalMap: finish(new THREE.CanvasTexture(normalFromHeight(hgt, W, H, 7)), false, aniso)
+	};
+}
+
+/** the crag: limestone broken in plates and cracks, pitted, with lichen */
+export function rockTextures(aniso: number) {
+	const S = 512;
+	const color = canvas(S, S);
+	const g = color.getContext('2d')!;
+	const img = g.createImageData(S, S);
+	const d = img.data;
+	const hgt = new Float32Array(S * S);
+	for (let y = 0; y < S; y++)
+		for (let x = 0; x < S; x++) {
+			// cracks are veins, not cells: the ridges of a folded noise
+			const v1 = fbm(x / 90, y / 90, S / 90, 31, 4);
+			const v2 = fbm(x / 34, y / 34, Math.round(S / 34), 41, 3);
+			const crack = Math.pow(1 - Math.min(1, Math.abs(v1 * 2 - 1) * 5), 3);
+			const fine = Math.pow(1 - Math.min(1, Math.abs(v2 * 2 - 1) * 9), 3);
+			const n = fbm(x / 48, y / 48, S / 48, 51, 5);
+			const m = fbm(x / 16, y / 16, S / 16, 61, 3);
+			const pit = hash(x + y * S, 81);
+			const lich = fbm(x / 20 + 7, y / 20, S / 20, 91, 3);
+			const i = (y * S + x) * 4;
+			// beds of the stone, and broad stains, over the cracks
+			const bedN = vnoise(x / 512, y / 26, 1, 71);
+			let l =
+				0.62 +
+				(n - 0.5) * 0.34 +
+				(m - 0.5) * 0.1 +
+				(bedN - 0.5) * 0.12 -
+				crack * 0.16 -
+				fine * 0.05 -
+				(pit < 0.04 ? 0.08 : 0);
+			let r = l * 1.02,
+				gg = l * 0.97,
+				bb = l * 0.9;
+			// crusts of lichen, grey-green and ochre, where the stone is open
+			if (lich > 0.62 && crack < 0.4) {
+				const t = clamp((lich - 0.62) * 6, 0, 1) * 0.55;
+				const warm = hash(Math.floor(x / 40) + Math.floor(y / 40) * 99, 3) < 0.4;
+				r = r * (1 - t) + (warm ? 0.72 : 0.56) * t;
+				gg = gg * (1 - t) + (warm ? 0.6 : 0.6) * t;
+				bb = bb * (1 - t) + (warm ? 0.36 : 0.46) * t;
+			}
+			d[i] = clamp(r, 0, 1) * 255;
+			d[i + 1] = clamp(gg, 0, 1) * 255;
+			d[i + 2] = clamp(bb, 0, 1) * 255;
+			d[i + 3] = 255;
+			hgt[y * S + x] = 0.6 + (n - 0.5) * 0.5 + (m - 0.5) * 0.2 - crack * 0.5 - fine * 0.15;
+		}
+	g.putImageData(img, 0, 0);
+	return {
+		map: finish(new THREE.CanvasTexture(color), true, aniso),
+		normalMap: finish(new THREE.CanvasTexture(normalFromHeight(hgt, S, S, 6)), false, aniso)
+	};
+}
+
+/** flags: irregular slabs of the same stone, with grass and soil between */
+export const FLAGS = 1.8;
+export function flagTextures(aniso: number) {
+	const S = 512;
+	const color = canvas(S, S);
+	const g = color.getContext('2d')!;
+	const img = g.createImageData(S, S);
+	const d = img.data;
+	const hgt = new Float32Array(S * S);
+	const P = 5;
+	for (let y = 0; y < S; y++)
+		for (let x = 0; x < S; x++) {
+			const wx = x / (S / P) + (vnoise(x / 20, y / 20, S / 20, 5) - 0.5) * 0.18,
+				wy = y / (S / P) + (vnoise(x / 20 + 9, y / 20, S / 20, 6) - 0.5) * 0.18;
+			const [d1, d2, id] = worley(wx, wy, P, 71);
+			const gap = (d2 - d1) * (S / P);
+			const n = fbm(x / 40, y / 40, S / 40, 13, 4);
+			const i = (y * S + x) * 4;
+			let r: number, gg: number, bb: number, hh: number;
+			if (gap > 4) {
+				const [cr, cg, cb] = hsl(
+					30 + hash(id, 1) * 14,
+					12 + hash(id, 2) * 10,
+					60 + hash(id, 3) * 14
+				);
+				const edge = clamp((gap - 4) / 7, 0, 1);
+				const shade = 1 + (n - 0.5) * 0.2 - (1 - edge) * 0.12;
+				r = cr * shade;
+				gg = cg * shade;
+				bb = cb * shade;
+				hh = 0.6 + 0.4 * Math.sqrt(edge) + (n - 0.5) * 0.1;
+			} else {
+				// between the stones: moss and soil
+				const moss = vnoise(x / 7, y / 7, Math.round(S / 7), 9);
+				r = 0.2 + moss * 0.06;
+				gg = 0.24 + moss * 0.12;
+				bb = 0.12;
+				hh = 0.1;
+			}
+			d[i] = clamp(r, 0, 1) * 255;
+			d[i + 1] = clamp(gg, 0, 1) * 255;
+			d[i + 2] = clamp(bb, 0, 1) * 255;
+			d[i + 3] = 255;
+			hgt[y * S + x] = hh;
+		}
+	g.putImageData(img, 0, 0);
+	return {
+		map: finish(new THREE.CanvasTexture(color), true, aniso),
+		normalMap: finish(new THREE.CanvasTexture(normalFromHeight(hgt, S, S, 6)), false, aniso)
+	};
+}

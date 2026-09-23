@@ -118,9 +118,38 @@ export function placeLeaves(items: PlantItem[], skels: Skeleton[], density: numb
 	return { leaves, flowers, worldPos, areas, flowerPos };
 }
 
-export function buildStand(items: PlantItem[], opt: StandOptions): Stand {
+/** a stand grown but not yet lit or built: its skeletons and leaf sites */
+export interface Prepared {
+	items: PlantItem[];
+	skels: Skeleton[];
+	placed: ReturnType<typeof placeLeaves>;
+}
+
+export function prepareStand(items: PlantItem[], density: number): Prepared {
 	const skels = deriveAll(items);
-	const { leaves, flowers, worldPos, areas, flowerPos } = placeLeaves(items, skels, opt.density);
+	return { items, skels, placed: placeLeaves(items, skels, density) };
+}
+
+/** one canopy over everything prepared, so every stand shades the others */
+export function sharedCanopy(preps: Prepared[]) {
+	const lo = new THREE.Vector3(Infinity, Infinity, Infinity),
+		hi = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+	for (const pr of preps)
+		for (const p of pr.placed.worldPos) {
+			lo.min(p);
+			hi.max(p);
+		}
+	lo.y = Math.min(lo.y, 0);
+	const canopy = new Canopy(lo.subScalar(0.6), hi.addScalar(0.6), 0.3);
+	for (const pr of preps) pr.placed.worldPos.forEach((p, i) => canopy.add(p, pr.placed.areas[i]));
+	canopy.finish();
+	return canopy;
+}
+
+export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepared): Stand {
+	const pr = prep ?? prepareStand(items, opt.density);
+	const skels = pr.skels;
+	const { leaves, flowers, worldPos, areas, flowerPos } = pr.placed;
 
 	// the light inside: the island's canopy if there is one, else this stand's
 	let canopy = opt.canopy;
@@ -175,14 +204,18 @@ export function buildStand(items: PlantItem[], opt: StandOptions): Stand {
 	box.expandByScalar(0.8);
 	box.getBoundingSphere(bounds);
 
-	const leafGeo = leafGeometry(bladeTemplate(sp.blade, opt.rows), leaves as LeafInstances);
+	const leafGeo = leafGeometry(
+		bladeTemplate(sp.blade, Math.min(opt.rows, sp.rows)),
+		leaves as LeafInstances
+	);
 	leafGeo.boundingSphere = bounds;
 	const leafMesh = new THREE.Mesh(
 		leafGeo,
 		leafMaterial(u, sp.palette.leafTop, sp.palette.leafUnder, sp.palette.leafVary, 0.52)
 	);
 	leafMesh.customDepthMaterial = leafDepth(u);
-	leafMesh.castShadow = leafMesh.receiveShadow = true;
+	leafMesh.castShadow = sp.castLeaves;
+	leafMesh.receiveShadow = true;
 	group.add(leafMesh);
 
 	let flowerMesh: THREE.Mesh | null = null;
@@ -192,7 +225,7 @@ export function buildStand(items: PlantItem[], opt: StandOptions): Stand {
 		const c = sp.palette.blossom;
 		flowerMesh = new THREE.Mesh(fg, leafMaterial(u, c, c.clone().multiplyScalar(0.9), 0.08, 0.7));
 		flowerMesh.customDepthMaterial = leafDepth(u);
-		flowerMesh.castShadow = true;
+		flowerMesh.castShadow = sp.castLeaves;
 		flowerMesh.receiveShadow = true;
 		group.add(flowerMesh);
 	}

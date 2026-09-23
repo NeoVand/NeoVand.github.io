@@ -198,7 +198,7 @@ export function pipeRadii(sk: Skeleton, tip: number, p: number) {
 	let h = 0,
 		a = 0;
 	for (let i = 0; i < n; i++) {
-		h = Math.max(h, sk.pos[i].y);
+		h = Math.max(h, Math.abs(sk.pos[i].y));
 		a = Math.max(a, sk.arc[i]);
 	}
 	sk.height = h;

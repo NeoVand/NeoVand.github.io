@@ -53,7 +53,8 @@ float rustleAt(vec3 p) {
 // the lean and sway of a point of the plant whose foot is base.xyz and whose
 // height is base.w; flex is how much it gives (wood stiffens toward the root)
 vec3 bendTree(vec3 p, vec4 base, float flex) {
-	float h = clamp((p.y - base.y) / base.w, 0.0, 1.4);
+	// how far from the foot, up for what stands and down for what hangs
+	float h = clamp(abs(p.y - base.y) / abs(base.w), 0.0, 1.4);
 	float w = h * h;
 	vec3 dir = normalize(vec3(uWindDir.x, 0.0, uWindDir.y));
 	float travel = dot(p.xz, uWindDir) * 0.18;
@@ -102,7 +103,7 @@ export function bendTree(
 	const t = U.uTime.value,
 		wind = U.uWind.value;
 	const wd = WIND_U.uWindDir.value;
-	const h = Math.min(Math.max((p.y - base.y) / height, 0), 1.4);
+	const h = Math.min(Math.abs(p.y - base.y) / Math.abs(height), 1.4);
 	const w = h * h;
 	const travel = (p.x * wd.x + p.z * wd.y) * 0.18;
 	const lean = (0.35 + 0.65 * gust(t, travel)) * wind * 0.045 * w;
