@@ -31,7 +31,7 @@ drawn.
 | `engine.ts`                 | The `Grove`: renderer, camera and layout, the light rig, the frame loop, input, adaptive resolution.                                                                                                                                                                                                                                                                                                                            |
 | `sky.ts`                    | The sky. A single-scattering atmosphere (Rayleigh, Mie, ozone; Schüler's Chapman approximation) summed into a sky-view table when the sun moves; a sea of cumulus ray-marched through a baked height field, with low-sun shadows; altocumulus overhead. By night, stars, a moonlit sea, and the old site's moon (`static/media/moon.svg`), drawn at full resolution over the sky and setting behind the cloud as the day comes. |
 | `island.ts`                 | The limestone wall, the crag the island is broken from, the lawn, the flags, the wall lanterns.                                                                                                                                                                                                                                                                                                                                 |
-| `rotunda.ts`                | Six open brick arches on stone columns, a leaded dome with verdigris, the hanging lantern.                                                                                                                                                                                                                                                                                                                                      |
+| `rotunda.ts`                | Six open brick arches on stone columns, a leaded dome with verdigris, and the lantern hung from the dome's middle, whose spotlight throws the gramophone's shadow forward across the floor.                                                                                                                                                                                                                                     |
 | `gramophone.ts`, `notes.ts` | The machine, and the golden notes that come out of it on the music's loudness.                                                                                                                                                                                                                                                                                                                                                  |
 | `flora/`                    | The garden (below).                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `air.ts`                    | Doves by day, perching and flying in bounds; fireflies by night, wandering the garden and flashing.                                                                                                                                                                                                                                                                                                                             |
@@ -68,8 +68,14 @@ fresh for WebGL; none of it is copied.
 
 The scene is drawn in linear HDR into a multisampled half-float buffer. One
 `postprocessing` pass then does mipmap bloom, AgX tone mapping and a gentle
-grade. The sky is drawn into its own smaller sheet and laid behind the scene.
-Shadows update every other frame, and hold still while the page scrolls.
+grade. The sky is drawn into its own smaller sheet and laid behind the scene,
+from a camera that never turns: when a hand turns the view, the island turns
+under a still sky (the sun's light turning with it), and the moon and stars
+stay where they are. Shadows update every other frame, and hold still while
+the page scrolls. The thinned leaves that cast the crowns' shadows live on a
+layer of their own; three's shadow pass tests layers against the picture's
+camera, so the engine opens that layer to it only for the length of each
+shadow pass (`gateShadowLayer`).
 
 ### Keeping to 60 fps
 
