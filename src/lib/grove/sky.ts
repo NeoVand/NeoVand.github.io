@@ -53,24 +53,31 @@ vec2 h22(vec2 p) {
 }
 // a cloud top seen from above is a heap of domes: each cell of a Worley
 // field is one puff, and three octaves of them make the cauliflower
-float dome(vec2 p) {
+// Each returns the height and its slope together — the slope of a dome is
+// known exactly — so the light on a cloud costs one pass, not two samples.
+vec3 dome(vec2 p) {
 	vec2 i = floor(p), f = fract(p);
-	float h = 0.0;
+	vec3 best = vec3(0.0);
 	for (int y = -1; y <= 1; y++)
 		for (int x = -1; x <= 1; x++) {
 			vec2 g = vec2(float(x), float(y));
 			vec2 o = h22(i + g);
 			float r = 0.55 + 0.35 * o.x;
-			float d = length(g + o - f) / r;
-			h = max(h, sqrt(max(0.0, 1.0 - d * d)) * (0.6 + 0.4 * o.y));
+			vec2 dv = (g + o - f) / r;
+			float s = max(0.0, 1.0 - dot(dv, dv));
+			float k = 0.6 + 0.4 * o.y;
+			float h = sqrt(s) * k;
+			if (h > best.x) best = vec3(h, k * dv / (r * max(sqrt(s), 0.08)));
 		}
-	return h;
+	return best;
 }
-float puffs(vec2 p, float lod) {
-	float h = dome(p) * 0.62;
-	h += dome(p * 2.3 + 3.7) * 0.28 * lod;
-	h += dome(p * 5.1 + 9.1) * 0.12 * lod * lod;
-	return h;
+vec3 puffs(vec2 p, float lod) {
+	vec3 a = dome(p) * 0.62;
+	vec3 b = dome(p * 2.3 + 3.7) * (0.28 * lod);
+	b.yz *= 2.3;
+	vec3 c = dome(p * 5.1 + 9.1) * (0.12 * lod * lod);
+	c.yz *= 5.1;
+	return a + b + c;
 }
 
 vec3 starField(vec2 p, float t, float band) {
@@ -165,11 +172,9 @@ void main() {
 			// fine octaves give way with distance, before they can shimmer
 			float lod = smoothstep(0.03, 0.16, de);
 			vec2 sd2 = normalize(uSun.xz);
-			float eps = 0.05;
-			float h0 = puffs(q, lod);
-			float h1 = puffs(q + sd2 * eps, lod);
-			float top = smoothstep(0.08, 0.75, h0);
-			float slope = (h1 - h0) / eps;
+			vec3 hp = puffs(q, lod);
+			float top = smoothstep(0.08, 0.75, hp.x);
+			float slope = dot(hp.yz, sd2);
 			float lit = clamp(0.55 + slope * 0.55, 0.0, 1.0);
 			vec3 gap = vec3(0.38, 0.39, 0.56);
 			vec3 shade = vec3(0.66, 0.62, 0.74);
@@ -216,10 +221,9 @@ void main() {
 			vec2 q = pc * uSea + vec2(tc, tc * 0.35);
 			float lod = smoothstep(0.03, 0.16, de);
 			vec2 md = normalize(uMoon.xz);
-			float h0 = puffs(q, lod);
-			float h1 = puffs(q + md * 0.05, lod);
-			float top = smoothstep(0.08, 0.75, h0);
-			float lit = clamp(0.5 + (h1 - h0) / 0.05 * 0.55, 0.0, 1.0);
+			vec3 hp = puffs(q, lod);
+			float top = smoothstep(0.08, 0.75, hp.x);
+			float lit = clamp(0.5 + dot(hp.yz, md) * 0.55, 0.0, 1.0);
 			float mtoward = dot(normalize(d.xz + 1e-5), md) * 0.5 + 0.5;
 			// cloud, not water: soft grey masses, their tops only a little silvered
 			vec3 sea = mix(vec3(0.008, 0.01, 0.016), vec3(0.05, 0.056, 0.072), top);
@@ -248,8 +252,35 @@ void main() {
 	// same values light the scene when the sky is captured as its environment
 	gl_FragColor = vec4(pow(max(col, 0.0), vec3(2.2)), 1.0);
 	#include <colorspace_fragment>
-	// an eighth of a level of noise, to break up banding in the gradient
-	gl_FragColor.rgb += (h21(gl_FragCoord.xy + fract(t)) - 0.5) / 255.0;
+}
+`;
+
+// The sky is soft — cloud, and stars drawn with a smooth falloff — so it is
+// drawn into a smaller sheet than the screen and laid behind the scene by a
+// copy that costs nothing: the flat site capped its sky under a retina
+// viewport's worth of pixels for the same reason. The noise that breaks up
+// banding goes on in the copy, in the screen's own pixels and colour.
+const BACK_V = /* glsl */ `
+varying vec2 vUv;
+void main() {
+	vUv = position.xy * 0.5 + 0.5;
+	gl_Position = vec4(position.xy, 1.0, 1.0);
+}
+`;
+const BACK_F = /* glsl */ `
+uniform sampler2D uSky;
+uniform float uTime;
+varying vec2 vUv;
+float h21(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.x + q.y) * q.z);
+}
+void main() {
+	gl_FragColor = texture2D(uSky, vUv);
+	#include <colorspace_fragment>
+	gl_FragColor.rgb += (h21(gl_FragCoord.xy + fract(uTime)) - 0.5) / 255.0;
+	gl_FragColor.a = 1.0;
 }
 `;
 
@@ -279,5 +310,52 @@ export function createSky() {
 		mesh.position.copy(camera.position);
 		mesh.updateMatrixWorld();
 	};
-	return { mesh, uniforms };
+	const scene = new THREE.Scene();
+	scene.add(mesh);
+
+	// the sheet: sRGB bytes, so the gradient keeps its steps in the darks
+	const target = new THREE.WebGLRenderTarget(2, 2, {
+		depthBuffer: false,
+		colorSpace: THREE.SRGBColorSpace,
+		minFilter: THREE.LinearFilter,
+		magFilter: THREE.LinearFilter,
+		generateMipmaps: false
+	});
+	const tri = new THREE.BufferGeometry();
+	tri.setAttribute(
+		'position',
+		new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3)
+	);
+	const backdrop = new THREE.Mesh(
+		tri,
+		new THREE.ShaderMaterial({
+			uniforms: { uSky: { value: target.texture }, uTime: U.uTime },
+			vertexShader: BACK_V,
+			fragmentShader: BACK_F,
+			depthWrite: false,
+			depthTest: false,
+			toneMapped: false
+		})
+	);
+	backdrop.renderOrder = -1000;
+	backdrop.frustumCulled = false;
+
+	return {
+		mesh,
+		uniforms,
+		backdrop,
+		/** size the sheet: the screen's pixels, up to a budget */
+		setSize(px: number, py: number, budget: number) {
+			const s = Math.min(1, Math.sqrt(budget / Math.max(1, px * py)));
+			const w = Math.max(2, Math.round(px * s)),
+				h = Math.max(2, Math.round(py * s));
+			if (target.width !== w || target.height !== h) target.setSize(w, h);
+		},
+		render(renderer: THREE.WebGLRenderer, camera: THREE.Camera) {
+			const prev = renderer.getRenderTarget();
+			renderer.setRenderTarget(target);
+			renderer.render(scene, camera);
+			renderer.setRenderTarget(prev);
+		}
+	};
 }

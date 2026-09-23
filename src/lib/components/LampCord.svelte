@@ -19,12 +19,13 @@
 	});
 	const W = 90,
 		H = 300,
-		N = 16,
 		SEG = 8.5;
 	const ax = W / 2,
 		ay = -4;
 
 	onMount(() => {
+		// shorter where the page stacks, so it hangs clear of the island's crowns
+		const N = matchMedia('(max-width: 899px), (max-aspect-ratio: 21/20)').matches ? 8 : 16;
 		const g = canvas.getContext('2d')!;
 		const dpr = Math.min(2, devicePixelRatio || 1);
 		canvas.width = W * dpr;

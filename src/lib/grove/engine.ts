@@ -97,6 +97,7 @@ export class Grove {
 	private ray = new THREE.Raycaster();
 	private playing = false;
 	private crankA = 0;
+	private shadowTick = 0;
 	private rand: () => number;
 	private listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [];
 	onGramophone?: () => void;
@@ -118,6 +119,9 @@ export class Grove {
 		r.toneMappingExposure = 1.0;
 		r.shadowMap.enabled = true;
 		r.shadowMap.type = THREE.PCFShadowMap;
+		// redrawn every other frame: see update()
+		r.shadowMap.autoUpdate = false;
+		r.shadowMap.needsUpdate = true;
 		this.renderer = r;
 		const phone = Math.min(screen.width, screen.height) < 600;
 		this.dprCap = Math.min(window.devicePixelRatio || 1, phone ? 2 : 2);
@@ -126,7 +130,16 @@ export class Grove {
 		this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
 		this.sky.uniforms.uSun.value.copy(SUN_DIR);
 		this.sky.uniforms.uMoon.value.copy(this.moonDir);
-		this.scene.add(this.sky.mesh);
+		// The sky fills every pixel with an opaque colour first. Leaves cut out
+		// by alpha-to-coverage then write their partial alpha into the canvas,
+		// and a browser that composites the canvas's alpha (WebKit does, even
+		// asked not to) shows the page's own ground through every leaf edge as
+		// a speck of blue. So nothing after the sky writes alpha; draw() turns
+		// it back on at the end of the frame, for the shadow pass, which packs
+		// depth into all four channels.
+		const gl = r.getContext();
+		this.sky.backdrop.onAfterRender = () => gl.colorMask(true, true, true, false);
+		this.scene.add(this.sky.backdrop);
 		this.scene.add(this.world);
 
 		this.light = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -312,6 +325,7 @@ export class Grove {
 	private applyDay(m: number) {
 		U.uNight.value = 1 - m;
 		this.sky.uniforms.uMix.value = m;
+		if (this.W > 1) this.sizeSky();
 		// the light swings from the moon's quarter to the sun's
 		// the moon is behind the island from here, so by night it is drawn in
 		// its rim light, with a cool fill from the sky to keep its shape
@@ -370,10 +384,11 @@ export class Grove {
 		this.layout = w >= 900 && w / h > 1.05 ? 'side' : 'stack';
 		this.renderer.setPixelRatio(this.dpr);
 		this.renderer.setSize(w, h, false);
+		this.sizeSky();
 		this.camera.aspect = w / h;
 		// fit the island and its trees into the part of the screen it owns
 		const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-		const [fw, fh] = this.layout === 'side' ? [0.52, 0.8] : [0.92, 0.47];
+		const [fw, fh] = this.layout === 'side' ? [0.52, 0.8] : [0.86, 0.44];
 		const subjectW = 17,
 			subjectH = 12;
 		const dW = subjectW / (fw * 2 * tan * this.camera.aspect);
@@ -544,7 +559,21 @@ export class Grove {
 		} catch {
 			/* older engines: the first frame compiles instead */
 		}
+		this.draw();
+	}
+
+	private draw() {
+		this.sky.render(this.renderer, this.camera);
 		this.renderer.render(this.scene, this.camera);
+		this.renderer.getContext().colorMask(true, true, true, true);
+	}
+
+	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
+	 *  by night, when it carries stars a pixel across. */
+	private sizeSky() {
+		const px = this.W * this.dpr,
+			py = this.H * this.dpr;
+		this.sky.setSize(px, py, lerp(2.2e6, 1.3e6, this.dayMix));
 	}
 
 	/** Begin the opening: the trees grow in, the camera settles, birds come. */
@@ -578,11 +607,16 @@ export class Grove {
 	private frame_ = (now: number) => {
 		if (!this.running) return;
 		this.raf = requestAnimationFrame(this.frame_);
+		// Deep in the page there is only sky, drifting, and every pane of glass
+		// over it has to blur it again each time it changes: there it is drawn
+		// twenty times a second, which the cloud cannot tell from sixty.
+		if (!this.world.visible && Math.abs(this.dayMix - this.dayTo) < 1e-3 && now - this.last < 48)
+			return;
 		const dt = Math.min(0.05, (now - this.last) / 1000);
 		this.last = now;
 		const t0 = performance.now();
 		this.update(dt);
-		this.renderer.render(this.scene, this.camera);
+		this.draw();
 		this.adapt(performance.now() - t0, dt);
 	};
 
@@ -615,6 +649,13 @@ export class Grove {
 		const visible = p < 1.85;
 		this.world.visible = visible;
 		this.light.castShadow = visible;
+		// the shadows follow the wind at half the rate the picture does: a
+		// crown's shadow on the lawn moves too slowly for the difference to show,
+		// and the shadow pass draws every tree a second time
+		this.shadowTick = (this.shadowTick + 1) % 2;
+		const quick = this.intro.t >= 0 && this.intro.t < this.intro.dur + 1.5;
+		this.renderer.shadowMap.needsUpdate =
+			visible && (this.shadowTick === 0 || quick || !!this.pressed);
 
 		// the pointer pushes the crowns aside, where it meets the lawn
 		this.ptrAmp = damp(this.ptrAmp, this.pointerOn && visible ? 1 : 0, 3, dt);
@@ -688,6 +729,7 @@ export class Grove {
 			this.dpr = next;
 			this.renderer.setPixelRatio(next);
 			this.renderer.setSize(this.W, this.H, false);
+			this.sizeSky();
 		}
 	}
 

@@ -62,37 +62,44 @@
 <section id="cv" class="cv" class:open aria-label="Résumé" bind:this={section} inert={!open}>
 	<div class="clip">
 		<div class="wrap inner">
-			<div class="tools">
-				<a class="pill glass" href={resume.pdf} download="Neo-Mohsenvand-Resume.pdf">
-					<svg aria-hidden="true"><use href="#icon-download" /></svg>
-					Download résumé PDF
-				</a>
-			</div>
-			<div class="grid">
-				<div class="col">
-					<h2 class="head"><svg aria-hidden="true"><use href="#icon-cv-work" /></svg>Experience</h2>
-					{@render list(resume.experience, 60)}
-					<h2 class="head">
-						<svg aria-hidden="true"><use href="#icon-cv-school" /></svg>Education
-					</h2>
-					{@render list(resume.education, 200)}
-					<h2 class="head"><svg aria-hidden="true"><use href="#icon-cv-honour" /></svg>Honours</h2>
-					<ul class="awards">
-						{#each resume.honours as h (h.html)}
-							<li><span>{@html h.html}</span><time>{h.year}</time></li>
-						{/each}
-					</ul>
+			<!-- a sheet of glass, since the island may still be passing behind it -->
+			<div class="sheet glass">
+				<div class="tools">
+					<a class="pill glass" href={resume.pdf} download="Neo-Mohsenvand-Resume.pdf">
+						<svg aria-hidden="true"><use href="#icon-download" /></svg>
+						Download résumé PDF
+					</a>
 				</div>
-				<div class="col">
-					<h2 class="head"><svg aria-hidden="true"><use href="#icon-cv-skill" /></svg>Skills</h2>
-					<dl class="skills">
-						{#each resume.skills as s (s.label)}
-							<div>
-								<dt><svg aria-hidden="true"><use href="#{s.icon}" /></svg>{s.label}</dt>
-								<dd>{s.text}</dd>
-							</div>
-						{/each}
-					</dl>
+				<div class="grid">
+					<div class="col">
+						<h2 class="head">
+							<svg aria-hidden="true"><use href="#icon-cv-work" /></svg>Experience
+						</h2>
+						{@render list(resume.experience, 60)}
+						<h2 class="head">
+							<svg aria-hidden="true"><use href="#icon-cv-school" /></svg>Education
+						</h2>
+						{@render list(resume.education, 200)}
+						<h2 class="head">
+							<svg aria-hidden="true"><use href="#icon-cv-honour" /></svg>Honours
+						</h2>
+						<ul class="awards">
+							{#each resume.honours as h (h.html)}
+								<li><span>{@html h.html}</span><time>{h.year}</time></li>
+							{/each}
+						</ul>
+					</div>
+					<div class="col">
+						<h2 class="head"><svg aria-hidden="true"><use href="#icon-cv-skill" /></svg>Skills</h2>
+						<dl class="skills">
+							{#each resume.skills as s (s.label)}
+								<div>
+									<dt><svg aria-hidden="true"><use href="#{s.icon}" /></svg>{s.label}</dt>
+									<dd>{s.text}</dd>
+								</div>
+							{/each}
+						</dl>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -127,6 +134,14 @@
 		opacity: 1;
 		transform: none;
 		transition-delay: 120ms;
+	}
+	.sheet {
+		border-radius: 24px;
+		padding: 34px 40px 44px;
+		/* denser than a card: this is a page of reading, not a glimpse */
+		--pane: color-mix(in srgb, var(--bg) 72%, transparent);
+		-webkit-backdrop-filter: blur(22px) saturate(1.2);
+		backdrop-filter: blur(22px) saturate(1.2);
 	}
 	.tools {
 		margin-bottom: 28px;
@@ -237,7 +252,7 @@
 		color: var(--title);
 		margin: 10px 0 4px;
 	}
-	.post-body :global(h3 .when) {
+	.post-body :global(h3) :global(.when) {
 		display: block;
 		font-weight: calc(400 + var(--wn));
 		font-size: 12.5px;
@@ -295,6 +310,10 @@
 		.grid {
 			grid-template-columns: 1fr;
 			gap: 8px;
+		}
+		.sheet {
+			border-radius: 18px;
+			padding: 22px 18px 28px;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

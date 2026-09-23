@@ -531,6 +531,8 @@
 		overflow-x: auto;
 		overflow-y: hidden;
 		scroll-snap-type: x proximity;
+		/* a page snaps to the margin the row keeps, not to the window's edge */
+		scroll-padding-inline: clamp(24px, 6vw, 96px);
 		scrollbar-width: thin;
 		padding: 12px 0 20px;
 		outline: none;

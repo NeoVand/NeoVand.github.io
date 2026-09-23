@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { papers } from '$lib/data/content';
 	import type { Paper } from '$lib/data/types';
-	import ReadingRoom from './ReadingRoom.svelte';
 
-	let room: ReadingRoom;
+	// the room itself stands at the top of the page, over everything,
+	// lamp cord included; the decks only ask for it
+	let { onopen }: { onopen: (p: Paper, deck: HTMLElement) => void } = $props();
 
 	function open(e: MouseEvent, p: Paper) {
 		// a modified click means "the PDF, please", as the link says
 		if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 		e.preventDefault();
-		room.open(p, e.currentTarget as HTMLElement);
+		onopen(p, e.currentTarget as HTMLElement);
 	}
 </script>
 
@@ -42,8 +43,6 @@
 		</div>
 	</div>
 </section>
-
-<ReadingRoom bind:this={room} />
 
 <style>
 	.decks {

@@ -10,8 +10,10 @@
 	import Media from '$lib/components/Media.svelte';
 	import Earlier from '$lib/components/Earlier.svelte';
 	import LampCord from '$lib/components/LampCord.svelte';
+	import ReadingRoom from '$lib/components/ReadingRoom.svelte';
 
 	let cvOpen = $state(false);
+	let room: ReadingRoom;
 	onMount(readLights);
 </script>
 
@@ -22,7 +24,7 @@
 	<Hero bind:cvOpen />
 	<Resume open={cvOpen} />
 	<Work />
-	<Papers />
+	<Papers onopen={(p, deck) => room.open(p, deck)} />
 	<Media />
 	<Earlier />
 </main>
@@ -32,10 +34,18 @@
 	<a href="/archive/">The first site</a>
 </footer>
 
+<ReadingRoom bind:this={room} />
+
 <style>
 	main {
 		position: relative;
 		z-index: 1;
+		/* the page lies over the scene; where it has nothing, a hand goes
+		   through to the island */
+		pointer-events: none;
+	}
+	main > :global(*) {
+		pointer-events: auto;
 	}
 	footer {
 		position: relative;

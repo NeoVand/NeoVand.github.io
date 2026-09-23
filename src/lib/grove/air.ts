@@ -271,24 +271,34 @@ export class Air {
 
 	// ── where a bird can be ───────────────────────────────────────────────
 	/** twig ends high on the crown, where a bird shows against the sky */
+	/** twig ends high on the crown, where a bird shows against the sky —
+	 *  and only those that have grown, since a bird cannot land on a promise */
 	private twigsOf(t: TreeHandles) {
 		const ps = t.perches;
 		const top = t.height * 0.55;
+		const grown = t.u.uGrow.value;
 		const out: number[] = [];
-		for (let i = 0; i < ps.length; i++) if (ps[i].p.y > top) out.push(i);
-		return out.length ? out : ps.map((_, i) => i);
+		for (let i = 0; i < ps.length; i++) if (ps[i].p.y > top && ps[i].s < grown - 0.8) out.push(i);
+		if (out.length) return out;
+		for (let i = 0; i < ps.length; i++) if (ps[i].s < grown - 0.8) out.push(i);
+		return out;
+	}
+
+	/** is the twig under this site there at all? */
+	private standing(s: Site) {
+		if (s.kind !== 'twig') return true;
+		const pr = s.tree.perches[s.i];
+		return !!pr && s.tree.u.uGrow.value - pr.s > 0.4;
 	}
 
 	private sitePos(s: Site, out: THREE.Vector3) {
 		if (s.kind === 'twig') {
 			const pr = s.tree.perches[s.i];
 			if (!pr) return out.set(0, -100, 0);
-			// the twig as it is grown and bent right now
-			const grown = clamp((s.tree.u.uGrow.value - pr.s) / 0.8, 0, 1);
+			// the twig as the wind has it right now
 			windOffset(pr.p, pr.flex, out);
 			out.add(pr.p);
 			out.y += 0.06;
-			if (grown < 0.99) out.y -= (1 - grown) * 50; // the twig is not there
 			return out;
 		}
 		return out.copy(s.p);
@@ -339,6 +349,8 @@ export class Air {
 				return { kind: 'point', p: this.pointSites(gname), group: gname };
 		}
 		const twigs = this.twigsOf(tree);
+		// a tree still coming up: wait on the building instead
+		if (!twigs.length) return { kind: 'point', p: this.pointSites('roof'), group: 'roof' };
 		return { kind: 'twig', tree, i: twigs[Math.floor(this.r() * twigs.length)] };
 	}
 
@@ -491,7 +503,7 @@ export class Air {
 				cr.pose = damp(cr.pose, 1, 6, dt);
 				cr.vel.set(0, 0, 0);
 				cr.timer -= dt;
-				if (cr.pos.y < -20 && cr.site.kind === 'twig') {
+				if (!this.standing(cr.site)) {
 					// the twig went out from under it
 					this.fly(cr, this.pickSite(cr), 0);
 				} else if (cr.timer < 0 && !reduced) {

@@ -10,7 +10,14 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			prerender: {
+				// the first site is a folder of static files, not a route
+				handleHttpError: ({ path, message }) => {
+					if (path.startsWith('/archive')) return;
+					throw new Error(message);
+				}
+			}
 		})
 	]
 });
