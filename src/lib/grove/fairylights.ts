@@ -11,11 +11,11 @@ import { ROT, type RotundaParts } from './rotunda';
 
 const BULB_R = 0.028;
 /** warm white, a little under a candle's colour */
-const WARM = new THREE.Color(1.0, 0.72, 0.4);
+const WARM = new THREE.Color(1.0, 0.6, 0.28);
 
 export interface FairyLights {
 	group: THREE.Group;
-	/** where the swags hang lowest: their light, for the glow map */
+	/** out from each rib and where each swag hangs lowest: their light, for the glow map */
 	glowAt: THREE.Vector3[];
 	update(on: number, time: number, still: boolean): void;
 }
@@ -52,6 +52,9 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 		const n = Math.round(len / 0.2);
 		for (let j = 0; j <= n; j++) rib.push(curve.getPointAt(j / n));
 		strings.push({ p: rib, order: rib.map((_, j) => (j / n) * 0.55) });
+		// the ribs' light, taken out past the lead toward the crowns: laid
+		// on the dome itself it would pale the whole of it
+		glowAt.push(at(a, corner + 0.9, domeY + 0.5));
 
 		// the swag to the next corner, sagging over the arch
 		const b = n6 + ((k + 1) * Math.PI) / 3;
@@ -118,7 +121,7 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 		uOn: { value: 0 },
 		uTime: { value: 0 },
 		uTwinkle: { value: 1 },
-		uWarm: { value: WARM.clone().multiplyScalar(7) },
+		uWarm: { value: WARM.clone().multiplyScalar(4.6) },
 		uBead: { value: new THREE.Color(0.42, 0.4, 0.34) }
 	};
 	const mat = new THREE.ShaderMaterial({

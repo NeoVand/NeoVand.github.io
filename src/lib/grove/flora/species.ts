@@ -94,7 +94,22 @@ function domeTree(o: DomeTree): Species {
 			// light, and thick with leaf at its skin. The dome is an envelope the
 			// wood may not pass; what reaches it stops and breaks into leafy
 			// shoots, which is what the pruning knife makes of it.
-			const heart = new THREE.Vector3(R(-0.15, 0.15), R(2.75, 3.0), R(-0.15, 0.15));
+			// which way, if any, the building is: probed round the crown's height
+			const away = new THREE.Vector3();
+			if (avoid) {
+				const probe = new THREE.Vector3();
+				for (let k = 0; k < 24; k++) {
+					const a = (k / 24) * Math.PI * 2;
+					if (avoid(probe.set(Math.sin(a) * 2.2, 3.0, Math.cos(a) * 2.2)))
+						((away.x -= Math.sin(a)), (away.z -= Math.cos(a)));
+				}
+				if (away.lengthSq() > 1e-6) away.normalize();
+			}
+			// the crown kept a little off the building, over its own trunk
+			const heart = new THREE.Vector3(R(-0.1, 0.1), R(2.75, 3.0), R(-0.1, 0.1)).addScaledVector(
+				away,
+				0.3
+			);
 			const rx = R(2.15, 2.45),
 				ry = R(1.45, 1.65);
 			const inside = (p: THREE.Vector3) =>
@@ -200,15 +215,39 @@ function domeTree(o: DomeTree): Species {
 				limb(s, v * R(0.68, 0.78), depth + 1);
 			};
 
-			// the trunk: a lean, a twist as it rises, and a parting into leaders
-			t.roll(R(0, 360)).pitch(R(4, 10));
-			const trunk = R(0.95, 1.3);
-			t.forward(trunk, 6, 0.05, 7, r);
+			// the trunk: straight up, as a kept tree's is, with only a little
+			// wander in it, and then a parting into leaders
+			t.roll(R(0, 360)).pitch(R(0, 1.5));
+			const trunk = R(1.05, 1.35);
+			t.forward(trunk, 6, 0.3, 2.2, r);
 			const leaders = r() < 0.5 ? 2 : 3;
-			const phase = r() * 360;
+			// the leaders part away from the building: of a round of trial
+			// turns, the one that sends the fewest of them toward it
+			const lean = (ph: number) => {
+				let bad = 0;
+				for (let k = 0; k < leaders; k++) {
+					const b = t.clone();
+					b.roll(ph + k * (360 / leaders)).pitch(33);
+					bad += Math.max(0, b.h.x * -away.x + b.h.z * -away.z);
+				}
+				return bad;
+			};
+			let phase = r() * 360;
+			if (away.lengthSq() > 0) {
+				let best = Infinity;
+				for (let k = 0; k < 24; k++) {
+					const ph = k * 15;
+					const bad = lean(ph);
+					if (bad < best - 1e-6) ((best = bad), (phase = ph));
+				}
+			}
 			for (let k = 0; k < leaders; k++) {
 				const b = t.branch();
-				b.roll(phase + k * (360 / leaders) + R(-20, 20)).pitch(R(26, 40));
+				b.roll(phase + k * (360 / leaders) + R(-12, 12));
+				// and one that still faces the building grows more upright
+				const c = b.clone().pitch(33);
+				const toward = -(c.h.x * away.x + c.h.z * away.z);
+				b.pitch(toward > 0.2 ? R(14, 20) : R(26, 40));
 				limb(b, R(0.85, 1.0), 1);
 			}
 			taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });

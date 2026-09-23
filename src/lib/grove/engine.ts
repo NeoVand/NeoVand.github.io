@@ -193,7 +193,9 @@ export class Grove {
 	private lanterns: THREE.Vector3[] = [];
 	private glassMat = new THREE.MeshStandardMaterial({
 		color: 0x2a2014,
-		emissive: new THREE.Color(1.0, 0.5, 0.17),
+		// a candle's orange, kept low enough that the tone map leaves it
+		// orange rather than burning it to white
+		emissive: new THREE.Color(1.0, 0.44, 0.13),
 		emissiveIntensity: 0,
 		roughness: 0.3
 	});
@@ -501,7 +503,7 @@ export class Grove {
 			rotY: r() * Math.PI * 2,
 			scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r()),
 			// pruned clear of the rotunda, with room for the leaves on the shoots
-			avoid: (p: THREE.Vector3) => rotundaClearance(p) < 0.42
+			avoid: (p: THREE.Vector3) => rotundaClearance(p) < 0.52
 		}));
 		// cypresses behind, off the axis so the dome stands clear between them
 		const cypresses: PlantItem[] = [
@@ -743,7 +745,7 @@ export class Grove {
 		U.uWind.value = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
 		this.lamp.intensity = lerp(22, 2.2, m);
-		this.glassMat.emissiveIntensity = lerp(4.5, 1.3, m);
+		this.glassMat.emissiveIntensity = lerp(2.6, 1.0, m);
 	}
 
 	setDay(day: boolean) {
@@ -1380,9 +1382,9 @@ export class Grove {
 	}
 
 	/** Lay the lanterns' and the fireflies' light into the glow map. */
-	private lampCol = new THREE.Color(1.0, 0.62, 0.3);
+	private lampCol = new THREE.Color(1.0, 0.55, 0.22);
 	private flyCol = new THREE.Color(0.8, 1.0, 0.45);
-	private fairyCol = new THREE.Color(1.0, 0.72, 0.4);
+	private fairyCol = new THREE.Color(1.0, 0.6, 0.28);
 	private lightUp() {
 		const night = 1 - this.dayMix;
 		const g = this.glow;
@@ -1392,7 +1394,9 @@ export class Grove {
 		// only the soft part of its light: the spot does the rest, with shadows
 		g.add(this.pavilion.lantern, this.lampCol, li * 0.3, 2.2);
 		// the fairy lights, a warm wash on the brick under each swag
-		if (night > 0.02) for (const p of this.fairy.glowAt) g.add(p, this.fairyCol, night * 0.3, 1.3);
+		// the fairy lights: on the brick round them and out into the crowns
+		// either side, which is most of what makes them look lit
+		if (night > 0.02) for (const p of this.fairy.glowAt) g.add(p, this.fairyCol, night * 0.45, 2.1);
 		if (night > 0.02) {
 			const { pos, glow } = this.air.fireflies;
 			const v = new THREE.Vector3();
