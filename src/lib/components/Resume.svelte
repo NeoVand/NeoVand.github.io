@@ -3,7 +3,7 @@
 	import type { ResumeEntry } from '$lib/data/types';
 	import { tick } from 'svelte';
 
-	let { open = false }: { open?: boolean } = $props();
+	let { open = $bindable(false) }: { open?: boolean } = $props();
 	let section: HTMLElement;
 	let openPost = $state<Record<string, boolean>>({});
 
@@ -12,6 +12,24 @@
 	// own height, so nothing is measured in script and the closed section
 	// costs the document nothing. Shut, it is inert: out of the tab order and
 	// unread, while still laid out, which is what lets it animate at all.
+	// Shut from its own corner, or with Escape while reading in it: focus
+	// goes back to the button that opened it, and a reader who had gone down
+	// into it is brought back up to that button rather than left somewhere
+	// further down a page that has just closed up under them.
+	function close() {
+		open = false;
+		const toggle = document.querySelector<HTMLElement>('.cv-toggle');
+		toggle?.focus({ preventScroll: true });
+		if (section.getBoundingClientRect().top < 0)
+			toggle?.scrollIntoView({
+				block: 'center',
+				behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+			});
+	}
+	function onKey(e: KeyboardEvent) {
+		if (open && e.key === 'Escape' && section.contains(document.activeElement)) close();
+	}
+
 	$effect(() => {
 		if (open)
 			tick().then(() => {
@@ -59,11 +77,24 @@
 	</ol>
 {/snippet}
 
+<svelte:window onkeydown={onKey} />
+
 <section id="cv" class="cv" class:open aria-label="Résumé" bind:this={section} inert={!open}>
 	<div class="clip">
 		<div class="wrap inner">
 			<!-- a sheet of glass, since the island may still be passing behind it -->
 			<div class="sheet glass">
+				<button
+					class="close pill glass"
+					type="button"
+					aria-label="Close the résumé"
+					title="Close"
+					onclick={close}
+				>
+					<svg viewBox="0 0 24 24" aria-hidden="true"
+						><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></svg
+					>
+				</button>
 				<div class="tools">
 					<a class="pill glass" href={resume.pdf} download="Neo-Mohsenvand-Resume.pdf">
 						<svg aria-hidden="true"><use href="#icon-download" /></svg>
@@ -136,6 +167,7 @@
 		transition-delay: 120ms;
 	}
 	.sheet {
+		position: relative;
 		border-radius: 24px;
 		padding: 34px 40px 44px;
 		/* denser than a card: this is a page of reading, not a glimpse */
@@ -145,6 +177,24 @@
 	}
 	.tools {
 		margin-bottom: 28px;
+	}
+	/* a round button in the sheet's top corner, of a piece with the pills */
+	.close {
+		position: absolute;
+		/* on the line of the download button, in from the corner as far */
+		top: 34px;
+		right: 40px;
+		width: 38px;
+		padding: 0;
+		justify-content: center;
+	}
+	.close svg {
+		width: 16px;
+		height: 16px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
 	}
 	.grid {
 		display: grid;
@@ -314,6 +364,10 @@
 		.sheet {
 			border-radius: 18px;
 			padding: 22px 18px 28px;
+		}
+		.close {
+			top: 22px;
+			right: 18px;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

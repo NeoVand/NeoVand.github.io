@@ -22,7 +22,7 @@
 
 <main>
 	<Hero bind:cvOpen />
-	<Resume open={cvOpen} />
+	<Resume bind:open={cvOpen} />
 	<Work />
 	<Papers onopen={(p, deck) => room.open(p, deck)} />
 	<Media />
