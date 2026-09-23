@@ -271,6 +271,10 @@ export class Grove {
 	/** the change of light under way: from what, and since when */
 	private dayFrom = 1;
 	private dayT = -1;
+	/** how far out of the picture the moon is (1 by day), on a clock of its own */
+	private moonK = 1;
+	private moonFrom = 1;
+	private moonT = -1;
 	private layout: Layout = 'side';
 	private W = 1;
 	H = 1;
@@ -283,6 +287,8 @@ export class Grove {
 	/** when the last spin was let go, and the last sample of a drag, for its speed */
 	private spunAt = -99;
 	private spinSample = { yaw: 0, t: 0 };
+	/** the slow turn of the island while a record plays, radians a second */
+	private orbit = 0;
 	private pitchNudge = 0;
 	private pointerNdc = new THREE.Vector2(0, 0);
 	private pointerOn = false;
@@ -336,6 +342,7 @@ export class Grove {
 	constructor(opts: GroveOptions) {
 		this.reduced = opts.reduced;
 		this.dayMix = this.dayTo = opts.day ? 1 : 0;
+		this.moonK = this.moonFrom = this.dayMix;
 		this.onGramophone = opts.onGramophone;
 		this.level = opts.level ?? (() => 0);
 		this.rand = rng(opts.seed ?? Date.now() & 0xffff);
@@ -773,6 +780,18 @@ export class Grove {
 		this.scene.environmentRotation.set(0, this.viewYaw, 0);
 	}
 
+	/**
+	 * The moon goes out of the picture, up and away from the page, as the
+	 * sun comes up: off at once, so it is seen to go before the sky pales
+	 * over it. With the night it comes back the same way, but slowly, and
+	 * settles into its place as the dark comes on.
+	 */
+	private placeMoon() {
+		const [mAz, mEl] = MOON[this.layout];
+		const out = this.moonK;
+		this.sky.uniforms.uMoon.value.copy(moonAt(mAz + MOON_OUT[0] * out, mEl + MOON_OUT[1] * out));
+	}
+
 	private applyDay(m: number) {
 		U.uNight.value = 1 - m;
 		this.sky.uniforms.uMix.value = m;
@@ -783,11 +802,7 @@ export class Grove {
 		// the disc sinks under the cloud as the lights go down
 		const k = smoothstep(0, 1, m);
 		this.sky.uniforms.uSun.value.copy(moonAt(this.sunAz, lerp(SUN_SET_EL, SUN_EL, k)));
-		// and the moon goes out of the picture, up and away from the page, as
-		// the sun comes up; with the night it comes back in the same way
-		const [mAz, mEl] = MOON[this.layout];
-		const out = Math.sqrt(clamp(m, 0, 1));
-		this.sky.uniforms.uMoon.value.copy(moonAt(mAz + MOON_OUT[0] * out, mEl + MOON_OUT[1] * out));
+		this.placeMoon();
 		// the key comes from the side the sun is on, well round from it, so
 		// the island's face takes the gold and its shadows fall across it
 		const key = moonAt(KEY_AZ[this.layout], KEY_EL);
@@ -829,11 +844,15 @@ export class Grove {
 		if (to !== this.dayTo) {
 			this.dayFrom = this.dayMix;
 			this.dayT = this.clock;
+			this.moonFrom = this.moonK;
+			this.moonT = this.clock;
 		}
 		this.dayTo = to;
 		this.air.setDay(day);
 		if (this.reduced) {
 			this.dayMix = this.dayTo;
+			this.moonK = this.dayTo;
+			this.moonT = -1;
 			this.applyDay(this.dayMix);
 		}
 		this.wake();
@@ -1412,6 +1431,7 @@ export class Grove {
 			!this.world.visible &&
 			!this.scrolling &&
 			Math.abs(this.dayMix - this.dayTo) < 1e-3 &&
+			this.moonT < 0 &&
 			now - this.last < 48
 		)
 			return;
@@ -1443,13 +1463,28 @@ export class Grove {
 			if (k >= 1) this.dayMix = this.dayTo;
 			this.applyDay(this.dayMix);
 		}
+		if (this.moonT >= 0) {
+			// out quickly, and ahead of the light; back in over five seconds,
+			// gathering way and slowing into its place
+			const up = this.dayTo === 1;
+			const k = clamp((this.clock - this.moonT) / (up ? 2.4 : 5), 0, 1);
+			const e = up ? 1 - (1 - k) * (1 - k) : easeInOut(k);
+			this.moonK = lerp(this.moonFrom, this.dayTo, e);
+			if (k >= 1) this.moonT = -1;
+			this.placeMoon();
+		}
 
 		// The island spins on after a throw, slowing gently over a couple of
 		// seconds, as a thing with some weight to it would; left alone for a
 		// while after, it drifts home on a slow spring, to the nearest whole
 		// turn rather than back through every turn it was given.
+		// While a record plays the island turns slowly round under the camera,
+		// coming up to speed over a few seconds and running down as gently;
+		// it goes home only a while after it has stopped.
+		this.orbit = damp(this.orbit, this.playing && !this.reduced ? 0.09 : 0, 0.5, dt);
+		if (this.orbit > 0.004) this.spunAt = this.clock;
 		if (!this.drag) {
-			this.yaw += this.yawVel * dt;
+			this.yaw += (this.yawVel + this.orbit) * dt;
 			const home = Math.round(this.yaw / (Math.PI * 2)) * Math.PI * 2;
 			if (!this.reduced && this.clock - this.spunAt > 5 && Math.abs(this.yawVel) < 0.4) {
 				const w = 0.9;
@@ -1483,7 +1518,7 @@ export class Grove {
 				!!this.grab ||
 				!!this.drag ||
 				Math.abs(this.yawVel) > 0.02 ||
-				(this.shadowTick === 0 && !this.scrolling));
+				(this.shadowTick === 0 && (!this.scrolling || this.orbit > 0.004)));
 		// the lantern's, only while the island is still arriving
 		if (quick) this.lamp.shadow.needsUpdate = true;
 

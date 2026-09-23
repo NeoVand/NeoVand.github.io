@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ASHLAR, FLAGS } from './textures';
 import { patch, nightPatch } from './shared';
-import { hash } from './rng';
+import { hash, smoothstep } from './rng';
 
 // ─── The island ───────────────────────────────────────────────────────────
 // A garden on a rock in the air. Round its edge a wall of dressed limestone,
@@ -15,6 +15,8 @@ import { hash } from './rng';
 // flat, as broken stone is.
 
 export const ISLAND = { R: 7.0, lawn: 6.7, top: 0, wallTop: 0.42, rockTop: -1.0, depth: 8.6 };
+/** how far down the outside of the wall comes, over the top of the rock */
+const WALL_FOOT = ISLAND.rockTop - 0.25;
 
 export interface IslandParts {
 	group: THREE.Group;
@@ -112,7 +114,15 @@ function rockMass(seed: number) {
 		// nothing under the wall juts in past it: the crag is fullest just below
 		const craggy = Math.min(1, t * 5) * Math.min(1, rb * 0.45);
 		const strata = Math.sin(y * 2.6 + vn3(cx * 0.2, y * 0.3, cz * 0.2, 11) * 4) * 0.05;
-		const r = Math.max(0.02, rb + (n - 0.5) * 1.9 * craggy + strata * craggy);
+		let r = Math.max(0.02, rb + (n - 0.5) * 1.9 * craggy + strata * craggy);
+		// Where it meets the wall it is the wall's own round, a little inside
+		// it, and it comes out into its lobes and crags only over the first
+		// metre or so below. Taken straight into them the first ring or two
+		// stood out past the wall's foot here and there as a thin blade of
+		// stone with nothing on top of it.
+		const flush = R - 0.06;
+		r = flush + (r - flush) * smoothstep(0.02, 0.15, t);
+		if (y > WALL_FOOT - 0.04) r = Math.min(r, flush);
 		// the tip wanders off the axis
 		const off = Math.pow(t, 3);
 		return {
@@ -220,7 +230,7 @@ export function buildIsland(mats: IslandMaterials, seed: number) {
 	);
 	const outer = lathe(
 		[
-			[R, rockTop - 0.25],
+			[R, WALL_FOOT],
 			[R, wallTop]
 		],
 		160,

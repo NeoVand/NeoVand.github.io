@@ -24,6 +24,13 @@ import { rng, clamp, damp, lerp, smoothstep } from './rng';
 type Site =
 	| { kind: 'twig'; tree: TreeHandles; i: number }
 	| { kind: 'point'; p: THREE.Vector3; group: string };
+type PointSite = Extract<Site, { kind: 'point' }>;
+
+/** what a bird on its perch is about */
+type Act = 'idle' | 'walk' | 'hop' | 'peck' | 'preen' | 'flutter' | 'coo';
+
+/** an angle brought round to the short way, within half a turn of nothing */
+const wrap = (a: number) => a - Math.PI * 2 * Math.round(a / (Math.PI * 2));
 
 interface Creature {
 	id: number;
@@ -48,6 +55,34 @@ interface Creature {
 	fdur: number;
 	/** still off stage, waiting for its entrance */
 	arriving: boolean;
+	/** this flight is only a hop, along the ledge or to the next twig */
+	hop: boolean;
+	yawFrom: number;
+	// on the perch
+	act: Act;
+	actT: number;
+	actLen: number;
+	count: number;
+	side: number;
+	walkTo: THREE.Vector3;
+	hopTo: Site | null;
+	gait: number;
+	/** the body comes round in little shuffles, a step at a time */
+	yawStep: number;
+	stepT: number;
+	// the head: turned, tipped down, pushed forward; and where the eyes are
+	hy: number;
+	hp: number;
+	hz: number;
+	lookY: number;
+	lookP: number;
+	lookT: number;
+	lean: number;
+	roll: number;
+	bob: number;
+	/** the wings, while it stands */
+	wf: number;
+	wo: number;
 }
 
 const N = 24;
@@ -132,6 +167,8 @@ function birdGeometry() {
 const WING_V = /* glsl */ `
 attribute float aSide;
 attribute vec2 iWing; // flap angle, fold 0..1
+attribute vec3 iHead; // the head: turned, tipped down, pushed forward
+mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
 mat3 rotZ(float a) { float c = cos(a), s = sin(a); return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0); }
 mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
 `;
@@ -141,6 +178,7 @@ export class Air {
 	private grove: Grove;
 	private birds: THREE.InstancedMesh;
 	private wingAttr: THREE.InstancedBufferAttribute;
+	private headAttr: THREE.InstancedBufferAttribute;
 	private flies: THREE.Points;
 	private flyPos: Float32Array;
 	private flyGlow: Float32Array;
@@ -173,6 +211,9 @@ export class Air {
 		this.wingAttr = new THREE.InstancedBufferAttribute(new Float32Array(N * 2), 2);
 		this.wingAttr.setUsage(THREE.DynamicDrawUsage);
 		geo.setAttribute('iWing', this.wingAttr);
+		this.headAttr = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
+		this.headAttr.setUsage(THREE.DynamicDrawUsage);
+		geo.setAttribute('iHead', this.headAttr);
 		const mat = patch(
 			new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
 			'bird',
@@ -185,6 +226,9 @@ export class Air {
 							`vec3 objectNormal = vec3(normal);
 						if (aSide != 0.0) {
 							objectNormal = rotY(aSide * iWing.y * 1.5) * (rotZ(aSide * iWing.x * (1.0 - iWing.y)) * objectNormal);
+						} else if (position.z > 0.14) {
+							float hw = smoothstep(0.14, 0.3, position.z);
+							objectNormal = rotY(iHead.x * hw) * (rotX(iHead.y * hw) * objectNormal);
 						}`
 						)
 						.replace(
@@ -198,6 +242,13 @@ export class Air {
 							v.y -= iWing.y * abs(v.x) * 0.25;
 							v.x *= 1.0 - iWing.y * 0.55;
 							transformed = hinge + v;
+						} else if (position.z > 0.14) {
+							// the head, and the neck with it, turned about the neck's root
+							float hw = smoothstep(0.14, 0.3, position.z);
+							vec3 neck = vec3(0.0, 0.07, 0.16);
+							vec3 v = rotY(iHead.x * hw) * (rotX(iHead.y * hw) * (transformed - neck));
+							v.z += iHead.z * hw;
+							transformed = neck + v;
 						}`
 						);
 			},
@@ -274,7 +325,30 @@ export class Air {
 				c2: new THREE.Vector3(),
 				ft: 0,
 				fdur: 1,
-				arriving: false
+				arriving: false,
+				hop: false,
+				yawFrom: 0,
+				act: 'idle',
+				actT: 0,
+				actLen: 1,
+				count: 0,
+				side: 1,
+				walkTo: new THREE.Vector3(),
+				hopTo: null,
+				gait: 0,
+				yawStep: 0,
+				stepT: 0,
+				hy: 0,
+				hp: 0,
+				hz: 0,
+				lookY: 0,
+				lookP: 0,
+				lookT: 0,
+				lean: 0.28,
+				roll: 0,
+				bob: 0,
+				wf: 0,
+				wo: 1
 			});
 		}
 		for (let i = 0; i < N; i++) {
@@ -355,16 +429,8 @@ export class Air {
 	private pointSites(group: string) {
 		const g = this.grove;
 		const r = this.r;
-		if (group === 'roof') {
-			const { r: R, y, h } = g.pavilion.dome;
-			const lat = lerp(0.35, 1.2, r()),
-				az = lerp(-1.3, 1.3, r());
-			return new THREE.Vector3(
-				Math.cos(lat) * R * Math.sin(az),
-				y + Math.sin(lat) * h + 0.02,
-				Math.cos(lat) * R * Math.cos(az)
-			);
-		}
+		if (group === 'roof')
+			return this.roofAt(lerp(0.35, 1.2, r()), lerp(-1.3, 1.3, r()), new THREE.Vector3());
 		if (group === 'crown') return g.pavilion.crown.clone().setY(g.pavilion.crown.y + 0.06);
 		if (group === 'sill') {
 			const [a, b] = g.pavilion.sills[Math.floor(r() * g.pavilion.sills.length)];
@@ -376,11 +442,99 @@ export class Air {
 			const cand = rim.filter((p) => p.z > 1);
 			return cand[Math.floor(r() * cand.length)].clone();
 		}
-		if (group === 'horn') {
-			const gr = g.gramophone;
-			return gr.group.localToWorld(gr.rim.clone().add(new THREE.Vector3(0, -0.02, 0)));
-		}
 		return new THREE.Vector3();
+	}
+
+	/** on the dome, at a latitude up from the cornice and an azimuth round from the front */
+	private roofAt(lat: number, az: number, out: THREE.Vector3) {
+		const { r: R, y, h } = this.grove.pavilion.dome;
+		return out.set(
+			Math.cos(lat) * R * Math.sin(az),
+			y + Math.sin(lat) * h + 0.02,
+			Math.cos(lat) * R * Math.cos(az)
+		);
+	}
+
+	/** where on the dome a point is, as [latitude, azimuth] */
+	private domeAt(p: THREE.Vector3): [number, number] {
+		const { r: R, y, h } = this.grove.pavilion.dome;
+		return [Math.atan2((p.y - 0.02 - y) / h, Math.hypot(p.x, p.z) / R), Math.atan2(p.x, p.z)];
+	}
+
+	/** is anyone else standing at `q`, or on the way there? */
+	private crowded(q: THREE.Vector3, cr: Creature) {
+		for (const o of this.c) {
+			if (o === cr || o.state === 'away' || o.site?.kind !== 'point') continue;
+			if (o.site.p.distanceTo(q) < 0.26) return true;
+			if (o.act === 'walk' && o.walkTo.distanceTo(q) < 0.26) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Somewhere a short way along the ledge a bird is standing on, clear of
+	 * the others: over the dome, down the cornice's run, round the wall's
+	 * top. Null if there is nowhere.
+	 */
+	private along(s: PointSite, lo: number, hi: number, cr: Creature) {
+		const g = this.grove;
+		const r = this.r;
+		const q = new THREE.Vector3();
+		for (let k = 0; k < 8; k++) {
+			const d = lerp(lo, hi, r()) * (r() < 0.5 ? -1 : 1);
+			if (s.group === 'roof') {
+				const { r: R, h } = g.pavilion.dome;
+				const [lat, az] = this.domeAt(s.p);
+				const a = r() * Math.PI;
+				this.roofAt(
+					clamp(lat + (Math.sin(a) * d) / h, 0.35, 1.2),
+					clamp(az + (Math.cos(a) * d) / (R * Math.cos(lat)), -1.35, 1.35),
+					q
+				);
+			} else if (s.group === 'sill') {
+				// the run it is on, and how far along it
+				let best = g.pavilion.sills[0],
+					bd = Infinity;
+				for (const run of g.pavilion.sills) {
+					const dd = s.p.distanceTo(run[0]) + s.p.distanceTo(run[1]);
+					if (dd < bd) [bd, best] = [dd, run];
+				}
+				const [a, b] = best;
+				const len = a.distanceTo(b);
+				const u = this.tmp.subVectors(s.p, a).dot(this.tmp2.subVectors(b, a)) / (len * len);
+				q.copy(a).lerp(b, clamp(u + d / len, 0.06, 0.94));
+			} else if (s.group === 'rim') {
+				const top = g.island.rim[0];
+				const cx = Math.hypot(top.x, top.z);
+				const th = Math.atan2(-s.p.z, s.p.x) + d / cx;
+				q.set(cx * Math.cos(th), top.y, -cx * Math.sin(th));
+				// and only on the near side, where it is seen
+				if (q.z < 1) continue;
+			} else return null;
+			if (q.distanceTo(s.p) < lo * 0.6 || this.crowded(q, cr)) continue;
+			return q;
+		}
+		return null;
+	}
+
+	/** another twig high on the same crown, a hop away, with nobody on it */
+	private nearTwig(cr: Creature): Site | null {
+		const s = cr.site;
+		if (s?.kind !== 'twig') return null;
+		const here = s.tree.perches[s.i]?.p;
+		if (!here) return null;
+		const taken = (i: number) =>
+			this.c.some(
+				(o) => o !== cr && o.site?.kind === 'twig' && o.site.tree === s.tree && o.site.i === i
+			);
+		const cand = this.twigsOf(s.tree).filter((i) => {
+			if (i === s.i) return false;
+			const d = s.tree.perches[i].p.distanceTo(here);
+			return d > 0.25 && d < 1.4 && !taken(i);
+		});
+		return cand.length
+			? { kind: 'twig', tree: s.tree, i: cand[Math.floor(this.r() * cand.length)] }
+			: null;
 	}
 
 	private pickSite(cr: Creature, prefer?: TreeHandles | null): Site {
@@ -388,7 +542,7 @@ export class Air {
 		const trees = this.grove.trees;
 		const tree = prefer ?? this.partyTree[cr.party] ?? trees[Math.floor(this.r() * trees.length)];
 		if (prefer === undefined && r < 0.22) {
-			const groups = ['roof', 'roof', 'sill', 'rim', 'crown', 'horn'];
+			const groups = ['roof', 'roof', 'sill', 'rim', 'crown'];
 			const gname = groups[Math.floor(this.r() * groups.length)];
 			if (
 				gname !== 'crown' ||
@@ -420,6 +574,122 @@ export class Air {
 			.add(this.tmp2.set(0, up * 0.35, 0));
 		cr.fdur = clamp(d / lerp(4.2, 5.4, this.r()), 0.7, 4.5);
 		cr.ft = -delay;
+		cr.state = 'fly';
+		this.route(cr, end.clone());
+		cr.hop = false;
+		cr.act = 'idle';
+		cr.hopTo = null;
+	}
+
+	/** is `p` in the rotunda's walls or under its dome, with `m` to spare? */
+	private inBuilding(p: THREE.Vector3, m: number) {
+		const pv = this.grove.pavilion;
+		const { r: R, y: dy, h } = pv.dome;
+		if (p.y < pv.floorY - 0.4) return false;
+		const rh = Math.hypot(p.x, p.z);
+		// the cornice's corners, where the sills are, stand out furthest
+		const [a, b] = pv.sills[0];
+		const eaves = a.y;
+		const wallR = Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2) + 0.1;
+		if (p.y < eaves + m) return rh < wallR + m;
+		if (p.y < dy) return rh < R + m;
+		const u = rh / (R + m),
+			v = (p.y - dy) / (h + m);
+		if (u * u + v * v < 1) return true;
+		return rh < 0.3 + m && p.y < pv.crown.y + 0.3 + m;
+	}
+
+	/** does the flight laid out for `cr` keep out of the building? */
+	private clear(cr: Creature, end: THREE.Vector3) {
+		const q = new THREE.Vector3();
+		for (let i = 1; i < 24; i++) {
+			this.bezier(cr, i / 24, q);
+			if (q.distanceTo(cr.from) < 0.5 || q.distanceTo(end) < 0.5) continue;
+			if (this.inBuilding(q, 0.3)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * A flight never goes through the rotunda. If the straight arc would, it
+	 * swings wide round the side it is nearer, or the other, and failing both
+	 * goes up over the dome.
+	 */
+	private route(cr: Creature, end: THREE.Vector3) {
+		if (this.clear(cr, end)) return;
+		const pv = this.grove.pavilion;
+		const c1 = cr.c1.clone(),
+			c2 = cr.c2.clone();
+		const [a, b] = pv.sills[0];
+		const R = Math.max(Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2), pv.dome.r) + 1.4;
+		const n = new THREE.Vector3(-(end.z - cr.from.z), 0, end.x - cr.from.x).normalize();
+		const mid = cr.from.clone().lerp(end, 0.5);
+		const near = Math.sign(n.x * mid.x + n.z * mid.z) || 1;
+		// out along ±n until the point is R from the axis
+		const wide = (c: THREE.Vector3, from: THREE.Vector3, s: number) => {
+			const an = (from.x * n.x + from.z * n.z) * s;
+			const aa = from.x * from.x + from.z * from.z;
+			const k = aa >= R * R ? 0 : -an + Math.sqrt(an * an - aa + R * R);
+			c.copy(from).addScaledVector(n, k * s);
+		};
+		for (const s of [near, -near]) {
+			wide(cr.c1, c1, s);
+			wide(cr.c2, c2, s);
+			if (this.clear(cr, end)) {
+				cr.fdur *= 1.25;
+				return;
+			}
+		}
+		// over the top, higher each time until it is clear
+		const top = pv.crown.y + 1;
+		for (let k = 0; k < 4; k++) {
+			const y = (top + k - 0.125 * (cr.from.y + end.y)) / 0.75;
+			cr.c1.copy(c1).setY(Math.max(c1.y, y));
+			cr.c2.copy(c2).setY(Math.max(c2.y, y));
+			if (this.clear(cr, end)) break;
+		}
+		cr.fdur *= 1.3;
+	}
+
+	/**
+	 * Which way to stand, somewhere worth facing: as often as not toward the
+	 * garden's visitor, now and then away, otherwise anywhere.
+	 */
+	private face(cr: Creature) {
+		const cam = this.group.worldToLocal(this.tmp.copy(this.grove.camera.position));
+		const toCam = Math.atan2(cam.x - cr.pos.x, cam.z - cr.pos.z);
+		const r = this.r();
+		const want =
+			r < 0.5
+				? toCam + (this.r() - 0.5) * 1.4
+				: r < 0.7
+					? toCam + Math.PI + (this.r() - 0.5) * 1.4
+					: this.r() * Math.PI * 2;
+		return cr.yaw + wrap(want - cr.yaw);
+	}
+
+	/**
+	 * A hop: a low, quick arc, the wings half open for a beat or two, and
+	 * the body turning on the way to face `face` as it comes down.
+	 */
+	private hop(cr: Creature, to: Site, face: number) {
+		cr.site = to;
+		cr.from.copy(cr.pos);
+		const end = this.sitePos(to, this.tmp);
+		const d = cr.from.distanceTo(end);
+		// a cubic whose middle points are both raised peaks at three quarters of it
+		const h = (0.07 + d * 0.22) / 0.75;
+		cr.c1.copy(cr.from).lerp(end, 0.3);
+		cr.c1.y += h + Math.max(0, end.y - cr.from.y) * 0.3;
+		cr.c2.copy(cr.from).lerp(end, 0.7);
+		cr.c2.y += h;
+		cr.fdur = 0.26 + d * 0.2;
+		cr.ft = 0;
+		cr.yawFrom = cr.yaw;
+		cr.yawTo = face;
+		cr.hop = true;
+		cr.act = 'idle';
+		cr.hopTo = null;
 		cr.state = 'fly';
 	}
 
@@ -526,8 +796,9 @@ export class Air {
 		for (const cr of onIt) {
 			if (this.partyTree[cr.party] === t) this.partyTree[cr.party] = next;
 			const toBuilding = this.r() < 0.33;
+			const group = this.r() < 0.6 ? 'roof' : 'sill';
 			const site: Site = toBuilding
-				? { kind: 'point', p: this.pointSites(this.r() < 0.6 ? 'roof' : 'sill'), group: 'roof' }
+				? { kind: 'point', p: this.pointSites(group), group }
 				: this.pickSite(cr, next);
 			this.fly(cr, site, this.r() * 0.25);
 		}
@@ -549,6 +820,260 @@ export class Air {
 		return { pos: this.flyPos, glow: this.flyGlow };
 	}
 
+	// ── on the perch ──────────────────────────────────────────────────────
+	/**
+	 * A bird at rest is never still. Its eyes go from one thing to the next
+	 * in jumps, the head turned and held and turned again; it comes round in
+	 * little shuffles, the head first; and every few seconds it takes up
+	 * something: it walks off along the ledge with the pigeon's nod (the head
+	 * held still in the air while the body goes on under it, then thrust on),
+	 * hops to the next twig or round where it stands, pecks at the stone,
+	 * preens, shakes out its wings, or bows and turns about, cooing.
+	 */
+	private perched(cr: Creature, dt: number) {
+		const site = cr.site!;
+		const r = this.r;
+		cr.actT += dt;
+		// where the eyes go, unless what it is doing says otherwise
+		cr.lookT -= dt;
+		if (cr.lookT < 0) {
+			cr.lookT = lerp(0.25, 2.4, r() * r());
+			cr.lookY = (r() - 0.5) * (r() < 0.35 ? 2.6 : 1.1);
+			cr.lookP = lerp(-0.3, 0.25, r());
+		}
+		let hy = cr.lookY,
+			hp = cr.lookP,
+			hz = 0,
+			lean = 0.28,
+			bob = 0,
+			roll = 0,
+			flap = 0,
+			fold = 1;
+		const done = () => {
+			cr.act = 'idle';
+			cr.actT = 0;
+			cr.timer = lerp(0.5, 2.6, r());
+		};
+
+		switch (cr.act) {
+			case 'idle':
+				cr.timer -= dt;
+				if (cr.timer < 0) this.choose(cr);
+				break;
+			case 'walk': {
+				if (site.kind !== 'point') {
+					done();
+					break;
+				}
+				const p = site.p;
+				const d = this.tmp.subVectors(cr.walkTo, p);
+				const left = d.length();
+				if (left < 0.015 || cr.actT > 7) {
+					done();
+					break;
+				}
+				cr.yawTo = cr.yaw + wrap(Math.atan2(d.x, d.z) - cr.yaw);
+				hy = 0;
+				hp = 0.1;
+				// round to face the way first, then off
+				if (Math.abs(cr.yawTo - cr.yaw) > 0.5) break;
+				cr.gait += dt * 3.4;
+				p.addScaledVector(d, Math.min(1, (0.24 * dt) / left));
+				if (site.group === 'roof') {
+					const [lat, az] = this.domeAt(p);
+					this.roofAt(lat, az, p);
+				}
+				// the head thrust forward in the first part of each step, then
+				// held where it is in the air while the body walks up under it
+				const s = cr.gait % 1;
+				hz =
+					s < 0.3 ? lerp(-0.07, 0.07, smoothstep(0, 0.3, s)) : lerp(0.07, -0.07, (s - 0.3) / 0.7);
+				bob = 0.006 * Math.sin(Math.PI * s);
+				roll = 0.06 * Math.sin(Math.PI * cr.gait);
+				lean = 0.14;
+				break;
+			}
+			case 'hop': {
+				const to = cr.hopTo;
+				if (!to || !this.standing(to)) {
+					done();
+					break;
+				}
+				// a crouch, facing the way, and off
+				const end = this.sitePos(to, this.tmp);
+				const face = cr.yaw + wrap(Math.atan2(end.x - cr.pos.x, end.z - cr.pos.z) - cr.yaw);
+				cr.yawTo = face;
+				hy = clamp(face - cr.yaw, -1, 1);
+				hp = 0.15;
+				lean = 0.18;
+				bob = -0.008 * smoothstep(0, 0.2, cr.actT);
+				if (cr.actT > 0.22 && Math.abs(face - cr.yaw) < 0.6) this.hop(cr, to, face);
+				else if (cr.actT > 2) done();
+				break;
+			}
+			case 'peck': {
+				const T = 0.46;
+				if (cr.actT >= T * cr.count) {
+					done();
+					break;
+				}
+				// down fast, a moment there, and back up
+				const u = (cr.actT % T) / T;
+				const dip = u < 0.2 ? smoothstep(0, 0.2, u) : 1 - smoothstep(0.32, 0.62, u);
+				hy = cr.lookY * 0.25;
+				hp = lerp(0.15, 1.05, dip);
+				hz = 0.05 * dip;
+				lean = lerp(0.22, 0.04, dip);
+				break;
+			}
+			case 'preen': {
+				const t = cr.actT;
+				if (t > cr.actLen) {
+					done();
+					break;
+				}
+				// halfway, as often as not, round to the other side
+				if (cr.count === 1 && t > cr.actLen / 2) {
+					cr.count = 0;
+					if (r() < 0.5) cr.side = -cr.side;
+				}
+				hy = cr.side * 2.2 + 0.1 * Math.sin(t * 13);
+				hp = 0.28 + 0.14 * Math.sin(t * 19 + 1);
+				hz = 0.03 * Math.sin(t * 23);
+				const e = smoothstep(0, 0.3, t) * (1 - smoothstep(cr.actLen - 0.3, cr.actLen, t));
+				fold = 1 - 0.14 * e;
+				flap = 0.5 * e;
+				break;
+			}
+			case 'flutter': {
+				if (cr.actT > cr.actLen) {
+					done();
+					break;
+				}
+				// up on its toes, and the wings shaken out and put away
+				const e = Math.sin((Math.PI * cr.actT) / cr.actLen);
+				fold = 1 - 0.92 * e;
+				flap = e * (0.3 + 0.55 * Math.sin(cr.actT * Math.PI * 2 * 7));
+				lean = 0.34;
+				hy = 0;
+				hp = -0.1;
+				bob = 0.012 * e;
+				break;
+			}
+			case 'coo': {
+				if (cr.actT > cr.actLen) {
+					done();
+					break;
+				}
+				// bowing, and turning about as it bows
+				const w = Math.sin(cr.actT * Math.PI * 2 * 1.6);
+				hy = 0;
+				hp = 0.3 + 0.35 * w;
+				hz = -0.03 + 0.03 * w;
+				lean = 0.2 + 0.1 * w;
+				cr.yawTo += dt * 1.1 * cr.side;
+				break;
+			}
+		}
+		if (cr.state !== 'perch') return;
+
+		// coming round: in little shuffles, a step at a time, the head first
+		const diff = cr.yawTo - cr.yaw;
+		if (Math.abs(diff) > 0.03) {
+			cr.stepT -= dt;
+			if (cr.stepT < 0) {
+				cr.stepT = 0.14;
+				cr.yawStep = cr.yaw + clamp(diff, -0.5, 0.5);
+			}
+			if (cr.act === 'idle') hy = clamp(diff * 1.2, -1.2, 1.2);
+			if (cr.act !== 'walk') bob += 0.007 * Math.sin((Math.PI * Math.max(cr.stepT, 0)) / 0.14);
+		}
+		cr.yaw = damp(cr.yaw, cr.yawStep, 24, dt);
+		// the eyes jump; the rest follows more easily
+		cr.hy = damp(cr.hy, hy, 26, dt);
+		cr.hp = damp(cr.hp, hp, 26, dt);
+		cr.hz = damp(cr.hz, hz, 40, dt);
+		cr.lean = damp(cr.lean, lean, 10, dt);
+		cr.roll = damp(cr.roll, roll, 14, dt);
+		cr.bob = bob;
+		cr.wf = flap;
+		cr.wo = fold;
+	}
+
+	/** Something to do, by where it is standing. */
+	private choose(cr: Creature) {
+		const s = cr.site!;
+		const r = this.r;
+		cr.actT = 0;
+		cr.act = 'idle';
+		cr.timer = lerp(0.6, 2.8, r());
+		const ledge = s.kind === 'point' && ['roof', 'sill', 'rim'].includes(s.group);
+		const twig = s.kind === 'twig';
+		// how likely each is: walk, hop, peck, preen, flutter, coo, turn, rest, off
+		const w = ledge
+			? [0.3, 0.12, 0.15, 0.09, 0.05, 0.05, 0.14, 0.06, 0.04]
+			: twig
+				? [0, 0.26, 0.08, 0.12, 0.06, 0.04, 0.16, 0.1, 0.18]
+				: [0, 0, 0, 0.2, 0.08, 0.08, 0.3, 0.22, 0.12];
+		let roll = r() * w.reduce((a, b) => a + b, 0),
+			k = 0;
+		while (k < w.length - 1 && roll >= w[k]) roll -= w[k++];
+		const turn = () => {
+			const aim = this.face(cr) - cr.yaw;
+			const by =
+				Math.abs(aim) > 0.4 && r() < 0.6 ? aim : (r() < 0.5 ? -1 : 1) * lerp(0.5, 2.6, r());
+			// as often as not with a jump, where there is room to land
+			if ((ledge || twig) && r() < 0.4) this.hop(cr, s, cr.yaw + by);
+			else cr.yawTo = cr.yaw + by;
+		};
+		switch (k) {
+			case 0: {
+				const q = s.kind === 'point' ? this.along(s, 0.15, 0.7, cr) : null;
+				if (!q) return turn();
+				cr.act = 'walk';
+				cr.walkTo.copy(q);
+				cr.gait = 0;
+				return;
+			}
+			case 1: {
+				const to = s.kind === 'point' ? this.along(s, 0.25, 0.9, cr) : this.nearTwig(cr);
+				if (!to) return turn();
+				cr.act = 'hop';
+				cr.hopTo =
+					to instanceof THREE.Vector3
+						? { kind: 'point', p: to, group: (s as PointSite).group }
+						: to;
+				return;
+			}
+			case 2:
+				cr.act = 'peck';
+				cr.count = 1 + Math.floor(r() * 3);
+				return;
+			case 3:
+				cr.act = 'preen';
+				cr.actLen = lerp(1.2, 3, r());
+				cr.side = r() < 0.5 ? -1 : 1;
+				cr.count = 1;
+				return;
+			case 4:
+				cr.act = 'flutter';
+				cr.actLen = lerp(0.5, 0.8, r());
+				return;
+			case 5:
+				cr.act = 'coo';
+				cr.actLen = lerp(1.4, 2.6, r());
+				cr.side = r() < 0.5 ? -1 : 1;
+				return;
+			case 6:
+				return turn();
+			case 7:
+				return;
+			default:
+				// off: most often to another twig of the same tree
+				this.fly(cr, this.pickSite(cr, twig && r() < 0.65 ? s.tree : undefined));
+		}
+	}
+
 	// ── a frame ───────────────────────────────────────────────────────────
 	update(dt: number, visible: boolean) {
 		this.day = damp(this.day, this.dayTo, 2.2, dt);
@@ -563,6 +1088,7 @@ export class Air {
 		const night = 1 - this.day;
 		const time = U.uTime.value;
 		const wing = this.wingAttr.array as Float32Array;
+		const head = this.headAttr.array as Float32Array;
 		const fwd = new THREE.Vector3(),
 			upv = new THREE.Vector3(0, 1, 0),
 			right = new THREE.Vector3();
@@ -582,44 +1108,57 @@ export class Air {
 					const prev = this.tmp.copy(cr.pos);
 					this.bezier(cr, t, cr.pos);
 					cr.vel.subVectors(cr.pos, prev).divideScalar(Math.max(dt, 1e-3));
-					if (cr.vel.lengthSq() > 1e-4) cr.yaw = Math.atan2(cr.vel.x, cr.vel.z);
-					// the last third of a second: reach for the branch
-					const left = (1 - t) * cr.fdur;
 					const away = cr.site?.kind === 'point' && cr.site.group === 'away';
-					cr.pose = away ? 0 : smoothstep(0.45, 0.0, left);
+					if (cr.hop) {
+						// barely off its feet, and round on the way
+						cr.yaw = lerp(cr.yawFrom, cr.yawTo, smoothstep(0, 1, t));
+						cr.pose = 1 - 0.4 * Math.sin(Math.PI * t);
+					} else {
+						if (cr.vel.lengthSq() > 1e-4) cr.yaw = Math.atan2(cr.vel.x, cr.vel.z);
+						// the last third of a second: reach for the branch
+						const left = (1 - t) * cr.fdur;
+						cr.pose = away ? 0 : smoothstep(0.45, 0.0, left);
+					}
 					if (t >= 1 && away) {
 						cr.state = 'away';
 						cr.site = null;
 					} else if (t >= 1) {
 						cr.state = 'perch';
-						cr.timer = lerp(2.5, 9, this.r());
-						cr.yawTo = cr.yaw + (this.r() - 0.5) * 1.2;
+						cr.act = 'idle';
+						cr.actT = 0;
+						if (cr.hop) {
+							cr.hop = false;
+							cr.timer = lerp(0.4, 2, this.r());
+							cr.yawTo = cr.yaw;
+						} else {
+							cr.timer = lerp(1, 4, this.r());
+							cr.yawTo = this.face(cr);
+						}
+						cr.yawStep = cr.yaw;
+						cr.stepT = 0;
 					}
 				}
 			} else if (cr.state === 'perch' && cr.site) {
-				this.sitePos(cr.site, cr.pos);
 				cr.pose = damp(cr.pose, 1, 6, dt);
 				cr.vel.set(0, 0, 0);
-				cr.timer -= dt;
 				if (!this.standing(cr.site)) {
 					// the twig went out from under it
 					this.fly(cr, this.pickSite(cr), 0);
-				} else if (cr.timer < 0 && !reduced) {
-					const roll = this.r();
-					if (roll < 0.55) {
-						// look the other way
-						cr.yawTo = cr.yaw + (this.r() < 0.5 ? -1 : 1) * lerp(0.6, 2.4, this.r());
-						cr.timer = lerp(1.5, 6, this.r());
-					} else if (roll < 0.9) {
-						// the next twig along
-						const tree = cr.site.kind === 'twig' ? cr.site.tree : null;
-						this.fly(cr, this.pickSite(cr, tree ?? undefined));
-					} else {
-						this.fly(cr, this.pickSite(cr));
-					}
-				}
-				cr.yaw = damp(cr.yaw, cr.yawTo, 7, dt);
+				} else if (!reduced) this.perched(cr, dt);
+				if (cr.state === 'perch') this.sitePos(cr.site, cr.pos);
 			}
+			if (cr.state !== 'perch') {
+				// in the air the head is held straight, and the body steady
+				cr.hy = damp(cr.hy, 0, 12, dt);
+				cr.hp = damp(cr.hp, 0, 12, dt);
+				cr.hz = 0;
+				cr.lean = damp(cr.lean, 0.28, 8, dt);
+				cr.roll = 0;
+				cr.bob = 0;
+			}
+			head[cr.id * 3] = cr.hy;
+			head[cr.id * 3 + 1] = cr.hp;
+			head[cr.id * 3 + 2] = cr.hz;
 
 			// wings: a burst of beats, then shut while it arcs
 			const flying = 1 - cr.pose;
@@ -640,22 +1179,40 @@ export class Air {
 				flap = 0;
 				fold = 1;
 			}
-			wing[cr.id * 2] = flap * (flying > 0.02 ? 1 : 0);
+			flap *= flying > 0.02 ? 1 : 0;
+			if (cr.hop && cr.state === 'fly') {
+				// half open, and a beat or two
+				const e = Math.sin(Math.PI * clamp(cr.ft / cr.fdur, 0, 1));
+				fold = 1 - 0.9 * e;
+				flap = e * (0.3 + 0.6 * Math.sin(cr.phase * Math.PI * 2 * 12));
+			} else if (cr.state === 'perch') {
+				flap = cr.wf;
+				fold = cr.wo;
+			}
+			wing[cr.id * 2] = flap;
 			wing[cr.id * 2 + 1] = fold;
 
 			// the body: along its heading in the air, leaning back on a branch
 			fwd.set(Math.sin(cr.yaw), 0, Math.cos(cr.yaw));
 			const climb = cr.state === 'fly' ? clamp(cr.vel.y / 6, -0.5, 0.5) : 0;
-			fwd.y = lerp(climb, 0.28, cr.pose);
+			fwd.y = lerp(climb, cr.lean, cr.pose);
 			fwd.normalize();
 			right.crossVectors(upv, fwd).normalize();
 			const up2 = this.tmp2.crossVectors(fwd, right).normalize();
+			if (cr.roll !== 0) {
+				// the waddle: side to side on each step
+				const cs = Math.cos(cr.roll),
+					sn = Math.sin(cr.roll);
+				const was = this.tmp.copy(right);
+				right.multiplyScalar(cs).addScaledVector(up2, sn);
+				up2.multiplyScalar(cs).addScaledVector(was, -sn);
+			}
 			this.m.makeBasis(right, up2, fwd);
 			const hidden = cr.state === 'away' || cr.arriving || cr.pos.y < -20;
 			const s = hidden ? 0 : cr.size;
 			if (!hidden) anyBird = true;
 			this.m.scale(this.tmp.set(s, s, s));
-			this.m.setPosition(cr.pos.x, cr.pos.y + 0.04 * cr.pose, cr.pos.z);
+			this.m.setPosition(cr.pos.x, cr.pos.y + 0.04 * cr.pose + cr.bob, cr.pos.z);
 			this.birds.setMatrixAt(cr.id, this.m);
 		}
 		// The fireflies: each wanders a patch of air on slow sines, and now
@@ -699,6 +1256,7 @@ export class Air {
 		}
 		this.birds.instanceMatrix.needsUpdate = true;
 		this.wingAttr.needsUpdate = true;
+		this.headAttr.needsUpdate = true;
 		(this.flies.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 		(this.flies.geometry.getAttribute('aGlow') as THREE.BufferAttribute).needsUpdate = true;
 		// in the picture's own pixels, which are not the canvas's

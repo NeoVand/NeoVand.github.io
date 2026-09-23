@@ -15,6 +15,7 @@
 	let hud = $state('');
 
 	async function toggleMusic() {
+		music.gramClick(!lights.playing);
 		if (lights.playing) {
 			music.pause();
 			lights.playing = false;

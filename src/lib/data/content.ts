@@ -10,7 +10,7 @@ export const meta = {
 	footer: '© 2025 Neo Mohsenvand'
 };
 export const bio =
-	"I'm an <strong>AI/ML engineer and product designer</strong>, and Chief AI Architect for Global Finance at <strong>Caterpillar</strong>, where I advance AI adoption through original products, shared infrastructure, and engineering education. I build <strong>enterprise AI agents</strong> and the software around them: document workflows, <strong>evaluation systems</strong>, <strong>voice interfaces</strong>, and tools that bring people into decisions. I also make <strong>local AI tools</strong> and interactive educational applications for exploring agent workflows, training models, and understanding retrieval. Before Caterpillar, I led research at <strong>BrainCo</strong> and worked on machine learning for biosignals at <strong>Apple</strong>. My doctoral and part-time postdoctoral research at <strong>MIT's Media Lab</strong> explored self-supervised learning, brain-computer interfaces, and tools for human memory and attention. I hold a <strong>PhD in Media Arts and Sciences</strong> from MIT and a master's in <strong>Mathematical Modelling and Scientific Computing</strong> from <strong>Oxford</strong>. I'm drawn to the intersection of <strong>software</strong>, <strong>design</strong>, and <strong>intelligence</strong>, both artificial and biological.";
+	"I'm an <strong>AI/ML engineer and product designer</strong>, and Chief AI Architect for Global Finance at <strong>Caterpillar</strong>, where I advance AI adoption through original products, shared infrastructure, and engineering education. I build <strong>enterprise AI agents</strong> and the software around them: document workflows, <strong>evaluation systems</strong>, <strong>voice interfaces</strong>, and tools that bring people into decisions. I also make <strong>local AI tools</strong> and interactive educational applications for exploring agent workflows, training models, and understanding retrieval. Before Caterpillar, I led research at <strong>BrainCo</strong> and worked on machine learning for biosignals at <strong>Apple</strong>. I did my <strong>PhD at MIT</strong>, in <strong>Human–AI Interaction</strong> at the <strong>Media Lab</strong>, and stayed on there as a postdoctoral researcher; my work explored self-supervised learning, brain-computer interfaces, and tools for human memory and attention. Before MIT, I earned a master's in <strong>Mathematical Modelling and Scientific Computing</strong> at <strong>Oxford</strong>. I'm drawn to the intersection of <strong>software</strong>, <strong>design</strong>, and <strong>intelligence</strong>, both artificial and biological.";
 export const links: ProfileLink[] = [
 	{
 		label: 'GitHub',
@@ -1162,7 +1162,7 @@ export const resume: Resume = {
 			id: 'cv-mit-postdoc',
 			org: 'MIT Media Lab',
 			when: 'Nov 2021 – Jun 2022',
-			roles: ['Postdoctoral Research Scientist, part-time · Cambridge, MA'],
+			roles: ['Postdoctoral Research Scientist · Cambridge, MA'],
 			body: '<ul class="cv-notes"> <li>Researched multimodal memory systems and physiological data, building on doctoral work in continuous-capture memory interfaces and self-supervised EEG representations.</li> </ul>'
 		},
 		{
@@ -1192,7 +1192,7 @@ export const resume: Resume = {
 			id: 'cv-mit-phd',
 			org: 'MIT',
 			when: 'Completed 2021',
-			roles: ['PhD, Media Arts and Sciences · Media Lab'],
+			roles: ['PhD, Human–AI Interaction · Media Lab'],
 			body: '<ul class="cv-notes"> <li>Completed in 2021; listed in MIT’s February 2022 degree record. Research in self-supervised learning and human–AI interaction.</li> <li>Thesis: <em>Classifying and Displaying Brain-Waves through Self-Supervised Learning.</em> Advisor: Pattie Maes. Co-advisors: Tomaso Poggio and Ed Boyden.</li> <li>First author of <a href="https://proceedings.mlr.press/v136/mohsenvand20a.html">SeqCLR</a> (ML4H NeurIPS Workshop, 2020), adapting contrastive learning to EEG through channel recombination and signal augmentations; evaluated emotion recognition, sleep staging, and abnormal-EEG detection across three datasets.</li> <li>Doctoral work also included continuous-capture memory interfaces and tools for human attention.</li> </ul>'
 		},
 		{

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { lights, toggleDay } from '$lib/lights.svelte';
+	import { lampClick as click } from '$lib/music';
 
 	// ─── The lamp pull ──────────────────────────────────────────────────────
 	// A verlet cord: a chain of beads with distance constraints and a heavy
@@ -275,28 +276,6 @@
 		knob.addEventListener('lostpointercapture', cancel);
 		knob.addEventListener('keydown', key);
 
-		let actx: AudioContext | null = null;
-		function click() {
-			try {
-				actx ??= new AudioContext();
-				const n = Math.floor(actx.sampleRate * 0.03);
-				const b = actx.createBuffer(1, n, actx.sampleRate);
-				const d = b.getChannelData(0);
-				for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 5);
-				const s = actx.createBufferSource();
-				s.buffer = b;
-				const f = actx.createBiquadFilter();
-				f.type = 'highpass';
-				f.frequency.value = 1800;
-				const gn = actx.createGain();
-				gn.gain.value = 0.18;
-				s.connect(f).connect(gn).connect(actx.destination);
-				s.start();
-			} catch {
-				/* no audio */
-			}
-		}
-
 		// give it a small swing on arrival
 		setTimeout(() => {
 			px[N - 1] -= reduced ? 0 : 6;
@@ -308,7 +287,6 @@
 		return () => {
 			cancelAnimationFrame(raf);
 			redraw = () => {};
-			actx?.close();
 		};
 	});
 </script>
