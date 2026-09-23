@@ -109,9 +109,9 @@
 		background: var(--bg);
 	}
 	.scene.failed {
-		background: linear-gradient(#5d7aa8, #f3c9a3);
+		background: linear-gradient(#b9c2c2, #f0c99d 55%, #e3b789);
 	}
 	:global(html:not(.day)) .scene.failed {
-		background: #000;
+		background: linear-gradient(#0a1128, #1a2548 60%, #28335a);
 	}
 </style>

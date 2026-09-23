@@ -23,7 +23,7 @@
    halates and reads thinner than it is. */
 :root {
 	--wn: 22;
-	--bg: #000;
+	--bg: #0b1328;
 	--title: #fff;
 	--text: #e3e3e5;
 	--muted: #9a9ca3;
@@ -47,7 +47,7 @@
 }
 :root.day {
 	--wn: 0;
-	--bg: #8fa9cc;
+	--bg: #d8b894;
 	--title: #0b1620;
 	--text: #15212c;
 	--muted: #34475a;

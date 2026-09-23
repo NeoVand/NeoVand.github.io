@@ -23,7 +23,7 @@ export function setDay(on: boolean, remember = true) {
 	lights.day = on;
 	document
 		.querySelector('meta[name="theme-color"]')
-		?.setAttribute('content', on ? '#5d7aa8' : '#000000');
+		?.setAttribute('content', on ? '#c4bfb2' : '#101a38');
 	if (remember)
 		try {
 			localStorage.setItem('lights', on ? 'day' : 'night');
