@@ -669,6 +669,10 @@ export class Grove {
 				k.z + Math.cos(k.yaw) * Math.cos(k.pitch) * k.d
 			);
 			this.camera.lookAt(k.x, k.y, k.z);
+			if (this.camera.near !== 0.3) {
+				this.camera.near = 0.3;
+				this.camera.updateProjectionMatrix();
+			}
 		}
 		return p;
 	}

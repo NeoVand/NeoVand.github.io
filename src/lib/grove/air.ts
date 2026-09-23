@@ -8,7 +8,7 @@ import { sparkTexture } from './textures';
 
 // ─── The air ──────────────────────────────────────────────────────────────
 // The same two dozen creatures, drawn by whichever light the lamp gives: by
-// day a sparrow, by night a firefly. They keep to the grove in two parties,
+// day a dove, by night a firefly. They keep to the grove in two parties,
 // one to a tree, and a party crosses to another tree every twenty seconds or
 // so; grab the tree a party is on and it is off almost together, some of it
 // breaking for the pavilion, which nobody can pull over.
@@ -57,7 +57,8 @@ interface Creature {
 
 const N = 24;
 
-/** A small bird: body along +z, wings hinged at the shoulders. */
+/** A white dove: body along +z, wings hinged at the shoulders, grey at the
+ *  tips, as in the old pictures of garden houses in the air. */
 function birdGeometry() {
 	const pos: number[] = [],
 		col: number[] = [],
@@ -69,11 +70,11 @@ function birdGeometry() {
 		side.push(s);
 		return pos.length / 3 - 1;
 	};
-	const back: [number, number, number] = [0.33, 0.23, 0.16];
-	const belly: [number, number, number] = [0.72, 0.63, 0.5];
-	const wing: [number, number, number] = [0.25, 0.18, 0.13];
-	const bar: [number, number, number] = [0.55, 0.47, 0.38];
-	const beak: [number, number, number] = [0.18, 0.16, 0.15];
+	const back: [number, number, number] = [0.8, 0.8, 0.82];
+	const belly: [number, number, number] = [0.93, 0.92, 0.9];
+	const wing: [number, number, number] = [0.86, 0.87, 0.89];
+	const bar: [number, number, number] = [0.6, 0.61, 0.65];
+	const beak: [number, number, number] = [0.6, 0.42, 0.4];
 	// body: rings along z, the highest point over the eye
 	const prof: [number, number, number][] = [
 		// z, radius, lift
@@ -120,7 +121,7 @@ function birdGeometry() {
 			h1 = push(s * 0.1, 0.1, -0.14, wing, s);
 		const m0 = push(s * 0.38, 0.1, 0.1, bar, s),
 			m1 = push(s * 0.36, 0.1, -0.18, wing, s);
-		const tp = push(s * 0.66, 0.1, -0.24, wing, s);
+		const tp = push(s * 0.78, 0.1, -0.28, bar, s);
 		I.push(h0, m0, h1, h1, m0, m1, m0, tp, m1);
 		I.push(h0, h1, m0, h1, m1, m0, m0, m1, tp);
 	}
@@ -255,7 +256,7 @@ export class Air {
 				flap: 0,
 				phase: this.r() * 10,
 				timer: 0,
-				size: lerp(0.24, 0.3, this.r()),
+				size: lerp(0.3, 0.38, this.r()),
 				tone: this.r(),
 				from: new THREE.Vector3(),
 				c1: new THREE.Vector3(),
