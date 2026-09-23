@@ -33,7 +33,7 @@
 			{#each earlier as it (it.title)}
 				{#if it.detail}
 					{@const d = it.detail}
-					<button class="tile glass" type="button" onclick={(e) => show(d, e)}>
+					<button class="tile glass card-ring" type="button" onclick={(e) => show(d, e)}>
 						<div class="thumb" class:grey={it.grey}>
 							<img src={it.img} alt="" loading="lazy" decoding="async" />
 						</div>
@@ -43,7 +43,7 @@
 						</div>
 					</button>
 				{:else}
-					<a class="tile glass" href={it.href} target="_blank" rel="noopener">
+					<a class="tile glass card-ring" href={it.href} target="_blank" rel="noopener">
 						<div class="thumb" class:grey={it.grey}>
 							<img src={it.img} alt="" loading="lazy" decoding="async" />
 						</div>
@@ -107,10 +107,6 @@
 		text-align: left;
 		text-decoration: none;
 		cursor: pointer;
-		transition: transform 380ms var(--ease-out);
-	}
-	.tile:hover {
-		transform: translateY(-2px);
 	}
 	.thumb {
 		aspect-ratio: 16 / 10;

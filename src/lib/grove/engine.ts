@@ -228,6 +228,9 @@ export class Grove {
 	private scrollSmooth = 0;
 	private yaw = 0;
 	private yawVel = 0;
+	/** when the last spin was let go, and the last sample of a drag, for its speed */
+	private spunAt = -99;
+	private spinSample = { yaw: 0, t: 0 };
 	private pitchNudge = 0;
 	private pointerNdc = new THREE.Vector2(0, 0);
 	private pointerOn = false;
@@ -955,9 +958,16 @@ export class Grove {
 			if (this.drag && this.drag.id === e.pointerId) {
 				const dx = e.clientX - this.drag.x;
 				if (Math.abs(dx) > 4) this.drag.moved = true;
-				const was = this.yaw;
-				this.yaw = clamp(this.drag.yaw - (dx / this.W) * 2.4, -0.75, 0.75);
-				this.yawVel = (this.yaw - was) * 60;
+				// all the way round if you like; a drag across the page is half a turn
+				this.yaw = this.drag.yaw - (dx / this.W) * 3.2;
+				// its speed, over real time and smoothed, for the throw
+				const now = performance.now();
+				const dt = (now - this.spinSample.t) / 1000;
+				if (dt > 0.004) {
+					const v = (this.yaw - this.spinSample.yaw) / dt;
+					this.yawVel = lerp(this.yawVel, clamp(v, -8, 8), Math.min(1, dt * 18));
+					this.spinSample = { yaw: this.yaw, t: now };
+				}
 			}
 			this.wake();
 		}) as EventListener);
@@ -993,6 +1003,9 @@ export class Grove {
 				this.wake();
 				return;
 			}
+			// a hand on a spinning island stops it
+			this.yawVel = 0;
+			this.spinSample = { yaw: this.yaw, t: performance.now() };
 			this.drag = {
 				id: e.pointerId,
 				x: e.clientX,
@@ -1005,7 +1018,12 @@ export class Grove {
 			this.wake();
 		}) as EventListener);
 		const up = ((e: PointerEvent) => {
-			if (this.drag?.id === e.pointerId) this.drag = null;
+			if (this.drag?.id === e.pointerId) {
+				this.drag = null;
+				this.spunAt = this.clock;
+				// a hand that had stopped before it let go throws nothing
+				if (performance.now() - this.spinSample.t > 90 || this.reduced) this.yawVel = 0;
+			}
 			if (this.grab?.id === e.pointerId) {
 				// let go: it springs back, and a hard bend shakes more loose
 				const g = this.grab;
@@ -1317,12 +1335,17 @@ export class Grove {
 			this.applyDay(this.dayMix);
 		}
 
-		// orbit: inertia after a drag, then easing home
+		// The island spins on after a throw, slowing gently over a couple of
+		// seconds, as a thing with some weight to it would; left alone for a
+		// while after, it drifts home on a slow spring, to the nearest whole
+		// turn rather than back through every turn it was given.
 		if (!this.drag) {
 			this.yaw += this.yawVel * dt;
-			this.yawVel = damp(this.yawVel, 0, 4, dt);
-			if (Math.abs(this.yawVel) < 0.02) this.yaw = damp(this.yaw, 0, 0.35, dt);
-			this.yaw = clamp(this.yaw, -0.75, 0.75);
+			const home = Math.round(this.yaw / (Math.PI * 2)) * Math.PI * 2;
+			if (!this.reduced && this.clock - this.spunAt > 5 && Math.abs(this.yawVel) < 0.4) {
+				const w = 0.9;
+				this.yawVel += (-(w * w) * (this.yaw - home) - 2 * w * this.yawVel) * dt;
+			} else this.yawVel *= Math.exp(-dt * 0.9);
 		}
 		// a little parallax from the pointer
 		const px = this.pointerOn && !this.drag ? this.pointerNdc.x : 0;
@@ -1346,7 +1369,12 @@ export class Grove {
 		// the wind, which nobody reading can tell from still: they wait
 		this.renderer.shadowMap.needsUpdate =
 			visible &&
-			(quick || !!this.pressed || !!this.grab || (this.shadowTick === 0 && !this.scrolling));
+			(quick ||
+				!!this.pressed ||
+				!!this.grab ||
+				!!this.drag ||
+				Math.abs(this.yawVel) > 0.02 ||
+				(this.shadowTick === 0 && !this.scrolling));
 		// the lantern's, only while the island is still arriving
 		if (quick) this.lamp.shadow.needsUpdate = true;
 

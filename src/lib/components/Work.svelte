@@ -64,7 +64,7 @@
 
 		<div class="grid">
 			{#each shown as p (p.href)}
-				<article class="card glass" style="--accent:{p.accent ?? 'var(--title)'}">
+				<article class="card glass card-ring" style="--accent:{p.accent ?? 'var(--title)'}">
 					<a class="cover" href={p.href} target="_blank" rel="noopener" aria-label="Open {p.title}"
 					></a>
 					<div class="thumb" style="background:{p.ground ?? 'var(--pane)'}">
@@ -165,10 +165,6 @@
 		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-		transition: transform 380ms var(--ease-out);
-	}
-	.card:hover {
-		transform: translateY(-3px);
 	}
 	.cover {
 		position: absolute;
@@ -191,14 +187,18 @@
 	}
 	.thumb img {
 		opacity: 0;
-		transition: opacity 500ms var(--ease);
+		transition:
+			opacity 500ms var(--ease),
+			transform 900ms var(--ease-out);
 	}
 	.thumb img:global(.in) {
 		opacity: 1;
 	}
 	.thumb video {
 		opacity: 0;
-		transition: opacity 300ms var(--ease);
+		transition:
+			opacity 300ms var(--ease),
+			transform 900ms var(--ease-out);
 	}
 	.card:hover .thumb video {
 		opacity: 1;

@@ -9,7 +9,13 @@
 		</div>
 		<div class="tiles">
 			{#each media as m (m.href)}
-				<a class="tile glass" href={m.href} target="_blank" rel="noopener" title={m.title}>
+				<a
+					class="tile glass card-ring"
+					href={m.href}
+					target="_blank"
+					rel="noopener"
+					title={m.title}
+				>
 					<div class="thumb">
 						<img src={m.img} alt="" loading="lazy" decoding="async" />
 						{#if m.video}
@@ -40,10 +46,6 @@
 		border-radius: 14px;
 		overflow: hidden;
 		text-decoration: none;
-		transition: transform 380ms var(--ease-out);
-	}
-	.tile:hover {
-		transform: translateY(-2px);
 	}
 	.thumb {
 		position: relative;
