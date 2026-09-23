@@ -15,8 +15,9 @@ import { brickTextures, lawnTexture, barkTextures, woodTexture } from './texture
 import { buildIsland, ISLAND, type IslandParts } from './island';
 import { buildPavilion, type PavilionParts } from './pavilion';
 import { buildGramophone, type Gramophone } from './gramophone';
-import { buildStand, type TreeHandles, type StandItem } from './trees';
-import { SPECIES, SHRUB } from './lsystem';
+import { buildStand, type Stand } from './flora/plants';
+import { OLIVE } from './flora/species';
+import { rustleFrom } from './flora/wind';
 import { patch, nightPatch } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
@@ -106,8 +107,7 @@ export class Grove {
 	island!: IslandParts;
 	pavilion!: PavilionParts;
 	gramophone!: Gramophone;
-	trees: TreeHandles[] = [];
-	shrubs!: TreeHandles;
+	trees: Stand[] = [];
 	air!: Air;
 	ivy!: Ivy;
 	private mats!: {
@@ -144,8 +144,8 @@ export class Grove {
 		moved: boolean;
 		t: number;
 	} | null = null;
-	private pressed: TreeHandles | null = null;
-	private growth = new Map<TreeHandles, { g: number; to: number; pop: number; popV: number }>();
+	private pressed: Stand | null = null;
+	private growth = new Map<Stand, { g: number; to: number; pop: number; popV: number }>();
 	private intro = { t: -1, dur: 3.4 };
 	private dpr = 1;
 	private dprCap = 2;
@@ -291,71 +291,36 @@ export class Grove {
 	private plant() {
 		const r = this.rand;
 		const phone = Math.min(window.innerWidth, window.innerHeight) < 700;
-		const n = phone ? 5 : 6;
-		// slots round the back and sides; the front is left open to the doorway
-		const slots: THREE.Vector3[] = [];
-		let guard = 0;
-		while (slots.length < n && guard++ < 500) {
-			const a = lerp(1.35, Math.PI * 2 - 1.35, r());
-			const rad = lerp(3.9, 5.6, r());
-			const p = new THREE.Vector3(Math.sin(a) * rad, 0, Math.cos(a) * rad);
-			if (slots.every((s) => s.distanceTo(p) > 2.7)) slots.push(p);
-		}
-		const order = SPECIES.map((_, i) => i).sort(() => r() - 0.5);
-		while (order.length < slots.length) order.push(Math.floor(r() * SPECIES.length));
-		// the tallest toward the back
-		slots.sort((a, b) => b.z - a.z);
-		this.trees = slots.map((pos, i) =>
-			this.plantTree({
-				sp: SPECIES[order[i]],
-				seed: Math.floor(r() * 1e6),
-				pos,
-				rotY: r() * Math.PI * 2,
-				heightScale: lerp(0.86, 1.04, i / Math.max(1, slots.length - 1))
-			})
-		);
-
-		// undergrowth along the lip and round the pavilion's foot
-		const items: StandItem[] = [];
-		const places: THREE.Vector3[] = [];
-		guard = 0;
-		const want = phone ? 13 : 17;
-		while (places.length < want && guard++ < 800) {
-			const a = r() * Math.PI * 2;
-			const nearPav = r() < 0.3;
-			const rad = nearPav ? lerp(2.75, 3.3, r()) : lerp(5.3, 6.2, r());
-			const p = new THREE.Vector3(Math.sin(a) * rad, 0, Math.cos(a) * rad);
-			// keep the path and the doorway clear
-			if (Math.abs(p.x) < 1.1 && p.z > 1.5) continue;
-			if (places.some((q) => q.distanceTo(p) < 1.2)) continue;
-			if (this.trees.some((t) => t.items[0].pos.distanceTo(p) < 1.0)) continue;
-			places.push(p);
-			items.push({
-				sp: SHRUB,
-				seed: Math.floor(r() * 1e6),
-				pos: p,
-				rotY: r() * Math.PI * 2,
-				heightScale: lerp(0.8, 1.2, r()),
-				sOffset: r() * 0.8
-			});
-		}
-		this.shrubs = buildStand(items, {
-			barkMap: this.mats.bark.map,
-			barkNormal: this.mats.bark.normalMap
+		const opt = {
+			barkMap: this.mats.bark.map!,
+			barkNormal: this.mats.bark.normalMap!,
+			rows: phone ? 3 : 5,
+			density: phone ? 0.62 : 1,
+			minRadius: phone ? 0.009 : 0.006
+		};
+		// two olives either side of the doorway and a little behind it, the way
+		// they stand in front of the old garden houses
+		const side = r() < 0.5 ? 1 : -1;
+		this.trees = [side, -side].map((sgn, i) => {
+			const a = sgn * lerp(0.95, 1.2, r());
+			const rad = lerp(4.1, 4.6, r());
+			const t = buildStand(
+				[
+					{
+						species: OLIVE,
+						seed: Math.floor(r() * 1e6),
+						pos: new THREE.Vector3(Math.sin(a) * rad, 0, Math.cos(a) * rad),
+						rotY: r() * Math.PI * 2,
+						scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r())
+					}
+				],
+				opt
+			);
+			this.world.add(t.group);
+			this.growth.set(t, { g: 1, to: 1, pop: 0, popV: 0 });
+			return t;
 		});
-		this.world.add(this.shrubs.group);
-		this.growth.set(this.shrubs, { g: 1, to: 1, pop: 0, popV: 0 });
 		this.shadeLawn();
-	}
-
-	private plantTree(item: StandItem) {
-		const t = buildStand([item], {
-			barkMap: this.mats.bark.map,
-			barkNormal: this.mats.bark.normalMap
-		});
-		this.world.add(t.group);
-		this.growth.set(t, { g: 1, to: 1, pop: 0, popV: 0 });
-		return t;
 	}
 
 	/** Darken the grass under each crown and round the pavilion's foot. */
@@ -367,26 +332,6 @@ export class Grove {
 			const p = t.items[0].pos;
 			blobs[i + 1].set(p.x, p.z, 1.9, 0.38);
 		});
-	}
-
-	/** A tree that has gone completely comes back as a different species. */
-	private replant(t: TreeHandles) {
-		const i = this.trees.indexOf(t);
-		if (i < 0) return t;
-		const old = t.items[0];
-		const others = SPECIES.filter((s) => s !== old.sp);
-		const sp = others[Math.floor(this.rand() * others.length)];
-		this.world.remove(t.group);
-		t.dispose();
-		this.growth.delete(t);
-		const nt = this.plantTree({ ...old, sp, seed: Math.floor(this.rand() * 1e6) });
-		this.trees[i] = nt;
-		const st = this.growth.get(nt)!;
-		st.g = 0;
-		st.to = 1;
-		nt.u.uGrow.value = 0;
-		this.air.replanted(t, nt);
-		return nt;
 	}
 
 	// ── the light ─────────────────────────────────────────────────────────
@@ -590,8 +535,10 @@ export class Grove {
 				return;
 			}
 			if (hit) {
+				// a touch shakes the crown from where the hand went in, and
+				// anything perched in it is off
 				this.pressed = hit;
-				this.growth.get(hit)!.to = 0;
+				rustleFrom(this.touchPoint(hit), 1);
 				this.air.pressed(hit);
 			}
 			this.drag = {
@@ -607,11 +554,7 @@ export class Grove {
 		}) as EventListener);
 		const up = ((e: PointerEvent) => {
 			if (this.drag?.id === e.pointerId) this.drag = null;
-			if (this.pressed) {
-				const st = this.growth.get(this.pressed);
-				if (st) st.to = 1;
-				this.pressed = null;
-			}
+			this.pressed = null;
 			this.wake();
 		}) as EventListener;
 		this.on(cv, 'pointerup', up);
@@ -623,12 +566,21 @@ export class Grove {
 	}
 
 	/** What is under the pointer: the machine, a tree, or nothing. */
-	private pick(): TreeHandles | 'gramophone' | null {
+	/** where the pointer's ray passes into a crown */
+	private touchPoint(t: Stand) {
+		this.ray.setFromCamera(this.pointerNdc, this.camera);
+		const c = t.crown.clone().setY(t.height * 0.72);
+		const p = new THREE.Vector3();
+		this.ray.ray.closestPointToPoint(c, p);
+		return p.lerp(c, 0.25);
+	}
+
+	private pick(): Stand | 'gramophone' | null {
 		this.ray.setFromCamera(this.pointerNdc, this.camera);
 		const ray = this.ray.ray;
 		const box = this.gramophone.hit.clone().applyMatrix4(this.gramophone.group.matrixWorld);
 		const gHit = ray.intersectBox(box, new THREE.Vector3());
-		let best: TreeHandles | null = null,
+		let best: Stand | null = null,
 			bestD = Infinity;
 		const a = new THREE.Vector3(),
 			b = new THREE.Vector3(),
@@ -806,7 +758,7 @@ export class Grove {
 			const rate = st.to > st.g ? 0.42 : 0.9;
 			let delay = 0;
 			if (introGrow >= 0 && introGrow < this.intro.dur + 1) {
-				delay = t === this.shrubs ? 0.2 : 0.7 + this.trees.indexOf(t) * 0.16;
+				delay = 0.7 + this.trees.indexOf(t) * 0.16;
 				if (introGrow < delay) continue;
 			}
 			const prev = st.g;
@@ -821,12 +773,6 @@ export class Grove {
 			const g = easeInOut(clamp(st.g, 0, 1));
 			t.u.uGrow.value = g * (t.sMax + 1.2) - 0.4 + st.pop * 0.25;
 			t.u.uGrowAll.value = 0.3 + 0.7 * g;
-			if (st.g <= 0 && st.to <= 0 && t !== this.shrubs && this.pressed === t) {
-				// gone: something else grows in its place
-				const nt = this.replant(t);
-				this.pressed = nt;
-				this.growth.get(nt)!.to = 0;
-			}
 		}
 
 		// the ivy creeps up the brick while the trees come up

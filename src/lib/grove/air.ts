@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { Grove } from './engine';
-import type { TreeHandles } from './trees';
-import { U, patch, nightPatch, windOffset } from './shared';
+import type { Stand as TreeHandles } from './flora/plants';
+import { bendTree } from './flora/wind';
+import { U, patch, nightPatch } from './shared';
 import { rng, clamp, damp, lerp, smoothstep } from './rng';
 import { sparkTexture } from './textures';
 
@@ -296,9 +297,8 @@ export class Air {
 			const pr = s.tree.perches[s.i];
 			if (!pr) return out.set(0, -100, 0);
 			// the twig as the wind has it right now
-			windOffset(pr.p, pr.flex, out);
-			out.add(pr.p);
-			out.y += 0.06;
+			bendTree(pr.p, pr.base, pr.height, pr.flex, out);
+			out.y += 0.05;
 			return out;
 		}
 		return out.copy(s.p);
@@ -437,12 +437,6 @@ export class Air {
 				: this.pickSite(cr, next);
 			this.fly(cr, site, this.r() * 0.25);
 		}
-	}
-
-	replanted(old: TreeHandles, nt: TreeHandles) {
-		for (let i = 0; i < 2; i++) if (this.partyTree[i] === old) this.partyTree[i] = nt;
-		for (const cr of this.c)
-			if (cr.site?.kind === 'twig' && cr.site.tree === old) this.fly(cr, this.pickSite(cr), 0);
 	}
 
 	private migrate() {
