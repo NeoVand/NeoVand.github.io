@@ -609,7 +609,8 @@ export class Air {
 		// The fireflies: each wanders a patch of air on slow sines, and now
 		// and then drifts off to another patch nearby; and each flashes on
 		// its own clock, a slow swell and fade, dark most of the time.
-		const on = smoothstep(0.1, 0.9, night);
+		// and the fireflies come out once the island has arrived
+		const on = smoothstep(0.1, 0.9, night) * this.grove.arrive;
 		for (let i = 0; i < this.ff.length; i++) {
 			const f = this.ff[i];
 			const k = i * 3;

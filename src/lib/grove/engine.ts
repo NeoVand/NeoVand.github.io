@@ -12,15 +12,7 @@ import {
 	ToneMappingEffect,
 	ToneMappingMode
 } from 'postprocessing';
-import {
-	brickTextures,
-	lawnTexture,
-	barkTextures,
-	woodTexture,
-	ashlarTextures,
-	rockTextures,
-	flagTextures
-} from './textures';
+import { bakeTextures, lawnTexture, barkTextures, woodTexture } from './textures';
 import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
 import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
@@ -116,7 +108,7 @@ function lampRoom() {
 				float az = atan(d.x, d.z);
 				float e = d.y;
 				// the floor, brightest under the lamp
-				vec3 floorC = vec3(0.62, 0.4, 0.22) * mix(0.25, 0.9, smoothstep(-0.2, -0.9, e));
+				vec3 floorC = vec3(0.62, 0.4, 0.22) * mix(0.25, 0.9, 1.0 - smoothstep(-0.9, -0.2, e));
 				// the bays, open to the night, and the piers between them
 				float bay = smoothstep(-0.1, 0.35, cos(az * 6.0));
 				vec3 wall = mix(vec3(0.5, 0.22, 0.1) * 0.5, vec3(0.02, 0.03, 0.07), bay);
@@ -250,13 +242,16 @@ export class Grove {
 	} | null = null;
 	private pressed: Stand | null = null;
 	private growth = new Map<Stand, { g: number; to: number; pop: number; popV: number }>();
-	private intro = { t: -1, dur: 3.4 };
+	private intro = { t: -1, dur: 3.2 };
 	/** the scale the picture is drawn at, which adapt() trades for time */
 	private dpr = 1;
 	private dprCap = 2;
 	/** the canvas's own density: the screen's, up to 2 */
 	private native = 1;
 	private present!: PresentPass;
+	private texReady: Promise<void> = Promise.resolve();
+	private lampBase = 0;
+	private glassBase = 0;
 	private frameTimes: number[] = [];
 	private ray = new THREE.Raycaster();
 	private playing = false;
@@ -392,7 +387,10 @@ export class Grove {
 	// ── building ──────────────────────────────────────────────────────────
 	private build() {
 		const aniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-		const bricks = brickTextures(aniso);
+		// the heavy textures are drawn in workers while the rest is built
+		const baked = bakeTextures(aniso);
+		this.texReady = baked.done;
+		const bricks = baked.tex.bricks;
 		const bark = barkTextures(aniso);
 		const brick = patch(
 			new THREE.MeshStandardMaterial({
@@ -411,7 +409,7 @@ export class Grove {
 			nightPatch
 		);
 		this.mats = { brick, copper, bark, stone: brick };
-		const ashlar = ashlarTextures(aniso);
+		const ashlar = baked.tex.ashlar;
 		const stone = patch(
 			new THREE.MeshStandardMaterial({
 				map: ashlar.map,
@@ -436,7 +434,7 @@ export class Grove {
 		this.brass = brass;
 
 		this.island = buildIsland(
-			{ ashlar, rock: rockTextures(aniso), flags: flagTextures(aniso), lawn: lawnTexture(aniso) },
+			{ ashlar, rock: baked.tex.rock, flags: baked.tex.flags, lawn: lawnTexture(aniso) },
 			this.rand() * 10
 		);
 		this.world.add(this.island.group);
@@ -752,8 +750,10 @@ export class Grove {
 			lerp(1.2, 0.55, m) * Math.min(1, Math.abs(m - 0.5) * 4 + 0.25);
 		U.uWind.value = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
-		this.lamp.intensity = lerp(22, 2.2, m);
-		this.glassMat.emissiveIntensity = lerp(2.6, 1.0, m);
+		this.lampBase = lerp(22, 2.2, m);
+		this.glassBase = lerp(2.6, 1.0, m);
+		this.lamp.intensity = this.lampBase * lerp(0.12, 1, this.arrive);
+		this.glassMat.emissiveIntensity = this.glassBase * lerp(0.12, 1, this.arrive);
 	}
 
 	setDay(day: boolean) {
@@ -845,13 +845,17 @@ export class Grove {
 		const H = this.H;
 		this.scrollSmooth = this.reduced ? this.scroll : damp(this.scrollSmooth, this.scroll, 10, dt);
 		const p = clamp(this.scrollSmooth / H, 0, 2.4);
-		// the intro: in from a little further out and higher up
-		let k = 1;
-		if (this.intro.t >= 0 && this.intro.t < this.intro.dur)
-			k = easeInOut(this.intro.t / this.intro.dur);
-		else if (this.intro.t < 0) k = 0;
-		const back = lerp(1.22, 1, k);
-		const lift = lerp(7, 0, k);
+		// the entrance (see begin): the turn and the drift in eased both ways,
+		// the rise eased out, quick off the mark and slow into its place
+		let k = 1,
+			rise = 0;
+		if (this.intro.t < 0) ((k = 0), (rise = 1));
+		else if (this.intro.t < this.intro.dur) {
+			const u = this.intro.t / this.intro.dur;
+			k = easeInOut(u);
+			rise = Math.pow(1 - u, 3);
+		}
+		const back = lerp(1.1, 1, k);
 		// sinking past the island, and looking up at it as it goes by
 		// Beside the words the island can linger and be looked up at as it goes;
 		// over them, where they stack, it keeps ahead of the text it would cover.
@@ -860,11 +864,14 @@ export class Grove {
 		// The camera only sinks; it does not tip. Going below the island is
 		// enough to see its underside, and a level camera keeps the horizon and
 		// the moon where they were, behind the page as well as the picture.
-		const pitch = THREE.MathUtils.degToRad(8 + lift) + this.pitchNudge;
+		const pitch = THREE.MathUtils.degToRad(8) + this.pitchNudge;
 		const drift = this.reduced ? 0 : Math.sin(this.clock * 0.045) * 0.06;
-		const yaw = this.yaw + drift + lerp(-0.35, 0, k);
+		const yaw = this.yaw + drift + lerp(-0.24, 0, k);
 		this.viewYaw = this.peekAt ? 0 : yaw;
-		const target = new THREE.Vector3(0, -0.9 - descend, 0);
+		// the island comes up from a third of the picture below its place: the
+		// camera, and what it looks at, go down past it instead, which with the
+		// sky held still is the same thing
+		const target = new THREE.Vector3(0, -0.9 - descend + rise * 0.32 * this.hv, 0);
 		const d = this.dist * back;
 		this.camera.position.set(
 			target.x + Math.sin(yaw) * Math.cos(pitch) * d,
@@ -1141,6 +1148,7 @@ export class Grove {
 	// ── the loop ──────────────────────────────────────────────────────────
 	async ready() {
 		this.sky.bake(this.renderer);
+		await this.texReady;
 		this.sky.update(this.renderer);
 		await this.bakeEnvironment();
 		this.applyDay(this.dayMix);
@@ -1233,19 +1241,24 @@ export class Grove {
 	}
 
 	/** Begin the opening: the trees grow in, the camera settles, birds come. */
+	/**
+	 * The entrance. The island is there whole from the first frame, trees and
+	 * all, low in the picture; as the veil lifts it floats up into its place,
+	 * turning a little as it comes, and settles, and a breath of wind goes
+	 * through the garden as it does. Then, by night, its lights come on: the
+	 * lamp on the finial first, down the ribs of the dome and out along the
+	 * swags, the lanterns, the fireflies. The sky holds still behind it.
+	 */
 	begin() {
-		if (this.reduced) {
-			this.intro.t = this.intro.dur;
-		} else {
-			this.intro.t = 0;
-			for (const [t, st] of this.growth) {
-				st.g = 0;
-				st.to = 1;
-				t.u.uGrow.value = 0;
-			}
-		}
+		this.intro.t = this.reduced ? this.intro.dur + 4 : 0;
 		this.air.begin();
 		this.wake();
+	}
+
+	/** how far the island's lights have come on after its arrival, 0..1 */
+	get arrive() {
+		const t = this.intro.t;
+		return t < 0 ? 0 : smoothstep(1.7, 3.9, t);
 	}
 
 	wake() {
@@ -1286,7 +1299,13 @@ export class Grove {
 	private update(dt: number) {
 		this.clock += dt;
 		U.uTime.value = this.clock;
-		if (this.intro.t >= 0) this.intro.t += dt;
+		if (this.intro.t >= 0) {
+			const was = this.intro.t;
+			this.intro.t += dt;
+			// a breath of wind through the garden as it settles
+			if (was < 1.6 && this.intro.t >= 1.6 && !this.reduced)
+				rustleFrom(new THREE.Vector3(0, 2.6, 0), 0.8);
+		}
 
 		// the lights
 		if (Math.abs(this.dayMix - this.dayTo) > 1e-4) {
@@ -1398,7 +1417,11 @@ export class Grove {
 			.transformDirection(this.camera.matrixWorldInverse);
 		this.light.target.position.set(0, 0, 0);
 
-		this.fairy.update(1 - this.dayMix, this.clock, this.reduced);
+		this.fairy.update((1 - this.dayMix) * this.arrive, this.clock, this.reduced);
+		// the lamps come up with the rest after the arrival
+		const up = lerp(0.12, 1, this.arrive);
+		this.lamp.intensity = this.lampBase * up;
+		this.glassMat.emissiveIntensity = this.glassBase * up;
 		this.air.update(dt, visible);
 		if (visible) {
 			this.lightUp();
@@ -1418,14 +1441,15 @@ export class Grove {
 		const night = 1 - this.dayMix;
 		const g = this.glow;
 		g.begin();
-		const li = lerp(0.35, 1.6, night);
+		const li = lerp(0.35, 1.6, night) * lerp(0.12, 1, this.arrive);
 		for (const p of this.lanterns) g.add(p, this.lampCol, li, 2.6);
 		// only the soft part of its light: the spot does the rest, with shadows
 		g.add(this.pavilion.lantern, this.lampCol, li * 0.3, 2.2);
 		// the fairy lights, a warm wash on the brick under each swag
 		// the fairy lights: on the brick round them and out into the crowns
 		// either side, which is most of what makes them look lit
-		if (night > 0.02) for (const p of this.fairy.glowAt) g.add(p, this.fairyCol, night * 0.45, 2.1);
+		if (night > 0.02)
+			for (const p of this.fairy.glowAt) g.add(p, this.fairyCol, night * 0.45 * this.arrive, 2.1);
 		if (night > 0.02) {
 			const { pos, glow } = this.air.fireflies;
 			const v = new THREE.Vector3();
