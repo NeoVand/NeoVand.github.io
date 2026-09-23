@@ -28,6 +28,7 @@ import { buildStand, prepareStand, sharedCanopy, type Stand, type PlantItem } fr
 import type { Canopy } from './flora/canopy';
 import { OLIVE, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
+import { Petals } from './flora/petals';
 import { patch, nightPatch } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
@@ -116,10 +117,11 @@ export class Grove {
 	island!: IslandParts;
 	pavilion!: RotundaParts;
 	private glow = new Glow();
+	private petals = new Petals();
 	private lanterns: THREE.Vector3[] = [];
 	private glassMat = new THREE.MeshStandardMaterial({
 		color: 0x2a2014,
-		emissive: new THREE.Color(1.0, 0.64, 0.3),
+		emissive: new THREE.Color(1.0, 0.5, 0.17),
 		emissiveIntensity: 0,
 		roughness: 0.3
 	});
@@ -337,6 +339,7 @@ export class Grove {
 		this.gramophone.group.rotation.y = 0.35;
 		this.world.add(this.gramophone.group);
 		this.world.add(this.notes.points);
+		this.world.add(this.petals.mesh);
 
 		this.plant();
 	}
@@ -444,7 +447,8 @@ export class Grove {
 			});
 		}
 
-		const groups = [olives, cypresses, whites, roses, vines];
+		// each olive a stand of its own, so a touch finds the one it touched
+		const groups = [[olives[0]], [olives[1]], cypresses, whites, roses, vines];
 		const preps = groups.map((g) => prepareStand(g, opt.density));
 		const canopy = sharedCanopy(preps);
 		const stands = preps.map((p, i) => buildStand(groups[i], { ...opt, canopy }, p));
@@ -557,7 +561,7 @@ export class Grove {
 		U.uWind.value = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
 		this.lamp.intensity = lerp(14, 2.2, m);
-		this.glassMat.emissiveIntensity = lerp(5.5, 2.2, m);
+		this.glassMat.emissiveIntensity = lerp(4.5, 1.3, m);
 	}
 
 	setDay(day: boolean) {
@@ -706,7 +710,9 @@ export class Grove {
 				// a touch shakes the crown from where the hand went in, and
 				// anything perched in it is off
 				this.pressed = hit;
-				rustleFrom(this.touchPoint(hit), 1);
+				const at = this.touchPoint(hit);
+				rustleFrom(at, 1);
+				if (!this.reduced) this.petals.shed(hit, at, 16);
 				this.air.pressed(hit);
 			}
 			this.drag = {
@@ -970,7 +976,14 @@ export class Grove {
 		this.light.target.position.set(0, 0, 0);
 
 		this.air.update(dt, visible);
-		if (visible) this.lightUp();
+		if (visible) {
+			this.lightUp();
+			this.petals.update(
+				dt,
+				this.garden.filter((g) => g.blossoms.length > 0),
+				this.reduced
+			);
+		}
 	}
 
 	/** Lay the lanterns' and the fireflies' light into the glow map. */
