@@ -87,6 +87,9 @@ uniform vec3 uSunCloud;
 uniform vec3 uSunHigh;
 uniform vec3 uMoonLight;
 uniform float uParity;  // -1 draws every pixel; 0 or 1, half of them, chequered
+uniform float uEye;     // how high over the cloud the eye is: 1 at the island, less going down
+uniform float uMist;    // how far into the cloud: 0 over it, 1 inside
+uniform float uDrift;   // the mist going by, with the scroll
 
 ${ATMO}
 
@@ -109,8 +112,9 @@ float h21(vec2 p) {
 
 // ── the cloud sea ──
 // The layer's tops lie between SEA_B below the eye and SEA_B - SEA_A; the
-// eye is SEA_B above its floor, in units the texture is scaled into.
-const float SEA_B = 1.0;
+// eye is SEA_B above its floor, in units the texture is scaled into. It is 1
+// beside the island, and comes down toward the tops as the page goes down.
+float SEA_B = 1.0;
 const float SEA_A = 0.34;
 vec2 gX, gY; // the floor plane's footprint per pixel, for filtering
 // a slow swell over the whole sheet, so it never repeats in rows: it
@@ -266,10 +270,26 @@ float disc(vec3 d, vec3 c, float r, out float rr) {
 	return 1.0 - smoothstep(r - w, r + w, x);
 }
 
+// Inside the cloud: its own light, brighter looking up toward where the
+// light comes in and dimmer looking down, and moving in soft folds that go
+// up past the eye as it sinks through.
+float mistFold(vec3 d) {
+	vec2 q = vec2(atan(d.x, -d.z) * 1.1, asin(clamp(d.y, -1.0, 1.0)) * 1.3 + uDrift);
+	float a = texture(uCloud, q * 0.22 + vec2(0.17, 0.0)).r;
+	float b = texture(uCloud, q * 0.08 + vec2(0.52, 0.3)).a;
+	float f = a * 0.45 + b * 0.55;
+	return 0.7 + 0.6 * smoothstep(0.15, 0.85, f);
+}
+
 void main() {
 	vec3 d = normalize(vDir);
 	float e = d.y;
 	float t = uTime;
+	SEA_B = uEye;
+	bool deep = uMist > 0.999;
+	float fold = uMist > 0.001 ? mistFold(d) : 1.0;
+	// brighter toward the top of the view, where the light comes in from
+	float lift = 0.74 + 0.4 * smoothstep(-0.65, 0.05, e);
 	// footprints on the two planes, taken here where every pixel runs them
 	float dn = max(-e, 0.004);
 	vec2 floorP = d.xz * (SEA_B / dn);
@@ -287,14 +307,14 @@ void main() {
 
 	Hit hit;
 	hit.ok = 0.0;
-	if (e < 0.0) hit = marchSea(d);
+	if (e < 0.0 && !deep) hit = marchSea(d);
 	float tb = SEA_B / dn;
 
 	float hc = 0.0;
 	// the high cloud goes where it would be finer than a pixel, near the
 	// horizon: there it is only streaks that crawl as the view moves
 	float rFp = (length(rX) + length(rY)) * 0.19;
-	if (e > 0.0) hc = highC(roofP, rX, rY) * uHigh * smoothstep(0.02, 0.12, e) * (1.0 - smoothstep(0.04, 0.16, rFp));
+	if (e > 0.0 && !deep) hc = highC(roofP, rX, rY) * uHigh * smoothstep(0.02, 0.12, e) * (1.0 - smoothstep(0.04, 0.16, rFp));
 	vec3 up3 = vec3(0.0, 1.0, 0.0);
 
 	vec3 col = vec3(0.0);
@@ -349,8 +369,9 @@ void main() {
 			// and at the horizon itself the far haze meets the sky with no line
 			day = mix(day, low, (1.0 - smoothstep(0.0, 0.045, -e)) * 0.85);
 			// and the air between, from the table, which stops at the cloud;
-			// held light, or the whole sea goes to milk
-			day = day * mix(air.a, 1.0, 0.6) + air.rgb * E * 0.32;
+			// held light, or the whole sea goes to milk; less of it as the eye
+			// comes down to the tops
+			day = day * mix(air.a, 1.0, 0.6) + air.rgb * E * 0.32 * (0.3 + 0.7 * uEye);
 		}
 		// the sun: a disc darkened toward its limb, which is what makes it
 		// round rather than a hole in the sky
@@ -359,6 +380,9 @@ void main() {
 		float limb = 0.5 + 0.5 * sqrt(max(0.0, 1.0 - rr * rr));
 		float over = (e < 0.0 ? 1.0 - hit.ok : 1.0) * (1.0 - hc);
 		day += uSunEye * E * 7.0 * sd * limb * over;
+		// in the cloud, the day is its lit white
+		vec3 mistD = mix(uSunCloud * E * 0.62 * 0.2 + amb * 0.62, zen * 1.25, 0.5) * lift * fold;
+		day = mix(day, mistD, uMist);
 		col += day * uMix;
 	}
 
@@ -411,6 +435,10 @@ void main() {
 		// its halo in the damp air
 		float ma = length(d - uMoon);
 		night += vec3(0.5, 0.56, 0.72) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
+		// in the cloud by night, the moon's light through it, grey-blue
+		vec3 mistN = (uMoonLight * 0.15 + amb * 0.62 + moonAir * 0.5) * lift * fold;
+		night = mix(night, mistN, uMist);
+		moonVis *= 1.0 - smoothstep(0.0, 0.5, uMist);
 		col += night * (1.0 - uMix);
 	}
 
@@ -654,7 +682,10 @@ export function createSky() {
 		uSunCloud: { value: new THREE.Color() },
 		uSunHigh: { value: new THREE.Color() },
 		uMoonLight: { value: new THREE.Color(0.2, 0.245, 0.35) },
-		uParity: { value: -1 }
+		uParity: { value: -1 },
+		uEye: { value: 1 },
+		uMist: { value: 0 },
+		uDrift: { value: 0 }
 	};
 	const mat = new THREE.ShaderMaterial({
 		uniforms,

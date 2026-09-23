@@ -181,9 +181,10 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 		worldPos.forEach((p, i) => canopy!.add(p, areas[i]));
 		canopy.finish();
 	}
+	const floor = items[0]?.species.skyFloor ?? 0;
 	for (let i = 0; i < leaves.pos.length / 3; i++) {
 		_v.set(leaves.pos[i * 3], leaves.pos[i * 3 + 1], leaves.pos[i * 3 + 2]);
-		leaves.data[i * 4 + 3] = canopy.sky(_v);
+		leaves.data[i * 4 + 3] = floor + (1 - floor) * canopy.sky(_v);
 	}
 	for (let i = 0; i < flowers.pos.length / 3; i++) {
 		_v.set(flowers.pos[i * 3], flowers.pos[i * 3 + 1], flowers.pos[i * 3 + 2]);

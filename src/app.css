@@ -23,11 +23,6 @@
    word inside a word inside a paragraph each chase their parent's colour a
    frame behind, the lag compounds down the tree, and the colour arrives
    all at once at the end.) */
-@property --wn {
-	syntax: '<number>';
-	inherits: true;
-	initial-value: 0;
-}
 @property --blur {
 	syntax: '<length>';
 	inherits: true;
@@ -120,11 +115,11 @@
 }
 
 /* ─── The two lights ──────────────────────────────────────────────────────
-   Night is the default and the page's own; the lamp adds .day. By night the
-   running text is set a shade heavier, because light type on a dark ground
-   halates and reads thinner than it is. */
+   Night is the default and the page's own; the lamp adds .day. The type
+   keeps one weight in both: set heavier by night, as it once was, Inter
+   grows wider with its weight, and every line on the page rewrapped as the
+   light changed. */
 :root {
-	--wn: 22;
 	--bg: #0b1328;
 	--title: #fff;
 	--text: #e3e3e5;
@@ -155,7 +150,6 @@
 	color-scheme: dark;
 }
 :root.day {
-	--wn: 0;
 	--bg: #aec4d3;
 	--title: #0b1620;
 	--text: #15212c;
@@ -196,7 +190,6 @@ html {
    the same 2.4 s, so the words and what is behind them cross together */
 html.theming {
 	transition:
-		--wn var(--theme-t),
 		--blur var(--theme-t),
 		--frost-sat var(--theme-t),
 		--bg var(--theme-t),
@@ -221,7 +214,7 @@ body {
 	font-family: var(--sans);
 	font-size: 16px;
 	line-height: 1.6;
-	font-weight: calc(400 + var(--wn));
+	font-weight: 410;
 	color: var(--text);
 	background: transparent;
 	font-optical-sizing: auto;
@@ -246,7 +239,7 @@ button {
 }
 strong,
 b {
-	font-weight: calc(600 + var(--wn));
+	font-weight: 610;
 	color: var(--title);
 }
 :focus-visible {
@@ -279,6 +272,17 @@ b {
 		inset 0 0 0 1px var(--hair),
 		0 1px 2px var(--cast);
 }
+/* The small panes, pills and chips, are not frosted. Each pane that blurs
+   what is behind it is a pass of its own over the live picture, every
+   frame; a dozen of them together beside the island were what made the
+   scroll past it stutter, and at their size the blur hardly shows. They take
+   a denser tint instead, the pane leant toward the page's own colour. */
+.pill.glass,
+.chip.glass {
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+	background: color-mix(in srgb, var(--pane) 72%, var(--bg));
+}
 .glass::before {
 	content: '';
 	position: absolute;
@@ -310,7 +314,7 @@ b {
 	padding: 0 16px;
 	border-radius: 999px;
 	font-size: 13.5px;
-	font-weight: calc(500 + var(--wn));
+	font-weight: 510;
 	letter-spacing: -0.005em;
 	color: var(--title);
 	text-decoration: none;

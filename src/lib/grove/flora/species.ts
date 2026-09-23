@@ -44,6 +44,12 @@ export interface Species {
 	castLeaves: boolean;
 	/** held against a wall, so the wind barely moves it */
 	cling?: boolean;
+	/**
+	 * the least sky a leaf sees. A crown too slim for the canopy's grid to
+	 * tell its skin from its heart (a cypress is one cell or two across)
+	 * comes out as all heart, dark right through, without it.
+	 */
+	skyFloor?: number;
 }
 
 const up = new THREE.Vector3(0, 1, 0);
@@ -305,8 +311,8 @@ export const CYPRESS: Species = {
 	name: 'cypress',
 	blade: { w: 0.42, cup: 0.18, droop: 0.05 },
 	palette: {
-		leafTop: new THREE.Color(0.055, 0.1, 0.045),
-		leafUnder: new THREE.Color(0.1, 0.15, 0.07),
+		leafTop: new THREE.Color(0.075, 0.14, 0.058),
+		leafUnder: new THREE.Color(0.14, 0.2, 0.095),
 		leafVary: 0.3,
 		blossom: new THREE.Color(0.4, 0.3, 0.2),
 		barkTint: new THREE.Color(0.55, 0.45, 0.38)
@@ -319,6 +325,7 @@ export const CYPRESS: Species = {
 	flex: 0.6,
 	rows: 3,
 	castLeaves: true,
+	skyFloor: 0.4,
 	derive(seed) {
 		const r = rng(seed);
 		const R = (a: number, b: number) => lerp(a, b, r());

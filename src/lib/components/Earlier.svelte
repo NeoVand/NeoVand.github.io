@@ -130,7 +130,7 @@
 	.t {
 		font-size: 14px;
 		line-height: 1.3;
-		font-weight: calc(600 + var(--wn));
+		font-weight: 610;
 		color: var(--title);
 	}
 	.d {

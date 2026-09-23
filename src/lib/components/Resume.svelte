@@ -157,14 +157,18 @@
 		padding-bottom: 56px;
 		opacity: 0;
 		transform: translateY(-8px);
+		/* hidden outright once shut, so its frosted sheet is never drawn */
+		visibility: hidden;
 		transition:
 			opacity 500ms var(--ease),
-			transform 700ms var(--ease);
+			transform 700ms var(--ease),
+			visibility 0s linear 700ms;
 	}
 	.open .inner {
 		opacity: 1;
 		transform: none;
-		transition-delay: 120ms;
+		visibility: visible;
+		transition-delay: 120ms, 120ms, 0s;
 	}
 	.sheet {
 		position: relative;
@@ -258,7 +262,7 @@
 	}
 	.org {
 		font-size: 16px;
-		font-weight: calc(600 + var(--wn));
+		font-weight: 610;
 		color: var(--title);
 	}
 	.when {
@@ -298,13 +302,13 @@
 	}
 	.post-body :global(h3) {
 		font-size: 14px;
-		font-weight: calc(600 + var(--wn));
+		font-weight: 610;
 		color: var(--title);
 		margin: 10px 0 4px;
 	}
 	.post-body :global(h3) :global(.when) {
 		display: block;
-		font-weight: calc(400 + var(--wn));
+		font-weight: 410;
 		font-size: 12.5px;
 		color: var(--muted);
 	}
@@ -343,7 +347,7 @@
 		align-items: center;
 		gap: 9px;
 		font-size: 14px;
-		font-weight: calc(600 + var(--wn));
+		font-weight: 610;
 		color: var(--title);
 	}
 	.skills dt svg {

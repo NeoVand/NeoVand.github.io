@@ -19,6 +19,17 @@
 
 <Scene />
 <LampCord />
+<!-- in the corner opposite the lamp: how this page is made -->
+<a
+	class="source"
+	href="https://github.com/NeoVand/NeoVand.github.io"
+	target="_blank"
+	rel="noopener"
+	aria-label="The source of this page, on GitHub"
+	title="The source of this page"
+>
+	<svg aria-hidden="true"><use href="#icon-github-cat" /></svg>
+</a>
 
 <main>
 	<Hero bind:cvOpen />
@@ -46,6 +57,30 @@
 	}
 	main > :global(*) {
 		pointer-events: auto;
+	}
+	.source {
+		position: absolute;
+		top: max(14px, env(safe-area-inset-top, 0px));
+		left: calc(var(--gutter) - 6px);
+		z-index: 20;
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		color: var(--muted);
+		transition:
+			color 200ms var(--ease),
+			opacity 900ms var(--ease);
+	}
+	.source:hover {
+		color: var(--title);
+	}
+	.source svg {
+		width: 22px;
+		height: 22px;
+	}
+	:global(html.veiled) .source {
+		opacity: 0;
 	}
 	footer {
 		position: relative;

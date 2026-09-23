@@ -137,6 +137,8 @@
 		top: 50%;
 		width: min(35rem, 36vw);
 		transform: translateY(-50%);
+		/* the links below are sized to it */
+		container-type: inline-size;
 	}
 	.name {
 		font-family: var(--serif);
@@ -161,7 +163,7 @@
 	}
 	.bio :global(strong) {
 		color: var(--title);
-		font-weight: calc(560 + var(--wn));
+		font-weight: 570;
 	}
 	:global(::highlight(untyped)) {
 		color: transparent;
@@ -179,11 +181,55 @@
 	.caret.on {
 		opacity: 0.8;
 	}
+	/* The four links keep to one line, always. Where the column is too
+	   narrow for them at full size they drop the "Google", tighten, and then
+	   scale down together with it, every measure in the one unit --u; on the
+	   narrowest phones they lose their icons rather than get smaller still. */
 	.links {
+		--u: 1px;
 		display: flex;
-		flex-wrap: wrap;
-		gap: 10px;
+		flex-wrap: nowrap;
+		gap: calc(10 * var(--u));
 		margin-top: 28px;
+	}
+	.links .pill {
+		flex: none;
+		height: calc(38 * var(--u));
+		padding: 0 calc(16 * var(--u));
+		gap: calc(8 * var(--u));
+		font-size: calc(13.5 * var(--u));
+		white-space: nowrap;
+	}
+	.links .pill svg {
+		width: calc(15 * var(--u));
+		height: calc(15 * var(--u));
+	}
+	@container (max-width: 505.98px) {
+		.links {
+			--u: min(1px, calc(100cqi / 405));
+			gap: calc(7 * var(--u));
+		}
+		.links .pill {
+			height: calc(36 * var(--u));
+			padding: 0 calc(12 * var(--u));
+			gap: calc(6 * var(--u));
+			font-size: calc(13 * var(--u));
+		}
+		.links .pill svg {
+			width: calc(14 * var(--u));
+			height: calc(14 * var(--u));
+		}
+		.wide-only {
+			display: none;
+		}
+	}
+	@container (max-width: 357.98px) {
+		.links {
+			--u: min(1px, calc(100cqi / 318));
+		}
+		.links .pill svg {
+			display: none;
+		}
 	}
 
 	/* the opening: one orchestrated moment, after the veil */
@@ -236,18 +282,6 @@
 		}
 		.bio {
 			font-size: 15.5px;
-		}
-		.links {
-			gap: 8px;
-		}
-		.links .pill {
-			height: 36px;
-			padding: 0 13px;
-			font-size: 13px;
-			flex: none;
-		}
-		.wide-only {
-			display: none;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {

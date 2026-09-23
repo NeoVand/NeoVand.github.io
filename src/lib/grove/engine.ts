@@ -289,6 +289,8 @@ export class Grove {
 	private spinSample = { yaw: 0, t: 0 };
 	/** the slow turn of the island while a record plays, radians a second */
 	private orbit = 0;
+	/** how far the sky is tipped away as the page goes down, in radians */
+	private skyTip = 0;
 	private pitchNudge = 0;
 	private pointerNdc = new THREE.Vector2(0, 0);
 	private pointerOn = false;
@@ -756,6 +758,11 @@ export class Grove {
 		// the day's light is taken with the sun where the day has it
 		u.uSun.value.copy(moonAt(this.sunAz, SUN_EL));
 		this.sky.update(this.renderer);
+		// the light over the cloud, wherever down the page the eye is now
+		const keepEye = u.uEye.value,
+			keepMist = u.uMist.value;
+		u.uEye.value = 1;
+		u.uMist.value = 0;
 		u.uStars.value = 0;
 		u.uMix.value = 1;
 		this.envDay = pm.fromScene(envScene, 0, 0.1, 100).texture;
@@ -763,6 +770,8 @@ export class Grove {
 		this.envNight = pm.fromScene(envScene, 0, 0.1, 100).texture;
 		u.uMix.value = keep;
 		u.uStars.value = 1;
+		u.uEye.value = keepEye;
+		u.uMist.value = keepMist;
 		u.uSun.value.copy(keepSun);
 		this.sky.update(this.renderer);
 		this.envRoom = pm.fromScene(lampRoom(), 0, 0.05, 50).texture;
@@ -980,6 +989,24 @@ export class Grove {
 			}
 		}
 		return p;
+	}
+
+	/**
+	 * Going down the page is going down past the island and into the cloud.
+	 * The sky tips away as the island rises, so the moon and the stars go up
+	 * out of the picture with it and the sea of cloud comes up under the
+	 * eye; then the eye sinks to the tops, and through them, and the rest of
+	 * the page is read in the cloud's own soft light, going by in folds.
+	 */
+	private descend(p: number) {
+		const u = this.sky.uniforms;
+		this.skyTip = THREE.MathUtils.degToRad(-20) * smoothstep(0.05, 1.15, p);
+		u.uEye.value = 1 - 0.52 * smoothstep(0.45, 1.9, p);
+		u.uMist.value = smoothstep(1.55, 2.15, p);
+		// the folds go by fastest on the way through, slowly after
+		const all = this.scrollSmooth / this.H;
+		u.uDrift.value =
+			0.2 * all + 0.7 * clamp(all - 1.4, 0, 0.8) + (this.reduced ? 0 : this.clock * 0.005);
 	}
 
 	/** Debugging: look at a point from a distance, or null to let go. */
@@ -1282,14 +1309,14 @@ export class Grove {
 		//
 		// And the sky does not turn when the view does. A hand on the page
 		// turns the island, and the moon and the stars stay where they are;
-		// only the scroll's sinking, which is no turn at all, moves the
-		// camera the sky is drawn from.
+		// only the scroll moves the camera the sky is drawn from: down, and
+		// tipped away from the horizon (see descend).
 		let cam = this.camera;
 		if (!this.peekAt) {
 			this.skyCam.copy(this.camera);
 			this.skyCam.quaternion.setFromAxisAngle(
 				RIGHT,
-				THREE.MathUtils.degToRad(SKY_TILT[this.layout] - 8)
+				THREE.MathUtils.degToRad(SKY_TILT[this.layout] - 8) + this.skyTip
 			);
 			this.skyCam.updateMatrixWorld();
 			cam = this.skyCam;
@@ -1498,6 +1525,7 @@ export class Grove {
 		this.yaw += (px * 0.03 - 0) * dt;
 
 		const p = this.placeCamera(dt);
+		this.descend(p);
 		this.aimKey();
 		const visible = p < 1.85;
 		this.world.visible = visible;

@@ -91,7 +91,7 @@
 	.t {
 		font-size: 13.5px;
 		line-height: 1.35;
-		font-weight: calc(550 + var(--wn));
+		font-weight: 560;
 		color: var(--title);
 	}
 	@media (max-width: 700px) {

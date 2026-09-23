@@ -134,7 +134,7 @@
 		border: 0;
 		border-radius: 999px;
 		font-size: 13px;
-		font-weight: calc(500 + var(--wn));
+		font-weight: 510;
 		color: var(--muted);
 		cursor: pointer;
 		transition:
@@ -218,7 +218,7 @@
 	}
 	.title {
 		font-size: 15.5px;
-		font-weight: calc(600 + var(--wn));
+		font-weight: 610;
 		letter-spacing: -0.01em;
 		color: var(--title);
 	}
