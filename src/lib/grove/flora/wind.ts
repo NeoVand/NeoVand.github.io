@@ -76,7 +76,7 @@ vec3 bendTree(vec3 p, vec4 base, float flex) {
 // the leaves near the pointer part and lift: a smooth field, never a pick
 vec3 partAt(vec3 p) {
 	vec3 d = p - uPtr;
-	float k = uPtrAmp * smoothstep(1.3, 0.0, length(d));
+	float k = uPtrAmp * (1.0 - smoothstep(0.0, 1.3, length(d)));
 	return (normalize(d + vec3(0.0, 0.001, 0.0)) + vec3(0.0, 0.5, 0.0)) * k * 0.12;
 }
 `;

@@ -371,7 +371,7 @@ export class Grove {
 		const olives: PlantItem[] = [side, -side].map((sgn, i) => ({
 			species: OLIVE,
 			seed: seed(),
-			pos: at(sgn * lerp(0.95, 1.2, r()), lerp(4.1, 4.6, r())),
+			pos: at(sgn * lerp(1.32, 1.5, r()), lerp(4.3, 4.8, r())),
 			rotY: r() * Math.PI * 2,
 			scale: lerp(1.32, 1.45, i === 0 ? r() : 1 - r())
 		}));
@@ -969,7 +969,7 @@ export class Grove {
 			this.playing && !this.reduced,
 			this.mouth,
 			this.mouthDir,
-			((this.H * this.dpr) / (2 * tan)) * 0.34
+			((this.H * this.dpr) / (2 * tan)) * 0.62
 		);
 
 		// the light's view-space direction, for leaves lit from behind

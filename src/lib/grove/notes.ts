@@ -67,6 +67,7 @@ export class Notes {
 	private vel: THREE.Vector3[] = [];
 	private age = new Float32Array(MAX);
 	private ttl = new Float32Array(MAX);
+	private lift = new Float32Array(MAX);
 	private budget = 0;
 	private next = 0;
 	private mat: THREE.ShaderMaterial;
@@ -118,7 +119,7 @@ export class Notes {
 					vec2 uv = vec2((gl_PointCoord.x + vKind) * 0.5, 1.0 - gl_PointCoord.y);
 					float a = texture2D(uMap, uv).a;
 					// in over a fifth of its life, out over the last half
-					float fade = smoothstep(0.0, 0.2, vLife) * smoothstep(1.0, 0.5, vLife);
+					float fade = smoothstep(0.0, 0.2, vLife) * (1.0 - smoothstep(0.5, 1.0, vLife));
 					if (a * fade < 0.02) discard;
 					gl_FragColor = vec4(uInk, a * fade);
 				}`,
@@ -140,27 +141,32 @@ export class Notes {
 		px: number
 	) {
 		this.mat.uniforms.uScale.value = px;
+		// gold, and a little brighter than white, so they shine as they go —
+		// by night enough to bloom
 		const night = U.uNight.value;
-		(this.mat.uniforms.uInk.value as THREE.Color).setRGB(
-			0.16 + night * 0.76,
-			0.12 + night * 0.8,
-			0.1 + night * 0.84
-		);
+		(this.mat.uniforms.uInk.value as THREE.Color)
+			.setRGB(1.0, 0.78, 0.42)
+			.multiplyScalar(1.3 + night * 1.6);
 		if (playing) this.budget += dt * (0.4 + level * 5.5);
 		while (this.budget >= 1) {
 			this.budget -= 1;
 			const i = this.next++ % MAX;
-			this.pos[i * 3] = mouth.x;
-			this.pos[i * 3 + 1] = mouth.y;
+			this.pos[i * 3] = mouth.x + (Math.random() - 0.5) * 0.25;
+			this.pos[i * 3 + 1] = mouth.y + (Math.random() - 0.5) * 0.3;
 			this.pos[i * 3 + 2] = mouth.z;
-			const side = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+			// out level, the way the bell points, and through the arch before
+			// they rise; a building has a roof
+			// the bell points a little aside; the doorway is straight ahead
+			const flat = new THREE.Vector3(dir.x * 0.35, 0, 1).normalize();
+			const side = new THREE.Vector3(-flat.z, 0, flat.x);
 			this.vel[i]
-				.copy(dir)
-				.multiplyScalar(0.35 + Math.random() * 0.25)
-				.addScaledVector(side, (Math.random() - 0.5) * 0.5)
-				.add(new THREE.Vector3(0, 0.16 + Math.random() * 0.12, 0));
+				.copy(flat)
+				.multiplyScalar(0.5 + Math.random() * 0.25)
+				.addScaledVector(side, (Math.random() - 0.5) * 0.35)
+				.setY((Math.random() - 0.6) * 0.14);
+			this.lift[i] = 0.16 + Math.random() * 0.24;
 			this.age[i] = 0;
-			this.ttl[i] = 3.2 + Math.random() * 1.6;
+			this.ttl[i] = 5 + Math.random() * 2;
 			this.kind[i] = Math.random() < 0.6 ? 0 : 1;
 		}
 		let any = false;
@@ -180,7 +186,13 @@ export class Notes {
 			this.pos[i * 3] += (v.x + wob * v.z) * dt;
 			this.pos[i * 3 + 1] += v.y * dt;
 			this.pos[i * 3 + 2] += (v.z - wob * v.x) * dt;
-			v.multiplyScalar(1 - dt * 0.25);
+			// once clear of the rotunda they lift and slow
+			const out = Math.hypot(this.pos[i * 3], this.pos[i * 3 + 2]) > 2.3;
+			if (out) {
+				v.y += (this.lift[i] - v.y) * Math.min(1, dt * 1.2);
+				v.x *= 1 - dt * 0.25;
+				v.z *= 1 - dt * 0.25;
+			}
 			this.life[i] = l;
 		}
 		const g = this.points.geometry;

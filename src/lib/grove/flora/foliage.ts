@@ -218,7 +218,7 @@ export function leafMaterial(
 				float wv = fract(vSeed * 7.13) - 0.5;
 				leafC *= 1.0 + wv * uVary;
 				leafC.r *= 1.0 + (fract(vSeed * 3.71) - 0.5) * uVary * 0.8;
-				float rib = smoothstep(0.1, 0.0, abs(vLeafUv.x - 0.5)) * 0.25;
+				float rib = (1.0 - smoothstep(0.0, 0.1, abs(vLeafUv.x - 0.5))) * 0.25;
 				diffuseColor.rgb = leafC * (1.0 + rib);`
 				)
 				.replace(
