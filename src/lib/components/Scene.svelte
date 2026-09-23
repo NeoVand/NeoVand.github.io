@@ -11,6 +11,8 @@
 	let canvas: HTMLCanvasElement;
 	let grove = $state.raw<Grove | null>(null);
 	let failed = $state(false);
+	// ?hud: frame rate and resolution in a corner, for looking at a real phone
+	let hud = $state('');
 
 	async function toggleMusic() {
 		if (lights.playing) {
@@ -49,6 +51,27 @@
 				(window as unknown as { __grove3d: Grove }).__grove3d = g;
 				g.setScroll(window.scrollY);
 				g.wake();
+				if (q.has('hud')) {
+					let n = 0,
+						t0 = performance.now(),
+						worst = 0,
+						last = t0;
+					const tick = (now: number) => {
+						if (disposed) return;
+						worst = Math.max(worst, now - last);
+						last = now;
+						n++;
+						if (now - t0 > 500) {
+							const s = g!.stats;
+							hud = `${((n * 1000) / (now - t0)).toFixed(0)} fps · worst ${worst.toFixed(0)} ms · dpr ${s.dpr}`;
+							n = 0;
+							t0 = now;
+							worst = 0;
+						}
+						requestAnimationFrame(tick);
+					};
+					requestAnimationFrame(tick);
+				}
 			} catch (e) {
 				console.warn('grove:', e);
 				failed = true;
@@ -93,6 +116,7 @@
 <svelte:window onkeydown={onKey} />
 
 <canvas bind:this={canvas} class="scene" class:failed aria-hidden="true"></canvas>
+{#if hud}<div class="hud">{hud}</div>{/if}
 
 <style>
 	.scene {
@@ -107,6 +131,20 @@
 		touch-action: pan-y;
 		-webkit-tap-highlight-color: transparent;
 		background: var(--bg);
+	}
+	.hud {
+		position: fixed;
+		left: 8px;
+		bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+		z-index: 50;
+		padding: 4px 8px;
+		border-radius: 6px;
+		font:
+			12px/1.3 ui-monospace,
+			monospace;
+		color: #fff;
+		background: rgba(0, 0, 0, 0.55);
+		pointer-events: none;
 	}
 	.scene.failed {
 		background: linear-gradient(#b9c2c2, #f0c99d 55%, #e3b789);
