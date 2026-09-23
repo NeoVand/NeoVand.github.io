@@ -108,7 +108,7 @@ function rockMass(seed: number) {
 		let n =
 			vn3(cx * 0.3, y * 0.42, cz * 0.3, 7) * 0.6 + vn3(cx * 0.75, y * 0.9, cz * 0.75, 9) * 0.4;
 		const bed = Math.floor(n * 4) / 4;
-		n = n + (bed - n) * 0.7;
+		n = n + (bed - n) * 0.4;
 		// nothing under the wall juts in past it: the crag is fullest just below
 		const craggy = Math.min(1, t * 5) * Math.min(1, rb * 0.45);
 		const strata = Math.sin(y * 2.6 + vn3(cx * 0.2, y * 0.3, cz * 0.2, 11) * 4) * 0.05;
@@ -186,7 +186,14 @@ const triplanar = (s: THREE.WebGLProgramParametersWithUniforms) => {
 		.replace(
 			'#include <aomap_fragment>',
 			`#include <aomap_fragment>
-			reflectedLight.indirectDiffuse *= vAo;
+			// a ledge faces up at the underside of the island, not at the sky
+			float shelf = smoothstep(0.15, 0.85, vWNrm.y) * step(vWPos.y, -1.0);
+			reflectedLight.indirectDiffuse *= vAo * (1.0 - 0.7 * shelf);
+			reflectedLight.indirectSpecular *= 1.0 - 0.8 * shelf;
+			// what faces down is lit by the cloud below, which the sun has warmed
+			float under = smoothstep(0.1, 0.8, -vWNrm.y);
+			reflectedLight.indirectDiffuse *= mix(vec3(1.0), vec3(1.12, 0.98, 0.84), under);
+			reflectedLight.indirectSpecular *= 1.0 - 0.7 * under;
 			reflectedLight.directDiffuse *= mix(0.7, 1.0, vAo);`
 		);
 };
