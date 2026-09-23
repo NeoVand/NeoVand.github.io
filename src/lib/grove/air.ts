@@ -451,6 +451,12 @@ export class Air {
 		this.partyTree = [shuffled[0] ?? null, shuffled[1] ?? null];
 		for (const cr of this.c) {
 			this.offstage(cr.pos);
+			// by night they are away already, and come with the morning
+			if (this.dayTo < 0.5) {
+				cr.state = 'away';
+				cr.site = null;
+				continue;
+			}
 			const site = this.pickSite(cr);
 			const delay = this.grove.reduced ? 0 : lerp(2.6, 7.5, this.r());
 			if (this.grove.reduced) {
@@ -466,8 +472,48 @@ export class Air {
 		}
 	}
 
+	/**
+	 * The lights change over. As night comes the doves go: up off their
+	 * perches a few at a time, and away out of the picture. With the morning
+	 * they come back in from where they went, and settle.
+	 */
 	setDay(day: boolean) {
+		const was = this.dayTo;
 		this.dayTo = day ? 1 : 0;
+		if (!this.started || was === this.dayTo) return;
+		const reduced = this.grove.reduced;
+		for (const cr of this.c) {
+			const leaving = cr.state === 'fly' && cr.site?.kind === 'point' && cr.site.group === 'away';
+			if (!day) {
+				if (cr.state === 'away' || leaving) continue;
+				if (reduced) {
+					cr.state = 'away';
+					cr.site = null;
+					continue;
+				}
+				cr.arriving = false;
+				this.fly(
+					cr,
+					{ kind: 'point', p: this.offstage(new THREE.Vector3()), group: 'away' },
+					this.r() * 1.4
+				);
+			} else {
+				if (cr.state !== 'away' && !leaving) continue;
+				const site = this.pickSite(cr);
+				if (reduced) {
+					cr.site = site;
+					this.sitePos(site, cr.pos);
+					cr.state = 'perch';
+					cr.pose = 1;
+					cr.timer = lerp(2, 8, this.r());
+					continue;
+				}
+				// those still on their way out turn back at once; the rest come
+				// in over the next few seconds
+				this.fly(cr, site, leaving ? this.r() * 0.3 : lerp(0.6, 3.6, this.r()));
+				cr.arriving = !leaving;
+			}
+		}
 	}
 
 	/** A tree is grabbed: everyone on it is off, some to the building. */
@@ -521,6 +567,7 @@ export class Air {
 			upv = new THREE.Vector3(0, 1, 0),
 			right = new THREE.Vector3();
 
+		let anyBird = false;
 		for (const cr of this.c) {
 			if (cr.state === 'fly') {
 				cr.ft += dt;
@@ -538,8 +585,12 @@ export class Air {
 					if (cr.vel.lengthSq() > 1e-4) cr.yaw = Math.atan2(cr.vel.x, cr.vel.z);
 					// the last third of a second: reach for the branch
 					const left = (1 - t) * cr.fdur;
-					cr.pose = smoothstep(0.45, 0.0, left);
-					if (t >= 1) {
+					const away = cr.site?.kind === 'point' && cr.site.group === 'away';
+					cr.pose = away ? 0 : smoothstep(0.45, 0.0, left);
+					if (t >= 1 && away) {
+						cr.state = 'away';
+						cr.site = null;
+					} else if (t >= 1) {
 						cr.state = 'perch';
 						cr.timer = lerp(2.5, 9, this.r());
 						cr.yawTo = cr.yaw + (this.r() - 0.5) * 1.2;
@@ -601,7 +652,8 @@ export class Air {
 			const up2 = this.tmp2.crossVectors(fwd, right).normalize();
 			this.m.makeBasis(right, up2, fwd);
 			const hidden = cr.state === 'away' || cr.arriving || cr.pos.y < -20;
-			const s = hidden ? 0 : cr.size * smoothstep(0.05, 0.6, this.day);
+			const s = hidden ? 0 : cr.size;
+			if (!hidden) anyBird = true;
 			this.m.scale(this.tmp.set(s, s, s));
 			this.m.setPosition(cr.pos.x, cr.pos.y + 0.04 * cr.pose, cr.pos.z);
 			this.birds.setMatrixAt(cr.id, this.m);
@@ -656,6 +708,6 @@ export class Air {
 		fu.uScale.value = (0.55 * H) / (2 * Math.tan(fov / 2));
 		fu.uDpr.value = this.grove.bufferScale;
 		this.flies.visible = night > 0.02;
-		this.birds.visible = this.day > 0.02;
+		this.birds.visible = anyBird;
 	}
 }
