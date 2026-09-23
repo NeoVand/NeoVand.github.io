@@ -155,6 +155,54 @@ class Grade extends Effect {
 	}
 }
 
+/**
+ * The line round the gramophone under the pointer, to say it can be
+ * clicked. Drawn last, in display terms: a crisp ring just outside the
+ * machine's silhouette, read from a mask of it (see drawGramMask), with a
+ * fainter one beyond it so the line has a little light round it.
+ */
+class Outline extends Effect {
+	constructor() {
+		super(
+			'Outline',
+			`uniform sampler2D uMask;
+			uniform vec2 uTexel;
+			uniform vec3 uColor;
+			uniform float uOn;
+			float ring(vec2 uv, float r) {
+				float m = 0.0;
+				for (int i = 0; i < 12; i++) {
+					float a = float(i) * 0.5236;
+					m = max(m, texture2D(uMask, uv + vec2(cos(a), sin(a)) * uTexel * r).r);
+				}
+				return m;
+			}
+			void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+				outputColor = inputColor;
+				if (uOn < 0.002) return;
+				float inside = texture2D(uMask, uv).r;
+				float line = clamp(ring(uv, 1.7) - inside, 0.0, 1.0);
+				float halo = clamp(ring(uv, 3.4) - inside, 0.0, 1.0) * 0.35;
+				outputColor.rgb = mix(inputColor.rgb, uColor, max(line, halo) * uOn);
+			}`,
+			{
+				blendFunction: BlendFunction.SET,
+				uniforms: new Map<string, THREE.Uniform>([
+					['uMask', new THREE.Uniform(null)],
+					['uTexel', new THREE.Uniform(new THREE.Vector2(1, 1))],
+					// a warm white, in the linear light the grade leaves
+					['uColor', new THREE.Uniform(new THREE.Color(1.0, 0.86, 0.62))],
+					['uOn', new THREE.Uniform(0)]
+				])
+			}
+		);
+	}
+}
+
+/** layers the gramophone's mask is drawn from: the machine, and what can stand in front of it */
+const GRAM_LAYER = 3,
+	OCCLUDER_LAYER = 4;
+
 export class Grove {
 	renderer: THREE.WebGLRenderer;
 	scene = new THREE.Scene();
@@ -162,6 +210,10 @@ export class Grove {
 	sky = createSky();
 	private composer: EffectComposer;
 	private grade = new Grade();
+	private outline = new Outline();
+	private gramMask = new THREE.WebGLRenderTarget(2, 2);
+	private maskWhite = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+	private maskDepth = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
 	private fxaa!: EffectPass;
 	private mainPass!: EffectPass;
 	private bloom: BloomEffect;
@@ -348,7 +400,8 @@ export class Grove {
 			this.camera,
 			this.bloom,
 			new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
-			this.grade
+			this.grade,
+			this.outline
 		);
 		pass.dithering = true;
 		this.composer.addPass(pass);
@@ -429,8 +482,15 @@ export class Grove {
 			'bronze',
 			nightPatch
 		);
+		// both sides: the horn is a sheet with no thickness, and from behind
+		// it is its back that shows
 		const brass = patch(
-			new THREE.MeshStandardMaterial({ color: 0xd8a650, metalness: 1, roughness: 0.26 }),
+			new THREE.MeshStandardMaterial({
+				color: 0xd8a650,
+				metalness: 1,
+				roughness: 0.26,
+				side: THREE.DoubleSide
+			}),
 			'brass',
 			nightPatchWarm
 		);
@@ -469,11 +529,16 @@ export class Grove {
 		this.lamp.shadow.needsUpdate = true;
 		this.world.add(this.lamp, this.lamp.target);
 		this.gramophone = buildGramophone(brass, woodTexture(aniso));
-		// on the floor just inside the front arch, the horn turned to the door
-		this.gramophone.group.position.set(0.12, this.pavilion.floorY, 0.4);
+		// in the middle of the rotunda, under the lantern, the horn turned to
+		// the door
+		this.gramophone.group.position.set(0, this.pavilion.floorY, 0);
 		this.gramophone.group.scale.setScalar(1.15);
 		this.gramophone.group.rotation.y = 0.3;
 		this.world.add(this.gramophone.group);
+		// for the line round it under the pointer: the machine, and the
+		// building that can stand between it and the eye
+		this.gramophone.group.traverse((o) => o.layers.enable(GRAM_LAYER));
+		this.pavilion.group.traverse((o) => o.layers.enable(OCCLUDER_LAYER));
 		this.world.add(this.notes.points);
 		this.world.add(this.petals.mesh);
 
@@ -1211,7 +1276,48 @@ export class Grove {
 			cam = this.skyCam;
 		}
 		this.sky.render(this.renderer, cam);
+		this.drawGramMask();
 		this.composer.render();
+	}
+
+	/**
+	 * While the gramophone is under the pointer, a mask of it for the
+	 * outline: the building drawn first into depth alone, so that a pier in
+	 * front of the machine hides its line too, then the machine in white.
+	 * A few dozen draws, and none at all otherwise.
+	 */
+	private drawGramMask() {
+		if (this.gramGlow < 0.002) return;
+		const r = this.renderer,
+			cam = this.camera,
+			scene = this.scene;
+		const keep = {
+			layers: cam.layers.mask,
+			shadows: r.shadowMap.needsUpdate,
+			override: scene.overrideMaterial,
+			autoClear: r.autoClear,
+			clear: r.getClearColor(new THREE.Color()),
+			alpha: r.getClearAlpha(),
+			target: r.getRenderTarget()
+		};
+		// (and no shadows drawn in passing, from a camera that sees only this)
+		r.shadowMap.needsUpdate = false;
+		r.setRenderTarget(this.gramMask);
+		r.setClearColor(0x000000, 1);
+		r.clear();
+		r.autoClear = false;
+		cam.layers.set(OCCLUDER_LAYER);
+		scene.overrideMaterial = this.maskDepth;
+		r.render(scene, cam);
+		cam.layers.set(GRAM_LAYER);
+		scene.overrideMaterial = this.maskWhite;
+		r.render(scene, cam);
+		cam.layers.mask = keep.layers;
+		scene.overrideMaterial = keep.override;
+		r.autoClear = keep.autoClear;
+		r.setClearColor(keep.clear, keep.alpha);
+		r.setRenderTarget(keep.target);
+		r.shadowMap.needsUpdate = keep.shadows;
 	}
 
 	/** Where pixels are small, an edge filter does what multisampling does,
@@ -1245,6 +1351,9 @@ export class Grove {
 		c.outputBuffer.setSize(bw, bh);
 		for (const p of c.passes) p.setSize(bw, bh);
 		U.uBufH.value = bh;
+		this.gramMask.setSize(bw, bh);
+		this.outline.uniforms.get('uMask')!.value = this.gramMask.texture;
+		this.outline.uniforms.get('uTexel')!.value.set(1 / bw, 1 / bh);
 		// drawn at the screen's density there is nothing to make up for
 		this.present.sharpness = this.dpr >= this.native - 0.01 ? 0 : 0.55;
 	}
@@ -1423,7 +1532,9 @@ export class Grove {
 		// lit up under the hand, eased in and out
 		this.gramFlash = Math.max(0, this.gramFlash - dt * 1.4);
 		this.gramGlow = damp(this.gramGlow, this.overGram ? 1 : this.gramFlash, 9, dt);
-		this.gramophone.hover.value = this.gramGlow;
+		// a little warmth in the brass, and the line round it
+		this.gramophone.hover.value = this.gramGlow * 0.6;
+		this.outline.uniforms.get('uOn')!.value = this.gramGlow;
 		// and what comes out of it
 		const g = this.gramophone.group;
 		this.mouth.copy(this.gramophone.mouth).applyMatrix4(g.matrixWorld);

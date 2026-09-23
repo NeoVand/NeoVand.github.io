@@ -46,7 +46,7 @@ function rimmed(group: THREE.Object3D, hover: { value: number }) {
 					`#include <lights_fragment_end>
 					{
 						float f = 1.0 - abs(dot(normal, normalize(vViewPosition)));
-						totalEmissiveRadiance += vec3(1.0, 0.72, 0.36) * (smoothstep(0.55, 0.95, f) * 2.4 + 0.04) * uHover;
+						totalEmissiveRadiance += vec3(1.0, 0.72, 0.36) * (smoothstep(0.8, 0.98, f) * 1.6 + 0.03) * uHover;
 					}`
 				);
 		};
