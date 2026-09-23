@@ -7,6 +7,7 @@ import {
 	BlendFunction,
 	EffectComposer,
 	EffectPass,
+	FXAAEffect,
 	RenderPass,
 	ToneMappingEffect,
 	ToneMappingMode
@@ -116,6 +117,8 @@ export class Grove {
 	sky = createSky();
 	private composer: EffectComposer;
 	private grade = new Grade();
+	private fxaa!: EffectPass;
+	private mainPass!: EffectPass;
 	private bloom: BloomEffect;
 	private sunAz = SUN_AZ.side;
 	private light: THREE.DirectionalLight;
@@ -237,8 +240,9 @@ export class Grove {
 		r.shadowMap.needsUpdate = true;
 		this.renderer = r;
 		const phone = Math.min(screen.width, screen.height) < 600;
-		this.dprCap = Math.min(window.devicePixelRatio || 1, phone ? 2 : 2);
+		this.dprCap = Math.min(window.devicePixelRatio || 1, 2);
 		this.dpr = this.dprCap;
+		void phone;
 
 		this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
 		this.sky.uniforms.uMoon.value.copy(this.moonDir);
@@ -264,6 +268,14 @@ export class Grove {
 			intensity: 0.45,
 			radius: 0.7
 		});
+		// the pass that picks out what is bright enough to bloom runs at the
+		// screen's full size by default, and only feeds a blur that starts at
+		// half of it: at half size itself it costs a quarter
+		const bloomSize = this.bloom.setSize.bind(this.bloom);
+		this.bloom.setSize = (w: number, h: number) => {
+			bloomSize(w, h);
+			this.bloom.luminancePass.setSize(Math.max(1, w >> 1), Math.max(1, h >> 1));
+		};
 		const pass = new EffectPass(
 			this.camera,
 			this.bloom,
@@ -272,6 +284,11 @@ export class Grove {
 		);
 		pass.dithering = true;
 		this.composer.addPass(pass);
+		// on a dense screen, a cheap edge filter in place of multisampling
+		this.fxaa = new EffectPass(this.camera, new FXAAEffect());
+		this.composer.addPass(this.fxaa);
+		this.composer.autoRenderToScreen = false;
+		this.mainPass = pass;
 		this.scene.add(this.world);
 
 		this.light = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -385,7 +402,7 @@ export class Grove {
 			barkMap: this.mats.bark.map!,
 			barkNormal: this.mats.bark.normalMap!,
 			rows: 3,
-			density: phone ? 0.5 : 0.8,
+			density: phone ? 0.38 : 0.52,
 			minRadius: 0.003
 		};
 		const seed = () => Math.floor(r() * 1e6);
@@ -611,7 +628,15 @@ export class Grove {
 
 	setScroll(y: number) {
 		this.scroll = y;
+		this.scrolledAt = performance.now();
 		this.wake();
+	}
+	private scrolledAt = -1e9;
+	/** the page is moving, or has only just stopped */
+	private get scrolling() {
+		return (
+			performance.now() - this.scrolledAt < 450 || Math.abs(this.scrollSmooth - this.scroll) > 0.5
+		);
 	}
 
 	// ── framing ───────────────────────────────────────────────────────────
@@ -627,6 +652,12 @@ export class Grove {
 		this.W = w;
 		this.H = h;
 		this.layout = w >= 900 && w / h > 1.05 ? 'side' : 'stack';
+		// a budget of pixels, not a ratio: a large, dense screen is drawn a
+		// little under its own density, which with the multisampling is still
+		// sharp, and holds the frame rate where a ratio would not
+		this.dprCap = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / (w * h)));
+		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
+		this.dpr = Math.min(this.dpr, this.dprCap);
 		this.renderer.setPixelRatio(this.dpr);
 		this.renderer.setSize(w, h, false);
 		this.setSamples();
@@ -945,10 +976,18 @@ export class Grove {
 		this.composer.render();
 	}
 
-	/** Where pixels are small, two samples smooth an edge as well as four. */
+	/** Where pixels are small, an edge filter does what multisampling does,
+	 *  for a fraction of what it costs; where they are large, four samples. */
 	private setSamples() {
-		const n = Math.min(this.dpr >= 1.4 ? 2 : 4, this.renderer.capabilities.maxSamples);
+		const dense = this.dpr >= 1.25;
+		const n = dense ? 0 : Math.min(2, this.renderer.capabilities.maxSamples);
 		if (this.composer.multisampling !== n) this.composer.multisampling = n;
+		if (this.fxaa) {
+			// whichever pass is last draws to the screen
+			this.fxaa.enabled = dense;
+			this.fxaa.renderToScreen = dense;
+			this.mainPass.renderToScreen = !dense;
+		}
 	}
 
 	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
@@ -956,7 +995,7 @@ export class Grove {
 	private sizeSky() {
 		const px = this.W * this.dpr,
 			py = this.H * this.dpr;
-		this.sky.setSize(px, py, lerp(1.25e6, 0.75e6, this.dayMix));
+		this.sky.setSize(px, py, lerp(0.8e6, 0.55e6, this.dayMix));
 		this.skyDirty = true;
 	}
 
@@ -992,9 +1031,16 @@ export class Grove {
 		if (!this.running) return;
 		this.raf = requestAnimationFrame(this.frame_);
 		// Deep in the page there is only sky, drifting, and every pane of glass
-		// over it has to blur it again each time it changes: there it is drawn
-		// twenty times a second, which the cloud cannot tell from sixty.
-		if (!this.world.visible && Math.abs(this.dayMix - this.dayTo) < 1e-3 && now - this.last < 48)
+		// over it has to blur it again each time it changes: at rest there it
+		// is drawn twenty times a second, which the cloud cannot tell from
+		// sixty. Never while the page is moving, though: then the sky moves
+		// with it and has to keep up.
+		if (
+			!this.world.visible &&
+			!this.scrolling &&
+			Math.abs(this.dayMix - this.dayTo) < 1e-3 &&
+			now - this.last < 48
+		)
 			return;
 		const dt = Math.min(0.05, (now - this.last) / 1000);
 		this.last = now;
@@ -1035,14 +1081,19 @@ export class Grove {
 		const p = this.placeCamera(dt);
 		const visible = p < 1.85;
 		this.world.visible = visible;
-		this.light.castShadow = visible;
+		// (the light keeps its shadow even when the island is out of sight:
+		// turning it off and on changes every material's program, and each
+		// change is a recompile in the middle of a scroll)
 		// the shadows follow the wind at half the rate the picture does: a
 		// crown's shadow on the lawn moves too slowly for the difference to show,
 		// and the shadow pass draws every tree a second time
 		this.shadowTick = (this.shadowTick + 1) % 2;
 		const quick = this.intro.t >= 0 && this.intro.t < this.intro.dur + 1.5;
+		// and while the page scrolls nothing the sun sees moves but leaves in
+		// the wind, which nobody reading can tell from still: they wait
 		this.renderer.shadowMap.needsUpdate =
-			visible && (this.shadowTick === 0 || quick || !!this.pressed);
+			visible &&
+			(quick || !!this.pressed || !!this.grab || (this.shadowTick === 0 && !this.scrolling));
 
 		// the pointer pushes the crowns aside, where it meets the lawn
 		this.ptrAmp = damp(this.ptrAmp, this.pointerOn && visible ? 1 : 0, 3, dt);
@@ -1146,6 +1197,12 @@ export class Grove {
 
 	/** Hold the frame rate by giving up resolution, and take it back when there is room. */
 	private adapt(ms: number, dt: number) {
+		// never mid-scroll: a change of resolution reallocates every buffer,
+		// and that is a hitch just where the eye is following the motion
+		if (this.scrolling) {
+			this.frameTimes.length = 0;
+			return;
+		}
 		this.frameTimes.push(dt * 1000);
 		if (this.frameTimes.length < 90) return;
 		const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
