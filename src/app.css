@@ -82,11 +82,11 @@ html.theming *,
 html.theming *::before,
 html.theming *::after {
 	transition:
-		color 900ms var(--ease),
-		background-color 900ms var(--ease),
-		border-color 900ms var(--ease),
-		fill 900ms var(--ease),
-		stroke 900ms var(--ease) !important;
+		color 1600ms var(--ease),
+		background-color 1600ms var(--ease),
+		border-color 1600ms var(--ease),
+		fill 1600ms var(--ease),
+		stroke 1600ms var(--ease) !important;
 }
 
 body {

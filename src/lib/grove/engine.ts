@@ -147,6 +147,9 @@ export class Grove {
 	private running = false;
 	private dayMix: number;
 	private dayTo: number;
+	/** the change of light under way: from what, and since when */
+	private dayFrom = 1;
+	private dayT = -1;
 	private layout: Layout = 'side';
 	private W = 1;
 	private H = 1;
@@ -565,7 +568,12 @@ export class Grove {
 	}
 
 	setDay(day: boolean) {
-		this.dayTo = day ? 1 : 0;
+		const to = day ? 1 : 0;
+		if (to !== this.dayTo) {
+			this.dayFrom = this.dayMix;
+			this.dayT = this.clock;
+		}
+		this.dayTo = to;
 		this.air.setDay(day);
 		if (this.reduced) {
 			this.dayMix = this.dayTo;
@@ -887,8 +895,11 @@ export class Grove {
 
 		// the lights
 		if (Math.abs(this.dayMix - this.dayTo) > 1e-4) {
-			this.dayMix = damp(this.dayMix, this.dayTo, 2.2, dt);
-			if (Math.abs(this.dayMix - this.dayTo) < 0.002) this.dayMix = this.dayTo;
+			// eased at both ends, over two and a half seconds: the sun goes
+			// down under the cloud, it is not switched off
+			const k = this.dayT < 0 ? 1 : clamp((this.clock - this.dayT) / 2.4, 0, 1);
+			this.dayMix = lerp(this.dayFrom, this.dayTo, easeInOut(k));
+			if (k >= 1) this.dayMix = this.dayTo;
 			this.applyDay(this.dayMix);
 		}
 

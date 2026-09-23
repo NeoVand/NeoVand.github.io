@@ -32,7 +32,7 @@ export function setDay(on: boolean, remember = true) {
 			/* private windows */
 		}
 	clearTimeout(themeT);
-	themeT = window.setTimeout(() => root.classList.remove('theming'), 1000);
+	themeT = window.setTimeout(() => root.classList.remove('theming'), 1700);
 }
 
 export const toggleDay = () => setDay(!lights.day);
