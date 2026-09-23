@@ -342,8 +342,10 @@ export function buildRotunda(brick: THREE.Material, stone: THREE.Material, bronz
 	group.add(finial);
 
 	// ── the lantern, hung in the middle of the room on a chain ──
-	const lanternY = floor + 2.12;
-	const lanternPos = new THREE.Vector3(0, lanternY, 0.72);
+	// low enough to be seen under the front arch, and behind the gramophone,
+	// so its shadow falls forward across the floor where it can be seen
+	const lanternY = floor + 1.95;
+	const lanternPos = new THREE.Vector3(0, lanternY, 0);
 	const chainGeo = new THREE.CylinderGeometry(0.008, 0.008, entY - lanternY - 0.2, 5);
 	chainGeo.translate(lanternPos.x, (entY + lanternY + 0.2) / 2, lanternPos.z);
 	const cap = new THREE.ConeGeometry(0.13, 0.12, 6);

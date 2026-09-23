@@ -37,7 +37,12 @@ export function patch<M extends THREE.Material>(m: M, key: string, ...patches: P
  * study; and at any hour it takes its share of the fireflies' and lanterns'
  * light from the glow map. Applied after lighting and before tone mapping.
  */
-export const nightPatch: Patch = (shader) => {
+export const nightPatch: Patch = (shader) => nightPatchOf(shader, 0.3);
+
+/** the same, with no blue by night: for polished metal under a lamp, which keeps its colour */
+export const nightPatchWarm: Patch = (shader) => nightPatchOf(shader, 0);
+
+function nightPatchOf(shader: THREE.WebGLProgramParametersWithUniforms, shift: number) {
 	shader.uniforms.uNight = U.uNight;
 	shader.uniforms.uGlowMap = U.uGlowMap;
 	shader.uniforms.uGlowOn = U.uGlowOn;
@@ -67,7 +72,7 @@ export const nightPatch: Patch = (shader) => {
 			`#include <opaque_fragment>
 			{
 				float l = dot(gl_FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-				gl_FragColor.rgb = mix(gl_FragColor.rgb, l * vec3(0.82, 0.92, 1.12), uNight * 0.3);
+				gl_FragColor.rgb = mix(gl_FragColor.rgb, l * vec3(0.82, 0.92, 1.12), uNight * ${shift.toFixed(2)});
 			}`
 		);
-};
+}

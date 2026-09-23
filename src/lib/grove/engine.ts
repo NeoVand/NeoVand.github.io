@@ -37,7 +37,7 @@ import type { Canopy } from './flora/canopy';
 import { OLIVE, BLOSSOM, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
 import { Petals } from './flora/petals';
-import { patch, nightPatch } from './shared';
+import { patch, nightPatch, nightPatchWarm } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
 import { Notes } from './notes';
@@ -72,8 +72,8 @@ const moonAt = (azDeg: number, elDeg: number) => {
 	return new THREE.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
 };
 const MOON: Record<Layout, [number, number]> = { side: [12, 4.6], stack: [2, 7.2] };
-/** where the moon goes when the lights come up: down under the cloud */
-const MOON_SET_EL = -5;
+/** which way the moon leaves when the lights come up, in degrees of azimuth and elevation */
+const MOON_OUT = [6, 12] as const;
 // An afternoon sun, well round to the left and out of the picture, so the
 // sky in it is blue all the way up and only its left edge warms. (Nearer the
 // middle, its glow in the haze whitens the whole top of a narrow phone.)
@@ -86,8 +86,50 @@ const SUN_SET_EL = -7;
 // are rimmed and the island's face takes the light across it.
 const KEY_AZ = { side: -60, stack: -52 };
 const KEY_EL = 32;
+const UP = new THREE.Vector3(0, 1, 0);
+const RIGHT = new THREE.Vector3(1, 0, 0);
 /** how far the sky is tipped up behind the island, in degrees, by layout */
 const SKY_TILT = { side: 0, stack: 9 };
+
+/**
+ * The rotunda by lamplight, as the gramophone would see it from the floor:
+ * warm flags below, six open bays of night between lit brick piers, a dim
+ * vault, and the lantern overhead. Baked once into an environment for the
+ * brass, which by night has nothing but this to be shiny with.
+ */
+function lampRoom() {
+	const scene = new THREE.Scene();
+	const mat = new THREE.ShaderMaterial({
+		side: THREE.BackSide,
+		vertexShader: /* glsl */ `
+			varying vec3 vD;
+			void main() {
+				vD = position;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			}`,
+		fragmentShader: /* glsl */ `
+			varying vec3 vD;
+			void main() {
+				vec3 d = normalize(vD);
+				float az = atan(d.x, d.z);
+				float e = d.y;
+				// the floor, brightest under the lamp
+				vec3 floorC = vec3(0.62, 0.4, 0.22) * mix(0.25, 0.9, smoothstep(-0.2, -0.9, e));
+				// the bays, open to the night, and the piers between them
+				float bay = smoothstep(-0.1, 0.35, cos(az * 6.0));
+				vec3 wall = mix(vec3(0.5, 0.22, 0.1) * 0.5, vec3(0.02, 0.03, 0.07), bay);
+				vec3 vault = vec3(0.3, 0.17, 0.08) * 0.35;
+				vec3 c = mix(e < 0.6 ? wall : vault, floorC, 1.0 - smoothstep(-0.08, 0.0, e));
+				// the lantern: up, and a little toward the back of the room
+				vec3 L = normalize(vec3(-0.1, 1.0, -0.4));
+				float a = acos(clamp(dot(d, L), -1.0, 1.0));
+				c += vec3(1.0, 0.66, 0.34) * (60.0 * (1.0 - smoothstep(0.06, 0.09, a)) + 2.5 * exp(-a * 7.0));
+				gl_FragColor = vec4(c, 1.0);
+			}`
+	});
+	scene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 64, 32), mat));
+	return scene;
+}
 
 /** The grade, after the tone map and in display terms: a little more
  *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
@@ -134,8 +176,13 @@ export class Grove {
 	private hemi: THREE.HemisphereLight;
 	private envDay: THREE.Texture | null = null;
 	private envNight: THREE.Texture | null = null;
+	private envRoom: THREE.Texture | null = null;
+	private brass: THREE.MeshStandardMaterial | null = null;
 	private moonDir = moonAt(...MOON.side);
 	private skyCam = new THREE.PerspectiveCamera();
+	/** the view's turn about the island, and the key light's direction before it */
+	private viewYaw = 0;
+	private keyDir = new THREE.Vector3(0, 1, 0);
 	private world = new THREE.Group();
 	island!: IslandParts;
 	pavilion!: RotundaParts;
@@ -149,7 +196,9 @@ export class Grove {
 		roughness: 0.3
 	});
 	/** the lantern in the rotunda: warm, lit at dusk, brighter by night */
-	private lamp = new THREE.PointLight(0xffa04a, 0, 9, 2);
+	// the lantern in the arch, shining down on the gramophone: a spot, so
+	// that it can throw the machine's shadow, wide enough to light the room
+	private lamp = new THREE.SpotLight(0xffa04a, 0, 7, 1.18, 0.85, 2);
 	gramophone!: Gramophone;
 	trees: Stand[] = [];
 	/** every stand on the island, and the light inside them all */
@@ -370,8 +419,9 @@ export class Grove {
 		const brass = patch(
 			new THREE.MeshStandardMaterial({ color: 0xd8a650, metalness: 1, roughness: 0.26 }),
 			'brass',
-			nightPatch
+			nightPatchWarm
 		);
+		this.brass = brass;
 
 		this.island = buildIsland(
 			{ ashlar, rock: rockTextures(aniso), flags: flagTextures(aniso), lawn: lawnTexture(aniso) },
@@ -380,14 +430,29 @@ export class Grove {
 		this.world.add(this.island.group);
 		this.pavilion = buildRotunda(brick, stone, bronze);
 		this.world.add(this.pavilion.group);
-		this.lamp.position.copy(this.pavilion.lantern);
+		// just under the lantern's foot, or the foot would shadow the floor
+		this.lamp.position.copy(this.pavilion.lantern).setY(this.pavilion.lantern.y - 0.18);
+		this.lamp.target.position.set(
+			this.pavilion.lantern.x,
+			this.pavilion.floorY,
+			this.pavilion.lantern.z
+		);
 		const lan = buildLanterns(stone, bronze, this.glassMat);
 		this.world.add(lan.group);
 		this.lanterns = lan.lights;
 		this.pavilion.lanternGlass.material = this.glassMat;
 		U.uGlowMap.value = this.glow.tex;
-		this.lamp.castShadow = false;
-		this.world.add(this.lamp);
+		// Nothing under the lantern moves, so its shadow is drawn once, when
+		// the scene first is, and kept (see the shadows in update).
+		this.lamp.castShadow = true;
+		this.lamp.shadow.mapSize.set(1024, 1024);
+		this.lamp.shadow.camera.near = 0.05;
+		this.lamp.shadow.bias = -0.0006;
+		this.lamp.shadow.normalBias = 0.015;
+		this.lamp.shadow.radius = 4;
+		this.lamp.shadow.autoUpdate = false;
+		this.lamp.shadow.needsUpdate = true;
+		this.world.add(this.lamp, this.lamp.target);
 		this.gramophone = buildGramophone(brass, woodTexture(aniso));
 		// on the floor just inside the front arch, the horn turned to the door
 		this.gramophone.group.position.set(0.12, this.pavilion.floorY, 0.4);
@@ -510,11 +575,46 @@ export class Grove {
 			this.world.add(st.group);
 			this.growth.set(st, { g: 1, to: 1, pop: 0, popV: 0 });
 		}
+		this.gateShadowLayer();
 		this.trees = [stands[0], stands[1]];
 		for (let i = 0; i < 2; i++) this.keepOff(stands[i], preps[i].placed.worldPos);
 		this.garden = stands;
 		this.canopy = canopy;
 		this.shadeLawn();
+	}
+
+	/**
+	 * The crowns' shadows are cast by a thinned set of leaves that lives on a
+	 * layer of its own, so the picture never draws it. But three's shadow
+	 * pass asks the picture's camera, not the light's, which layers to draw,
+	 * so on its own the set is never drawn at all. Two empty marks, first and
+	 * last in the world, open that layer to the camera for the length of each
+	 * shadow pass and close it again: the picture's list of what to draw is
+	 * made before the shadows, so it never sees the layer.
+	 */
+	private gateShadowLayer() {
+		const mark = (fn: 'onBeforeShadow' | 'onAfterShadow', open: boolean) => {
+			const m = new THREE.Mesh(
+				new THREE.BufferGeometry().setAttribute(
+					'position',
+					new THREE.Float32BufferAttribute([], 3)
+				),
+				new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false })
+			);
+			m.castShadow = true;
+			m.frustumCulled = false;
+			m[fn] = (_r, _o, camera) => {
+				if (open) camera.layers.enable(SHADOW_LAYER);
+				else camera.layers.disable(SHADOW_LAYER);
+			};
+			return m;
+		};
+		const open = mark('onBeforeShadow', true),
+			close = mark('onAfterShadow', false);
+		this.world.add(open, close);
+		// the opening mark first of all
+		this.world.children.splice(this.world.children.indexOf(open), 1);
+		this.world.children.unshift(open);
 	}
 
 	/** a stone urn on a plinth, for flowers either side of the path */
@@ -578,7 +678,19 @@ export class Grove {
 		u.uStars.value = 1;
 		u.uSun.value.copy(keepSun);
 		this.sky.update(this.renderer);
+		this.envRoom = pm.fromScene(lampRoom(), 0, 0.05, 50).texture;
 		pm.dispose();
+		this.applyDay(this.dayMix);
+	}
+
+	/**
+	 * The sky holds still while the view turns (see draw), so it is the island
+	 * that seems to turn under it; the sun, and the sky's light in the metal,
+	 * turn with the view to match, as they would over a turning island.
+	 */
+	private aimKey() {
+		this.light.position.copy(this.keyDir).applyAxisAngle(UP, this.viewYaw).multiplyScalar(30);
+		this.scene.environmentRotation.set(0, this.viewYaw, 0);
 	}
 
 	private applyDay(m: number) {
@@ -591,18 +703,18 @@ export class Grove {
 		// the disc sinks under the cloud as the lights go down
 		const k = smoothstep(0, 1, m);
 		this.sky.uniforms.uSun.value.copy(moonAt(this.sunAz, lerp(SUN_SET_EL, SUN_EL, k)));
-		// and the moon goes down into it as the sun comes up, staying out in
-		// the first of the daylight, so that it is seen to go
+		// and the moon goes out of the picture, up and away from the page, as
+		// the sun comes up; with the night it comes back in the same way
 		const [mAz, mEl] = MOON[this.layout];
-		this.sky.uniforms.uMoon.value.copy(
-			moonAt(mAz, lerp(mEl, MOON_SET_EL, Math.sqrt(clamp(m, 0, 1))))
-		);
+		const out = Math.sqrt(clamp(m, 0, 1));
+		this.sky.uniforms.uMoon.value.copy(moonAt(mAz + MOON_OUT[0] * out, mEl + MOON_OUT[1] * out));
 		// the key comes from the side the sun is on, well round from it, so
 		// the island's face takes the gold and its shadows fall across it
 		const key = moonAt(KEY_AZ[this.layout], KEY_EL);
 		const moonLight = this.moonDir.clone().setY(Math.max(this.moonDir.y, 0.28)).normalize();
 		const dir = moonLight.lerp(key, k).normalize();
-		this.light.position.copy(dir).multiplyScalar(30);
+		this.keyDir.copy(dir);
+		this.aimKey();
 		// the sun's colour is the sky's: what is left of white after the air
 		const sunCol = sunLight(THREE.MathUtils.degToRad(KEY_EL), 1.5);
 		sunCol.multiplyScalar(1 / Math.max(sunCol.r, sunCol.g, sunCol.b));
@@ -619,11 +731,14 @@ export class Grove {
 		this.grade.uniforms.get('uWarm')!.value = lerp(0.85, 0.2, m);
 		const env = m > 0.5 ? this.envDay : this.envNight;
 		this.scene.environment = env;
+		// Polished brass is all reflection: under the night sky alone it would
+		// go dull. By night it sees what it would, the lamplit room round it.
+		if (this.brass) this.brass.envMap = m > 0.5 ? null : this.envRoom;
 		this.scene.environmentIntensity =
 			lerp(1.2, 0.55, m) * Math.min(1, Math.abs(m - 0.5) * 4 + 0.25);
 		U.uWind.value = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
-		this.lamp.intensity = lerp(14, 2.2, m);
+		this.lamp.intensity = lerp(22, 2.2, m);
 		this.glassMat.emissiveIntensity = lerp(4.5, 1.3, m);
 	}
 
@@ -734,6 +849,7 @@ export class Grove {
 		const pitch = THREE.MathUtils.degToRad(8 + lift) + this.pitchNudge;
 		const drift = this.reduced ? 0 : Math.sin(this.clock * 0.045) * 0.06;
 		const yaw = this.yaw + drift + lerp(-0.35, 0, k);
+		this.viewYaw = this.peekAt ? 0 : yaw;
 		const target = new THREE.Vector3(0, -0.9 - descend, 0);
 		const d = this.dist * back;
 		this.camera.position.set(
@@ -1039,11 +1155,18 @@ export class Grove {
 		// haze and no sky. So there the sky is drawn from a camera tipped up
 		// a little, which puts blue over the garden and the horizon behind the
 		// rock. Nothing on the island touches the horizon to give it away.
+		//
+		// And the sky does not turn when the view does. A hand on the page
+		// turns the island, and the moon and the stars stay where they are;
+		// only the scroll's sinking, which is no turn at all, moves the
+		// camera the sky is drawn from.
 		let cam = this.camera;
-		const tilt = SKY_TILT[this.layout];
-		if (tilt) {
+		if (!this.peekAt) {
 			this.skyCam.copy(this.camera);
-			this.skyCam.rotateX(THREE.MathUtils.degToRad(tilt));
+			this.skyCam.quaternion.setFromAxisAngle(
+				RIGHT,
+				THREE.MathUtils.degToRad(SKY_TILT[this.layout] - 8)
+			);
 			this.skyCam.updateMatrixWorld();
 			cam = this.skyCam;
 		}
@@ -1154,6 +1277,7 @@ export class Grove {
 		this.yaw += (px * 0.03 - 0) * dt;
 
 		const p = this.placeCamera(dt);
+		this.aimKey();
 		const visible = p < 1.85;
 		this.world.visible = visible;
 		// (the light keeps its shadow even when the island is out of sight:
@@ -1169,6 +1293,8 @@ export class Grove {
 		this.renderer.shadowMap.needsUpdate =
 			visible &&
 			(quick || !!this.pressed || !!this.grab || (this.shadowTick === 0 && !this.scrolling));
+		// the lantern's, only while the island is still arriving
+		if (quick) this.lamp.shadow.needsUpdate = true;
 
 		// the pointer pushes the crowns aside, where it meets the lawn
 		this.ptrAmp = damp(this.ptrAmp, this.pointerOn && visible ? 1 : 0, 3, dt);
@@ -1257,7 +1383,8 @@ export class Grove {
 		g.begin();
 		const li = lerp(0.35, 1.6, night);
 		for (const p of this.lanterns) g.add(p, this.lampCol, li, 2.6);
-		g.add(this.pavilion.lantern, this.lampCol, li * 0.5, 2.2);
+		// only the soft part of its light: the spot does the rest, with shadows
+		g.add(this.pavilion.lantern, this.lampCol, li * 0.3, 2.2);
 		if (night > 0.02) {
 			const { pos, glow } = this.air.fireflies;
 			const v = new THREE.Vector3();
