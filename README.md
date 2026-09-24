@@ -1,5 +1,7 @@
 # The grove, in three dimensions
 
+![The homepage by night: the floating garden with its rotunda lit, beside the name and bio](static/media/og-grove-night.jpg)
+
 This branch (`grove-3d`) rebuilds the homepage as a SvelteKit site with a
 three.js scene behind it: a garden on a floating rock at golden hour, over a
 sea of cloud, turning to the blue hour when the lamp cord is pulled.
