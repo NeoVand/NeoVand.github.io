@@ -44,6 +44,7 @@
 					reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
 					seed: q.has('seed') ? +q.get('seed')! : undefined,
 					onGramophone: toggleMusic,
+					onLost: () => (failed = true),
 					level: music.level
 				});
 				await g.ready();
@@ -177,6 +178,6 @@
 		background: linear-gradient(#6f93c4, #b9cde4 60%, #e8dccb);
 	}
 	:global(html:not(.day)) .scene.failed {
-		background: linear-gradient(#0a1128, #1a2548 60%, #28335a);
+		background: linear-gradient(#08090f, #0e111a 60%, #161a24);
 	}
 </style>

@@ -14,6 +14,11 @@ let bins: Uint8Array<ArrayBuffer>;
 
 function audio() {
 	if (ctx) return ctx;
+	// On an iPhone, sound made through the page's audio graph is silenced by
+	// the ringer switch, as a notification would be, unless the page says it
+	// is playing music (Safari 16.4 and on). It is.
+	const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+	if (session) session.type = 'playback';
 	ctx = new AudioContext();
 	master = ctx.createGain();
 	master.gain.value = 0.9;

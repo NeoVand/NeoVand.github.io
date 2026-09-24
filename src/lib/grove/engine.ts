@@ -47,6 +47,8 @@ export interface GroveOptions {
 	reduced: boolean;
 	seed?: number;
 	onGramophone?: () => void;
+	/** the drawing context was lost: the page shows its plain sky instead */
+	onLost?: () => void;
 	/** how loud the music is, 0..1, for the notes out of the horn */
 	level?: () => number;
 }
@@ -350,6 +352,12 @@ export class Grove {
 	private rand: () => number;
 	private listeners: [EventTarget, string, EventListener, AddEventListenerOptions?][] = [];
 	onGramophone?: () => void;
+	private onLost?: () => void;
+	/** a finger on the machine, waiting to be lifted: a touch starts music only then */
+	private gramTap: { id: number; x: number; y: number; t: number } | null = null;
+	/** a change of scale or size, made at the start of the next frame drawn */
+	private pendingScale = 0;
+	private pendingResize = false;
 	private level: () => number;
 	private notes = new Notes();
 	private mouth = new THREE.Vector3();
@@ -360,6 +368,7 @@ export class Grove {
 		this.dayMix = this.dayTo = opts.day ? 1 : 0;
 		this.moonK = this.moonFrom = this.dayMix;
 		this.onGramophone = opts.onGramophone;
+		this.onLost = opts.onLost;
 		this.level = opts.level ?? (() => 0);
 		this.rand = rng(opts.seed ?? Date.now() & 0xffff);
 		const r = new THREE.WebGLRenderer({
@@ -382,6 +391,24 @@ export class Grove {
 		r.shadowMap.autoUpdate = false;
 		r.shadowMap.needsUpdate = true;
 		this.renderer = r;
+		// Should the phone take the drawing context back (it does, short of
+		// memory), the page shows its plain sky rather than a black hole, and
+		// if the context is given back, the page starts afresh, once.
+		this.on(r.domElement, 'webglcontextlost', ((e: Event) => {
+			e.preventDefault();
+			this.stop();
+			this.live = false;
+			this.onLost?.();
+		}) as EventListener);
+		this.on(r.domElement, 'webglcontextrestored', () => {
+			try {
+				if (sessionStorage.getItem('grove-restored')) return;
+				sessionStorage.setItem('grove-restored', '1');
+			} catch {
+				return;
+			}
+			location.reload();
+		});
 		const phone = Math.min(screen.width, screen.height) < 600;
 		this.dprCap = Math.min(window.devicePixelRatio || 1, 2);
 		// (a phone starts at twice and may climb toward its own density)
@@ -930,7 +957,7 @@ export class Grove {
 		// own density, three, as far as the budget allows; it starts at two
 		// and the governor takes it up only while the frames keep time.
 		this.native = Math.min(window.devicePixelRatio || 1, this.flowing ? 3 : 2);
-		this.dprCap = Math.min(this.native, Math.sqrt(2.4e6 / (w * h)));
+		this.dprCap = Math.min(this.native, Math.sqrt((this.flowing ? 2.0e6 : 2.4e6) / (w * h)));
 		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
 		this.dpr = Math.min(this.dpr, this.dprCap);
 		this.renderer.setSize(w, h, false);
@@ -1083,7 +1110,13 @@ export class Grove {
 
 	private bind() {
 		const cv = this.renderer.domElement;
-		this.on(window, 'resize', () => this.resize());
+		// (made at the start of the next frame, before it is drawn: a canvas
+		// resized is wiped, and resized between frames it would be shown so,
+		// a black frame, the canvas being opaque)
+		this.on(window, 'resize', () => {
+			this.pendingResize = true;
+			this.wake();
+		});
 		this.on(document, 'visibilitychange', () => (document.hidden ? this.stop() : this.wake()));
 		this.on(cv, 'pointermove', ((e: PointerEvent) => {
 			this.setPointer(e);
@@ -1167,7 +1200,12 @@ export class Grove {
 			if (hit === 'gramophone') {
 				// a touch has no hover: the outline flashes as it is pressed
 				this.gramFlash = 1;
-				this.onGramophone?.();
+				// A mouse plays it at once. A finger plays it as it is lifted:
+				// a browser lets a page make a sound for a touch only when the
+				// touch ends, and a record asked for as it began would be
+				// refused without a word.
+				if (e.pointerType === 'mouse') this.onGramophone?.();
+				else this.gramTap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
 				return;
 			}
 			if (hit) {
@@ -1203,6 +1241,16 @@ export class Grove {
 			this.wake();
 		}) as EventListener);
 		const up = ((e: PointerEvent) => {
+			const tap = this.gramTap;
+			if (tap?.id === e.pointerId) {
+				this.gramTap = null;
+				if (
+					e.type === 'pointerup' &&
+					Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 14 &&
+					performance.now() - tap.t < 900
+				)
+					this.onGramophone?.();
+			}
 			if (this.drag?.id === e.pointerId) {
 				this.drag = null;
 				this.spunAt = this.clock;
@@ -1502,7 +1550,9 @@ export class Grove {
 	private sizeSky() {
 		const px = this.W * this.dpr,
 			py = this.H * this.dpr;
-		this.sky.setSize(px, py, lerp(0.7e6, 0.4e6, this.dayMix) * (this.flowing ? 0.5 : 1));
+		// (sized for where the light is going, not for each step of the way,
+		// or it is made anew every frame of the change)
+		this.sky.setSize(px, py, lerp(0.7e6, 0.4e6, this.dayTo) * (this.flowing ? 0.5 : 1));
 		this.skyDirty = true;
 	}
 
@@ -1562,6 +1612,15 @@ export class Grove {
 			return;
 		const dt = Math.min(0.05, (now - this.last) / 1000);
 		this.last = now;
+		// changes of size first, so the wiped canvas is drawn before it is seen
+		if (this.pendingResize) {
+			this.pendingResize = false;
+			this.resize();
+		}
+		if (this.pendingScale) {
+			this.setScale(this.pendingScale);
+			this.pendingScale = 0;
+		}
 		const t0 = performance.now();
 		this.update(dt);
 		this.draw();
@@ -1790,7 +1849,7 @@ export class Grove {
 			this.scrollTimes.length = 0;
 			if (late > 0.08 && this.dpr > 1) {
 				this.dprCeil = Math.max(1, this.dpr - 0.25);
-				this.setScale(this.dprCeil);
+				this.pendingScale = this.dprCeil;
 				return;
 			}
 		}
@@ -1810,7 +1869,7 @@ export class Grove {
 			this.dprCeil = next;
 		} else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
 			next = Math.min(top, this.dpr + 0.25);
-		if (next !== this.dpr) this.setScale(next);
+		if (next !== this.dpr) this.pendingScale = next;
 	}
 
 	/**
