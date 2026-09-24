@@ -35,7 +35,7 @@ const wrap = (a: number) => a - Math.PI * 2 * Math.round(a / (Math.PI * 2));
 interface Creature {
 	id: number;
 	party: number;
-	state: 'away' | 'perch' | 'fly';
+	state: 'away' | 'perch' | 'fly' | 'hover';
 	site: Site | null;
 	pos: THREE.Vector3;
 	vel: THREE.Vector3;
@@ -83,6 +83,9 @@ interface Creature {
 	/** the wings, while it stands */
 	wf: number;
 	wo: number;
+	/** started up off the turning island: its place in the air, and the perch it left */
+	hover: { base: THREE.Vector3; yaw0: number; ph: number } | null;
+	home: Site | null;
 }
 
 const N = 24;
@@ -182,6 +185,15 @@ export class Air {
 	private flies: THREE.Points;
 	private flyPos: Float32Array;
 	private flyGlow: Float32Array;
+	/** The fireflies are in the air, not on the island: when it is turned
+	 *  they stay where they are and it goes round under them. So they hang
+	 *  in a frame that turns with the eye, and their light on the garden is
+	 *  laid where they really are. */
+	private flyGroup = new THREE.Group();
+	private flyWorld = new Float32Array(N * 3);
+	/** the eye's turn about the island, and whether the island is being turned */
+	private yaw = 0;
+	private spinning = false;
 	/** each firefly's patch of air, where it is going, and its flashing */
 	private ff: {
 		home: THREE.Vector3;
@@ -302,7 +314,8 @@ export class Air {
 		});
 		this.flies = new THREE.Points(fg, fm);
 		this.flies.frustumCulled = false;
-		this.group.add(this.birds, this.flies);
+		this.flyGroup.add(this.flies);
+		this.group.add(this.birds, this.flyGroup);
 
 		for (let i = 0; i < N; i++) {
 			this.c.push({
@@ -348,7 +361,9 @@ export class Air {
 				roll: 0,
 				bob: 0,
 				wf: 0,
-				wo: 1
+				wo: 1,
+				hover: null,
+				home: null
 			});
 		}
 		for (let i = 0; i < N; i++) {
@@ -558,6 +573,7 @@ export class Air {
 
 	// ── flights ───────────────────────────────────────────────────────────
 	private fly(cr: Creature, to: Site, delay = 0) {
+		cr.hover = null;
 		cr.site = to;
 		cr.from.copy(cr.pos);
 		const end = this.sitePos(to, this.tmp);
@@ -786,6 +802,41 @@ export class Air {
 		}
 	}
 
+	/**
+	 * The island is turned under them: the birds on it start up and hold
+	 * their places in the air, as birds would over a thing going round
+	 * beneath them, circling a little, until it is still again; then they
+	 * come back down, most to the perch they left.
+	 */
+	startle() {
+		if (!this.started || this.grove.reduced) return;
+		for (const cr of this.c) {
+			if (cr.state !== 'perch' || !cr.site || this.r() > 0.85) continue;
+			const home = cr.site;
+			const out = this.tmp.set(cr.pos.x, 0, cr.pos.z);
+			const len = out.length();
+			if (len > 1e-3) out.multiplyScalar(1 / len);
+			else out.set(0, 0, 1);
+			const base = cr.pos.clone().addScaledVector(out, lerp(0.3, 1.2, this.r()));
+			base.y += lerp(1.2, 2.4, this.r());
+			this.fly(cr, { kind: 'point', p: base.clone(), group: 'hover' }, this.r() * 0.25);
+			cr.hover = { base, yaw0: this.yaw, ph: this.r() * Math.PI * 2 };
+			cr.home = home;
+		}
+	}
+
+	/** where a bird holding its place in the air is, in the island's frame, now */
+	private hoverAt(cr: Creature, out: THREE.Vector3) {
+		const h = cr.hover!;
+		const a = this.yaw - h.yaw0;
+		const th = h.ph + U.uTime.value * 1.3;
+		const bx = h.base.x + Math.cos(th) * 0.22,
+			bz = h.base.z + Math.sin(th) * 0.22;
+		const c = Math.cos(a),
+			sn = Math.sin(a);
+		return out.set(bx * c + bz * sn, h.base.y + Math.sin(th * 0.7) * 0.06, -bx * sn + bz * c);
+	}
+
 	/** A tree is grabbed: everyone on it is off, some to the building. */
 	pressed(t: TreeHandles) {
 		const onIt = this.c.filter((cr) => cr.site?.kind === 'twig' && cr.site.tree === t);
@@ -817,7 +868,7 @@ export class Air {
 
 	/** where the fireflies are and how bright, for the light they give */
 	get fireflies() {
-		return { pos: this.flyPos, glow: this.flyGlow };
+		return { pos: this.flyWorld, glow: this.flyGlow };
 	}
 
 	// ── on the perch ──────────────────────────────────────────────────────
@@ -1075,7 +1126,10 @@ export class Air {
 	}
 
 	// ── a frame ───────────────────────────────────────────────────────────
-	update(dt: number, visible: boolean) {
+	update(dt: number, visible: boolean, yaw = 0, spinning = false) {
+		this.yaw = yaw;
+		this.spinning = spinning;
+		this.flyGroup.rotation.y = yaw;
 		this.day = damp(this.day, this.dayTo, 2.2, dt);
 		this.group.visible = visible && this.started;
 		if (!this.started) return;
@@ -1095,6 +1149,8 @@ export class Air {
 
 		let anyBird = false;
 		for (const cr of this.c) {
+			// a place in the air moves, in the island's frame, as the island turns
+			if (cr.hover && cr.site?.kind === 'point') this.hoverAt(cr, cr.site.p);
 			if (cr.state === 'fly') {
 				cr.ft += dt;
 				if (cr.ft < 0) {
@@ -1109,6 +1165,7 @@ export class Air {
 					this.bezier(cr, t, cr.pos);
 					cr.vel.subVectors(cr.pos, prev).divideScalar(Math.max(dt, 1e-3));
 					const away = cr.site?.kind === 'point' && cr.site.group === 'away';
+					const aloft = away || (cr.site?.kind === 'point' && cr.site.group === 'hover');
 					if (cr.hop) {
 						// barely off its feet, and round on the way
 						cr.yaw = lerp(cr.yawFrom, cr.yawTo, smoothstep(0, 1, t));
@@ -1117,11 +1174,14 @@ export class Air {
 						if (cr.vel.lengthSq() > 1e-4) cr.yaw = Math.atan2(cr.vel.x, cr.vel.z);
 						// the last third of a second: reach for the branch
 						const left = (1 - t) * cr.fdur;
-						cr.pose = away ? 0 : smoothstep(0.45, 0.0, left);
+						cr.pose = aloft ? 0 : smoothstep(0.45, 0.0, left);
 					}
 					if (t >= 1 && away) {
 						cr.state = 'away';
 						cr.site = null;
+					} else if (t >= 1 && aloft) {
+						cr.state = 'hover';
+						cr.timer = lerp(0.6, 1.4, this.r());
 					} else if (t >= 1) {
 						cr.state = 'perch';
 						cr.act = 'idle';
@@ -1137,6 +1197,23 @@ export class Air {
 						cr.yawStep = cr.yaw;
 						cr.stepT = 0;
 					}
+				}
+			} else if (cr.state === 'hover' && cr.site && cr.hover) {
+				// holding its place in the air, circling a little, facing the way
+				// it goes there, until the island under it is still
+				this.sitePos(cr.site, cr.pos);
+				const th = cr.hover.ph + U.uTime.value * 1.3;
+				cr.yaw = Math.atan2(-Math.sin(th), Math.cos(th)) + (this.yaw - cr.hover.yaw0);
+				cr.pose = damp(cr.pose, 0, 6, dt);
+				cr.timer -= dt;
+				if (!this.spinning && cr.timer < 0) {
+					const home = cr.home;
+					const back =
+						home && this.standing(home) && !(home.kind === 'point' && this.crowded(home.p, cr))
+							? home
+							: this.pickSite(cr);
+					cr.home = null;
+					this.fly(cr, back, this.r() * 0.9);
 				}
 			} else if (cr.state === 'perch' && cr.site) {
 				cr.pose = damp(cr.pose, 1, 6, dt);
@@ -1180,7 +1257,10 @@ export class Air {
 				fold = 1;
 			}
 			flap *= flying > 0.02 ? 1 : 0;
-			if (cr.hop && cr.state === 'fly') {
+			if (cr.state === 'hover') {
+				flap = Math.sin(cr.phase * Math.PI * 2 * 8) * 0.9;
+				fold = 0;
+			} else if (cr.hop && cr.state === 'fly') {
 				// half open, and a beat or two
 				const e = Math.sin(Math.PI * clamp(cr.ft / cr.fdur, 0, 1));
 				fold = 1 - 0.9 * e;
@@ -1253,6 +1333,16 @@ export class Air {
 				}
 			}
 			this.flyGlow[i] = (reduced ? 0.45 : 0.22 + 0.78 * b) * on;
+		}
+		// where the fireflies really are, turned with the air, for their light
+		const cy = Math.cos(yaw),
+			sy = Math.sin(yaw);
+		for (let i = 0; i < N; i++) {
+			const x = this.flyPos[i * 3],
+				z = this.flyPos[i * 3 + 2];
+			this.flyWorld[i * 3] = x * cy + z * sy;
+			this.flyWorld[i * 3 + 1] = this.flyPos[i * 3 + 1];
+			this.flyWorld[i * 3 + 2] = -x * sy + z * cy;
 		}
 		this.birds.instanceMatrix.needsUpdate = true;
 		this.wingAttr.needsUpdate = true;

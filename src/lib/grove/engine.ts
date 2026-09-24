@@ -294,6 +294,13 @@ export class Grove {
 	/** how far the sky is tipped away as the page goes down, in radians */
 	private skyTip = 0;
 	private pitchNudge = 0;
+	/** the tilt a hand gives the island, dragging it up or down, and where it is going */
+	private pitchDrag = 0;
+	private pitchDragTo = 0;
+	/** whether the island was being turned last frame, for the birds */
+	private wasSpinning = false;
+	/** the wind as the light has it, before a spin adds to it */
+	private windBase = 1;
 	private pointerNdc = new THREE.Vector2(0, 0);
 	private pointerOn = false;
 	private ptrAmp = 0;
@@ -302,6 +309,7 @@ export class Grove {
 		x: number;
 		y: number;
 		yaw: number;
+		pitch: number;
 		moved: boolean;
 		t: number;
 	} | null = null;
@@ -885,7 +893,7 @@ export class Grove {
 		if (this.brass) this.brass.envMap = m > 0.5 ? null : this.envRoom;
 		this.scene.environmentIntensity =
 			lerp(1.2, 0.55, m) * Math.min(1, Math.abs(m - 0.5) * 4 + 0.25);
-		U.uWind.value = lerp(0.55, 1, m);
+		this.windBase = lerp(0.55, 1, m);
 		// the lantern: already lit at dusk, the one warm thing by night
 		this.lampBase = lerp(22, 2.2, m);
 		this.glassBase = lerp(2.6, 1.0, m);
@@ -1027,7 +1035,7 @@ export class Grove {
 		// The camera only sinks; it does not tip. Going below the island is
 		// enough to see its underside, and a level camera keeps the horizon and
 		// the moon where they were, behind the page as well as the picture.
-		const pitch = THREE.MathUtils.degToRad(8) + this.pitchNudge;
+		const pitch = THREE.MathUtils.degToRad(8) + this.pitchNudge + this.pitchDrag;
 		// (not on a phone, where the slow turn drags every fine edge across
 		// the pixels and the picture crawls)
 		const drift = this.reduced || this.flowing ? 0 : Math.sin(this.clock * 0.045) * 0.06;
@@ -1163,10 +1171,15 @@ export class Grove {
 			}
 			this.lastMove = { x: e.clientX, y: e.clientY };
 			if (this.drag && this.drag.id === e.pointerId) {
-				const dx = e.clientX - this.drag.x;
-				if (Math.abs(dx) > 4) this.drag.moved = true;
+				const dx = e.clientX - this.drag.x,
+					dy = e.clientY - this.drag.y;
+				if (Math.hypot(dx, dy) > 4) this.drag.moved = true;
 				// all the way round if you like; a drag across the page is half a turn
 				this.yaw = this.drag.yaw - (dx / this.W) * 3.2;
+				// and up or down, a tilt: pulled down, the island is seen from
+				// higher, its lawn and its roof; pushed up, from lower, its rock.
+				// Within bounds, and it goes back to rest when let go.
+				this.pitchDragTo = clamp(this.drag.pitch + (dy / this.H) * 1.1, -0.12, 0.36);
 				// its speed, over real time and smoothed, for the throw
 				const now = performance.now();
 				const dt = (now - this.spinSample.t) / 1000;
@@ -1234,6 +1247,7 @@ export class Grove {
 				x: e.clientX,
 				y: e.clientY,
 				yaw: this.yaw,
+				pitch: this.pitchDragTo,
 				moved: false,
 				t: this.clock
 			};
@@ -1675,6 +1689,30 @@ export class Grove {
 				this.yawVel += (-(w * w) * (this.yaw - home) - 2 * w * this.yawVel) * dt;
 			} else this.yawVel *= Math.exp(-dt * 0.9);
 		}
+		// the tilt a hand gave it goes back to rest when it is let go, slowly,
+		// and while held follows the hand a touch behind, as a weight would
+		if (!this.drag) this.pitchDragTo = damp(this.pitchDragTo, 0, this.reduced ? 20 : 0.9, dt);
+		this.pitchDrag = damp(this.pitchDrag, this.pitchDragTo, 12, dt);
+		// Turned, the island startles what sits on it: the birds go up and
+		// hold their places in the air until it is still. And the air goes
+		// through the trees a little harder while it turns.
+		const spinning = !!this.drag?.moved || Math.abs(this.yawVel) > 0.35;
+		// (a hand's turn, or its throw; not the island's own slow way home)
+		const byHand = !!this.drag?.moved || this.clock - this.spunAt < 1.5;
+		if (
+			spinning &&
+			!this.wasSpinning &&
+			byHand &&
+			(Math.abs(this.yawVel) > 0.8 || this.drag?.moved)
+		)
+			this.air.startle();
+		if (spinning || Math.abs(this.yawVel) < 0.2) this.wasSpinning = spinning;
+		U.uWind.value = damp(
+			U.uWind.value,
+			this.windBase * (1 + Math.min(0.9, Math.abs(this.yawVel) * 0.3)),
+			3,
+			dt
+		);
 		// a little parallax from the pointer
 		const px = this.pointerOn && !this.drag ? this.pointerNdc.x : 0;
 		const py = this.pointerOn && !this.drag ? this.pointerNdc.y : 0;
@@ -1782,7 +1820,7 @@ export class Grove {
 		const up = lerp(0.12, 1, this.arrive);
 		this.lamp.intensity = this.lampBase * up;
 		this.glassMat.emissiveIntensity = this.glassBase * up;
-		this.air.update(dt, visible);
+		this.air.update(dt, visible, this.viewYaw, !!this.drag?.moved || Math.abs(this.yawVel) > 0.35);
 		if (visible) {
 			this.lightUp();
 			this.petals.update(
