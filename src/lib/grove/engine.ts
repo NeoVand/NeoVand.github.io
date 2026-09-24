@@ -384,7 +384,8 @@ export class Grove {
 		this.renderer = r;
 		const phone = Math.min(screen.width, screen.height) < 600;
 		this.dprCap = Math.min(window.devicePixelRatio || 1, 2);
-		this.dpr = this.dprCap;
+		// (a phone starts at twice and may climb toward its own density)
+		this.dpr = Math.min(this.dprCap, 2);
 		void phone;
 
 		this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
@@ -924,10 +925,12 @@ export class Grove {
 		// a budget of pixels, not a ratio: a large, dense screen is drawn a
 		// little under its own density, which with the multisampling is still
 		// sharp, and holds the frame rate where a ratio would not
-		this.native = Math.min(window.devicePixelRatio || 1, 2);
-		// (a phone's GPU is a fraction of a laptop's, and shares itself with
-		// the page's scrolling: it gets a third of the pixels)
-		this.dprCap = Math.min(this.native, Math.sqrt((this.flowing ? 0.8e6 : 2.4e6) / (w * h)));
+		// A phone's picture is small and seen close: drawn under twice its
+		// width it is soft and its fine things shimmer. It may go up to its
+		// own density, three, as far as the budget allows; it starts at two
+		// and the governor takes it up only while the frames keep time.
+		this.native = Math.min(window.devicePixelRatio || 1, this.flowing ? 3 : 2);
+		this.dprCap = Math.min(this.native, Math.sqrt(2.4e6 / (w * h)));
 		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
 		this.dpr = Math.min(this.dpr, this.dprCap);
 		this.renderer.setSize(w, h, false);
@@ -937,10 +940,15 @@ export class Grove {
 		this.camera.aspect = w / h;
 		// fit the island and its trees into the part of the screen it owns
 		const tan = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-		const [fw, fh] = this.layout === 'side' ? [0.52, 0.8] : [0.86, 0.44];
-		// the whole island, from the tops of the cypresses to the point of the
-		// rock: it is a thing floating, and it has to be seen whole to read so
-		const subjectW = 17,
+		// The whole island, from the tops of the cypresses to the point of the
+		// rock: it is a thing floating, and it has to be seen whole to read so.
+		// Where the words stack under it, on a narrow screen, it is the width
+		// that binds, and there it is fitted to the span of its crowns rather
+		// than a margin round them, or it is small, far off, and every fine
+		// thing in it is under a pixel.
+		const side = this.layout === 'side';
+		const [fw, fh] = side ? [0.52, 0.8] : [1.0, 0.54];
+		const subjectW = side ? 17 : 15.6,
 			subjectH = 17.2;
 		const dW = subjectW / (fw * 2 * tan * this.camera.aspect);
 		const dH = subjectH / (fh * 2 * tan);
@@ -950,7 +958,7 @@ export class Grove {
 		// smaller with it, or on a phone it is a plate over the dome
 		this.sky.uniforms.uMoonS.value = clamp(40 / this.dist, 0.45, 1);
 		this.hv = 2 * this.dist * tan;
-		const [fx, fy] = this.layout === 'side' ? [0.31, 0.5] : [0.5, 0.27];
+		const [fx, fy] = side ? [0.31, 0.5] : [0.5, 0.29];
 		this.moonDir.copy(moonAt(...MOON[this.layout]));
 		this.sunAz = SUN_AZ[this.layout];
 		this.applyDay(this.dayMix);
@@ -993,7 +1001,9 @@ export class Grove {
 		// enough to see its underside, and a level camera keeps the horizon and
 		// the moon where they were, behind the page as well as the picture.
 		const pitch = THREE.MathUtils.degToRad(8) + this.pitchNudge;
-		const drift = this.reduced ? 0 : Math.sin(this.clock * 0.045) * 0.06;
+		// (not on a phone, where the slow turn drags every fine edge across
+		// the pixels and the picture crawls)
+		const drift = this.reduced || this.flowing ? 0 : Math.sin(this.clock * 0.045) * 0.06;
 		const yaw = this.yaw + drift + lerp(-0.24, 0, k);
 		this.viewYaw = this.peekAt ? 0 : yaw;
 		// the island comes up from a third of the picture below its place: the
@@ -1482,7 +1492,9 @@ export class Grove {
 		this.outline.uniforms.get('uMask')!.value = this.gramMask.texture;
 		this.outline.uniforms.get('uTexel')!.value.set(1 / bw, 1 / bh);
 		// drawn at the screen's density there is nothing to make up for
-		this.present.sharpness = this.dpr >= this.native - 0.01 ? 0 : 0.55;
+		// (and on a phone only lightly: sharpened hard, its small fine things
+		// shimmer)
+		this.present.sharpness = this.dpr >= this.native - 0.01 ? 0 : this.flowing ? 0.3 : 0.55;
 	}
 
 	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
@@ -1791,8 +1803,12 @@ export class Grove {
 		const late = this.lateness(s);
 		const top = Math.min(this.dprCap, this.dprCeil);
 		let next = this.dpr;
-		if ((late > 0.12 || tick > 22) && this.dpr > 1) next = Math.max(1, this.dpr - 0.25);
-		else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
+		// once it has had to come down it stays down: going back up and down
+		// every second or two, the picture sharpens and softens by turns
+		if ((late > 0.12 || tick > 22) && this.dpr > 1) {
+			next = Math.max(1, this.dpr - 0.25);
+			this.dprCeil = next;
+		} else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
 			next = Math.min(top, this.dpr + 0.25);
 		if (next !== this.dpr) this.setScale(next);
 	}
