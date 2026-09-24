@@ -155,7 +155,7 @@
 			const k = tone;
 			g.lineCap = 'round';
 			g.lineJoin = 'round';
-			g.strokeStyle = mixRGBA([170, 170, 178, 0.72], [40, 58, 74, 0.85], k);
+			g.strokeStyle = mixRGBA([182, 172, 158, 0.72], [40, 58, 74, 0.85], k);
 			g.lineWidth = 1.3;
 			g.beginPath();
 			// the cord that has come out of the fitting hangs straight from it

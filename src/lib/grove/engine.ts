@@ -948,7 +948,10 @@ export class Grove {
 
 	private placeCamera(dt: number) {
 		const H = this.H;
-		this.scrollSmooth = this.reduced ? this.scroll : damp(this.scrollSmooth, this.scroll, 10, dt);
+		// The picture goes with the page exactly: smoothed, it trailed the
+		// words on a fast swipe and went on sliding a moment after they had
+		// stopped, a small second move when everything should be still.
+		this.scrollSmooth = this.scroll;
 		const p = clamp(this.scrollSmooth / H, 0, 2.4);
 		// the entrance (see begin): the turn and the drift in eased both ways,
 		// the rise eased out, quick off the mark and slow into its place

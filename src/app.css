@@ -41,7 +41,7 @@
 @property --title {
 	syntax: '<color>';
 	inherits: true;
-	initial-value: #fff;
+	initial-value: #f4e7d4;
 }
 @property --text {
 	syntax: '<color>';
@@ -121,15 +121,16 @@
    light changed. */
 :root {
 	--bg: #0b0e16;
-	--title: #fff;
-	--text: #e3e3e5;
-	--muted: #9a9ca3;
-	--faint: #6b6e75;
-	--hair: rgba(255, 255, 255, 0.09);
+	/* by lamplight: an ivory, not the screen's own white */
+	--title: #f4e7d4;
+	--text: #e6dccd;
+	--muted: #a59d91;
+	--faint: #756e65;
+	--hair: rgba(255, 236, 210, 0.09);
 	--pane: rgba(21, 24, 34, 0.42);
 	--pane-2: rgba(46, 50, 64, 0.52);
-	--pane-edge: rgba(255, 255, 255, 0.2);
-	--pane-top: rgba(255, 255, 255, 0.1);
+	--pane-edge: rgba(255, 238, 214, 0.2);
+	--pane-top: rgba(255, 238, 214, 0.1);
 	--blur: 16px;
 	/* the résumé's sheet and the panels over the page: denser than a card */
 	--sheet: rgba(13, 15, 22, 0.76);
@@ -137,9 +138,9 @@
 	--frost-sat: 1.2;
 	--cast: rgba(0, 0, 0, 0.35);
 	--copper: #d9b8a2;
-	--focus: #cfd8e8;
+	--focus: #e8d9c3;
 	/* the line round a card under the pointer */
-	--ring: rgba(236, 241, 252, 0.62);
+	--ring: rgba(244, 228, 206, 0.6);
 	--ease: cubic-bezier(0.25, 0, 0, 1);
 	--theme-t: 2400ms cubic-bezier(0.65, 0, 0.35, 1);
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);

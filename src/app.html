@@ -195,11 +195,11 @@
 					{
 						const g = bloom.getContext('2d');
 						const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-						gr.addColorStop(0.0, 'rgba(255,255,255,0.95)');
-						gr.addColorStop(0.08, 'rgba(235,242,255,0.60)');
-						gr.addColorStop(0.28, 'rgba(195,213,255,0.22)');
-						gr.addColorStop(0.6, 'rgba(170,195,255,0.06)');
-						gr.addColorStop(1.0, 'rgba(170,195,255,0)');
+						gr.addColorStop(0.0, 'rgba(255,244,226,0.95)');
+						gr.addColorStop(0.08, 'rgba(246,232,210,0.60)');
+						gr.addColorStop(0.28, 'rgba(232,206,170,0.22)');
+						gr.addColorStop(0.6, 'rgba(220,190,150,0.06)');
+						gr.addColorStop(1.0, 'rgba(220,190,150,0)');
 						g.fillStyle = gr;
 						g.fillRect(0, 0, 128, 128);
 					}
@@ -256,16 +256,16 @@
 							ctx.closePath();
 							ctx.fillStyle = day
 								? `rgba(255,255,255,${glass.toFixed(3)})`
-								: `rgba(190,206,240,${glass.toFixed(3)})`;
+								: `rgba(226,210,186,${glass.toFixed(3)})`;
 							ctx.fill();
 							if (!day) {
-								ctx.shadowColor = 'rgba(170,195,255,0.35)';
+								ctx.shadowColor = 'rgba(232,200,160,0.35)';
 								ctx.shadowBlur = 4 * dpr;
 							}
 							ctx.lineWidth = 1.1;
 							ctx.strokeStyle = day
 								? `rgba(18,30,48,${(0.55 + lit * 0.3).toFixed(3)})`
-								: `rgba(228,234,250,${(0.66 + lit * 0.3).toFixed(3)})`;
+								: `rgba(244,232,214,${(0.66 + lit * 0.3).toFixed(3)})`;
 							ctx.stroke();
 							ctx.shadowBlur = 0;
 						}
@@ -284,7 +284,7 @@
 							const x = cx + P2[i][0] * S,
 								y = cy + P2[i][1] * S;
 							const k = 1.2 + (1.2 * (P3[i][2] + 2)) / 4;
-							ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,255,255,0.95)';
+							ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,244,226,0.95)';
 							ctx.beginPath();
 							ctx.arc(x, y, k, 0, Math.PI * 2);
 							ctx.fill();
