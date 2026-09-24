@@ -945,6 +945,10 @@ export class Grove {
 		const dW = subjectW / (fw * 2 * tan * this.camera.aspect);
 		const dH = subjectH / (fh * 2 * tan);
 		this.dist = Math.max(dW, dH);
+		// the moon keeps its size against the island: where the island has
+		// to be drawn from further off to fit a narrow screen, the moon is
+		// smaller with it, or on a phone it is a plate over the dome
+		this.sky.uniforms.uMoonS.value = clamp(40 / this.dist, 0.45, 1);
 		this.hv = 2 * this.dist * tan;
 		const [fx, fy] = this.layout === 'side' ? [0.31, 0.5] : [0.5, 0.27];
 		this.moonDir.copy(moonAt(...MOON[this.layout]));

@@ -92,6 +92,7 @@ uniform float uMist;    // how far into the cloud: 0 over it, 1 inside
 uniform float uDrift;   // the mist going by, with the scroll
 uniform float uUnder;   // 0 over the cloud, 1 out of the bottom of it
 uniform float uAlt;     // how far under the cloud's base the eye has come down
+uniform float uMoonS;   // the moon's size, for the screen: less where the island is drawn small
 
 ${ATMO}
 
@@ -497,7 +498,8 @@ void main() {
 		moonVis = overM;
 		// its halo in the damp air
 		float ma = length(d - uMoon);
-		night += vec3(0.5, 0.53, 0.6) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
+		float mas = ma / uMoonS;
+		night += vec3(0.5, 0.53, 0.6) * (exp(-mas * 34.0) * 0.12 + exp(-mas * 6.0) * 0.012) * overM;
 		if (uUnder > 0.001) {
 			Pal P;
 			P.hor = horN * 1.05 + moonAir * 0.3;
@@ -653,6 +655,7 @@ uniform sampler2D uMoonTex;
 uniform vec3 uMoon;
 uniform float uMoonOn;
 uniform vec2 uMoonGain;
+uniform float uMoonS;
 uniform mat4 uProjInv;
 uniform mat4 uCamWorld;
 varying vec2 vUv;
@@ -672,12 +675,13 @@ void main() {
 		vec4 v = uProjInv * vec4(vUv * 2.0 - 1.0, 1.0, 1.0);
 		vec3 d = normalize((uCamWorld * vec4(v.xyz / v.w, 0.0)).xyz);
 		float x = length(d - uMoon);
-		if (x < 0.02) {
+		float R = 0.0165 * uMoonS;
+		if (x < R * 1.25) {
 			float w = max(fwidth(x), 1e-5);
-			float md = 1.0 - smoothstep(0.0165 - w, 0.0165 + w, x);
+			float md = 1.0 - smoothstep(R - w, R + w, x);
 			vec3 mR = normalize(cross(uMoon, vec3(0.0, 1.0, 0.0)));
 			vec3 mU = cross(mR, uMoon);
-			vec2 mp = vec2(dot(d - uMoon, mR), dot(d - uMoon, mU)) / 0.0165;
+			vec2 mp = vec2(dot(d - uMoon, mR), dot(d - uMoon, mU)) / R;
 			// read a little inside the painting's own edge, and with the old
 			// site's brightness(1.28) contrast(1.06): its darkest sea stays
 			// well above the night, so the limb is a clean circle all round
@@ -759,7 +763,8 @@ export function createSky() {
 		uMist: { value: 0 },
 		uDrift: { value: 0 },
 		uUnder: { value: 0 },
-		uAlt: { value: 0.1 }
+		uAlt: { value: 0.1 },
+		uMoonS: { value: 1 }
 	};
 	const mat = new THREE.ShaderMaterial({
 		uniforms,
@@ -803,6 +808,7 @@ export function createSky() {
 				uMoon: uniforms.uMoon,
 				uMoonOn: { value: 0 },
 				uMoonGain: { value: new THREE.Vector2(2.4, 2.2) },
+				uMoonS: uniforms.uMoonS,
 				uProjInv: { value: new THREE.Matrix4() },
 				uCamWorld: { value: new THREE.Matrix4() }
 			},
