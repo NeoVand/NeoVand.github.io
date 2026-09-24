@@ -312,6 +312,8 @@ export class Grove {
 		pitch: number;
 		moved: boolean;
 		t: number;
+		/** the tree it came down on, if it did */
+		tree: Stand | null;
 	} | null = null;
 	private pressed: Stand | null = null;
 	private growth = new Map<Stand, { g: number; to: number; pop: number; popV: number }>();
@@ -1221,19 +1223,9 @@ export class Grove {
 				else this.gramTap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now() };
 				return;
 			}
-			if (hit) {
-				// a touch shakes the crown from where the hand went in, sets
-				// the tree swaying away from it, and anything perched in it is
-				// off; and the hand has hold of it, to bend it
-				this.pressed = hit;
-				const at = this.touchPoint(hit);
-				rustleFrom(at, 1);
-				if (!this.reduced) this.petals.shed(hit, at, 16);
-				this.air.pressed(hit);
-				const sp = this.spring(hit);
-				const away = this.flatDir(this.camera.getWorldDirection(new THREE.Vector3()));
-				sp.vx += away.x * 0.32;
-				sp.vz += away.z * 0.32;
+			if (hit && e.pointerType === 'mouse') {
+				// the hand has hold of the tree, to bend it
+				this.press(hit);
 				this.grab = { tree: hit, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
 				cv.setPointerCapture(e.pointerId);
 				this.wake();
@@ -1249,7 +1241,11 @@ export class Grove {
 				yaw: this.yaw,
 				pitch: this.pitchDragTo,
 				moved: false,
-				t: this.clock
+				t: this.clock,
+				// On a touch screen the crowns are much of the island, and a
+				// finger drawn over one turns and tilts the island like any
+				// other; a tap, no drag, is what shakes the tree.
+				tree: hit
 			};
 			cv.setPointerCapture(e.pointerId);
 			this.wake();
@@ -1294,6 +1290,8 @@ export class Grove {
 					this.onGramophone?.();
 			}
 			if (this.drag?.id === e.pointerId) {
+				if (this.drag.tree && !this.drag.moved && e.type === 'pointerup')
+					this.press(this.drag.tree);
 				this.drag = null;
 				this.spunAt = this.clock;
 				// a hand that had stopped before it let go throws nothing
@@ -1315,6 +1313,21 @@ export class Grove {
 		}) as EventListener;
 		this.on(cv, 'pointerup', up);
 		this.on(cv, 'pointercancel', up);
+	}
+
+	/** a hand in a crown shakes it from where it went in, sets the tree
+	 *  swaying away from it, and anything perched in it is off */
+	private press(hit: Stand) {
+		this.pressed = hit;
+		const at = this.touchPoint(hit);
+		rustleFrom(at, 1);
+		if (!this.reduced) this.petals.shed(hit, at, 16);
+		this.air.pressed(hit);
+		const sp = this.spring(hit);
+		const away = this.flatDir(this.camera.getWorldDirection(new THREE.Vector3()));
+		sp.vx += away.x * 0.32;
+		sp.vz += away.z * 0.32;
+		this.wake();
 	}
 
 	private setPointer(e: PointerEvent) {
