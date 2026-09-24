@@ -149,8 +149,8 @@ Hit marchSea(vec3 d) {
 	SW = swell(d.xz * mix(t0, t1, 0.4), 1.0);
 	// finer where the ray skims the tops, or the far cloud comes out in
 	// terraces
-	int N = de < 0.12 ? 16 : 10;
-	for (int i = 0; i <= 16; i++) {
+	int N = de < 0.12 ? 11 : 7;
+	for (int i = 0; i <= 11; i++) {
 		if (i > N) break;
 		float t = mix(t0, t1, float(i) / float(N));
 		vec2 p = d.xz * t;
@@ -162,7 +162,7 @@ Hit marchSea(vec3 d) {
 			if (i > 0) {
 				// narrow the crossing down between the last two steps
 				float lo = prevT, hi = t;
-				for (int j = 0; j < 4; j++) {
+				for (int j = 0; j < 3; j++) {
 					float mid = 0.5 * (lo + hi);
 					float ym = SEA_B - de * mid;
 					if (ym <= SEA_A * seaH(d.xz * mid, mid / tb)) hi = mid; else lo = mid;

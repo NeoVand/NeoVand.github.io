@@ -261,27 +261,24 @@ b {
 /* ─── Glass ───────────────────────────────────────────────────────────────
    A pane rather than a tinted rectangle: a rim that catches the light on two
    arcs and is compressed along the sides, an inner light along the top
-   edge, and the sky coming through behind. Blur is kept small by night — a
-   star is about one device pixel, and blur kills it quadratically. */
+   edge, and the sky behind it. It is not frosted. A pane that blurs what
+   is behind it is a pass of its own over the live picture, every frame,
+   and a page of them was most of what the browser did each frame: profiled
+   on the M4 Air at its own size, half the frames came late with the cards
+   frosted and almost none without. What is behind them is soft already,
+   sky and cloud; they take a denser tint instead, the pane leant toward the
+   page's own colour. (Only the sheets that open over everything, one at a
+   time, are frosted: the résumé, a detail, the reading room.) */
 .glass {
 	position: relative;
-	background: var(--pane);
-	-webkit-backdrop-filter: blur(var(--blur)) saturate(1.25);
-	backdrop-filter: blur(var(--blur)) saturate(1.25);
+	background: color-mix(in srgb, var(--pane) 64%, var(--bg));
 	box-shadow:
 		inset 0 1px 0 var(--pane-top),
 		inset 0 0 0 1px var(--hair),
 		0 1px 2px var(--cast);
 }
-/* The small panes, pills and chips, are not frosted. Each pane that blurs
-   what is behind it is a pass of its own over the live picture, every
-   frame; a dozen of them together beside the island were what made the
-   scroll past it stutter, and at their size the blur hardly shows. They take
-   a denser tint instead, the pane leant toward the page's own colour. */
 .pill.glass,
 .chip.glass {
-	-webkit-backdrop-filter: none;
-	backdrop-filter: none;
 	background: color-mix(in srgb, var(--pane) 72%, var(--bg));
 }
 .glass::before {

@@ -316,6 +316,9 @@ export class Grove {
 	private lampBase = 0;
 	private glassBase = 0;
 	private frameTimes: number[] = [];
+	/** frame intervals while the page scrolls, and the scale they allow */
+	private scrollTimes: number[] = [];
+	private dprCeil = Infinity;
 	private ray = new THREE.Raycaster();
 	private playing = false;
 	/** a tree in the hand, and every tree's spring */
@@ -389,7 +392,7 @@ export class Grove {
 		this.composer.addPass(new RenderPass(this.scene, this.camera));
 		this.bloom = new BloomEffect({
 			mipmapBlur: true,
-			levels: 6,
+			levels: 5,
 			// only lamps, fireflies and the sun bloom: a lit cloud blooming
 			// is a veil over everything
 			luminanceThreshold: 2.6,
@@ -1330,11 +1333,15 @@ export class Grove {
 		this.wake();
 	}
 
-	// The sky is drawn whole every frame. (It was once drawn half at a time
-	// while the view held still, as a chequer; but anything that moved slowly
-	// through it — the far edge of the cloud as the camera drifts, the moon's
-	// rim — then stepped every other frame, pixel by pixel, and shimmered.)
+	// The sky is the dearest thing in the frame, and at rest it hardly
+	// changes: the cloud drifts less than a pixel a frame. So then it is
+	// drawn whole every other frame, and every frame only while something
+	// moves it: the page, the lights changing over, the moon going. (It was
+	// once drawn half at a time instead, as a chequer; but anything that
+	// moved slowly through it then stepped every other frame, pixel by
+	// pixel, and shimmered.)
 	skyDirty = true;
+	private skyTick = 0;
 	private draw() {
 		this.sky.update(this.renderer);
 		// Where the words stack under it, the island stands high in a tall
@@ -1357,7 +1364,16 @@ export class Grove {
 			this.skyCam.updateMatrixWorld();
 			cam = this.skyCam;
 		}
-		this.sky.render(this.renderer, cam);
+		const moving =
+			this.skyDirty ||
+			this.scrolling ||
+			this.moonT >= 0 ||
+			Math.abs(this.dayMix - this.dayTo) > 1e-4;
+		this.skyTick ^= 1;
+		if (moving || this.skyTick === 0) {
+			this.sky.render(this.renderer, cam);
+			this.skyDirty = false;
+		}
 		this.drawGramMask();
 		this.composer.render();
 	}
@@ -1402,14 +1418,13 @@ export class Grove {
 		r.shadowMap.needsUpdate = keep.shadows;
 	}
 
-	/** Where pixels are small, an edge filter does what multisampling does,
-	 *  for a fraction of what it costs; where they are large, four samples. */
+	/** An edge filter does what multisampling would, for a fraction of what
+	 *  it costs: on a half-float frame, multisampling was a fifth of it. */
 	private setSamples() {
-		const dense = this.dpr >= 1.25;
-		const n = dense ? 0 : Math.min(2, this.renderer.capabilities.maxSamples);
+		const n = 0;
 		if (this.composer.multisampling !== n) this.composer.multisampling = n;
 		if (this.fxaa) {
-			this.fxaa.enabled = dense;
+			this.fxaa.enabled = true;
 			this.fxaa.renderToScreen = false;
 			this.mainPass.renderToScreen = false;
 		}
@@ -1445,7 +1460,7 @@ export class Grove {
 	private sizeSky() {
 		const px = this.W * this.dpr,
 			py = this.H * this.dpr;
-		this.sky.setSize(px, py, lerp(0.8e6, 0.55e6, this.dayMix));
+		this.sky.setSize(px, py, lerp(0.7e6, 0.4e6, this.dayMix));
 		this.skyDirty = true;
 	}
 
@@ -1568,10 +1583,11 @@ export class Grove {
 		// (the light keeps its shadow even when the island is out of sight:
 		// turning it off and on changes every material's program, and each
 		// change is a recompile in the middle of a scroll)
-		// the shadows follow the wind at half the rate the picture does: a
-		// crown's shadow on the lawn moves too slowly for the difference to show,
-		// and the shadow pass draws every tree a second time
-		this.shadowTick = (this.shadowTick + 1) % 2;
+		// the shadows follow the wind a dozen times a second: a crown's soft
+		// shadow on the lawn moves too slowly for the difference to show, and
+		// the shadow pass, which draws every tree a second time, was the
+		// largest single thing in the frame
+		this.shadowTick = (this.shadowTick + 1) % 5;
 		const quick = this.intro.t >= 0 && this.intro.t < this.intro.dur + 1.5;
 		// and while the page scrolls nothing the sun sees moves but leaves in
 		// the wind, which nobody reading can tell from still: they wait
@@ -1703,37 +1719,66 @@ export class Grove {
 
 	/** Hold the frame rate by giving up resolution, and take it back when there is room. */
 	private adapt(ms: number, dt: number) {
-		// never mid-scroll: a change of resolution reallocates every buffer,
-		// and that is a hitch just where the eye is following the motion
-		// and not deep in the page, where the frames are held back on purpose
-		// and not just after it either: the first second or two after a
-		// scroll is heavier than rest (the shadows catching up, pictures
-		// decoding), and judged on it the resolution would drop and then
-		// come back, a hitch and a softening each way
-		if (this.scrolling || !this.world.visible || performance.now() - this.scrolledAt < 2500) {
+		// Frames while the page scrolls are the ones that matter most, and
+		// the dearest: the sky is drawn every frame then, not every other. So
+		// they are counted too, apart, and if they came late the scale comes
+		// down once the page is still, and stays down: judged only at rest it
+		// would climb back to where the next scroll stutters again.
+		if (this.scrolling) {
+			if (this.world.visible) this.scrollTimes.push(dt * 1000);
 			this.frameTimes.length = 0;
 			return;
 		}
+		// Never changed mid-scroll (a change of resolution reallocates every
+		// buffer, a hitch just where the eye follows the motion), nor deep in
+		// the page, where frames are held back on purpose, nor in the first
+		// seconds after a scroll, which run heavy (shadows catching up,
+		// pictures decoding).
+		if (!this.world.visible || performance.now() - this.scrolledAt < 2500) {
+			this.frameTimes.length = 0;
+			return;
+		}
+		if (this.scrollTimes.length >= 40) {
+			const late = this.lateness(this.scrollTimes);
+			this.scrollTimes.length = 0;
+			if (late > 0.08 && this.dpr > 1) {
+				this.dprCeil = Math.max(1, this.dpr - 0.25);
+				this.setScale(this.dprCeil);
+				return;
+			}
+		}
+		this.scrollTimes.length = 0;
 		this.frameTimes.push(dt * 1000);
 		if (this.frameTimes.length < 90) return;
-		// Judged against the display, not against sixty: the shortest usual
-		// interval is its refresh, 8 ms on a 120 Hz screen, and a frame that
-		// takes half again as long has missed one. A few misses are judder
-		// the eye sees the moment the page moves.
 		const s = this.frameTimes.slice().sort((a, b) => a - b);
 		this.frameTimes.length = 0;
 		const tick = s[Math.floor(s.length * 0.1)];
-		const late = s.filter((d) => d > tick * 1.5).length / s.length;
+		const late = this.lateness(s);
+		const top = Math.min(this.dprCap, this.dprCeil);
 		let next = this.dpr;
 		if ((late > 0.12 || tick > 22) && this.dpr > 1) next = Math.max(1, this.dpr - 0.25);
-		else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < this.dprCap)
-			next = Math.min(this.dprCap, this.dpr + 0.25);
-		if (next !== this.dpr) {
-			this.dpr = next;
-			this.setSamples();
-			this.sizeBuffers();
-			this.sizeSky();
-		}
+		else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
+			next = Math.min(top, this.dpr + 0.25);
+		if (next !== this.dpr) this.setScale(next);
+	}
+
+	/**
+	 * How many frames came late. Judged against the display, not against
+	 * sixty: the shortest usual interval is its refresh, 8 ms on a 120 Hz
+	 * screen, and a frame that takes half again as long has missed one. A
+	 * few misses are judder the eye sees the moment the page moves.
+	 */
+	private lateness(times: number[]) {
+		const s = times.slice().sort((a, b) => a - b);
+		const tick = s[Math.floor(s.length * 0.1)];
+		return s.filter((d) => d > tick * 1.5).length / s.length;
+	}
+
+	private setScale(d: number) {
+		this.dpr = d;
+		this.setSamples();
+		this.sizeBuffers();
+		this.sizeSky();
 	}
 
 	/** the scale the picture's buffers are drawn at, for anything sized in their pixels */
