@@ -275,6 +275,13 @@
 			max-width: 40rem;
 			margin: 0 auto;
 			padding: 57svh calc(var(--gutter-r) + 4px) 32px calc(var(--gutter) + 4px);
+			/* its top is the island's: a finger there is for the island (to
+			   turn it, to play the record, to shake a tree), not for the
+			   words below it */
+			pointer-events: none;
+		}
+		.copy > * {
+			pointer-events: auto;
 		}
 		.name {
 			font-size: min(56px, calc((100vw - 60px) / 8.4));

@@ -309,6 +309,17 @@ export class Grove {
 	/** the scale the picture is drawn at, which adapt() trades for time */
 	private dpr = 1;
 	private dprCap = 2;
+	/**
+	 * On a touch screen the picture goes up with the page, as a picture on
+	 * the page would, and is not moved from here at all. A phone scrolls on
+	 * its own compositor, at 120 Hz on the newer ones, and anything moved
+	 * with the scroll from a script (at most sixty times a second, and a
+	 * frame behind) steps against the words beside it however fast it is
+	 * drawn: the island came up the screen in small jumps. Scrolled with
+	 * the page it moves with the words exactly, and once it is out of sight
+	 * nothing is drawn at all.
+	 */
+	private flowing = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 	/** the canvas's own density: the screen's, up to 2 */
 	private native = 1;
 	private present!: PresentPass;
@@ -914,7 +925,9 @@ export class Grove {
 		// little under its own density, which with the multisampling is still
 		// sharp, and holds the frame rate where a ratio would not
 		this.native = Math.min(window.devicePixelRatio || 1, 2);
-		this.dprCap = Math.min(this.native, Math.sqrt(2.4e6 / (w * h)));
+		// (a phone's GPU is a fraction of a laptop's, and shares itself with
+		// the page's scrolling: it gets a third of the pixels)
+		this.dprCap = Math.min(this.native, Math.sqrt((this.flowing ? 0.8e6 : 2.4e6) / (w * h)));
 		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
 		this.dpr = Math.min(this.dpr, this.dprCap);
 		this.renderer.setSize(w, h, false);
@@ -955,7 +968,7 @@ export class Grove {
 		// words on a fast swipe and went on sliding a moment after they had
 		// stopped, a small second move when everything should be still.
 		this.scrollSmooth = this.scroll;
-		const p = clamp(this.scrollSmooth / H, 0, 2.4);
+		const p = this.flowing ? 0 : clamp(this.scrollSmooth / H, 0, 2.4);
 		// the entrance (see begin): the turn and the drift in eased both ways,
 		// the rise eased out, quick off the mark and slow into its place
 		let k = 1,
@@ -1017,6 +1030,14 @@ export class Grove {
 	 */
 	private descend() {
 		const u = this.sky.uniforms;
+		if (this.flowing) {
+			// the picture goes with the page: nothing in it moves with the scroll
+			this.skyTip = 0;
+			u.uEye.value = 1;
+			u.uMist.value = 0;
+			u.uUnder.value = 0;
+			return;
+		}
 		const all = this.scrollSmooth / this.H;
 		const deg = THREE.MathUtils.degToRad;
 		// down toward the sea, and then, hidden in the cloud, level again and
@@ -1193,7 +1214,12 @@ export class Grove {
 	}
 
 	private setPointer(e: PointerEvent) {
-		this.pointerNdc.set((e.clientX / this.W) * 2 - 1, -(e.clientY / this.H) * 2 + 1);
+		// from the canvas's own corner, which on a phone scrolls with the page
+		const r = this.renderer.domElement.getBoundingClientRect();
+		this.pointerNdc.set(
+			((e.clientX - r.left) / this.W) * 2 - 1,
+			-((e.clientY - r.top) / this.H) * 2 + 1
+		);
 	}
 
 	/** What is under the pointer: the machine, a tree, or nothing. */
@@ -1460,7 +1486,7 @@ export class Grove {
 	private sizeSky() {
 		const px = this.W * this.dpr,
 			py = this.H * this.dpr;
-		this.sky.setSize(px, py, lerp(0.7e6, 0.4e6, this.dayMix));
+		this.sky.setSize(px, py, lerp(0.7e6, 0.4e6, this.dayMix) * (this.flowing ? 0.5 : 1));
 		this.skyDirty = true;
 	}
 
@@ -1499,6 +1525,11 @@ export class Grove {
 
 	private frame_ = (now: number) => {
 		if (!this.running) return;
+		// scrolled out of sight with the page: rest until it comes back
+		if (this.flowing && this.scroll > this.H) {
+			this.running = false;
+			return;
+		}
 		this.raf = requestAnimationFrame(this.frame_);
 		// Deep in the page there is only sky, drifting, and every pane of glass
 		// over it has to blur it again each time it changes: at rest there it

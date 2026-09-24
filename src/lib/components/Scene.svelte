@@ -147,6 +147,18 @@
 		-webkit-tap-highlight-color: transparent;
 		background: var(--bg);
 	}
+	/* On a touch screen the picture is part of the page and goes up with it
+	   (see the engine's flowing), fading at its foot into the page's own
+	   colour. */
+	@media (pointer: coarse) {
+		.scene {
+			position: absolute;
+			inset: 0 0 auto 0;
+			width: 100%;
+			-webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+			mask-image: linear-gradient(to bottom, #000 72%, transparent);
+		}
+	}
 	.hud {
 		position: fixed;
 		left: 8px;
