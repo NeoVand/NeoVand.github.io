@@ -1254,6 +1254,34 @@ export class Grove {
 			cv.setPointerCapture(e.pointerId);
 			this.wake();
 		}) as EventListener);
+		// A finger on the island itself has hold of it, to turn it and to tilt
+		// it, up and down as well as across; anywhere else, the sky round it
+		// or the words, a finger scrolls the page as it always does. It has to
+		// be settled as the touch begins: a page once scrolling is not taken
+		// back. (The gramophone is left alone, a tap being all it wants.)
+		let held = false;
+		this.on(
+			cv,
+			'touchstart',
+			((e: TouchEvent) => {
+				held = false;
+				if (e.touches.length !== 1) return;
+				const t = e.touches[0];
+				this.pointAt(t.clientX, t.clientY);
+				if (this.pick() === 'gramophone' || !this.onIsland()) return;
+				held = true;
+				if (e.cancelable) e.preventDefault();
+			}) as EventListener,
+			{ passive: false }
+		);
+		this.on(
+			cv,
+			'touchmove',
+			((e: TouchEvent) => {
+				if (held && e.cancelable) e.preventDefault();
+			}) as EventListener,
+			{ passive: false }
+		);
 		const up = ((e: PointerEvent) => {
 			const tap = this.gramTap;
 			if (tap?.id === e.pointerId) {
@@ -1290,12 +1318,53 @@ export class Grove {
 	}
 
 	private setPointer(e: PointerEvent) {
+		this.pointAt(e.clientX, e.clientY);
+	}
+
+	private pointAt(x: number, y: number) {
 		// from the canvas's own corner, which on a phone scrolls with the page
 		const r = this.renderer.domElement.getBoundingClientRect();
-		this.pointerNdc.set(
-			((e.clientX - r.left) / this.W) * 2 - 1,
-			-((e.clientY - r.top) / this.H) * 2 + 1
-		);
+		this.pointerNdc.set(((x - r.left) / this.W) * 2 - 1, -((y - r.top) / this.H) * 2 + 1);
+	}
+
+	/**
+	 * Is the pointer on the island: its rock, its wall and lawn, a tree, or
+	 * the rotunda? The island's own surfaces are few enough to be asked
+	 * outright (this is once, as a finger comes down); a tree is its crown
+	 * and its trunk; and the rotunda is taken as a drum as wide as
+	 * its dome and as high as its finial.
+	 */
+	private onIsland() {
+		this.ray.setFromCamera(this.pointerNdc, this.camera);
+		if (this.ray.intersectObject(this.island.group, true).length) return true;
+		const ray = this.ray.ray;
+		const base = new THREE.Vector3(),
+			e = new THREE.Ray();
+		for (const t of this.trees) {
+			// the crown, as wide as it reaches and as high as the tree: a ball
+			// squashed to that, and the ray squashed with it
+			const rh = t.crownR * 0.85,
+				k = rh / Math.max(t.height - t.crown.y, 1);
+			e.origin.subVectors(ray.origin, t.crown).setY((ray.origin.y - t.crown.y) * k);
+			e.direction.set(ray.direction.x, ray.direction.y * k, ray.direction.z).normalize();
+			if (e.distanceSqToPoint(base.set(0, 0, 0)) < rh * rh) return true;
+			const p = t.items[0].pos;
+			if (ray.distanceSqToSegment(base.set(p.x, 0.3, p.z), t.crown) < 0.45 ** 2) return true;
+		}
+		const { origin: o, direction: d } = ray;
+		const pv = this.pavilion;
+		const mid = -(o.x * d.x + o.z * d.z) / Math.max(d.x * d.x + d.z * d.z, 1e-6);
+		for (let i = -20; i <= 20; i++) {
+			const s = mid + i * 0.2;
+			const y = o.y + d.y * s;
+			if (
+				y > pv.floorY - 0.4 &&
+				y < pv.crown.y + 0.2 &&
+				Math.hypot(o.x + d.x * s, o.z + d.z * s) < pv.dome.r + 0.3
+			)
+				return true;
+		}
+		return false;
 	}
 
 	/** What is under the pointer: the machine, a tree, or nothing. */
@@ -1694,7 +1763,7 @@ export class Grove {
 		if (!this.drag) this.pitchDragTo = damp(this.pitchDragTo, 0, this.reduced ? 20 : 0.9, dt);
 		this.pitchDrag = damp(this.pitchDrag, this.pitchDragTo, 12, dt);
 		// Turned, the island startles what sits on it: the birds go up and
-		// hold their places in the air until it is still. And the air goes
+		// circle over it until it is still. And the air goes
 		// through the trees a little harder while it turns.
 		const spinning = !!this.drag?.moved || Math.abs(this.yawVel) > 0.35;
 		// (a hand's turn, or its throw; not the island's own slow way home)

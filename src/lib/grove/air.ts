@@ -16,9 +16,9 @@ import { rng, clamp, damp, lerp, smoothstep } from './rng';
 // how far it has come out of the air onto the branch, and everything is
 // read off it — the wings running out of the beat into the spread it brakes
 // on and down onto its back, the body swinging from its heading to the
-// small backward lean of a bird on a branch. The flight is a bounding one,
-// a burst of flapping and then the wings shut while it arcs, which is what a
-// small bird actually does. A perched bird is drawn from its twig, through
+// small backward lean of a bird on a branch. On the wing a dove beats in
+// runs of a few strokes and glides between them on wings held up in a
+// shallow V, and it leans into its turns. A perched bird is drawn from its twig, through
 // the same wind field that bends the twig, so the two move as one.
 
 type Site =
@@ -35,7 +35,7 @@ const wrap = (a: number) => a - Math.PI * 2 * Math.round(a / (Math.PI * 2));
 interface Creature {
 	id: number;
 	party: number;
-	state: 'away' | 'perch' | 'fly' | 'hover';
+	state: 'away' | 'perch' | 'fly' | 'wheel';
 	site: Site | null;
 	pos: THREE.Vector3;
 	vel: THREE.Vector3;
@@ -83,9 +83,44 @@ interface Creature {
 	/** the wings, while it stands */
 	wf: number;
 	wo: number;
-	/** started up off the turning island: its place in the air, and the perch it left */
-	hover: { base: THREE.Vector3; yaw0: number; ph: number } | null;
+	/** started up off the turning island: circling in the open air, and the perch it left */
+	wheel: Wheel | null;
 	home: Site | null;
+	/** a moment yet before it goes up with the rest (-1: not going) */
+	goIn: number;
+	/** leaning into a turn */
+	bank: number;
+	/** the wingbeat: where in the stroke, how hard, whether it is beating
+	 *  or gliding, and for how much longer */
+	wp: number;
+	amp: number;
+	beating: boolean;
+	wT: number;
+}
+
+/**
+ * A bird circling over the island. It is in the air, not on the island, so
+ * it is kept in the air's frame (which the eye's turn carries round) and
+ * the island goes round under it when it is turned.
+ */
+interface Wheel {
+	/** where it is and how it is going, in the air */
+	q: THREE.Vector3;
+	w: THREE.Vector3;
+	/** its heading in the air, turned toward the way it goes */
+	ah: number;
+	/** its own ring: how wide, how high, its sway, its place in the flock, its speed */
+	r: number;
+	h: number;
+	ph: number;
+	off: number;
+	v: number;
+	/** how long it has been up, the least it stays, how long the island has
+	 *  been still, and how long it lets it be still before it thinks of coming down */
+	t: number;
+	stay: number;
+	calm: number;
+	linger: number;
 }
 
 const N = 24;
@@ -194,6 +229,8 @@ export class Air {
 	/** the eye's turn about the island, and whether the island is being turned */
 	private yaw = 0;
 	private spinning = false;
+	/** the flock circling, where its middle is on the ring, and which way round */
+	private flock = { phi: 0, dir: 1 };
 	/** each firefly's patch of air, where it is going, and its flashing */
 	private ff: {
 		home: THREE.Vector3;
@@ -362,8 +399,14 @@ export class Air {
 				bob: 0,
 				wf: 0,
 				wo: 1,
-				hover: null,
-				home: null
+				wheel: null,
+				home: null,
+				goIn: -1,
+				bank: 0,
+				wp: this.r() * 6,
+				amp: 0,
+				beating: false,
+				wT: 0
 			});
 		}
 		for (let i = 0; i < N; i++) {
@@ -573,7 +616,15 @@ export class Air {
 
 	// ── flights ───────────────────────────────────────────────────────────
 	private fly(cr: Creature, to: Site, delay = 0) {
-		cr.hover = null;
+		// already on the wing, it goes at once, on from the way it was going
+		const onWing = cr.state === 'wheel' || (cr.state === 'fly' && !cr.hop && cr.ft >= 0);
+		if (onWing) delay = 0;
+		else {
+			cr.beating = true;
+			cr.wT = lerp(0.45, 1, this.r());
+		}
+		cr.wheel = null;
+		cr.goIn = -1;
 		cr.site = to;
 		cr.from.copy(cr.pos);
 		const end = this.sitePos(to, this.tmp);
@@ -589,6 +640,9 @@ export class Air {
 			.lerp(end, 0.75)
 			.add(this.tmp2.set(0, up * 0.35, 0));
 		cr.fdur = clamp(d / lerp(4.2, 5.4, this.r()), 0.7, 4.5);
+		const sp = cr.vel.length();
+		if (onWing && sp > 0.5)
+			cr.c1.copy(cr.from).addScaledVector(cr.vel, Math.min((sp * cr.fdur) / 3, d * 0.45) / sp);
 		cr.ft = -delay;
 		cr.state = 'fly';
 		this.route(cr, end.clone());
@@ -803,43 +857,167 @@ export class Air {
 	}
 
 	/**
-	 * The island is turned under them: the birds on it start up and hold
-	 * their places in the air, as birds would over a thing going round
-	 * beneath them, circling a little, until it is still again; then they
-	 * come back down, most to the perch they left.
+	 * The island is turned under them: most of the birds on it start up
+	 * together, clattering, and go round over it in a loose ring, as doves
+	 * do over a roof when something has put them up: gathering into a flock
+	 * as they go, the island turning under them, until it is still again
+	 * and each, as its perch comes round, drops out of the ring onto it.
 	 */
 	startle() {
 		if (!this.started || this.grove.reduced) return;
+		const wheeling = this.c.some((cr) => cr.state === 'wheel');
+		let sx = 0,
+			sz = 0;
 		for (const cr of this.c) {
-			if (cr.state !== 'perch' || !cr.site || this.r() > 0.85) continue;
-			const home = cr.site;
-			const out = this.tmp.set(cr.pos.x, 0, cr.pos.z);
-			const len = out.length();
-			if (len > 1e-3) out.multiplyScalar(1 / len);
-			else out.set(0, 0, 1);
-			const base = cr.pos.clone().addScaledVector(out, lerp(0.3, 1.2, this.r()));
-			base.y += lerp(1.2, 2.4, this.r());
-			this.fly(cr, { kind: 'point', p: base.clone(), group: 'hover' }, this.r() * 0.25);
-			cr.hover = { base, yaw0: this.yaw, ph: this.r() * Math.PI * 2 };
-			cr.home = home;
+			if (cr.state !== 'perch' || !cr.site || cr.goIn >= 0 || this.r() > 0.85) continue;
+			// not all at once: one goes and the rest go with it
+			cr.goIn = this.r() * this.r() * 0.45;
+			const q = this.toAir(cr.pos, this.tmp);
+			const a = Math.atan2(q.z, q.x);
+			sx += Math.cos(a);
+			sz += Math.sin(a);
+		}
+		// a new flock gathers about where most of them were, and goes round
+		// one way or the other
+		if (!wheeling && (sx || sz)) {
+			this.flock.phi = Math.atan2(sz, sx);
+			this.flock.dir = this.r() < 0.5 ? 1 : -1;
 		}
 	}
 
-	/** where a bird holding its place in the air is, in the island's frame, now */
-	private hoverAt(cr: Creature, out: THREE.Vector3) {
-		const h = cr.hover!;
-		const a = this.yaw - h.yaw0;
-		const th = h.ph + U.uTime.value * 1.3;
-		const bx = h.base.x + Math.cos(th) * 0.22,
-			bz = h.base.z + Math.sin(th) * 0.22;
-		const c = Math.cos(a),
-			sn = Math.sin(a);
-		return out.set(bx * c + bz * sn, h.base.y + Math.sin(th * 0.7) * 0.06, -bx * sn + bz * c);
+	/** a point on the island, in the air's frame (which the island turns under) */
+	private toAir(p: THREE.Vector3, out: THREE.Vector3) {
+		const c = Math.cos(this.yaw),
+			sn = Math.sin(this.yaw);
+		return out.set(p.x * c - p.z * sn, p.y, p.x * sn + p.z * c);
+	}
+
+	/** and a point in the air, where it is over the island now */
+	private fromAir(q: THREE.Vector3, out: THREE.Vector3) {
+		const c = Math.cos(this.yaw),
+			sn = Math.sin(this.yaw);
+		return out.set(q.x * c + q.z * sn, q.y, -q.x * sn + q.z * c);
+	}
+
+	/** Up off the perch: steeply, beating hard, out and up toward the ring. */
+	private takeOff(cr: Creature) {
+		const r = this.r;
+		const q = this.toAir(cr.pos, new THREE.Vector3());
+		const rq = Math.hypot(q.x, q.z);
+		const ox = rq > 1e-3 ? q.x / rq : 0,
+			oz = rq > 1e-3 ? q.z / rq : 1;
+		const ah = cr.yaw - this.yaw;
+		cr.home = cr.site;
+		cr.wheel = {
+			q,
+			// a leap: up, and out, and on the way it was facing
+			w: new THREE.Vector3(ox * 1.3 + Math.sin(ah) * 1.1, 3.2, oz * 1.3 + Math.cos(ah) * 1.1),
+			ah,
+			// about the heads of the trees, out beyond the cypresses
+			r: lerp(7, 8.6, r()),
+			h: lerp(6.4, 7.6, r()),
+			ph: r() * Math.PI * 2,
+			off: (r() - 0.5) * 1.1,
+			v: lerp(4.6, 5.6, r()),
+			t: 0,
+			stay: lerp(3.5, 6.5, r()),
+			calm: 0,
+			linger: lerp(0.4, 2.6, r())
+		};
+		cr.state = 'wheel';
+		cr.goIn = -1;
+		cr.act = 'idle';
+		cr.hop = false;
+		cr.hopTo = null;
+		cr.beating = true;
+		cr.wT = lerp(0.9, 1.4, r());
+	}
+
+	/**
+	 * Going round. It is steered, not laid out: it makes for a point a
+	 * little ahead of it on its ring, turning and speeding up only as fast
+	 * as a bird can, and banks into the turn. Its ring breathes, wider and
+	 * narrower, higher and lower, on slow swells of its own; and the flock
+	 * draws together as it goes, those behind their place in it pressing
+	 * on, those ahead easing off. Once the island has been still a while it
+	 * waits for its perch to come round ahead, and drops out onto it.
+	 */
+	private wheelOn(cr: Creature, dt: number, time: number) {
+		const W = cr.wheel!;
+		const F = this.flock;
+		W.t += dt;
+		W.calm = this.spinning ? 0 : W.calm + dt;
+		const q = W.q,
+			w = W.w;
+		const th = Math.atan2(q.z, q.x);
+		const R = W.r + Math.sin(time * 0.37 + W.ph) * 0.45;
+		const H = W.h + Math.sin(time * 0.29 + W.ph * 1.7) * 0.3;
+		const phi = th + F.dir * 0.42;
+		const behind = wrap(F.phi + W.off - th) * F.dir;
+		const v = W.v * (1 + clamp(behind * 0.5, -0.25, 0.45));
+		const steer = this.tmp.set(R * Math.cos(phi) - q.x, H - q.y, R * Math.sin(phi) - q.z);
+		steer.setLength(v).sub(w);
+		const most = 9 * dt;
+		if (steer.lengthSq() > most * most) steer.setLength(most);
+		w.add(steer);
+		// never into the building, nor through a crown: out and up from
+		// anything just ahead of it
+		const ahead = this.tmp.copy(q).addScaledVector(w, 0.45);
+		for (const t of this.grove.trees) {
+			const c = this.toAir(t.crown, this.tmp2);
+			const dx = ahead.x - c.x,
+				dy = ahead.y - c.y,
+				dz = ahead.z - c.z;
+			const d = Math.hypot(dx, dy, dz),
+				rr = t.crownR * 0.85 + 0.5;
+			if (d < rr && d > 1e-3) {
+				w.x += (dx / d) * 12 * dt;
+				w.y += (dy / d + 0.6) * 12 * dt;
+				w.z += (dz / d) * 12 * dt;
+			}
+		}
+		if (this.inBuilding(this.fromAir(ahead, this.tmp), 0.3)) {
+			const rq = Math.max(Math.hypot(q.x, q.z), 1e-3);
+			w.x += (q.x / rq) * 14 * dt;
+			w.z += (q.z / rq) * 14 * dt;
+			w.y += 10 * dt;
+		}
+		q.addScaledVector(w, dt);
+		// facing the way it goes, turned into it a moment behind (slower
+		// while it is still lifting off), and leaning into the turn as far as
+		// its speed and the turn's tightness ask
+		const hv = Math.hypot(w.x, w.z);
+		const was = W.ah;
+		const up = smoothstep(0, 0.6, W.t);
+		if (hv > 0.3) W.ah += wrap(Math.atan2(w.x, w.z) - W.ah) * (1 - Math.exp(-lerp(4, 10, up) * dt));
+		const turn = (W.ah - was) / Math.max(dt, 1e-3);
+		const lean = clamp(-Math.atan((hv * turn) / 9.8) * 1.05, -0.6, 0.6);
+		cr.bank = damp(cr.bank, lean * up, 5, dt);
+		const prev = this.tmp2.copy(cr.pos);
+		this.fromAir(q, cr.pos);
+		cr.vel.subVectors(cr.pos, prev).divideScalar(Math.max(dt, 1e-3));
+		cr.yaw = W.ah + this.yaw;
+		cr.pose = damp(cr.pose, 0, 7, dt);
+		if (W.t < W.stay || W.calm < W.linger) return;
+		// down: to where it was, if that is still there and free
+		const home = cr.home;
+		const to =
+			home && this.standing(home) && !(home.kind === 'point' && this.crowded(home.p, cr))
+				? home
+				: this.pickSite(cr);
+		const hq = this.toAir(this.sitePos(to, this.tmp), this.tmp);
+		const lead = wrap(Math.atan2(hq.z, hq.x) - th) * F.dir;
+		if (Math.hypot(hq.x, hq.z) < 3 || (lead > 0.25 && lead < 2.3) || W.calm > W.linger + 9) {
+			cr.home = null;
+			this.fly(cr, to, 0);
+		}
 	}
 
 	/** A tree is grabbed: everyone on it is off, some to the building. */
 	pressed(t: TreeHandles) {
-		const onIt = this.c.filter((cr) => cr.site?.kind === 'twig' && cr.site.tree === t);
+		const onIt = this.c.filter(
+			(cr) => cr.state !== 'wheel' && cr.site?.kind === 'twig' && cr.site.tree === t
+		);
 		if (!onIt.length) return;
 		const others = this.grove.trees.filter((o) => o !== t && !this.partyTree.includes(o));
 		const next =
@@ -1148,9 +1326,13 @@ export class Air {
 			right = new THREE.Vector3();
 
 		let anyBird = false;
+		// the middle of the flock goes round at the pace of a bird on the ring
+		if (this.c.some((cr) => cr.state === 'wheel')) this.flock.phi += this.flock.dir * 0.69 * dt;
 		for (const cr of this.c) {
-			// a place in the air moves, in the island's frame, as the island turns
-			if (cr.hover && cr.site?.kind === 'point') this.hoverAt(cr, cr.site.p);
+			if (cr.state === 'perch' && cr.goIn >= 0) {
+				cr.goIn -= dt;
+				if (cr.goIn < 0) this.takeOff(cr);
+			}
 			if (cr.state === 'fly') {
 				cr.ft += dt;
 				if (cr.ft < 0) {
@@ -1165,25 +1347,32 @@ export class Air {
 					this.bezier(cr, t, cr.pos);
 					cr.vel.subVectors(cr.pos, prev).divideScalar(Math.max(dt, 1e-3));
 					const away = cr.site?.kind === 'point' && cr.site.group === 'away';
-					const aloft = away || (cr.site?.kind === 'point' && cr.site.group === 'hover');
 					if (cr.hop) {
 						// barely off its feet, and round on the way
 						cr.yaw = lerp(cr.yawFrom, cr.yawTo, smoothstep(0, 1, t));
 						cr.pose = 1 - 0.4 * Math.sin(Math.PI * t);
 					} else {
-						if (cr.vel.lengthSq() > 1e-4) cr.yaw = Math.atan2(cr.vel.x, cr.vel.z);
-						// the last third of a second: reach for the branch
+						// turned toward the way it goes a moment behind, never
+						// snapped round, and leaning into the turn
+						const hv = Math.hypot(cr.vel.x, cr.vel.z);
+						const was = cr.yaw;
+						if (hv > 0.2)
+							cr.yaw += wrap(Math.atan2(cr.vel.x, cr.vel.z) - cr.yaw) * (1 - Math.exp(-12 * dt));
+						const turn = (cr.yaw - was) / Math.max(dt, 1e-3);
+						const lean = clamp(-Math.atan((hv * turn) / 9.8) * 1.05, -0.6, 0.6);
+						cr.bank = damp(cr.bank, lean * (1 - cr.pose), 6, dt);
+						// the last third of a second: reach for the branch. Off it,
+						// the body comes out of its perch over a moment.
 						const left = (1 - t) * cr.fdur;
-						cr.pose = aloft ? 0 : smoothstep(0.45, 0.0, left);
+						const pose = away ? 0 : smoothstep(0.45, 0.0, left);
+						cr.pose = pose > cr.pose ? pose : damp(cr.pose, pose, 8, dt);
 					}
 					if (t >= 1 && away) {
 						cr.state = 'away';
 						cr.site = null;
-					} else if (t >= 1 && aloft) {
-						cr.state = 'hover';
-						cr.timer = lerp(0.6, 1.4, this.r());
 					} else if (t >= 1) {
 						cr.state = 'perch';
+						cr.bank = 0;
 						cr.act = 'idle';
 						cr.actT = 0;
 						if (cr.hop) {
@@ -1198,23 +1387,8 @@ export class Air {
 						cr.stepT = 0;
 					}
 				}
-			} else if (cr.state === 'hover' && cr.site && cr.hover) {
-				// holding its place in the air, circling a little, facing the way
-				// it goes there, until the island under it is still
-				this.sitePos(cr.site, cr.pos);
-				const th = cr.hover.ph + U.uTime.value * 1.3;
-				cr.yaw = Math.atan2(-Math.sin(th), Math.cos(th)) + (this.yaw - cr.hover.yaw0);
-				cr.pose = damp(cr.pose, 0, 6, dt);
-				cr.timer -= dt;
-				if (!this.spinning && cr.timer < 0) {
-					const home = cr.home;
-					const back =
-						home && this.standing(home) && !(home.kind === 'point' && this.crowded(home.p, cr))
-							? home
-							: this.pickSite(cr);
-					cr.home = null;
-					this.fly(cr, back, this.r() * 0.9);
-				}
+			} else if (cr.state === 'wheel' && cr.wheel) {
+				this.wheelOn(cr, dt, time);
 			} else if (cr.state === 'perch' && cr.site) {
 				cr.pose = damp(cr.pose, 1, 6, dt);
 				cr.vel.set(0, 0, 0);
@@ -1230,37 +1404,48 @@ export class Air {
 				cr.hp = damp(cr.hp, 0, 12, dt);
 				cr.hz = 0;
 				cr.lean = damp(cr.lean, 0.28, 8, dt);
-				cr.roll = 0;
+				cr.roll = cr.state === 'away' ? 0 : cr.bank;
 				cr.bob = 0;
 			}
 			head[cr.id * 3] = cr.hy;
 			head[cr.id * 3 + 1] = cr.hp;
 			head[cr.id * 3 + 2] = cr.hz;
 
-			// wings: a burst of beats, then shut while it arcs
+			// Wings. A run of steady strokes, three to six, then a glide on
+			// them held up in a shallow V, and strokes again: longer runs and
+			// quicker ones going up, glides coming down. It eases into a run
+			// and out of it, never switched from one to the other.
 			const flying = 1 - cr.pose;
 			cr.phase += dt;
-			const cycle = cr.phase % 0.62;
-			const burst = cycle < 0.36 ? 1 : 0;
-			const beat = Math.sin(cr.phase * Math.PI * 2 * 11) * 0.95;
-			const glide = -0.1;
-			let flap = burst ? beat : glide;
-			let fold = burst ? 0 : 0.75;
+			const aloft = cr.state === 'wheel' || (cr.state === 'fly' && !cr.hop && cr.ft >= 0);
+			if (aloft) {
+				const climbing = cr.vel.y > 0.8;
+				cr.wT -= dt;
+				if (cr.wT < 0) {
+					cr.beating = !cr.beating || climbing;
+					cr.wT = cr.beating ? lerp(3, 6, this.r()) / 6 : lerp(0.7, 2, this.r());
+				} else if (climbing && !cr.beating) {
+					cr.beating = true;
+					cr.wT = lerp(0.5, 0.9, this.r());
+				}
+				const up = cr.wheel && cr.wheel.t < 1.2;
+				cr.wp += Math.PI * 2 * (up ? 7 : lerp(5.4, 6.4, cr.tone)) * dt;
+			}
+			cr.amp = damp(cr.amp, aloft && cr.beating ? 1 : 0, 9, dt);
+			let flap = lerp(0.3, 0.12 + Math.sin(cr.wp) * 0.85, cr.amp);
+			let fold = 0;
 			// landing: wings up into the brake, then down onto the back
 			const brake = smoothstep(0.0, 0.5, cr.pose) * (1 - smoothstep(0.6, 1.0, cr.pose));
 			flap = lerp(flap, 0.7, brake);
 			fold = lerp(fold, 0, brake);
 			flap = lerp(flap, 0, cr.pose);
 			fold = lerp(fold, 1, smoothstep(0.7, 1.0, cr.pose));
-			if (cr.state === 'away' || cr.ft < 0) {
+			if (cr.state === 'away' || (cr.state === 'fly' && cr.ft < 0)) {
 				flap = 0;
 				fold = 1;
 			}
 			flap *= flying > 0.02 ? 1 : 0;
-			if (cr.state === 'hover') {
-				flap = Math.sin(cr.phase * Math.PI * 2 * 8) * 0.9;
-				fold = 0;
-			} else if (cr.hop && cr.state === 'fly') {
+			if (cr.hop && cr.state === 'fly') {
 				// half open, and a beat or two
 				const e = Math.sin(Math.PI * clamp(cr.ft / cr.fdur, 0, 1));
 				fold = 1 - 0.9 * e;
@@ -1274,7 +1459,8 @@ export class Air {
 
 			// the body: along its heading in the air, leaning back on a branch
 			fwd.set(Math.sin(cr.yaw), 0, Math.cos(cr.yaw));
-			const climb = cr.state === 'fly' ? clamp(cr.vel.y / 6, -0.5, 0.5) : 0;
+			const climb =
+				cr.state === 'fly' || cr.state === 'wheel' ? clamp(cr.vel.y / 6, -0.5, 0.65) : 0;
 			fwd.y = lerp(climb, cr.lean, cr.pose);
 			fwd.normalize();
 			right.crossVectors(upv, fwd).normalize();

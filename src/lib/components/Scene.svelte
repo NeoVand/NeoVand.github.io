@@ -143,7 +143,8 @@
 		height: 100lvh;
 		z-index: 0;
 		display: block;
-		/* horizontal drags turn the island; vertical ones scroll the page */
+		/* horizontal drags turn the island; vertical ones scroll the page, but
+		   for those begun on the island itself, which tilt it (see the engine) */
 		touch-action: pan-y;
 		-webkit-tap-highlight-color: transparent;
 		background: var(--bg);
