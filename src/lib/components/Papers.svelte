@@ -91,11 +91,11 @@
 			drop-shadow(0 10px 18px rgba(30, 30, 50, 0.2));
 		filter: brightness(calc(1 - var(--i) * 0.04)) var(--sh);
 	}
-	.deck:hover .fan,
+	:global(:root:not(.scroll-still)) .deck:hover .fan,
 	.deck:focus-visible .fan {
 		--fan: 10deg;
 	}
-	.deck:global(.no-hover):hover .fan {
+	:global(:root:not(.scroll-still)) .deck:global(.no-hover):hover .fan {
 		--fan: 5.5deg;
 	}
 	.meta {

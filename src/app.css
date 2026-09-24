@@ -36,7 +36,7 @@
 @property --bg {
 	syntax: '<color>';
 	inherits: true;
-	initial-value: #0b1328;
+	initial-value: #0b0e16;
 }
 @property --title {
 	syntax: '<color>';
@@ -120,20 +120,20 @@
    grows wider with its weight, and every line on the page rewrapped as the
    light changed. */
 :root {
-	--bg: #0b1328;
+	--bg: #0b0e16;
 	--title: #fff;
 	--text: #e3e3e5;
 	--muted: #9a9ca3;
 	--faint: #6b6e75;
 	--hair: rgba(255, 255, 255, 0.09);
-	--pane: rgba(16, 24, 52, 0.38);
-	--pane-2: rgba(40, 52, 92, 0.5);
+	--pane: rgba(21, 24, 34, 0.42);
+	--pane-2: rgba(46, 50, 64, 0.52);
 	--pane-edge: rgba(255, 255, 255, 0.2);
 	--pane-top: rgba(255, 255, 255, 0.1);
 	--blur: 16px;
 	/* the résumé's sheet and the panels over the page: denser than a card */
-	--sheet: rgba(11, 19, 40, 0.72);
-	--sheet-2: rgba(11, 19, 40, 0.78);
+	--sheet: rgba(13, 15, 22, 0.76);
+	--sheet-2: rgba(13, 15, 22, 0.82);
 	--frost-sat: 1.2;
 	--cast: rgba(0, 0, 0, 0.35);
 	--copper: #d9b8a2;
@@ -396,11 +396,11 @@ b {
 		transform 900ms var(--ease-out);
 }
 @media (hover: hover) {
-	.card-ring:hover::after {
+	:root:not(.scroll-still) .card-ring:hover::after {
 		opacity: 1;
 	}
-	.card-ring:hover .thumb img,
-	.card-ring:hover .thumb video {
+	:root:not(.scroll-still) .card-ring:hover .thumb img,
+	:root:not(.scroll-still) .card-ring:hover .thumb video {
 		transform: scale(1.045);
 	}
 }

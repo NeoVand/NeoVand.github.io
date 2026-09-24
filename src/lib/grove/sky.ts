@@ -454,8 +454,9 @@ void main() {
 		// table (one bounce) does not carry: so the night's air is drawn, not
 		// computed — indigo overhead, a paler band low down, the moon's glow.
 		vec3 night;
-		vec3 zenN = vec3(0.0042, 0.0068, 0.022);
-		vec3 horN = vec3(0.019, 0.024, 0.05);
+		// nearly black, with only a little of the moon's blue in it
+		vec3 zenN = vec3(0.0034, 0.0044, 0.0092);
+		vec3 horN = vec3(0.0135, 0.0158, 0.025);
 		float mu = dot(d, uMoon);
 		vec3 moonAir = uMoonLight * (phaseHG(mu, 0.8) * 0.35 + phaseR(mu) * 0.12) * 0.05;
 		vec3 amb = zenN * 1.7 + horN * 0.35;
@@ -468,7 +469,7 @@ void main() {
 			float band = exp(-pow(dot(d, bandN) * 3.2, 2.0));
 			band *= 0.35 + 0.65 * textureGrad(uCloud, d.xz * 0.9 + d.y * 0.3, rX * 0.01, rY * 0.01).b;
 			float fade = smoothstep(0.0, 0.14, e) * (1.0 - hc * 0.9);
-			night += band * vec3(0.010, 0.012, 0.022) * fade;
+			night += band * vec3(0.0085, 0.0095, 0.0135) * fade;
 			night += starField(p, t, band) * fade * uStars * 0.9;
 			night += meteor(vec2(az, el), t, 0.0) * uStars * fade;
 			if (hc > 0.0) {
@@ -496,7 +497,7 @@ void main() {
 		moonVis = overM;
 		// its halo in the damp air
 		float ma = length(d - uMoon);
-		night += vec3(0.5, 0.56, 0.72) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
+		night += vec3(0.5, 0.53, 0.6) * (exp(-ma * 34.0) * 0.12 + exp(-ma * 6.0) * 0.012) * overM;
 		if (uUnder > 0.001) {
 			Pal P;
 			P.hor = horN * 1.05 + moonAir * 0.3;
@@ -752,7 +753,7 @@ export function createSky() {
 		uSunEye: { value: new THREE.Color() },
 		uSunCloud: { value: new THREE.Color() },
 		uSunHigh: { value: new THREE.Color() },
-		uMoonLight: { value: new THREE.Color(0.2, 0.245, 0.35) },
+		uMoonLight: { value: new THREE.Color(0.2, 0.222, 0.27) },
 		uParity: { value: -1 },
 		uEye: { value: 1 },
 		uMist: { value: 0 },

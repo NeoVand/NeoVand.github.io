@@ -27,15 +27,19 @@
 		const hover = matchMedia('(hover: hover)').matches;
 		if (!hover || !p.video) return;
 		const enter = () => {
+			// not for a card the page has slid under a still pointer
+			if (document.documentElement.classList.contains('scroll-still')) return;
 			if (!node.src) node.src = p.video!;
-			node.play().catch(() => {});
+			if (node.paused) node.play().catch(() => {});
 		};
 		const leave = () => node.pause();
 		card.addEventListener('pointerenter', enter);
+		card.addEventListener('pointermove', enter);
 		card.addEventListener('pointerleave', leave);
 		return {
 			destroy() {
 				card.removeEventListener('pointerenter', enter);
+				card.removeEventListener('pointermove', enter);
 				card.removeEventListener('pointerleave', leave);
 			}
 		};

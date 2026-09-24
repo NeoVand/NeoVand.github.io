@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-		<meta name="theme-color" content="#0e1731" />
+		<meta name="theme-color" content="#0d1018" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
 		<link
 			rel="icon"
@@ -54,7 +54,7 @@
 				const root = document.documentElement;
 				root.classList.toggle('day', day);
 				const bar = document.querySelector('meta[name="theme-color"]');
-				if (bar) bar.setAttribute('content', day ? '#aec4d3' : '#0e1731');
+				if (bar) bar.setAttribute('content', day ? '#aec4d3' : '#0d1018');
 				// the page is built behind a curtain and comes up whole; only a
 				// script sets this, so with JS off there is no curtain to lift
 				root.classList.add('veiled');
@@ -76,7 +76,7 @@
 				inset: 0;
 				z-index: 1000;
 				display: block;
-				background: #0b1328;
+				background: #0b0e16;
 				touch-action: none;
 				overscroll-behavior: contain;
 				transition: opacity 1100ms cubic-bezier(0.4, 0, 0.6, 1);

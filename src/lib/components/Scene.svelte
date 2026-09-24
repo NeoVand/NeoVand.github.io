@@ -81,11 +81,25 @@
 			await veil?.lifted;
 			g?.begin();
 		})();
-		const onScroll = () => g?.setScroll(window.scrollY);
+		// When the page slides under a pointer that has not moved, whatever
+		// comes to rest under it is not being pointed at: the browser tells it
+		// so all the same, as the scroll ends, and cards would light and zoom
+		// and decks fan out just as the page settles. So after a scroll the
+		// page holds its hovers (html.scroll-still) until the hand moves.
+		const root = document.documentElement;
+		const onScroll = () => {
+			g?.setScroll(window.scrollY);
+			root.classList.add('scroll-still');
+		};
+		const onMove = (e: PointerEvent) => {
+			if (e.movementX || e.movementY) root.classList.remove('scroll-still');
+		};
 		addEventListener('scroll', onScroll, { passive: true });
+		addEventListener('pointermove', onMove, { passive: true, capture: true });
 		return () => {
 			disposed = true;
 			removeEventListener('scroll', onScroll);
+			removeEventListener('pointermove', onMove, { capture: true });
 			g?.dispose();
 		};
 	});

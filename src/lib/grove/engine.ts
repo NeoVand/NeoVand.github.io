@@ -825,12 +825,12 @@ export class Grove {
 		// the sun's colour is the sky's: what is left of white after the air
 		const sunCol = sunLight(THREE.MathUtils.degToRad(KEY_EL), 1.5);
 		sunCol.multiplyScalar(1 / Math.max(sunCol.r, sunCol.g, sunCol.b));
-		const moonCol = new THREE.Color(0.7, 0.8, 1.0);
+		const moonCol = new THREE.Color(0.74, 0.8, 0.92);
 		this.light.color.copy(moonCol).lerp(sunCol, m);
 		this.light.intensity = lerp(2.2, 3.4, m);
 		// by night the cloud below is lit by the moon, and gives some of it back
-		this.hemi.color.set(0x55688c).lerp(new THREE.Color(0x9fbbe6), m);
-		this.hemi.groundColor.set(0x3a465e).lerp(new THREE.Color(0x8e8a86), m);
+		this.hemi.color.set(0x5b6475).lerp(new THREE.Color(0x9fbbe6), m);
+		this.hemi.groundColor.set(0x3e434e).lerp(new THREE.Color(0x8e8a86), m);
 		this.hemi.intensity = lerp(1.7, 0.75, m);
 		U.uSunColor.value.copy(this.light.color).multiplyScalar(lerp(0.18, 1, m));
 		this.renderer.toneMappingExposure = lerp(0.82, 1.0, m);
@@ -878,11 +878,14 @@ export class Grove {
 	setScroll(y: number) {
 		this.scroll = y;
 		this.scrolledAt = performance.now();
+		this.stillSinceScroll = true;
 		this.pageMax = Math.max(1, document.documentElement.scrollHeight - innerHeight);
 		this.wake();
 	}
 	/** how far the page scrolls, for the length of the descent */
 	private pageMax = 1;
+	/** the pointer has not moved since the page last scrolled */
+	private stillSinceScroll = false;
 	private scrolledAt = -1e9;
 	/** the page is moving, or has only just stopped */
 	private get scrolling() {
@@ -1101,7 +1104,18 @@ export class Grove {
 			}
 			this.wake();
 		}) as EventListener);
+		// a hand that has not moved since the page last scrolled: the
+		// pointer has not left the island, the page has slid over it
+		this.on(
+			window,
+			'pointermove',
+			((e: PointerEvent) => {
+				if (e.movementX || e.movementY) this.stillSinceScroll = false;
+			}) as EventListener,
+			{ passive: true, capture: true }
+		);
 		this.on(cv, 'pointerleave', () => {
+			if (this.stillSinceScroll) return;
 			this.pointerOn = false;
 			this.overGram = false;
 			cv.style.cursor = '';
@@ -1689,7 +1703,11 @@ export class Grove {
 		// never mid-scroll: a change of resolution reallocates every buffer,
 		// and that is a hitch just where the eye is following the motion
 		// and not deep in the page, where the frames are held back on purpose
-		if (this.scrolling || !this.world.visible) {
+		// and not just after it either: the first second or two after a
+		// scroll is heavier than rest (the shadows catching up, pictures
+		// decoding), and judged on it the resolution would drop and then
+		// come back, a hitch and a softening each way
+		if (this.scrolling || !this.world.visible || performance.now() - this.scrolledAt < 2500) {
 			this.frameTimes.length = 0;
 			return;
 		}
