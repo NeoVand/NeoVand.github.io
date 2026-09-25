@@ -455,8 +455,10 @@
 		opacity: 0;
 		transition: opacity 340ms var(--ease);
 	}
+	/* by day the glass is the sky's own blue, deeper overhead and paler
+	   toward the horizon, not a white sheet laid over it */
 	:global(.day) .backdrop {
-		background: rgba(214, 222, 234, 0.82);
+		background: linear-gradient(rgba(86, 128, 184, 0.72), rgba(142, 174, 212, 0.72));
 	}
 	.in .backdrop {
 		opacity: 1;

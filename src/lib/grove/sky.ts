@@ -123,15 +123,15 @@ vec2 gX, gY; // the floor plane's footprint per pixel, for filtering
 // a slow swell over the whole sheet, so it never repeats in rows: it
 // changes over many puffs, so one reading serves a whole ray
 float swell(vec2 p, float k) {
-	vec2 c = p * uSea * 0.071 + vec2(0.63, 0.12);
+	vec2 c = p * uSea * 0.071 + vec2(0.63 + uTime * 0.0011, 0.12 + uTime * 0.0004);
 	float m = textureGrad(uCloud, c, gX * uSea * 0.071 * k, gY * uSea * 0.071 * k).a;
 	// and where it opens altogether, onto clear air
 	return (0.55 + 0.9 * m) * smoothstep(uCover, uCover + 0.3, m);
 }
 float SW = 1.0;
 float seaH(vec2 p, float k) {
-	vec2 a = p * uSea + vec2(uTime * 0.0021, uTime * 0.0008);
-	vec2 b = p * uSea * 0.37 + vec2(0.31, 0.77) - vec2(uTime * 0.0007, 0.0);
+	vec2 a = p * uSea + vec2(uTime * 0.0085, uTime * 0.0032);
+	vec2 b = p * uSea * 0.37 + vec2(0.31, 0.77) + vec2(uTime * 0.0021, -uTime * 0.0016);
 	float h1 = textureGrad(uCloud, a, gX * uSea * k, gY * uSea * k).r;
 	float h2 = textureGrad(uCloud, b, gX * uSea * 0.37 * k, gY * uSea * 0.37 * k).r;
 	return clamp((h1 * 0.78 + h2 * 0.52 - 0.18) * SW, 0.0, 1.0);
@@ -218,9 +218,9 @@ vec3 shadeSea(Hit hit, vec3 d, vec3 l, vec3 lightCol, vec3 amb, float tb) {
 float highC(vec2 p, vec2 gx, vec2 gy) {
 	// drifts of cloud: slow fbm for where it is, finer for its ragged
 	// edges, and a little of the puffs for texture within
-	vec2 a = p * 0.19 + vec2(uTime * 0.0035, -uTime * 0.0011);
+	vec2 a = p * 0.19 + vec2(uTime * 0.011, -uTime * 0.0034);
 	vec4 c = textureGrad(uCloud, a, gx * 0.19, gy * 0.19);
-	vec4 c2 = textureGrad(uCloud, p * 0.047 + vec2(0.4, 0.1), gx * 0.047, gy * 0.047);
+	vec4 c2 = textureGrad(uCloud, p * 0.047 + vec2(0.4 + uTime * 0.0021, 0.1 + uTime * 0.0005), gx * 0.047, gy * 0.047);
 	float f = c2.a * 0.72 + c.b * 0.42 + c.g * 0.12;
 	return smoothstep(0.66, 0.92, f);
 }
@@ -301,9 +301,10 @@ const float LOW_DECK = 7.5;
 // (read with the footprint's own gradients, taken before any branch: in a
 // branch the neighbours' footprints are not there to be had)
 float ceilD(vec2 q, vec2 gx, vec2 gy) {
-	float a = textureGrad(uCloud, q * 0.14 + vec2(uTime * 0.0016, 0.21), gx * 0.14, gy * 0.14).a;
-	float b = textureGrad(uCloud, q * 0.42 + vec2(0.3, uTime * 0.0009), gx * 0.42, gy * 0.42).r;
-	return smoothstep(0.3, 0.74, a * 0.55 + b * 0.45);
+	float a = textureGrad(uCloud, q * 0.14 + vec2(uTime * 0.0062, 0.21 + uTime * 0.0013), gx * 0.14, gy * 0.14).a;
+	float b = textureGrad(uCloud, q * 0.42 + vec2(0.3 + uTime * 0.0105, -uTime * 0.0038), gx * 0.42, gy * 0.42).r;
+	float breathe = 0.05 * sin(uTime * 0.045 + q.x * 0.013 - q.y * 0.009);
+	return smoothstep(0.3 + breathe, 0.74 + breathe, a * 0.55 + b * 0.45);
 }
 
 vec3 underWorld(vec3 d, Pal P) {
@@ -321,8 +322,8 @@ vec3 underWorld(vec3 d, Pal P) {
 		vec3 ceil = mix(P.lit, P.belly, dens);
 		c = mix(ceil, P.hor, 1.0 - exp(-tc * 0.08));
 	} else {
-		float a = textureGrad(uCloud, ql * 0.1 + vec2(0.61, 0.2), lX * 0.1, lY * 0.1).a;
-		float b = textureGrad(uCloud, ql * 0.3, lX * 0.3, lY * 0.3).r;
+		float a = textureGrad(uCloud, ql * 0.1 + vec2(0.61 + uTime * 0.0045, 0.2 + uTime * 0.001), lX * 0.1, lY * 0.1).a;
+		float b = textureGrad(uCloud, ql * 0.3 + vec2(uTime * 0.0072, -uTime * 0.0027), lX * 0.3, lY * 0.3).r;
 		float puff = smoothstep(0.52, 0.84, a * 0.5 + b * 0.5);
 		c = mix(c, P.low * (0.7 + 0.3 * b), puff * exp(-tl * 0.045) * 0.9);
 	}

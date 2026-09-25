@@ -58,6 +58,70 @@ const MOON_AT = [0.83, 0.15];
 const MOON_R = 30;
 const MOON_D = 80;
 
+/** the layers the gramophone's outline is made from: the machine, and what can stand in front of it */
+const GRAM_LAYER = 3,
+	OCCLUDER_LAYER = 4;
+
+/**
+ * The line round the gramophone under the pointer, as the grove draws it: a
+ * crisp ring just outside the machine's silhouette, read from a mask of it,
+ * with a fainter one beyond. Drawn over the finished picture, adding to it.
+ */
+function outlinePass() {
+	const m = new THREE.ShaderMaterial({
+		uniforms: {
+			uMask: { value: null as THREE.Texture | null },
+			uTexel: { value: new THREE.Vector2(1, 1) },
+			uColor: { value: new THREE.Color(1.0, 0.86, 0.62) },
+			uOn: { value: 0 }
+		},
+		vertexShader: /* glsl */ `
+			varying vec2 vUv;
+			void main() {
+				vUv = position.xy * 0.5 + 0.5;
+				gl_Position = vec4(position.xy, 0.0, 1.0);
+			}`,
+		fragmentShader: /* glsl */ `
+			uniform sampler2D uMask;
+			uniform vec2 uTexel;
+			uniform vec3 uColor;
+			uniform float uOn;
+			varying vec2 vUv;
+			float ring(vec2 uv, float r) {
+				float m = 0.0;
+				for (int i = 0; i < 12; i++) {
+					float a = float(i) * 0.5236;
+					m = max(m, texture2D(uMask, uv + vec2(cos(a), sin(a)) * uTexel * r).r);
+				}
+				return m;
+			}
+			void main() {
+				float inside = texture2D(uMask, vUv).r;
+				float line = clamp(ring(vUv, 1.7) - inside, 0.0, 1.0);
+				float halo = clamp(ring(vUv, 3.4) - inside, 0.0, 1.0) * 0.35;
+				float a = max(line, halo) * uOn;
+				if (a < 0.003) discard;
+				gl_FragColor = vec4(uColor, 1.0);
+				#include <colorspace_fragment>
+				gl_FragColor = vec4(gl_FragColor.rgb * a, a);
+			}`,
+		transparent: true,
+		depthTest: false,
+		depthWrite: false,
+		toneMapped: false,
+		premultipliedAlpha: true
+	});
+	const tri = new THREE.BufferGeometry().setAttribute(
+		'position',
+		new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3)
+	);
+	const mesh = new THREE.Mesh(tri, m);
+	mesh.frustumCulled = false;
+	const scene = new THREE.Scene();
+	scene.add(mesh);
+	return { scene, mat: m };
+}
+
 /** The moon, a disc with its painting on it, and a glow round it that only adds light. */
 function moonMesh() {
 	const m = new THREE.ShaderMaterial({
@@ -153,6 +217,12 @@ export class IsletView {
 	private gramGlow = 0;
 	private mouth = new THREE.Vector3();
 	private mouthDir = new THREE.Vector3();
+	/** the gramophone's outline: its mask, and the pass that rings it */
+	private outline = outlinePass();
+	private gramMask = new THREE.WebGLRenderTarget(2, 2);
+	private maskWhite = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+	private maskDepth = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
+	private flat = new THREE.Camera();
 	/** coming up into its place (1), or gone (0), and which way it is going */
 	private k = 0;
 	private to = 0;
@@ -216,6 +286,12 @@ export class IsletView {
 		this.gateShadowLayer();
 		this.air = new Air(islet.habitat(this));
 		islet.group.add(this.air.group, this.notes.points);
+		// for the line round the gramophone: the machine, and the solid
+		// things that can stand between it and the eye
+		islet.gram.group.traverse((o) => o.layers.enable(GRAM_LAYER));
+		for (const o of [...islet.solid, islet.tree?.bark].filter(Boolean) as THREE.Object3D[])
+			o.traverse((c) => c.layers.enable(OCCLUDER_LAYER));
+		this.outline.mat.uniforms.uMask.value = this.gramMask.texture;
 		// the moon hangs in the view, not on the islet: it stays where it is as
 		// the islet is turned
 		this.camera.add(this.moon);
@@ -323,6 +399,10 @@ export class IsletView {
 		const perM = this.H / (2 * tan) / MOON_D;
 		this.moon.scale.setScalar((2 * (MOON_R / perM)) / 0.68);
 		this.pxPerUnit = (this.H * dpr) / (2 * tan);
+		const bw = Math.max(1, Math.round(this.W * dpr)),
+			bh = Math.max(1, Math.round(this.H * dpr));
+		this.gramMask.setSize(bw, bh);
+		this.outline.mat.uniforms.uTexel.value.set(1 / bw, 1 / bh);
 	}
 	private pxPerUnit = 1000;
 
@@ -422,8 +502,10 @@ export class IsletView {
 
 		// the moon out by night, faint in the day's sky
 		const mu = (this.moon.material as THREE.ShaderMaterial).uniforms;
-		mu.uOn.value = lerp(1, 0.4, smoothstep(0.35, 0.8, L.day)) * clamp(this.k * 1.5, 0, 1);
+		// (gone in the full day, as the grove's is)
+		mu.uOn.value = (1 - smoothstep(0.55, 0.85, L.day)) * clamp(this.k * 1.5, 0, 1);
 		mu.uGlow.value = 1 - smoothstep(0.3, 0.7, L.day);
+		this.moon.visible = mu.uOn.value > 0.002;
 		// by night the brass shines with the lamplit room; by day with the day
 		this.islet.brass.envMap = L.day > 0.5 ? null : this.envRoom;
 		this.islet.update(dt, 1 - L.day, this.reduced, L.playing);
@@ -452,7 +534,46 @@ export class IsletView {
 		this.renderer.shadowMap.needsUpdate =
 			this.shadowTick === 0 || !!this.drag || Math.abs(this.yawVel) > 0.02 || this.k < 1;
 		this.renderer.render(this.scene, cam);
+		this.drawOutline();
 		return true;
+	}
+
+	/**
+	 * While the gramophone is under the pointer, the line round it: a mask of
+	 * it (the solid things in front drawn first into depth alone, so that
+	 * they hide the line too, then the machine in white), and the ring read
+	 * from it laid over the picture. Nothing at all otherwise.
+	 */
+	private drawOutline() {
+		const on = this.gramGlow;
+		this.outline.mat.uniforms.uOn.value = on;
+		if (on < 0.002) return;
+		const r = this.renderer,
+			cam = this.camera,
+			scene = this.scene;
+		const keep = {
+			layers: cam.layers.mask,
+			shadows: r.shadowMap.needsUpdate,
+			bg: scene.background
+		};
+		r.shadowMap.needsUpdate = false;
+		r.setRenderTarget(this.gramMask);
+		r.setClearColor(0x000000, 1);
+		r.clear();
+		r.autoClear = false;
+		cam.layers.set(OCCLUDER_LAYER);
+		scene.overrideMaterial = this.maskDepth;
+		r.render(scene, cam);
+		cam.layers.set(GRAM_LAYER);
+		scene.overrideMaterial = this.maskWhite;
+		r.render(scene, cam);
+		scene.overrideMaterial = null;
+		cam.layers.mask = keep.layers;
+		r.setRenderTarget(null);
+		r.setClearColor(0x000000, 0);
+		r.render(this.outline.scene, this.flat);
+		r.autoClear = true;
+		r.shadowMap.needsUpdate = keep.shadows;
 	}
 
 	// ── the hand ──────────────────────────────────────────────────────────
@@ -566,6 +687,7 @@ export class IsletView {
 		this.envDay?.dispose();
 		this.envNight?.dispose();
 		this.envRoom?.dispose();
+		this.gramMask.dispose();
 		this.renderer.dispose();
 	}
 }

@@ -562,18 +562,18 @@ export class Islet {
 		);
 		const gram = buildGramophone(this.brass, woodTexture(8));
 		const slab = new THREE.Mesh(stoneGeometry(91, 0.3, 1), m.rock);
-		slab.scale.set(0.62, 0.09, 0.55);
+		slab.scale.set(0.44, 0.08, 0.4);
 		slab.rotation.y = 0.4;
 		slab.position.set(GRAM.x, groundY(GRAM.x, GRAM.y) - 0.01, GRAM.y);
 		slab.castShadow = slab.receiveShadow = true;
 		gram.group.position.set(GRAM.x, slab.position.y + 0.055, GRAM.y);
-		gram.group.scale.setScalar(1.3);
+		gram.group.scale.setScalar(0.87);
 		gram.group.rotation.y = 0.45;
 		gram.group.updateMatrix();
 		g.add(slab, gram.group);
 		this.solid.push(slab);
 		this.gram = gram;
-		this.keepOut.push([GRAM.x, GRAM.y, 0.62]);
+		this.keepOut.push([GRAM.x, GRAM.y, 0.45]);
 
 		this.leaves = new Petals({ ground: groundAt, size: [0.13, 0.19], life: [8, 12], sink: 0.5 });
 		g.add(this.leaves.mesh);

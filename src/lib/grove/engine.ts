@@ -1622,9 +1622,13 @@ export class Grove {
 			this.skyCam.updateMatrixWorld();
 			cam = this.skyCam;
 		}
+		// (and deep in the page, where the sky is all there is and it is drawn
+		// only thirty times a second anyway, every time, or the cloud going by
+		// steps)
 		const moving =
 			this.skyDirty ||
 			this.scrolling ||
+			!this.world.visible ||
 			this.moonT >= 0 ||
 			Math.abs(this.dayMix - this.dayTo) > 1e-4;
 		this.skyTick ^= 1;
@@ -1768,9 +1772,8 @@ export class Grove {
 			return;
 		}
 		this.raf = requestAnimationFrame(this.frame_);
-		// Deep in the page there is only sky, drifting, and every pane of glass
-		// over it has to blur it again each time it changes: at rest there it
-		// is drawn twenty times a second, which the cloud cannot tell from
+		// Deep in the page there is only sky, drifting: at rest there it is
+		// drawn thirty times a second, which cloud going by cannot tell from
 		// sixty. Never while the page is moving, though: then the sky moves
 		// with it and has to keep up.
 		if (
@@ -1779,7 +1782,7 @@ export class Grove {
 			!this.scrolling &&
 			Math.abs(this.dayMix - this.dayTo) < 1e-3 &&
 			this.moonT < 0 &&
-			now - this.last < 48
+			now - this.last < 30
 		)
 			return;
 		const dt = Math.min(0.05, (now - this.last) / 1000);
