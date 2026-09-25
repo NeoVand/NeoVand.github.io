@@ -15,6 +15,8 @@ export interface Palette {
 	leafUnder: THREE.Color;
 	/** how much leaf to leaf colour wanders */
 	leafVary: number;
+	/** a second leaf colour, which some of the leaves go to */
+	leafAlt?: THREE.Color;
 	blossom: THREE.Color;
 	barkTint: THREE.Color;
 }
@@ -402,7 +404,7 @@ export const CYPRESS: Species = {
 };
 
 /** A flowering shrub: a mound of many stems, small leaves, flowers over it. */
-function shrub(name: string, blossom: THREE.Color, flowering: number): Species {
+export function shrub(name: string, blossom: THREE.Color, flowering: number): Species {
 	return {
 		name,
 		blade: { w: 0.3, cup: 0.15, droop: 0.15 },
@@ -576,6 +578,158 @@ export const VINE: Species = {
 		return sk;
 	}
 };
+
+/**
+ * A Japanese maple, alone over a spring. A short trunk that leans a little
+ * and parts low into three or four stems, each going up and out in long,
+ * sinuous reaches; branches off them that level out and droop a little at
+ * their ends, so the foliage lies in tiers, one over another; and the crown a
+ * broad, shallow parasol, open enough to see the wood through. At the ends of
+ * everything, level sprays of small leaves in pairs: crimson, scarlet, and
+ * here and there gone to orange.
+ */
+export const MAPLE: Species = {
+	name: 'maple',
+	blade: { w: 0.55, cup: 0.08, droop: 0.1 },
+	palette: {
+		leafTop: new THREE.Color(0.42, 0.028, 0.022),
+		leafUnder: new THREE.Color(0.52, 0.085, 0.035),
+		leafAlt: new THREE.Color(0.66, 0.2, 0.018),
+		leafVary: 0.3,
+		blossom: new THREE.Color(0.5, 0.06, 0.03),
+		barkTint: new THREE.Color(0.5, 0.43, 0.42)
+	},
+	gnarl: 0.55,
+	base: 0.13,
+	tip: 0.007,
+	pipe: 2.3,
+	flare: 0.6,
+	flex: 0.9,
+	rows: 4,
+	castLeaves: true,
+	derive(seed) {
+		const r = rng(seed);
+		const R = (a: number, b: number) => lerp(a, b, r());
+		const sk = newSkeleton();
+		const t = new Turtle(sk, { n: 0 });
+		const _d = new THREE.Vector3();
+
+		// a pair of leaves at a node, held out level either side and turned
+		// up to the sky
+		const pair = (s: Turtle, size: number) => {
+			for (const side of [-1, 1]) {
+				_d.copy(s.h).multiplyScalar(0.45).addScaledVector(s.l, side);
+				_d.y = _d.y * 0.3 - 0.05;
+				const dir = _d.clone().applyAxisAngle(up, R(-0.4, 0.4)).normalize();
+				const face = new THREE.Vector3(R(-0.3, 0.3), 1, R(-0.3, 0.3));
+				s.leaf(dir, face, size * R(0.85, 1.15), 0);
+			}
+		};
+		// a spray: a level twig, a pair at each node, and now and then a
+		// short side twig with a pair or two of its own
+		const spray = (s: Turtle, n: number, size: number) => {
+			s.level();
+			for (let i = 0; i < n; i++) {
+				s.forward(R(0.07, 0.1), 1, -0.02, 10, r);
+				s.level();
+				pair(s, size);
+				if (i > 0 && r() < 0.7) {
+					const b = s.branch();
+					b.h.applyAxisAngle(up, (r() < 0.5 ? -1 : 1) * R(0.6, 1.1));
+					b.level();
+					for (let j = 0; j < 3; j++) {
+						b.forward(R(0.06, 0.08), 1, 0, 8, r);
+						b.level();
+						pair(b, size * 0.9);
+					}
+				}
+			}
+			pair(s, size * 0.8);
+		};
+		// a pad: sprays laid out level all round a point, so the foliage
+		// lies in a flat cloud with air above and below it
+		const pad = (s: Turtle, reach: number) => {
+			const k = 8 + Math.floor(r() * 4);
+			const ph = r() * Math.PI * 2;
+			for (let i = 0; i < k; i++) {
+				const b = s.branch();
+				const a = ph + (i / k) * Math.PI * 2 + R(-0.25, 0.25);
+				b.h.set(Math.cos(a), R(-0.1, 0.14), Math.sin(a)).normalize();
+				b.level();
+				spray(b, Math.max(3, Math.round((reach * R(0.75, 1.1)) / 0.08)), R(0.15, 0.18));
+			}
+			// and more over the middle, a little higher, so the cloud is domed
+			// and not a ring
+			for (let i = 0; i < 5; i++) {
+				const b = s.branch();
+				const a = r() * Math.PI * 2;
+				b.p.y += R(0.04, 0.16);
+				b.h.set(Math.cos(a), 0.1, Math.sin(a)).normalize();
+				spray(b, 3 + Math.floor(r() * 2), R(0.15, 0.17));
+			}
+		};
+		// a tier: a branch off the stem, out from the tree's middle and nearly
+		// level, a little up and then drooping to its end, with a pad there
+		// and another part way along it
+		let side = r() < 0.5 ? 1 : -1;
+		const tier = (s: Turtle, f: number) => {
+			side = -side;
+			const b = s.branch();
+			const out = _d.set(s.p.x, 0, s.p.z);
+			if (out.lengthSq() < 1e-4) out.set(Math.cos(r() * 6.3), 0, Math.sin(r() * 6.3));
+			out.normalize().applyAxisAngle(up, side * R(0.35, 1.1));
+			b.h.set(out.x, R(0.2, 0.4), out.z).normalize();
+			b.level();
+			const L = lerp(1.9, 0.9, f) * R(0.85, 1.15);
+			const n = Math.max(2, Math.round(L / 0.22));
+			for (let i = 0; i < n; i++) {
+				b.forward(L / n, 1, i < n / 2 ? 0.03 : -0.07, 7, r);
+				if (i === Math.floor(n / 2) && L > 1.1 && r() < 0.7) {
+					const c = b.branch();
+					c.h.applyAxisAngle(up, (r() < 0.5 ? -1 : 1) * R(0.5, 0.9));
+					c.h.y = Math.max(c.h.y, 0.05);
+					c.h.normalize();
+					c.level();
+					c.forward(R(0.3, 0.5), 2, -0.04, 7, r);
+					pad(c, R(0.45, 0.65));
+				}
+			}
+			pad(b, R(0.6, 0.85) * lerp(1.1, 0.8, f));
+		};
+		// a stem: up and out from the parting, crooked, with tiers along it
+		// every half metre or so, and a pad on its top
+		const stem = (s: Turtle, len: number) => {
+			const segs = Math.round(len / 0.2);
+			let at = R(0.55, 0.8),
+				gone = 0;
+			for (let i = 0; i < segs; i++) {
+				s.forward(len / segs, 1, 0.05, 7, r);
+				gone += len / segs;
+				if (gone > at && gone < len - 0.25) {
+					tier(s, gone / len);
+					at += R(0.36, 0.52);
+				}
+			}
+			pad(s, R(0.7, 0.9));
+		};
+
+		// the trunk: short, leaning a little, and parting low
+		t.roll(R(0, 360)).pitch(R(4, 9));
+		t.forward(R(0.45, 0.65), 4, 0.1, 3, r);
+		const stems = r() < 0.5 ? 3 : 4;
+		const phase = r() * 360;
+		for (let k = 0; k < stems; k++) {
+			const b = t.branch();
+			b.roll(phase + k * (360 / stems) + R(-15, 15)).pitch(R(28, 44));
+			stem(b, R(2.3, 3.0));
+		}
+		taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
+		return sk;
+	}
+};
+
+/** azaleas: low mounds by the water, covered in magenta */
+export const AZALEA = shrub('azalea', new THREE.Color(0.86, 0.16, 0.42), 0.85);
 
 export const SPECIES = {
 	olive: OLIVE,

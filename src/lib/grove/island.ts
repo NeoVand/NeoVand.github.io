@@ -24,6 +24,8 @@ export interface IslandParts {
 	lawnU: { uBlobs: { value: THREE.Vector4[] } };
 	/** points along the coping where a bird may stand */
 	rim: THREE.Vector3[];
+	/** the crag's stone, read from three sides: for any rock in the sky */
+	rockMat: THREE.MeshStandardMaterial;
 }
 
 export interface IslandMaterials {
@@ -57,7 +59,7 @@ function lathe(pts: [number, number][], seg: number, tileW: number, tileH: numbe
 }
 
 // 3D value noise, for the rock
-function vn3(x: number, y: number, z: number, salt: number) {
+export function vn3(x: number, y: number, z: number, salt: number) {
 	const xi = Math.floor(x),
 		yi = Math.floor(y),
 		zi = Math.floor(z);
@@ -370,7 +372,7 @@ export function buildIsland(mats: IslandMaterials, seed: number) {
 		const th = (i / 48) * Math.PI * 2;
 		rim.push(new THREE.Vector3(cx * Math.cos(th), wallTop + cr * 0.55, -cx * Math.sin(th)));
 	}
-	return { group, lawn, lawnU, rim } satisfies IslandParts;
+	return { group, lawn, lawnU, rim, rockMat } satisfies IslandParts;
 }
 
 /**

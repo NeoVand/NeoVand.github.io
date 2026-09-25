@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { Paper } from '$lib/data/types';
+	import { stage } from '$lib/stage.svelte';
 
 	// ─── The reading room: a paper opens into all its pages ─────────────────
 	// Clicking a deck does not leave the page. The five pages of the fan fly
@@ -26,6 +27,9 @@
 	let pagesEl = $state<HTMLDivElement>() as unknown as HTMLDivElement;
 	let flyLayer: HTMLDivElement;
 	let closeBtn: HTMLButtonElement;
+	// the islet's canvas, over the glass in the room the words leave free
+	let isletCv: HTMLCanvasElement;
+	let islet = $state(false);
 
 	let deck: HTMLElement | null = null;
 	let flying = false;
@@ -224,6 +228,34 @@
 		);
 	}
 
+	// On a wide screen, with a mouse, the room over the words, beside the
+	// title, is the islet's: it floats there over the glass, and its fall goes
+	// on down behind the pages.
+	function frameIslet() {
+		const g = stage.grove;
+		const h = head?.getBoundingClientRect(),
+			s = stream?.getBoundingClientRect();
+		const x = h ? Math.round(h.right) : 0;
+		const w = innerWidth - x;
+		const frameH = s ? Math.round(s.top + 12) : 0;
+		if (!g || !h || !s || !matchMedia('(pointer: fine)').matches || w < 380 || frameH < 300) {
+			if (islet) g?.read(null);
+			islet = false;
+			return;
+		}
+		islet = true;
+		Object.assign(isletCv.style, { left: x + 'px', width: w + 'px', height: innerHeight + 'px' });
+		g.read({ w, h: innerHeight, frameH });
+	}
+
+	$effect(() => {
+		const g = stage.grove;
+		if (!g || !isletCv) return;
+		g.setIsletCanvas(isletCv);
+		// a tap on the glass round the islet closes the room, as it would anywhere
+		g.onIsletMiss = () => close();
+	});
+
 	export async function open(p: Paper, d: HTMLElement) {
 		if (flying) return;
 		deck = d;
@@ -237,6 +269,7 @@
 		moreShown = abstractEl.scrollHeight > abstractEl.clientHeight + 2;
 		await tick();
 		checkCut();
+		frameIslet();
 		if (!reduced()) {
 			flying = true;
 			fly(d, true, () => (flying = false));
@@ -249,6 +282,8 @@
 		if (!deck || flying || hidden) return;
 		const d = deck;
 		isIn = false;
+		// the islet goes down into the glass while the pages go home
+		if (islet) stage.grove?.read(null);
 		const finish = () => {
 			// hover stays off this deck until the pointer moves, so the fan
 			// does not swing out under a pointer that merely stayed put
@@ -264,6 +299,7 @@
 			document.documentElement.style.overflow = '';
 			d.querySelectorAll<HTMLElement>('.page').forEach((p) => (p.style.visibility = ''));
 			flying = false;
+			islet = false;
 			deck = null;
 			paper = null;
 			lazy?.disconnect();
@@ -318,7 +354,13 @@
 	}
 </script>
 
-<svelte:window onkeydown={onKey} onresize={checkCut} />
+<svelte:window
+	onkeydown={onKey}
+	onresize={() => {
+		checkCut();
+		if (!hidden && isIn) frameIslet();
+	}}
+/>
 
 <div
 	class="room"
@@ -331,6 +373,7 @@
 	bind:this={room}
 >
 	<div class="backdrop" onclick={close} aria-hidden="true"></div>
+	<canvas class="islet" class:on={islet} bind:this={isletCv} aria-hidden="true"></canvas>
 	<button class="close glass" type="button" aria-label="Close" onclick={close} bind:this={closeBtn}>
 		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
 	</button>
@@ -417,6 +460,19 @@
 	}
 	.in .backdrop {
 		opacity: 1;
+	}
+	/* the islet's canvas: over the glass, under the words and the pages, and
+	   fading out toward the foot of the room, where its fall gives out */
+	.islet {
+		position: fixed;
+		top: 0;
+		display: none;
+		opacity: 0;
+		-webkit-mask-image: linear-gradient(#000 62%, transparent 94%);
+		mask-image: linear-gradient(#000 62%, transparent 94%);
+	}
+	.islet.on {
+		display: block;
 	}
 	.close {
 		position: absolute;

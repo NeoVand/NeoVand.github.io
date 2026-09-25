@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { lights, setDay } from '$lib/lights.svelte';
 	import * as music from '$lib/music';
+	import { stage } from '$lib/stage.svelte';
 	import type { Grove } from '$lib/grove/engine';
 
 	// The renderer behind the whole page. It is fetched after the page itself
@@ -50,6 +51,7 @@
 				await g.ready();
 				if (disposed) return;
 				grove = g;
+				stage.grove = g;
 				(window as unknown as { __grove3d: Grove }).__grove3d = g;
 				g.setScroll(window.scrollY);
 				g.wake();
@@ -99,6 +101,7 @@
 		addEventListener('pointermove', onMove, { passive: true, capture: true });
 		return () => {
 			disposed = true;
+			stage.grove = null;
 			removeEventListener('scroll', onScroll);
 			removeEventListener('pointermove', onMove, { capture: true });
 			g?.dispose();

@@ -8,8 +8,28 @@ import type { Stand } from './plants';
 // fall so much as sink, at a walking pace at most, rocking from side to side
 // and turning as it goes, carried off down the wind; it settles or leaves the
 // island and is gone. Now and then one lets go by itself.
+//
+// The same serves for leaves: a maple's, red, larger, falling past the edge
+// of its rock and on down into the air.
 
 const MAX = 90;
+
+/** what can let go: where each is, and the colours they come in */
+export interface PetalSource {
+	at: THREE.Vector3[];
+	colors: THREE.Color[];
+}
+
+export interface PetalOptions {
+	/** the height of the ground under a point, or null where there is none */
+	ground?: (p: THREE.Vector3) => number | null;
+	/** how big, in metres, least and most */
+	size?: [number, number];
+	/** how many seconds each lasts, least and most */
+	life?: [number, number];
+	/** how fast it sinks, metres a second */
+	sink?: number;
+}
 
 interface Petal {
 	p: THREE.Vector3;
@@ -41,8 +61,16 @@ export class Petals {
 	private q = new THREE.Quaternion();
 	private s = new THREE.Vector3();
 	private idle = 3;
+	private opt: Required<PetalOptions>;
 
-	constructor() {
+	constructor(opt: PetalOptions = {}) {
+		this.opt = {
+			ground: (p) => (Math.hypot(p.x, p.z) < 6.6 ? 0 : null),
+			size: [0.11, 0.16],
+			life: [5, 9],
+			sink: 0.45,
+			...opt
+		};
 		const mat = patch(
 			new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, side: THREE.DoubleSide }),
 			'petal',
@@ -71,9 +99,14 @@ export class Petals {
 
 	/** let go of `n` flowers from the stand, those nearest `near` first */
 	shed(st: Stand, near: THREE.Vector3 | null, n: number) {
-		const src = st.blossoms;
+		this.drop({ at: st.blossoms, colors: [st.items[0].species.palette.blossom] }, near, n);
+	}
+
+	/** let go of `n` of what the source holds, those nearest `near` first */
+	drop(from: PetalSource, near: THREE.Vector3 | null, n: number) {
+		const src = from.at;
 		if (!src.length) return;
-		const col = st.items[0].species.palette.blossom;
+		const { size, life } = this.opt;
 		const pick: THREE.Vector3[] = [];
 		if (near) {
 			const sorted = src
@@ -90,10 +123,11 @@ export class Petals {
 			pt.rot.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
 			pt.spin.set((Math.random() - 0.5) * 5, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 5);
 			pt.age = 0;
-			pt.life = 5 + Math.random() * 4;
+			pt.life = life[0] + Math.random() * (life[1] - life[0]);
 			// larger than life, or at this distance they are a pixel
-			pt.size = 0.11 + Math.random() * 0.05;
+			pt.size = size[0] + Math.random() * (size[1] - size[0]);
 			pt.phase = Math.random() * 6.28;
+			const col = from.colors[Math.floor(Math.random() * from.colors.length)];
 			this.mesh.setColorAt(
 				i,
 				new THREE.Color().copy(col).multiplyScalar(0.92 + Math.random() * 0.1)
@@ -102,14 +136,15 @@ export class Petals {
 		if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
 	}
 
-	update(dt: number, stands: Stand[], reduced: boolean) {
+	update(dt: number, sources: PetalSource[], reduced: boolean) {
 		// now and then, one by itself
 		this.idle -= dt;
 		if (this.idle < 0 && !reduced) {
 			this.idle = 1.5 + Math.random() * 3;
-			const st = stands[Math.floor(Math.random() * stands.length)];
-			if (st) this.shed(st, null, 1);
+			const src = sources[Math.floor(Math.random() * sources.length)];
+			if (src) this.drop(src, null, 1);
 		}
+		const sink = this.opt.sink;
 		const wd = WIND_U.uWindDir.value;
 		const wind = U.uWind.value;
 		const t = U.uTime.value;
@@ -117,21 +152,22 @@ export class Petals {
 			const pt = this.ps[i];
 			if (pt.life <= 0) continue;
 			pt.age += dt;
-			if (pt.age > pt.life || pt.p.y < -9) {
+			if (pt.age > pt.life || pt.p.y < -12) {
 				pt.life = 0;
 				this.mesh.setMatrixAt(i, this.m.makeScale(0, 0, 0));
 				continue;
 			}
 			// sink toward a slow terminal speed, rock, and go down the wind
 			const rock = Math.sin(t * 2.2 + pt.phase);
-			pt.v.y += (-0.45 - pt.v.y) * Math.min(1, dt * 2.5);
+			pt.v.y += (-sink - pt.v.y) * Math.min(1, dt * 2.5);
 			pt.v.x += (wd.x * 0.55 * wind + rock * 0.35 - pt.v.x) * Math.min(1, dt * 1.5);
 			pt.v.z +=
 				(wd.y * 0.55 * wind + Math.cos(t * 1.7 + pt.phase) * 0.3 - pt.v.z) * Math.min(1, dt * 1.5);
 			pt.p.addScaledVector(pt.v, dt);
-			// on the lawn, it rests until it fades
-			if (pt.p.y < 0.02 && Math.hypot(pt.p.x, pt.p.z) < 6.6) {
-				pt.p.y = 0.02;
+			// on the ground, it rests until it fades
+			const gy = this.opt.ground(pt.p);
+			if (gy !== null && pt.p.y < gy + 0.02 && pt.p.y > gy - 0.3) {
+				pt.p.y = gy + 0.02;
 				pt.v.set(0, 0, 0);
 				pt.spin.multiplyScalar(0.8);
 				pt.rot.x = Math.PI / 2;

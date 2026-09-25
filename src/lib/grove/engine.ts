@@ -30,10 +30,12 @@ import {
 import type { Canopy } from './flora/canopy';
 import { OLIVE, BLOSSOM, CYPRESS, WHITE_SHRUB, ROSE_SHRUB, VINE } from './flora/species';
 import { rustleFrom } from './flora/wind';
-import { Petals } from './flora/petals';
+import { Petals, type PetalSource } from './flora/petals';
 import { patch, nightPatch, nightPatchWarm } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
 import { Air } from './air';
+import { Islet } from './islet';
+import { IsletView } from './isletview';
 import { Notes } from './notes';
 
 // ─── The grove, in three dimensions ───────────────────────────────────────
@@ -82,6 +84,14 @@ const SUN_SET_EL = -7;
 // are rimmed and the island's face takes the light across it.
 const KEY_AZ = { side: -60, stack: -52 };
 const KEY_EL = 32;
+/** do this when the page has a moment, or soon anyway */
+const idle = (f: () => void) => {
+	const ric = (
+		globalThis as unknown as { requestIdleCallback?: (f: () => void, o?: object) => void }
+	).requestIdleCallback;
+	if (ric) ric(f, { timeout: 3000 });
+	else setTimeout(f, 30);
+};
 const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 /** how far the sky is tipped up behind the island, in degrees, by layout */
@@ -254,6 +264,8 @@ export class Grove {
 	trees: Stand[] = [];
 	/** every stand on the island, and the light inside them all */
 	garden: Stand[] = [];
+	/** what flowers there are to fall, stand by stand */
+	private blooms: PetalSource[] = [];
 	canopy: Canopy | null = null;
 	air!: Air;
 	private mats!: {
@@ -370,6 +382,14 @@ export class Grove {
 	private pendingResize = false;
 	private level: () => number;
 	private notes = new Notes();
+	/** The islet the reading room shows over its glass, on a canvas of its
+	 *  own: built when the page is idle, once the room has given its canvas. */
+	private islet: IsletView | null = null;
+	private isletCanvas: HTMLCanvasElement | null = null;
+	/** a tap on the reading room's canvas that found nothing there */
+	onIsletMiss?: () => void;
+	private lawnTex!: THREE.Texture;
+	private rockTex!: THREE.Texture;
 	private mouth = new THREE.Vector3();
 	private mouthDir = new THREE.Vector3();
 
@@ -557,8 +577,10 @@ export class Grove {
 		);
 		this.brass = brass;
 
+		this.lawnTex = lawnTexture(aniso);
+		this.rockTex = baked.tex.rock.map;
 		this.island = buildIsland(
-			{ ashlar, rock: baked.tex.rock, flags: baked.tex.flags, lawn: lawnTexture(aniso) },
+			{ ashlar, rock: baked.tex.rock, flags: baked.tex.flags, lawn: this.lawnTex },
 			this.rand() * 10
 		);
 		this.world.add(this.island.group);
@@ -720,6 +742,9 @@ export class Grove {
 		this.trees = [stands[0], stands[1]];
 		for (let i = 0; i < 2; i++) this.keepOff(stands[i], preps[i].placed.worldPos);
 		this.garden = stands;
+		this.blooms = stands
+			.filter((g) => g.blossoms.length > 0)
+			.map((g) => ({ at: g.blossoms, colors: [g.items[0].species.palette.blossom] }));
 		this.canopy = canopy;
 		this.shadeLawn();
 	}
@@ -1108,6 +1133,92 @@ export class Grove {
 		u.uDrift.value =
 			0.2 * all + 1.1 * clamp(all - 1.3, 0, 0.7) + (this.reduced ? 0 : this.clock * 0.005);
 	}
+
+	// ── the islet, over the reading room ──────────────────────────────────
+	/** The reading room's canvas, where the islet is drawn over its glass. */
+	setIsletCanvas(c: HTMLCanvasElement) {
+		this.isletCanvas = c;
+	}
+
+	/**
+	 * A paper is open: the islet comes up on the reading room's canvas, `w`
+	 * by `h` of the page's pixels, framed in the top `frameH` of it. Or, with
+	 * null, the paper has closed and it goes.
+	 */
+	read(size: { w: number; h: number; frameH: number } | null) {
+		if (size) {
+			this.buildIslet(true);
+			const v = this.islet;
+			if (!v) return;
+			// its own budget of pixels, up to twice the page's
+			const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.2e6 / (size.w * size.h)));
+			v.frame(size.w, size.h, size.frameH, Math.max(1, dpr));
+			v.open();
+		} else this.islet?.close();
+		this.wake();
+	}
+
+	/** reading: the islet is coming, there, or going */
+	private get reading() {
+		return !!this.islet?.active;
+	}
+
+	/**
+	 * Built once the grove has come in and the page is idle; its programs are
+	 * made then too, in its own context, so the first paper opened does not
+	 * wait for them. (A phone's reading room has no room for it.)
+	 */
+	private buildIslet(now = false) {
+		if (this.islet || !this.isletCanvas || this.flowing || !this.live) return;
+		// in three parts, each at an idle moment of its own, so none of them is
+		// a pause the page can feel: the rock and its ground and water, then
+		// the planting, then its renderer; or all at once, if a paper is
+		// opened before they are done
+		if (!this.isletQueue) {
+			const canvas = this.isletCanvas;
+			const phone = Math.min(window.innerWidth, window.innerHeight) < 700;
+			let islet: Islet;
+			let view: IsletView;
+			this.isletQueue = [
+				() =>
+					(islet = new Islet(
+						{
+							rock: this.island.rockMat,
+							rockMap: this.rockTex,
+							lawn: this.lawnTex,
+							bark: this.mats.bark,
+							glass: this.glassMat
+						},
+						Math.floor(this.rand() * 1e6),
+						{ phone }
+					)),
+				() => islet.grow(),
+				() => islet.plant(),
+				() => {
+					view = new IsletView(canvas, islet, this.reduced);
+					view.onMiss = () => this.onIsletMiss?.();
+					this.islet = view;
+				},
+				() => view.skies(),
+				() => void view.compile().then(() => idle(() => view.warm()))
+			];
+		}
+		const q = this.isletQueue;
+		if (now) {
+			// (the last step, the compiling, the first frame does instead)
+			while (q.length > 1) q.shift()!();
+			q.length = 0;
+			return;
+		}
+		const next = () => {
+			const f = q.shift();
+			if (!f) return;
+			f();
+			if (q.length) idle(next);
+		};
+		idle(next);
+	}
+	private isletQueue: (() => void)[] | null = null;
 
 	/** Debugging: look at a point from a distance, or null to let go. */
 	peekAt: { x: number; y: number; z: number; d: number; yaw: number; pitch: number } | null = null;
@@ -1665,6 +1776,7 @@ export class Grove {
 		this.intro.t = this.reduced ? this.intro.dur + 4 : 0;
 		this.air.begin();
 		this.wake();
+		if (!this.flowing) setTimeout(() => this.buildIslet(), 6500);
 	}
 
 	/** how far the island's lights have come on after its arrival, 0..1 */
@@ -1700,6 +1812,7 @@ export class Grove {
 		// with it and has to keep up.
 		if (
 			!this.world.visible &&
+			!this.reading &&
 			!this.scrolling &&
 			Math.abs(this.dayMix - this.dayTo) < 1e-3 &&
 			this.moonT < 0 &&
@@ -1719,9 +1832,34 @@ export class Grove {
 		}
 		const t0 = performance.now();
 		this.update(dt);
+		if (this.reading) {
+			// Under the glass the page's picture holds still, and the glass over
+			// it need not be frosted afresh each frame; it is drawn again only
+			// while the light changes, now and then. Over it, the islet.
+			const changing = Math.abs(this.dayMix - this.dayTo) > 1e-4 || this.moonT >= 0;
+			if (changing && (this.readTick = (this.readTick + 1) % 4) === 0) this.draw();
+			this.stepIslet(dt);
+			return;
+		}
 		this.draw();
 		this.adapt(performance.now() - t0, dt);
 	};
+	private readTick = 0;
+
+	private stepIslet(dt: number) {
+		const v = this.islet;
+		if (!v) return;
+		const shown = v.step(dt, {
+			key: this.light,
+			keyDir: this.keyDir,
+			hemi: this.hemi,
+			day: this.dayMix,
+			exposure: this.renderer.toneMappingExposure,
+			envIntensity: this.scene.environmentIntensity
+		});
+		// its little lights, into the one glow map both pictures read
+		if (shown) v.islet.lightUp(this.glow, 1 - this.dayMix, this.lampCol, this.flyCol);
+	}
 
 	private update(dt: number) {
 		this.clock += dt;
@@ -1905,11 +2043,7 @@ export class Grove {
 		this.air.update(dt, visible, this.viewYaw, !!this.drag?.moved || Math.abs(this.yawVel) > 0.35);
 		if (visible) {
 			this.lightUp();
-			this.petals.update(
-				dt,
-				this.garden.filter((g) => g.blossoms.length > 0),
-				this.reduced
-			);
+			this.petals.update(dt, this.blooms, this.reduced);
 		}
 	}
 

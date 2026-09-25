@@ -216,7 +216,9 @@ export function leafMaterial(
 	vary: number,
 	sheen = 0.5,
 	/** for flowers: the least size in pixels, and the leaves they are seen against */
-	small?: { minPx: number; ground: THREE.Color }
+	small?: { minPx: number; ground: THREE.Color },
+	/** a colour some of the leaves go to */
+	alt?: THREE.Color
 ) {
 	const m = new THREE.MeshStandardMaterial({
 		color: 0xffffff,
@@ -226,13 +228,21 @@ export function leafMaterial(
 	});
 	patch(
 		m,
-		'leaf-' + top.getHexString() + under.getHexString() + (small ? '-min' : ''),
+		'leaf-' +
+			top.getHexString() +
+			under.getHexString() +
+			(small ? '-min' : '') +
+			(alt ? '-alt' : ''),
 		leafPatch(u, small?.minPx ?? 0),
 		(s) => {
 			s.uniforms.uGround = { value: small?.ground ?? top };
 			s.uniforms.uTop = { value: top };
 			s.uniforms.uUnder = { value: under };
 			s.uniforms.uVary = { value: vary };
+			if (alt) {
+				s.uniforms.uAlt = { value: alt };
+				s.defines = { ...(s.defines ?? {}), LEAF_ALT: '' };
+			}
 			s.uniforms.uSunView = U.uSunView;
 			s.uniforms.uSunColor = U.uSunColor;
 			s.fragmentShader = s.fragmentShader
@@ -243,6 +253,9 @@ export function leafMaterial(
 				varying float vCov;
 				uniform vec3 uUnder;
 				uniform float uVary;
+				#ifdef LEAF_ALT
+				uniform vec3 uAlt;
+				#endif
 				uniform vec3 uSunView;
 				uniform vec3 uSunColor;
 				varying float vSky;
@@ -257,6 +270,10 @@ export function leafMaterial(
 				float wv = fract(vSeed * 7.13) - 0.5;
 				leafC *= 1.0 + wv * uVary;
 				leafC.r *= 1.0 + (fract(vSeed * 3.71) - 0.5) * uVary * 0.8;
+				#ifdef LEAF_ALT
+				// some leaves turned further than the rest, in drifts and not one by one
+				leafC = mix(leafC, uAlt * (1.0 + wv * uVary), smoothstep(0.55, 0.95, fract(vSeed * 5.27)));
+				#endif
 				float rib = (1.0 - smoothstep(0.0, 0.1, abs(vLeafUv.x - 0.5))) * 0.25;
 				diffuseColor.rgb = mix(uGround, leafC * (1.0 + rib), vCov);`
 				)
