@@ -98,6 +98,13 @@ const pause = () =>
 		requestAnimationFrame(go);
 		setTimeout(go, 50);
 	});
+/** The veil's boot log, and the figure on it that gains a dimension as each
+ *  part of the grove is ready (see app.html): what is being built, in numbers. */
+type Veil = { log?(tag: string, text: string, metric?: string): void; dim?(n: number): void };
+const veil = () => (globalThis as unknown as { __veil?: Veil }).__veil;
+const log = (tag: string, text: string, metric?: string) => veil()?.log?.(tag, text, metric);
+const since = (t0: number) => `${Math.round(performance.now() - t0)} ms`;
+const count = (n: number) => n.toLocaleString('en-US');
 const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 /** how far the sky is tipped up behind the island, in degrees, by layout */
@@ -371,7 +378,9 @@ export class Grove {
 	private build() {
 		const aniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
 		// the heavy textures are drawn in workers while the rest is built
+		const tb = performance.now();
 		const baked = bakeTextures(aniso);
+		void baked.done.then(() => log('tex', 'brick · ashlar · rock · flagstone', since(tb)));
 		this.texReady = baked.done;
 		const bricks = baked.tex.bricks;
 		const bark = barkTextures(aniso);
@@ -586,9 +595,24 @@ export class Grove {
 		const canopy = sharedCanopy(preps);
 		const stands: Stand[] = [];
 		for (let i = 0; i < groups.length; i++) {
-			stands.push(buildStand(groups[i], { ...opt, canopy }, preps[i]));
+			const t0 = performance.now();
+			const st = buildStand(groups[i], { ...opt, canopy }, preps[i]);
+			stands.push(st);
+			const leaves = (st.leaves.geometry as THREE.InstancedBufferGeometry).instanceCount;
+			const flowers = st.flowers
+				? (st.flowers.geometry as THREE.InstancedBufferGeometry).instanceCount
+				: 0;
+			const n = groups[i].length;
+			log(
+				'grow',
+				`${groups[i][0].species.name}${n > 1 ? ` ×${n}` : ''} · ${count(leaves)} leaves` +
+					(flowers ? ` · ${count(flowers)} flowers` : ''),
+				since(t0)
+			);
 			await pause();
 		}
+		// the garden grown: the figure takes its third dimension
+		veil()?.dim?.(3);
 		for (const st of stands) {
 			this.world.add(st.group);
 			this.growth.set(st, { g: 1, to: 1, pop: 0, popV: 0 });
@@ -1479,18 +1503,41 @@ export class Grove {
 		this.air = new Air(groveHabitat(this));
 		this.air.setDay(this.dayTo > 0.5);
 		this.world.add(this.air.group);
+		const ts = performance.now();
 		this.sky.bake(this.renderer);
 		await this.texReady;
 		this.sky.update(this.renderer);
 		await this.bakeEnvironment();
 		this.applyDay(this.dayMix);
 		this.placeCamera(0);
+		log('sky', 'scattering table · 2 environment maps', since(ts));
+		// and, the programs being made, its fourth
+		veil()?.dim?.(4);
+		const tc = performance.now();
 		try {
 			await this.renderer.compileAsync(this.scene, this.camera);
 		} catch {
 			/* older engines: the first frame compiles instead */
 		}
+		log('gpu', `${this.renderer.info.programs?.length ?? 0} shader programs compiled`, since(tc));
+		const td = performance.now();
 		this.draw();
+		{
+			const gl = this.renderer.getContext();
+			const i = this.renderer.info.render;
+			log(
+				'draw',
+				`${gl.drawingBufferWidth}×${gl.drawingBufferHeight} · ${gl.getParameter(gl.SAMPLES)}× MSAA · ` +
+					`${(i.triangles / 1e6).toFixed(2)} M tris · ${i.calls} calls`,
+				since(td)
+			);
+			const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+			const name = String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+			// "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, …)" → "Apple M4"
+			const m = /^ANGLE \([^,]*, ([^,]*)/.exec(name);
+			const gpu = (m ? m[1] : name).replace(/^.*Renderer: /, '').replace(/ Direct3D.*$/, '');
+			log('gpu', gpu, 'WebGL 2');
+		}
 		// nothing is drawn until everything is compiled, or the first frame
 		// compiles what is left while the page waits, and skips the shadows
 		this.live = true;

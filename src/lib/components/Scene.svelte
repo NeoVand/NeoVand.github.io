@@ -33,12 +33,37 @@
 		let disposed = false;
 		music.onStop(() => (lights.playing = false));
 		let g: Grove | null = null;
-		const veil = (window as unknown as { __veil?: { open(): void; lifted: Promise<void> } }).__veil;
+		const veil = (
+			window as unknown as {
+				__veil?: {
+					open(): void;
+					lifted: Promise<void>;
+					log?(tag: string, text: string, metric?: string): void;
+					dim?(n: number): void;
+				};
+			}
+		).__veil;
 		(async () => {
 			try {
+				const tf = performance.now();
 				const { Grove } = await import('$lib/grove/engine');
 				if (disposed) return;
+				// for the veil's log: what came down the wire for the scene
+				{
+					const js = performance
+						.getEntriesByType('resource')
+						.filter((e) => /\.js(\?|$)/.test(e.name)) as PerformanceResourceTiming[];
+					const kb = js.reduce((a, e) => a + (e.transferSize || e.encodedBodySize || 0), 0) / 1024;
+					veil?.log?.(
+						'fetch',
+						`three.js · engine · ${js.length} scripts · ${Math.round(kb)} KB`,
+						`${Math.round(performance.now() - tf)} ms`
+					);
+				}
+				// the engine is here: the veil's figure takes its second dimension
+				veil?.dim?.(2);
 				const q = new URLSearchParams(location.search);
+				const tb = performance.now();
 				g = new Grove({
 					canvas,
 					day: lights.day,
@@ -48,8 +73,14 @@
 					onLost: () => (failed = true),
 					level: music.level
 				});
+				veil?.log?.(
+					'build',
+					'island · rotunda · gramophone · lights',
+					`${Math.round(performance.now() - tb)} ms`
+				);
 				await g.ready();
 				if (disposed) return;
+				veil?.log?.('ready', 'first frame on screen', `${(performance.now() / 1000).toFixed(2)} s`);
 				grove = g;
 				stage.grove = g;
 				(window as unknown as { __grove3d: Grove }).__grove3d = g;

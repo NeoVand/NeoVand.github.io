@@ -84,36 +84,52 @@
 			html.veiled.day #veil {
 				background: #aec4d3;
 			}
-			html.veil-gone #veil {
-				opacity: 0;
+			/* once the figure is drawing, it draws the ground too, and opens it */
+			html.veiled.veil-drawn #veil {
+				background: transparent;
+			}
+			html.veil-gone #veil,
+			html.veil-dive #veil {
 				pointer-events: none;
 			}
-			/* only as large as the figure: a full-screen canvas at the screen's
-			   density is millions of pixels cleared and composited every frame */
+			html.veil-gone:not(.veil-dive) #veil {
+				opacity: 0;
+			}
+			/* the whole screen: the figure is drawn with its ground, which it
+			   opens as the page comes in */
 			#veil-canvas {
 				position: absolute;
-				left: 50%;
-				top: 50%;
-				width: 80vmin;
-				height: 80vmin;
+				inset: 0;
+				width: 100%;
+				height: 100%;
 				display: block;
-				transform: translate(-50%, -50%);
-				transition: transform 1300ms cubic-bezier(0.25, 0, 0, 1);
-				will-change: transform;
 			}
-			html.veil-gone #veil-canvas {
-				transform: translate(-50%, -50%) scale(1.1);
+			/* the build's log, in the corner (drawn with the figure: see below) */
+			#veil-log {
+				position: absolute;
+				left: max(22px, 3vw);
+				bottom: max(20px, 4vh);
+				display: block;
+				pointer-events: none;
+				transition: opacity 420ms ease;
 			}
-			@media (prefers-reduced-motion: reduce) {
-				html.veil-gone #veil-canvas {
-					transform: translate(-50%, -50%);
+			html.veil-full #veil-log {
+				opacity: 0;
+			}
+			@media (max-width: 600px) {
+				#veil-log {
+					left: 16px;
+					bottom: 18px;
 				}
 			}
 		</style>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<div id="veil" aria-hidden="true"><canvas id="veil-canvas"></canvas></div>
+		<div id="veil" aria-hidden="true">
+			<canvas id="veil-canvas"></canvas>
+			<canvas id="veil-log"></canvas>
+		</div>
 		<script>
 			// ─── The veil's tesseract ───────────────────────────────────────────
 			// A hypercube turning in four dimensions, drawn in two: sixteen
@@ -140,6 +156,7 @@
 					const V = [];
 					for (let i = 0; i < 16; i++)
 						V.push([i & 1 ? 1 : -1, i & 2 ? 1 : -1, i & 4 ? 1 : -1, i & 8 ? 1 : -1]);
+					// the squares: two axes free, the other two fixed each at a sign
 					const FACES = [];
 					for (let a = 0; a < 4; a++)
 						for (let b = a + 1; b < 4; b++) {
@@ -148,7 +165,14 @@
 								for (let sd = -1; sd <= 1; sd += 2) {
 									const at = (va, vb) =>
 										V.findIndex((v) => v[a] === va && v[b] === vb && v[c] === sc && v[d] === sd);
-									FACES.push([at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)]);
+									FACES.push({
+										v: [at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)],
+										span: [a, b],
+										fix: [
+											[c, sc],
+											[d, sd]
+										]
+									});
 								}
 						}
 					const rot = (p, i, j, t) => {
@@ -160,25 +184,25 @@
 						p[j] = a * s + b * c;
 					};
 					const P3 = V.map(() => [0, 0, 0]),
-						P2 = V.map(() => [0, 0]);
-					function project(t) {
+						P2 = V.map(() => [0, 0]),
+						W4 = V.map(() => 0);
+					// e: how far each axis has grown out (0..1); a4: the turn in the
+					// fourth dimension, which begins only once there is one
+					// the view's own tilt, down and across
+					const T1 = Math.atan2(0.34, 0.94),
+						T2 = Math.atan2(0.47, 0.88);
+					function project(e, a4, a1, a2) {
 						for (let i = 0; i < 16; i++) {
-							const p = V[i].slice();
-							rot(p, 0, 3, t * 0.42);
-							rot(p, 1, 2, t * 0.27);
-							rot(p, 0, 2, 0.6 + t * 0.05);
+							const p = [V[i][0] * e[0], V[i][1] * e[1], V[i][2] * e[2], V[i][3] * e[3]];
+							rot(p, 0, 3, a4);
+							rot(p, 1, 2, a1);
+							rot(p, 0, 2, a2);
+							W4[i] = p[3];
 							const k4 = 2.4 / (2.4 - p[3] * 0.85);
-							let x = p[0] * k4,
-								y = p[1] * k4,
-								z = p[2] * k4;
-							let y2 = y * 0.94 - z * 0.34,
-								z2 = y * 0.34 + z * 0.94;
-							y = y2;
-							z = z2;
-							let x2 = x * 0.88 + z * 0.47;
-							z2 = -x * 0.47 + z * 0.88;
-							x = x2;
-							z = z2;
+							const q = [p[0] * k4, p[1] * k4, p[2] * k4];
+							rot(q, 1, 2, T1);
+							rot(q, 2, 0, T2);
+							const [x, y, z] = q;
 							const k3 = 4.4 / (4.4 - z);
 							P3[i][0] = x;
 							P3[i][1] = y;
@@ -204,27 +228,146 @@
 						g.fillRect(0, 0, 128, 128);
 					}
 					const order = FACES.map((f, i) => i);
-					let lit = 0;
-					// st: the canvas's side and the window's shorter side in CSS
-					// pixels, the pixel ratio, and the lights
+					const ease = (x) => {
+						x = Math.min(1, Math.max(0, x));
+						return x * x * x * (x * (x * 6 - 15) + 10);
+					};
+					// each part of the figure is there as fully as the axes it stands
+					// out along have grown: while an axis is still folded in, its far
+					// copy of everything lies on the near one, and fades in as it
+					// draws away
+					const weigh = (idx, fix) => {
+						let w = 1;
+						for (const [j, s] of fix) if (s > 0) w *= e[j];
+						return w;
+					};
+					const e = [0, 0, 0, 0];
+					let lit = 0,
+						a4 = 0,
+						a1 = 0,
+						a2 = 0.6,
+						last = -1,
+						pane = -1;
+					// the area inside a few points in order, for choosing the window
+					const area = (h) => {
+						let a = 0;
+						for (let i = 0; i < h.length; i++) {
+							const p = h[i],
+								q = h[(i + 1) % h.length];
+							a += p[0] * q[1] - q[0] * p[1];
+						}
+						return Math.abs(a) / 2;
+					};
+					// st: the screen and its shorter side in CSS pixels, the pixel
+					// ratio, the lights and the ground, when each axis began to grow
+					// and when the way out did (on the page's clock)
 					return function frame(t, st) {
-						const { side, vmin, dpr, day } = st;
+						const { W, H, vmin, dpr, day } = st;
+						const now = performance.timeOrigin + performance.now();
+						for (let j = 0; j < 4; j++) {
+							const s0 = st.stages ? st.stages[j] : 0;
+							e[j] = s0 ? ease((now - s0) / st.ext) : 0;
+						}
+						// The way out: the pane of the inner cell most square to the eye
+						// clears to a window on the page, and the eye goes in through
+						// it, the figure slowing in its turning, growing past and fading
+						// as it goes, the window widening until it is the whole screen.
+						// Eased at both ends.
+						const u = st.dive ? Math.min(1, Math.max(0, (now - st.dive) / st.diveMs)) : 0;
+						const spin = 1 - ease(u / 0.8);
+						const dt = last < 0 ? 0 : Math.min(0.1, t - last);
+						last = t;
+						a4 += dt * 0.42 * e[3] * spin;
+						a1 += dt * 0.27 * spin;
+						a2 += dt * 0.05 * spin;
 						lit += ((st.full ? 1 : 0) - lit) * 0.06;
-						const px = Math.round(side * dpr);
-						if (canvas.width !== px || canvas.height !== px) canvas.width = canvas.height = px;
-						project(t);
+						const pw = Math.round(W * dpr),
+							ph = Math.round(H * dpr);
+						if (canvas.width !== pw || canvas.height !== ph) {
+							canvas.width = pw;
+							canvas.height = ph;
+						}
+						project(e, a4, a1, a2);
 						const S = vmin * 0.082,
-							cx = side / 2,
-							cy = side / 2;
+							cx = W / 2,
+							cy = H / 2;
+						// the pane, chosen once as the way out begins: of the inner
+						// cell's faces, the one that is largest and most toward the eye
+						if (u > 0 && pane < 0) {
+							let best = -1;
+							const pick = (all) =>
+								FACES.forEach((F, fi) => {
+									if (!all && !F.v.every((i) => W4[i] < 0)) return;
+									const [a, b, , d] = F.v.map((i) => P3[i]);
+									const n = [
+										(b[1] - a[1]) * (d[2] - a[2]) - (b[2] - a[2]) * (d[1] - a[1]),
+										(b[2] - a[2]) * (d[0] - a[0]) - (b[0] - a[0]) * (d[2] - a[2]),
+										(b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0])
+									];
+									const nz = Math.abs(n[2]) / (Math.hypot(...n) || 1);
+									const sc = area(F.v.map((i) => [P2[i][0], P2[i][1]])) * nz * nz;
+									if (sc > best) {
+										best = sc;
+										pane = fi;
+									}
+								});
+							pick(false);
+							if (pane < 0) pick(true);
+						}
+						const win = pane >= 0 ? FACES[pane].v : [];
+						let Z = 1,
+							hx = 0,
+							hy = 0,
+							drift = 0;
+						if (pane >= 0) {
+							for (const i of win) {
+								hx += (P2[i][0] * S) / 4;
+								hy += (P2[i][1] * S) / 4;
+							}
+							Z = Math.exp(Math.log(30) * ease(u));
+							drift = ease(u);
+						}
+						const sx = (i) => cx + (P2[i][0] * S - hx) * Z + hx * (1 - drift),
+							sy = (i) => cy + (P2[i][1] * S - hy) * Z + hy * (1 - drift);
+						// (the glass clears first, so the window is clear; the edges and
+						// the lights go by after)
+						const gone = 1 - (u < 0.25 ? 0 : ease((u - 0.25) / 0.55)),
+							clear = 1 - ease(u / 0.45);
 						ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-						ctx.clearRect(0, 0, side, side);
+						ctx.clearRect(0, 0, W, H);
+						// the ground, and the window in it
+						const ga = 1 - (u < 0.72 ? 0 : ease((u - 0.72) / 0.28));
+						if (ga > 0.002) {
+							ctx.globalAlpha = ga;
+							ctx.fillStyle = st.ground;
+							ctx.fillRect(0, 0, W, H);
+							ctx.globalAlpha = 1;
+							const hole = ease(u / 0.28);
+							if (pane >= 0 && hole > 0.002) {
+								const h = win.map((i) => [sx(i), sy(i)]);
+								const r = Math.sqrt(area(h) / Math.PI);
+								ctx.globalCompositeOperation = 'destination-out';
+								ctx.fillStyle = ctx.shadowColor = `rgba(0,0,0,${hole.toFixed(3)})`;
+								ctx.shadowBlur = Math.min(60, Math.max(4, r * 0.06)) * dpr;
+								ctx.beginPath();
+								h.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+								ctx.closePath();
+								ctx.fill();
+								ctx.shadowBlur = 0;
+								ctx.globalCompositeOperation = 'source-over';
+							}
+						}
+						if (gone < 0.002) return;
 						ctx.lineJoin = 'round';
 						const depth = FACES.map(
-							(f) => (P3[f[0]][2] + P3[f[1]][2] + P3[f[2]][2] + P3[f[3]][2]) / 4
+							(f) => (P3[f.v[0]][2] + P3[f.v[1]][2] + P3[f.v[2]][2] + P3[f.v[3]][2]) / 4
 						);
 						order.sort((i, j) => depth[i] - depth[j]);
 						for (const fi of order) {
-							const f = FACES[fi];
+							const F = FACES[fi],
+								f = F.v;
+							const w = weigh(f, F.fix);
+							if (w < 0.003) continue;
 							const a = P3[f[0]],
 								b = P3[f[1]],
 								d = P3[f[3]];
@@ -247,16 +390,30 @@
 								nz = -nz;
 							}
 							const shade = 0.16 + 0.84 * Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
-							const glass = day
-								? 0.08 + 0.34 * shade + lit * 0.05
-								: 0.025 + 0.13 * shade + lit * 0.03;
+							const glass =
+								(day ? 0.08 + 0.34 * shade + lit * 0.05 : 0.025 + 0.13 * shade + lit * 0.03) *
+								w *
+								clear;
+							// the cell further out in the fourth dimension a little warmer,
+							// the one further in a little cooler: as the figure turns inside
+							// out, the warmth passes from one to the other
+							const ww = (W4[f[0]] + W4[f[1]] + W4[f[2]] + W4[f[3]]) / 4;
+							const k = 0.5 + 0.5 * Math.max(-1, Math.min(1, ww));
 							ctx.beginPath();
-							ctx.moveTo(cx + P2[f[0]][0] * S, cy + P2[f[0]][1] * S);
-							for (let k = 1; k < 4; k++) ctx.lineTo(cx + P2[f[k]][0] * S, cy + P2[f[k]][1] * S);
+							ctx.moveTo(sx(f[0]), sy(f[0]));
+							for (let q = 1; q < 4; q++) ctx.lineTo(sx(f[q]), sy(f[q]));
 							ctx.closePath();
-							ctx.fillStyle = day
-								? `rgba(255,255,255,${glass.toFixed(3)})`
-								: `rgba(226,210,186,${glass.toFixed(3)})`;
+							if (day) {
+								const r = Math.round(236 + 19 * k),
+									g = Math.round(244 + 8 * k),
+									bl = Math.round(255 - 10 * k);
+								ctx.fillStyle = `rgba(${r},${g},${bl},${glass.toFixed(3)})`;
+							} else {
+								const r = Math.round(196 + 34 * k),
+									g = Math.round(206 + 4 * k),
+									bl = Math.round(232 - 50 * k);
+								ctx.fillStyle = `rgba(${r},${g},${bl},${glass.toFixed(3)})`;
+							}
 							ctx.fill();
 							if (!day) {
 								ctx.shadowColor = 'rgba(232,200,160,0.35)';
@@ -264,27 +421,38 @@
 							}
 							ctx.lineWidth = 1.1;
 							ctx.strokeStyle = day
-								? `rgba(18,30,48,${(0.55 + lit * 0.3).toFixed(3)})`
-								: `rgba(244,232,214,${(0.66 + lit * 0.3).toFixed(3)})`;
+								? `rgba(18,30,48,${((0.55 + lit * 0.3) * w * gone).toFixed(3)})`
+								: `rgba(244,232,214,${((0.66 + lit * 0.3) * w * gone).toFixed(3)})`;
 							ctx.stroke();
 							ctx.shadowBlur = 0;
 						}
 						ctx.globalCompositeOperation = day ? 'source-over' : 'lighter';
+						const vw = V.map(
+							(v) =>
+								(v[0] > 0 ? e[0] : 1) *
+								(v[1] > 0 ? e[1] : 1) *
+								(v[2] > 0 ? e[2] : 1) *
+								(v[3] > 0 ? e[3] : 1)
+						);
 						for (let i = 0; i < 16; i++) {
-							const x = cx + P2[i][0] * S,
-								y = cy + P2[i][1] * S;
+							if (vw[i] < 0.003) continue;
+							const x = sx(i),
+								y = sy(i);
 							const near = (P3[i][2] + 2) / 4;
 							const r = (day ? 12 : 20) * (0.7 + 0.6 * near) * (1 + lit * 0.35);
-							ctx.globalAlpha = (day ? 0.6 : 0.9) * (0.55 + 0.45 * near);
+							ctx.globalAlpha = (day ? 0.6 : 0.9) * (0.55 + 0.45 * near) * vw[i] * gone;
 							ctx.drawImage(bloom, x - r, y - r, r * 2, r * 2);
 						}
 						ctx.globalAlpha = 1;
 						ctx.globalCompositeOperation = 'source-over';
 						for (let i = 0; i < 16; i++) {
-							const x = cx + P2[i][0] * S,
-								y = cy + P2[i][1] * S;
+							if (vw[i] < 0.003) continue;
+							const x = sx(i),
+								y = sy(i);
 							const k = 1.2 + (1.2 * (P3[i][2] + 2)) / 4;
-							ctx.fillStyle = day ? 'rgba(18,30,48,0.9)' : 'rgba(255,244,226,0.95)';
+							ctx.fillStyle = day
+								? `rgba(18,30,48,${(0.9 * vw[i] * gone).toFixed(3)})`
+								: `rgba(255,244,226,${(0.95 * vw[i] * gone).toFixed(3)})`;
 							ctx.beginPath();
 							ctx.arc(x, y, k, 0, Math.PI * 2);
 							ctx.fill();
@@ -292,14 +460,201 @@
 					};
 				}
 
+				// The build's log, drawn in the same worker as the figure and for
+				// the same reason: the lines come in bursts, as the build does,
+				// when the page's thread is least free to show them. Here they are
+				// let out one after another, rise as the next come under them, type
+				// in with their numbers settling last; and each has its span on a
+				// waterfall at the right, when it began and how long it took on the
+				// page's clock, so the work done at once shows as at once.
+				function logger(canvas) {
+					const ctx = canvas.getContext('2d');
+					const rows = [],
+						queue = [];
+					let scroll = 0,
+						nextAt = 0,
+						last = 0,
+						axis = 0.8;
+					const ease = (x) => {
+						x = Math.min(1, Math.max(0, x));
+						return x * x * (3 - 2 * x);
+					};
+					const hash = (a, b) => {
+						const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+						return v - Math.floor(v);
+					};
+					const CPS = 260;
+					return {
+						add(r) {
+							const m = /([\d.]+)\s*ms\b/.exec(r.metric || '');
+							r.ms = m ? parseFloat(m[1]) : 0;
+							queue.push(r);
+							if (rows.length + queue.length > 40) rows.shift();
+						},
+						frame(now, st) {
+							const { W, H, dpr, day, phone } = st;
+							const pw = Math.max(1, Math.round(W * dpr)),
+								ph = Math.max(1, Math.round(H * dpr));
+							if (canvas.width !== pw || canvas.height !== ph) {
+								canvas.width = pw;
+								canvas.height = ph;
+							}
+							const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
+							last = now;
+							if (queue.length && now >= nextAt) {
+								const r = queue.shift();
+								r.at = now;
+								rows.push(r);
+								nextAt = now + (queue.length > 3 ? 60 : 105);
+							}
+							scroll += (rows.length - scroll) * (1 - Math.exp(-dt * 10));
+							let end = 0.5;
+							for (const r of rows) end = Math.max(end, r.t * 1.12);
+							axis += (end - axis) * (1 - Math.exp(-dt * 3));
+							ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+							ctx.clearRect(0, 0, W, H);
+							const fs = phone ? 9.5 : 11,
+								LH = Math.round(fs * 1.74);
+							ctx.font = `400 ${fs}px Menlo, 'SF Mono', SFMono-Regular, Consolas, 'DejaVu Sans Mono', monospace`;
+							ctx.textBaseline = 'alphabetic';
+							const cw = ctx.measureText('0').width;
+							const xk = cw * 6.5,
+								xm = cw * 13.5;
+							const wfW = phone ? 46 : 104,
+								msW = cw * (phone ? 6 : 7);
+							const wfX = W - msW - wfW - cw * 1.5;
+							const room = wfX - xm - cw * 2;
+							const C = day
+								? {
+										time: '18,30,48',
+										ta: 0.42,
+										tag: '120,64,20',
+										text: '18,30,48',
+										xa: 0.84,
+										bar: '120,64,20',
+										head: '70,34,8'
+									}
+								: {
+										time: '226,210,186',
+										ta: 0.36,
+										tag: '240,196,132',
+										text: '236,224,206',
+										xa: 0.8,
+										bar: '240,196,132',
+										head: '255,238,206'
+									};
+							const col = (c, a) => `rgba(${c},${a.toFixed(3)})`;
+							// the waterfall's ground: a hairline for the page's first second
+							ctx.fillStyle = col(C.time, 0.12);
+							ctx.fillRect(wfX, H - 3, wfW, 1);
+							const sec = Math.floor(axis);
+							for (let k = 1; k <= sec; k++) ctx.fillRect(wfX + (k / axis) * wfW, H - 5, 1, 3);
+							for (let i = 0; i < rows.length; i++) {
+								const r = rows[i];
+								const y = H - 9 - (scroll - 1 - i) * LH;
+								if (y < -2 || y > H + LH) continue;
+								const age = (now - r.at) / 1000;
+								// (fading out toward the top, and in over the bottom edge as it rises)
+								const fade =
+									ease((y - 2) / (H * 0.62)) * ease((H - y + 3) / (LH * 1.1)) * ease(age / 0.18);
+								if (fade < 0.005) continue;
+								ctx.fillStyle = col(C.time, C.ta * fade);
+								ctx.fillText(r.t.toFixed(3), 0, y);
+								ctx.fillStyle = col(C.tag, 0.92 * fade);
+								ctx.fillText(r.tag, xk, y);
+								// typed in, and each digit turning over a moment before it settles
+								const full = r.text;
+								const n = Math.min(full.length, Math.floor(age * CPS));
+								let shown = '';
+								for (let j = 0; j < n; j++) {
+									const ch = full[j];
+									shown +=
+										ch >= '0' && ch <= '9' && age - j / CPS < 0.16
+											? String(Math.floor(hash(Math.floor(now / 50), j + i * 31) * 10))
+											: ch;
+								}
+								let text = shown;
+								if (ctx.measureText(text).width > room) {
+									while (text.length > 1 && ctx.measureText(text + '…').width > room)
+										text = text.slice(0, -1);
+									text += '…';
+								}
+								ctx.fillStyle = col(C.text, C.xa * fade);
+								ctx.fillText(text, xm, y);
+								const typed = full.length / CPS;
+								if (age < typed + 0.1) {
+									ctx.fillStyle = col(C.text, 0.55 * fade);
+									ctx.fillRect(
+										xm + ctx.measureText(text).width + 1,
+										y - fs * 0.78,
+										cw * 0.6,
+										fs * 0.92
+									);
+								}
+								// its span: from when it began to when it ended, drawn out
+								const bk = ease((age - typed * 0.5) / 0.4);
+								if (r.ms > 0 || r.tag === 'ready') {
+									const t1 = r.t,
+										t0 = Math.max(0, r.t - r.ms / 1000);
+									const x0 = wfX + Math.min(1, t0 / axis) * wfW,
+										x1 = wfX + Math.min(1, t1 / axis) * wfW;
+									if (r.tag === 'ready') {
+										ctx.fillStyle = col(C.head, 0.8 * fade * bk);
+										ctx.fillRect(x1 - 0.5, y - fs * 0.85, 1, fs);
+									} else {
+										const xe = x0 + Math.max(1.5, x1 - x0) * bk;
+										ctx.fillStyle = col(C.bar, 0.82 * fade);
+										ctx.fillRect(x0, y - fs * 0.46, xe - x0, 2.5);
+										if (bk < 1) {
+											ctx.fillStyle = col(C.head, fade * (1 - bk * 0.5));
+											ctx.fillRect(xe - 1.2, y - fs * 0.46 - 1.2, 3, 5);
+										}
+									}
+								}
+								const right = r.ms > 0 ? `${Math.round(r.ms)} ms` : r.metric || '';
+								if (right) {
+									ctx.textAlign = 'right';
+									ctx.fillStyle = col(C.time, (r.ms > 0 ? 0.62 : 0.5) * fade * bk);
+									ctx.fillText(right, W, y);
+									ctx.textAlign = 'left';
+								}
+							}
+						}
+					};
+				}
+
+				const logCv = document.getElementById('veil-log');
+				// when the way out began, on the page's clock (see the dive above)
+				let diveAt = 0;
+				const DIVE = 2000;
 				const state = () => {
 					const vmin = Math.min(innerWidth, innerHeight);
+					const phone = innerWidth < 600;
+					const lw = phone ? innerWidth - 32 : Math.min(660, innerWidth - 44);
+					const lh = Math.round((phone ? 9.5 : 11) * 1.74) * 11 + 12;
+					if (logCv) {
+						logCv.style.width = `${lw}px`;
+						logCv.style.height = `${lh}px`;
+					}
 					return {
-						side: vmin * 0.8,
+						W: innerWidth,
+						H: innerHeight,
 						vmin,
 						dpr: Math.min(devicePixelRatio || 1, 2),
 						day: root.classList.contains('day'),
-						full: root.classList.contains('veil-full')
+						ground: root.classList.contains('day') ? '#aec4d3' : '#0b0e16',
+						dive: diveAt,
+						diveMs: DIVE,
+						full: root.classList.contains('veil-full'),
+						stages: (window.__veil && window.__veil.stages) || [0, 0, 0, 0],
+						ext: 440,
+						log: {
+							W: lw,
+							H: lh,
+							dpr: Math.min(devicePixelRatio || 1, 2),
+							day: root.classList.contains('day'),
+							phone
+						}
 					};
 				};
 				const born = performance.now();
@@ -310,25 +665,41 @@
 				try {
 					if (typeof OffscreenCanvas === 'undefined' || !canvas.transferControlToOffscreen) throw 0;
 					const src = `const tesseract = ${tesseract.toString()};
-						let frame = null, st = null, born = 0;
+						const logger = ${logger.toString()};
+						let frame = null, lg = null, st = null, born = 0, told = false;
 						const next = (f) => (self.requestAnimationFrame ? requestAnimationFrame(f) : setTimeout(() => f(performance.now()), 16));
 						const loop = () => {
-							if (frame && st) frame((performance.now() - born) / 1000, st);
+							if (frame && st) {
+								frame((performance.now() - born) / 1000, st);
+								// (the page may take its own ground away now: this one is drawn)
+								if (!told) { told = true; postMessage('drawn'); }
+							}
+							if (lg && st && st.log) lg.frame(performance.timeOrigin + performance.now(), st.log);
 							next(loop);
 						};
 						onmessage = (e) => {
 							const d = e.data;
 							if (d.canvas) { frame = tesseract(d.canvas); born = performance.now() - d.age; }
-							st = Object.assign(st || {}, d.st);
+							if (d.logCanvas) lg = logger(d.logCanvas);
+							if (d.row && lg) lg.add(d.row);
+							if (d.st) st = Object.assign(st || {}, d.st);
 						};
 						next(loop);`;
 					const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
 					const w = new Worker(url);
 					URL.revokeObjectURL(url);
 					const off = canvas.transferControlToOffscreen();
-					w.postMessage({ canvas: off, age: 0, st: state() }, [off]);
+					const logOff =
+						logCv && logCv.transferControlToOffscreen ? logCv.transferControlToOffscreen() : null;
+					w.postMessage(
+						{ canvas: off, logCanvas: logOff, age: 0, st: state() },
+						logOff ? [off, logOff] : [off]
+					);
 					send = () => w.postMessage({ st: state() });
 					stop = () => w.terminate();
+					w.onmessage = (e) => e.data === 'drawn' && root.classList.add('veil-drawn');
+					window.__veilLog = (row) => w.postMessage({ row });
+					window.__veilMode = 'OffscreenCanvas · worker';
 				} catch (e) {
 					send = null;
 				}
@@ -337,16 +708,29 @@
 				if (!send) {
 					let st = state();
 					const frame = tesseract(canvas);
+					const lg = logCv ? logger(logCv) : null;
 					let raf = 0;
 					const loop = (now) => {
 						raf = requestAnimationFrame(loop);
 						frame((now - born) / 1000, st);
+						root.classList.add('veil-drawn');
+						if (lg) lg.frame(performance.timeOrigin + performance.now(), st.log);
 					};
+					window.__veilLog = (row) => lg && lg.add(row);
 					raf = requestAnimationFrame(loop);
 					send = () => (st = state());
 					stop = () => cancelAnimationFrame(raf);
+					window.__veilMode = 'canvas · main thread';
 				}
 
+				// (and the lifting below tells it when an axis begins to grow, and
+				// when to go in)
+				window.__veilPush = send;
+				window.__veilDive = (at) => {
+					diveAt = at;
+					send();
+					return DIVE;
+				};
 				addEventListener('resize', send);
 				new MutationObserver(send).observe(root, { attributes: true, attributeFilter: ['class'] });
 				// and when the veil has gone, so does the figure
@@ -359,10 +743,19 @@
 				}, 500);
 			})();
 
-			// ─── Lifting it ─────────────────────────────────────────────────────
+			// ─── Lifting it, and what is said on it ─────────────────────────────
+			// The figure is built up as the page is: a point first, drawn out
+			// into a line, the line into a square, the square into a cube, and
+			// the cube into the tesseract, each once the part of the page it
+			// stands for is ready (the engine arrived, the garden grown, the
+			// programs being made) and never before the last has finished
+			// growing. In the corner, the log of the build itself, in its own
+			// numbers.
+			//
 			// The app calls __veil.open() once the scene has drawn its first
-			// frame. The figure is given a little while to be seen turning
-			// first, and the veil is never held longer than MAX, whatever fails.
+			// frame. The veil lifts then, once the tesseract has been seen
+			// whole and turning a moment, and never later than MAX, whatever
+			// fails.
 			(() => {
 				const root = document.documentElement;
 				const veil = document.getElementById('veil');
@@ -370,7 +763,10 @@
 				const V = (window.__veil = {
 					gone: false,
 					lifted: new Promise((r) => (lift = r)),
-					open: () => {}
+					open: () => {},
+					log: () => {},
+					dim: () => {},
+					stages: [0, 0, 0, 0]
 				});
 				if (!veil || !root.classList.contains('veiled')) {
 					V.gone = true;
@@ -385,13 +781,114 @@
 				veil.addEventListener('touchmove', still, { passive: false });
 				const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 				const MIN = reduced ? 400 : 2000,
-					MAX = 9000;
+					MAX = 9000,
+					// an axis's growing, the pause before the next, and the tesseract
+					// seen turning before the veil lifts (ms)
+					EXT = 440,
+					GAP = 40,
+					TURN = 600;
 				const born = performance.now();
-				let done = false;
+				const clock = () => performance.timeOrigin + performance.now();
+				const drawing = () => !!window.__veilPush;
+
+				// ── the log: each line stamped with the page's clock, and handed to
+				// the figure's worker to be drawn (see logger above) ─────────────
+				V.log = (tag, text, metric) => {
+					if (V.gone || !window.__veilLog) return;
+					window.__veilLog({ t: performance.now() / 1000, tag, text, metric: metric || '' });
+				};
+
+				// ── the figure's steps ───────────────────────────────────────────
+				let want = 0,
+					growT = 0;
+				V.dim = (n) => {
+					want = Math.max(want, Math.min(4, n));
+					grow();
+				};
+				function grow() {
+					clearTimeout(growT);
+					for (let j = 0; j < want; j++) {
+						if (V.stages[j]) continue;
+						const from = j === 0 ? 0 : V.stages[j - 1] + EXT + GAP;
+						const now = clock();
+						if (now < from) {
+							growT = setTimeout(grow, from - now + 2);
+							return;
+						}
+						V.stages[j] = now;
+						if (window.__veilPush) window.__veilPush();
+					}
+					check();
+				}
+
+				// what the veil itself can say at once
+				if (drawing()) {
+					V.log(
+						'veil',
+						`tesseract · ${window.__veilMode || 'canvas'}`,
+						`${devicePixelRatio || 1}× dpr`
+					);
+					// the first axis soon after the point is seen
+					setTimeout(() => V.dim(1), 240);
+				}
+				const dom = () => {
+					const n = performance.getEntriesByType('navigation')[0];
+					if (n)
+						V.log(
+							'html',
+							`document · ${Math.round((n.transferSize || n.encodedBodySize || 0) / 1024)} KB · ${document.getElementsByTagName('*').length} elements`,
+							`${Math.round(n.domInteractive)} ms`
+						);
+					document.fonts &&
+						document.fonts.ready.then(() => {
+							const f = new Set();
+							document.fonts.forEach(
+								(x) => x.status === 'loaded' && f.add(x.family.replace(/["']/g, ''))
+							);
+							if (f.size) V.log('font', [...f].join(' · '), `${Math.round(performance.now())} ms`);
+						});
+				};
+				if (document.readyState === 'loading')
+					addEventListener('DOMContentLoaded', dom, { once: true });
+				else dom();
+
+				// ── lifting it ───────────────────────────────────────────────────
+				let ready = false,
+					done = false;
+				V.open = () => {
+					ready = true;
+					check();
+				};
+				function check() {
+					if (done || !ready) return;
+					let wait = Math.max(0, MIN - (performance.now() - born));
+					if (drawing() && !reduced) {
+						// not until the tesseract is whole and has turned a while
+						if (!V.stages[3]) return;
+						wait = Math.max(wait, V.stages[3] + EXT + TURN - clock());
+					}
+					if (wait > 0) return void setTimeout(check, wait + 5);
+					go();
+				}
 				function go() {
 					if (done) return;
 					done = true;
 					root.classList.add('veil-full');
+					// in through the figure, where it is drawn (it opens its own
+					// ground: see the dive above); the page starts coming in as the
+					// window does
+					if (drawing() && !reduced && window.__veilDive) {
+						const dive = window.__veilDive(clock());
+						root.classList.add('veil-dive');
+						V.gone = true;
+						// (the page's own opening begins as the window does)
+						setTimeout(lift, 220);
+						setTimeout(() => {
+							root.classList.remove('veiled', 'veil-drawn', 'veil-dive');
+							veil.remove();
+						}, dive + 60);
+						return;
+					}
 					setTimeout(
 						() => {
 							root.classList.add('veil-gone');
@@ -408,7 +905,6 @@
 						reduced ? 60 : 380
 					);
 				}
-				V.open = () => setTimeout(go, Math.max(0, MIN - (performance.now() - born)));
 				setTimeout(go, MAX);
 			})();
 		</script>
