@@ -22,6 +22,40 @@ export const U = {
 	uBufH: { value: 1000 }
 };
 
+// ─── The picture's tone map and grade ─────────────────────────────────────
+// Both pictures, the grove's and the islet's, are drawn straight to their
+// canvases, and every surface tone-maps itself as it is drawn: AgX, then the
+// grade in display terms (a little more saturation than AgX leaves, a gentle
+// S for contrast, warm lights and cool shadows). Done per pixel like this
+// there is no half-float frame to fill and pass over four times more, and
+// the canvas can take the screen's own density with the GPU's multisampling.
+//
+// The renderer hands a shader one number for all this, its exposure; so the
+// warmth rides in it too, in whole hundredths, four to a step above the
+// exposure itself (see graded()), and is taken back out here.
+THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+	'vec3 CustomToneMapping( vec3 color ) { return color; }',
+	`vec3 CustomToneMapping( vec3 color ) {
+		float k = floor( toneMappingExposure * 0.25 );
+		float x = toneMappingExposure - 4.0 * k;
+		float warm = k * 0.01;
+		// (AgX multiplies by the exposure uniform itself: undo the warmth in it)
+		vec3 c = AgXToneMapping( color * ( x / toneMappingExposure ) );
+		c = pow( max( c, 0.0 ), vec3( 1.0 / 2.2 ) );
+		float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+		c = mix( vec3( l ), c, 1.18 );
+		c = mix( c, c * c * ( 3.0 - 2.0 * c ), 0.34 );
+		c *= mix( vec3( 0.97, 0.99, 1.05 ), vec3( 1.04, 1.0, 0.95 ),
+			smoothstep( 0.15, 0.85, l ) * warm + ( 1.0 - warm ) * 0.5 );
+		return pow( max( c, 0.0 ), vec3( 2.2 ) );
+	}`
+);
+
+/** the renderer's toneMappingExposure for an exposure (under 4) and a warmth (0..1) */
+export function graded(exposure: number, warm: number) {
+	return Math.min(exposure, 3.99) + 4 * Math.round(Math.min(Math.max(warm, 0), 1) * 100);
+}
+
 type Patch = (shader: THREE.WebGLProgramParametersWithUniforms) => void;
 
 /** Compose shader patches on a built-in material, keyed so programs are shared. */

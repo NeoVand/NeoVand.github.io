@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { U } from './shared';
 import { ROT, type RotundaParts } from './rotunda';
 
 // ─── Fairy lights ─────────────────────────────────────────────────────────
@@ -158,6 +159,8 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 			void main() {
 				vec3 bead = uBead * vShade;
 				gl_FragColor = vec4(mix(bead, uWarm * vOn, clamp(vOn * 1.5, 0.0, 1.0)), 1.0);
+				#include <tonemapping_fragment>
+				#include <colorspace_fragment>
 			}`
 	});
 	const bulbs = new THREE.InstancedMesh(geo, mat, all.length);
@@ -168,6 +171,70 @@ export function buildFairyLights(rot: RotundaParts): FairyLights {
 	});
 	bulbs.frustumCulled = false;
 	group.add(bulbs);
+
+	// and round each lit bulb a little of its light in the air, a soft disc
+	// facing the eye, drawn a hand's breadth nearer than the bulb so the dome
+	// it sits on does not cut it in half
+	const haloGeo = new THREE.BufferGeometry();
+	haloGeo.setAttribute(
+		'position',
+		new THREE.Float32BufferAttribute(
+			all.flatMap((p) => p.toArray()),
+			3
+		)
+	);
+	haloGeo.setAttribute('aOrder', new THREE.Float32BufferAttribute(order, 1));
+	haloGeo.setAttribute('aPhase', new THREE.Float32BufferAttribute(phase, 1));
+	haloGeo.setAttribute(
+		'aSize',
+		new THREE.Float32BufferAttribute(
+			all.map((p) => (p === tip ? 2.2 : 1)),
+			1
+		)
+	);
+	const halo = new THREE.Points(
+		haloGeo,
+		new THREE.ShaderMaterial({
+			uniforms: { ...uniforms, uBufH: U.uBufH },
+			vertexShader: /* glsl */ `
+				attribute float aOrder;
+				attribute float aPhase;
+				attribute float aSize;
+				uniform float uOn;
+				uniform float uTime;
+				uniform float uTwinkle;
+				uniform float uBufH;
+				varying float vOn;
+				void main() {
+					float on = smoothstep(aOrder * 0.6, aOrder * 0.6 + 0.4, uOn);
+					float breathe = 1.0 + uTwinkle * (0.16 * sin(uTime * 1.3 + aPhase * 6.283)
+						+ 0.08 * sin(uTime * 2.9 + aPhase * 17.0));
+					vOn = on * breathe;
+					vec4 mv = modelViewMatrix * vec4(position, 1.0);
+					mv.xyz *= 1.0 - 0.12 / length(mv.xyz);
+					gl_Position = projectionMatrix * mv;
+					gl_PointSize = vOn < 0.01 ? 0.0
+						: 0.17 * aSize * projectionMatrix[1][1] * uBufH * 0.5 / -mv.z;
+				}`,
+			fragmentShader: /* glsl */ `
+				uniform vec3 uWarm;
+				varying float vOn;
+				void main() {
+					float d = length(gl_PointCoord - 0.5) * 2.0;
+					float k = exp(-d * d * 6.0) * max(1.0 - d, 0.0);
+					if (k * vOn < 0.004) discard;
+					gl_FragColor = vec4(uWarm * (0.07 * k * vOn), 1.0);
+					#include <tonemapping_fragment>
+					#include <colorspace_fragment>
+				}`,
+			transparent: true,
+			depthWrite: false,
+			blending: THREE.AdditiveBlending
+		})
+	);
+	halo.frustumCulled = false;
+	halo.renderOrder = 2;
+	group.add(halo);
 
 	return {
 		group,

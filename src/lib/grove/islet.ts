@@ -678,11 +678,24 @@ export class Islet {
 		prep: ReturnType<typeof prepareStand>;
 	} | null = null;
 
-	/** and then made, with the azaleas */
+	/** and then made, with the azaleas and the wildflowers: in three parts,
+	 *  each small enough for an idle moment of its own (or all at once) */
 	plant() {
+		this.plantTree();
+		this.plantShrubs();
+		this.plantFlowers();
+	}
+
+	plantTree() {
 		if (!this.prep) this.grow();
-		const { item: treeItem, opt: barkOpt, prep } = this.prep!;
-		this.tree = buildStand([treeItem], barkOpt, prep);
+		const { item: treeItem, opt: barkOpt } = this.prep!;
+		this.tree = buildStand([treeItem], barkOpt, this.prep!.prep);
+		this.stands = [this.tree];
+		this.group.add(this.tree.group);
+	}
+
+	plantShrubs() {
+		const barkOpt = this.prep!.opt;
 		const bush =
 			(species: typeof AZALEA) =>
 			([x, z, s]: number[]) => {
@@ -708,8 +721,16 @@ export class Islet {
 			[-2.6, 0.15, 0.66]
 		].map(bush(WHITE_SHRUB));
 		const opt = { ...barkOpt, density: 0.9 };
-		this.stands = [this.tree, buildStand(azaleas, opt), buildStand(whites, opt)];
-		// and in the grass, drifts of wildflowers, each drift of one kind
+		for (const st of [buildStand(azaleas, opt), buildStand(whites, opt)]) {
+			this.stands.push(st);
+			this.group.add(st.group);
+		}
+	}
+
+	plantFlowers() {
+		const { opt: barkOpt, prep } = this.prep!;
+		const opt = { ...barkOpt, density: 0.9 };
+		// in the grass, drifts of wildflowers, each drift of one kind
 		const kinds = [
 			new THREE.Color(0.97, 0.96, 0.9),
 			new THREE.Color(0.98, 0.8, 0.22),
@@ -736,8 +757,12 @@ export class Islet {
 				});
 			}
 		}
-		for (const k of kinds) if (k.items.length) this.stands.push(buildStand(k.items, opt));
-		for (const st of this.stands) this.group.add(st.group);
+		for (const k of kinds)
+			if (k.items.length) {
+				const st = buildStand(k.items, opt);
+				this.stands.push(st);
+				this.group.add(st.group);
+			}
 
 		// the leaves that let go: a sample of the crown's, in its colours
 		const pal = MAPLE.palette;

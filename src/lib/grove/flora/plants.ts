@@ -291,8 +291,10 @@ export function buildStand(items: PlantItem[], opt: StandOptions, prep?: Prepare
 				ground: sp.palette.leafTop
 			})
 		);
-		flowerMesh.customDepthMaterial = leafDepth(u);
-		flowerMesh.castShadow = sp.castLeaves;
+		// (a crown's shadow is its leaves': flowers a few pixels across add
+		// nothing to it that shows, and drawn again for the light, all of
+		// them, they were the shadow pass's largest part)
+		flowerMesh.castShadow = false;
 		flowerMesh.receiveShadow = true;
 		group.add(flowerMesh);
 	}

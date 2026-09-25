@@ -562,6 +562,8 @@ export class Air {
 					float core = exp(-d * d * 70.0);
 					float halo = exp(-d * d * 7.0) * max(1.0 - d, 0.0);
 					gl_FragColor = vec4(vec3(0.8, 1.0, 0.4) * (core * 7.0 + halo * 0.7) * vGlow, 1.0);
+					#include <tonemapping_fragment>
+					#include <colorspace_fragment>
 				}`,
 			transparent: true,
 			depthWrite: false,

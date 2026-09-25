@@ -52,41 +52,37 @@ export function bladeTemplate(b: Blade, rows: number) {
 	return { pos, nrm, uv, idx };
 }
 
-/** five petals round +y, opening upward, face +y */
+/**
+ * Five petals round +y, opening upward, face +y: one fan from the heart out
+ * to a rim that runs tip, notch, tip round the flower, cupped as the petals
+ * lift. A flower is a few pixels across, and at that size this scalloped
+ * disc is the flower; drawn as five separate petals it was twice the
+ * triangles and three times the vertices, each running the wind, and the
+ * blossom tree's flowers alone cost as much as every leaf on the island.
+ */
 export function rosetteTemplate() {
-	const pos: number[] = [],
-		nrm: number[] = [],
-		uv: number[] = [],
+	const pos: number[] = [0, 0.02, 0],
+		nrm: number[] = [0, 1, 0],
+		uv: number[] = [0.5, 0],
 		idx: number[] = [];
 	const up = new THREE.Vector3(0, 1, 0);
-	for (let k = 0; k < 5; k++) {
-		const a = (k / 5) * Math.PI * 2;
+	const n = 10;
+	for (let k = 0; k < n; k++) {
+		const tip = k % 2 === 0;
+		const a = (k / n) * Math.PI * 2;
 		const out = new THREE.Vector3(Math.sin(a), 0.45, Math.cos(a)).normalize();
 		const side = new THREE.Vector3().crossVectors(up, out).normalize();
 		const nOut = new THREE.Vector3().crossVectors(out, side).normalize();
-		const base = pos.length / 3;
-		// a round petal, broad enough to overlap its neighbours at the heart:
-		// the flower reads as a scalloped disc, not a star of slivers a pixel
-		// wide that sparkle as they move
-		const pts = [
-			[0, 0, 0],
-			[0.3, 0.35, 0.22],
-			[0.28, 0.72, 0.2],
-			[0, 1, 0],
-			[-0.28, 0.72, 0.2],
-			[-0.3, 0.35, 0.22]
-		];
-		for (const [sx, t, lift] of pts) {
-			const p = out
-				.clone()
-				.multiplyScalar(t * 0.5)
-				.addScaledVector(side, sx * 0.5)
-				.addScaledVector(nOut, lift * 0.04);
-			pos.push(p.x, p.y + 0.02, p.z);
-			nrm.push(nOut.x, nOut.y, nOut.z);
-			uv.push(0.5 + sx, t);
-		}
-		for (let j = 1; j < pts.length - 1; j++) idx.push(base, base + j, base + j + 1);
+		// a tip reaches the petal's length; a notch, where two petals
+		// overlap, a little over half of it
+		const r = tip ? 0.5 : 0.37;
+		const p = out.clone().multiplyScalar(r);
+		pos.push(p.x, p.y + 0.02, p.z);
+		nrm.push(nOut.x, nOut.y, nOut.z);
+		// (along each petal's middle, as the leaf's rib runs, and across it at the notches)
+		uv.push(tip ? 0.5 : 0.8, tip ? 1 : 0.6);
+		// (wound as the petals were, so the same face is the flower's top)
+		idx.push(0, 1 + ((k + 1) % n), 1 + k);
 	}
 	return { pos, nrm, uv, idx };
 }

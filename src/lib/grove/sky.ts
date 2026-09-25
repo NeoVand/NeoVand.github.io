@@ -660,6 +660,9 @@ uniform float uMoonS;
 uniform mat4 uProjInv;
 uniform mat4 uCamWorld;
 varying vec2 vUv;
+float ditherHash(vec2 p) {
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
 void main() {
 	// four taps on a rotated grid, half a texel out: the edges of cloud
 	// against cloud behind it are a hard step in the sheet, and this is
@@ -693,6 +696,10 @@ void main() {
 		}
 	}
 	gl_FragColor = vec4(c, 1.0);
+	#include <tonemapping_fragment>
+	#include <colorspace_fragment>
+	// (the sky's long gradients come down to eight bits here: dithered, or they band)
+	gl_FragColor.rgb += (ditherHash(gl_FragCoord.xy) - 0.5) / 255.0;
 }
 `;
 
@@ -816,8 +823,7 @@ export function createSky() {
 			vertexShader: BACK_V,
 			fragmentShader: BACK_F,
 			depthWrite: false,
-			depthTest: false,
-			toneMapped: false
+			depthTest: false
 		})
 	);
 	backdrop.renderOrder = -1000;

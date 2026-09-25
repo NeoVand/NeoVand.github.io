@@ -1,23 +1,12 @@
 import * as THREE from 'three';
-import { U } from './shared';
+import { U, graded } from './shared';
 import { createSky, sunLight } from './sky';
-import {
-	BloomEffect,
-	Effect,
-	BlendFunction,
-	EffectComposer,
-	EffectPass,
-	FXAAEffect,
-	RenderPass,
-	ToneMappingEffect,
-	ToneMappingMode
-} from 'postprocessing';
 import { bakeTextures, lawnTexture, barkTextures, woodTexture } from './textures';
 import { buildIsland, buildLanterns, ISLAND, type IslandParts } from './island';
 import { Glow } from './glow';
 import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
 import { buildFairyLights, type FairyLights } from './fairylights';
-import { PresentPass } from './present';
+import { GramOutline, GRAM_LAYER, OCCLUDER_LAYER } from './outline';
 import { buildGramophone, lampRoom, type Gramophone } from './gramophone';
 import {
 	buildStand,
@@ -92,103 +81,38 @@ const idle = (f: () => void) => {
 	if (ric) ric(f, { timeout: 3000 });
 	else setTimeout(f, 30);
 };
+/**
+ * Give the page its turn: a frame drawn (the veil's figure moves on), then
+ * on. Waiting on the frame, not merely yielding: a bare yield comes back
+ * before the browser paints, and the figure moved five times a second. (Not
+ * for long, though: a hidden page draws no frames.)
+ */
+const pause = () =>
+	new Promise<void>((r) => {
+		let done = false;
+		const go = () => {
+			if (done) return;
+			done = true;
+			setTimeout(r, 0);
+		};
+		requestAnimationFrame(go);
+		setTimeout(go, 50);
+	});
 const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 /** how far the sky is tipped up behind the island, in degrees, by layout */
 const SKY_TILT = { side: 0, stack: 9 };
-
-/** The grade, after the tone map and in display terms: a little more
- *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
- *  shadows. Then every pixel opaque, whatever wrote alpha before it. */
-class Grade extends Effect {
-	constructor() {
-		super(
-			'Grade',
-			`uniform float uSat;
-			uniform float uCon;
-			uniform float uWarm;
-			void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-				vec3 c = pow(max(inputColor.rgb, 0.0), vec3(1.0 / 2.2));
-				float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-				c = mix(vec3(l), c, uSat);
-				c = mix(c, c * c * (3.0 - 2.0 * c), uCon);
-				c *= mix(vec3(0.97, 0.99, 1.05), vec3(1.04, 1.0, 0.95), smoothstep(0.15, 0.85, l) * uWarm + (1.0 - uWarm) * 0.5);
-				outputColor = vec4(pow(max(c, 0.0), vec3(2.2)), 1.0);
-			}`,
-			{
-				blendFunction: BlendFunction.SET,
-				uniforms: new Map([
-					['uSat', new THREE.Uniform(1.18)],
-					['uCon', new THREE.Uniform(0.34)],
-					['uWarm', new THREE.Uniform(1.0)]
-				])
-			}
-		);
-	}
-}
-
-/**
- * The line round the gramophone under the pointer, to say it can be
- * clicked. Drawn last, in display terms: a crisp ring just outside the
- * machine's silhouette, read from a mask of it (see drawGramMask), with a
- * fainter one beyond it so the line has a little light round it.
- */
-class Outline extends Effect {
-	constructor() {
-		super(
-			'Outline',
-			`uniform sampler2D uMask;
-			uniform vec2 uTexel;
-			uniform vec3 uColor;
-			uniform float uOn;
-			float ring(vec2 uv, float r) {
-				float m = 0.0;
-				for (int i = 0; i < 12; i++) {
-					float a = float(i) * 0.5236;
-					m = max(m, texture2D(uMask, uv + vec2(cos(a), sin(a)) * uTexel * r).r);
-				}
-				return m;
-			}
-			void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-				outputColor = inputColor;
-				if (uOn < 0.002) return;
-				float inside = texture2D(uMask, uv).r;
-				float line = clamp(ring(uv, 1.7) - inside, 0.0, 1.0);
-				float halo = clamp(ring(uv, 3.4) - inside, 0.0, 1.0) * 0.35;
-				outputColor.rgb = mix(inputColor.rgb, uColor, max(line, halo) * uOn);
-			}`,
-			{
-				blendFunction: BlendFunction.SET,
-				uniforms: new Map<string, THREE.Uniform>([
-					['uMask', new THREE.Uniform(null)],
-					['uTexel', new THREE.Uniform(new THREE.Vector2(1, 1))],
-					// a warm white, in the linear light the grade leaves
-					['uColor', new THREE.Uniform(new THREE.Color(1.0, 0.86, 0.62))],
-					['uOn', new THREE.Uniform(0)]
-				])
-			}
-		);
-	}
-}
-
-/** layers the gramophone's mask is drawn from: the machine, and what can stand in front of it */
-const GRAM_LAYER = 3,
-	OCCLUDER_LAYER = 4;
 
 export class Grove {
 	renderer: THREE.WebGLRenderer;
 	scene = new THREE.Scene();
 	camera: THREE.PerspectiveCamera;
 	sky = createSky();
-	private composer: EffectComposer;
-	private grade = new Grade();
-	private outline = new Outline();
-	private gramMask = new THREE.WebGLRenderTarget(2, 2);
-	private maskWhite = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-	private maskDepth = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
-	private fxaa!: EffectPass;
-	private mainPass!: EffectPass;
-	private bloom: BloomEffect;
+	/** the line round the gramophone under the pointer */
+	private outline = new GramOutline();
+	/** the tone map's exposure, and the grade's warm lights and cool shadows (see graded) */
+	private exposure = 1;
+	private warm = 0.5;
 	private sunAz = SUN_AZ.side;
 	private light: THREE.DirectionalLight;
 	private hemi: THREE.HemisphereLight;
@@ -306,7 +230,6 @@ export class Grove {
 	private flowing = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 	/** the canvas's own density: the screen's, up to 2 */
 	private native = 1;
-	private present!: PresentPass;
 	private texReady: Promise<void> = Promise.resolve();
 	private lampBase = 0;
 	private glassBase = 0;
@@ -314,6 +237,10 @@ export class Grove {
 	/** frame intervals while the page scrolls, and the scale they allow */
 	private scrollTimes: number[] = [];
 	private dprCeil = Infinity;
+	private ceilAt = -Infinity;
+	private ceilWait = 30e3;
+	/** frames before this are not judged: see adapt() */
+	private settleAt = 0;
 	private ray = new THREE.Raycaster();
 	private playing = false;
 	/** a tree in the hand, and every tree's spring */
@@ -363,18 +290,24 @@ export class Grove {
 		this.rand = rng(opts.seed ?? Date.now() & 0xffff);
 		const r = new THREE.WebGLRenderer({
 			canvas: opts.canvas,
-			// the frame is drawn off screen, multisampled, and tone-mapped on
-			// the way out; the canvas itself needs neither
-			antialias: false,
-			depth: false,
+			// Drawn straight to the canvas with the GPU's multisampling, in place
+			// of a half-float frame passed over four times more (bloom, tone
+			// map, grade, and an edge filter that blurred what it smoothed). At
+			// the same scale it costs about the same, and its edges are true
+			// ones: a thin leaf is covered, not guessed at, and holds still as
+			// it turns. (WebKit gives the canvas an alpha channel even so, and
+			// composites it: whatever is drawn must leave alpha at one, as
+			// every material here does.)
+			antialias: true,
+			depth: true,
 			alpha: false,
 			powerPreference: 'high-performance',
 			stencil: false
 		});
 		r.outputColorSpace = THREE.SRGBColorSpace;
-		r.toneMapping = THREE.NoToneMapping;
-		// read by the tone-mapping pass, which is where exposure lives now
-		r.toneMappingExposure = 1.0;
+		// every surface tone-maps and grades itself as it is drawn (see shared.ts)
+		r.toneMapping = THREE.CustomToneMapping;
+		r.toneMappingExposure = graded(this.exposure, this.warm);
 		r.shadowMap.enabled = true;
 		r.shadowMap.type = THREE.PCFShadowMap;
 		// redrawn every other frame: see update()
@@ -402,58 +335,13 @@ export class Grove {
 		const phone = Math.min(screen.width, screen.height) < 600;
 		this.dprCap = Math.min(window.devicePixelRatio || 1, 2);
 		// (a phone starts at twice and may climb toward its own density)
-		this.dpr = Math.min(this.dprCap, 2);
+		this.dpr = this.dprCap;
 		void phone;
 
 		this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 400);
 		this.sky.uniforms.uMoon.value.copy(this.moonDir);
 		this.scene.add(this.sky.backdrop);
 
-		// The frame: drawn in linear light into a half-float, multisampled
-		// buffer, then one pass that blooms what is brighter than white, tone
-		// maps the lot with AgX, dithers, and seals the alpha (a browser that
-		// composites a canvas's alpha, as WebKit does even when asked not to,
-		// would otherwise show the page through every leaf's edge).
-		this.composer = new EffectComposer(r, {
-			frameBufferType: THREE.HalfFloatType,
-			multisampling: Math.min(4, r.capabilities.maxSamples)
-		});
-		this.composer.addPass(new RenderPass(this.scene, this.camera));
-		this.bloom = new BloomEffect({
-			mipmapBlur: true,
-			levels: 5,
-			// only lamps, fireflies and the sun bloom: a lit cloud blooming
-			// is a veil over everything
-			luminanceThreshold: 2.6,
-			luminanceSmoothing: 0.12,
-			intensity: 0.45,
-			radius: 0.7
-		});
-		// the pass that picks out what is bright enough to bloom runs at the
-		// screen's full size by default, and only feeds a blur that starts at
-		// half of it: at half size itself it costs a quarter
-		const bloomSize = this.bloom.setSize.bind(this.bloom);
-		this.bloom.setSize = (w: number, h: number) => {
-			bloomSize(w, h);
-			this.bloom.luminancePass.setSize(Math.max(1, w >> 1), Math.max(1, h >> 1));
-		};
-		const pass = new EffectPass(
-			this.camera,
-			this.bloom,
-			new ToneMappingEffect({ mode: ToneMappingMode.AGX }),
-			this.grade,
-			this.outline
-		);
-		pass.dithering = true;
-		this.composer.addPass(pass);
-		// on a dense screen, a cheap edge filter in place of multisampling
-		this.fxaa = new EffectPass(this.camera, new FXAAEffect());
-		this.composer.addPass(this.fxaa);
-		// and last, onto the screen at its own density
-		this.present = new PresentPass();
-		this.composer.addPass(this.present);
-		this.composer.autoRenderToScreen = false;
-		this.mainPass = pass;
 		this.scene.add(this.world);
 
 		this.light = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -474,8 +362,6 @@ export class Grove {
 		this.scene.add(this.hemi);
 
 		this.build();
-		this.air = new Air(groveHabitat(this));
-		this.world.add(this.air.group);
 		this.applyDay(this.dayMix);
 		this.bind();
 		this.resize();
@@ -584,8 +470,6 @@ export class Grove {
 		this.pavilion.group.traverse((o) => o.layers.enable(OCCLUDER_LAYER));
 		this.world.add(this.notes.points);
 		this.world.add(this.petals.mesh);
-
-		this.plant();
 	}
 
 	/** Deal the stand: every species at least once, the rest at random. */
@@ -595,7 +479,7 @@ export class Grove {
 	 * along the wall where they can spill over it, roses by the steps with
 	 * urns of them; and ivy over the coping, falling down the rock.
 	 */
-	private plant() {
+	private async plant() {
 		const r = this.rand;
 		const phone = Math.min(window.innerWidth, window.innerHeight) < 700;
 		const opt = {
@@ -691,9 +575,20 @@ export class Grove {
 
 		// each olive a stand of its own, so a touch finds the one it touched
 		const groups = [[olives[0]], [olives[1]], cypresses, whites, roses, vines];
-		const preps = groups.map((g) => prepareStand(g, opt.density));
+		// Grown a stand at a time, with the page given its turn between: grown
+		// at a stroke it was near half a second in which nothing else ran,
+		// the veil's figure standing still.
+		const preps: ReturnType<typeof prepareStand>[] = [];
+		for (const g of groups) {
+			await pause();
+			preps.push(prepareStand(g, opt.density));
+		}
 		const canopy = sharedCanopy(preps);
-		const stands = preps.map((p, i) => buildStand(groups[i], { ...opt, canopy }, p));
+		const stands: Stand[] = [];
+		for (let i = 0; i < groups.length; i++) {
+			stands.push(buildStand(groups[i], { ...opt, canopy }, preps[i]));
+			await pause();
+		}
 		for (const st of stands) {
 			this.world.add(st.group);
 			this.growth.set(st, { g: 1, to: 1, pop: 0, popV: 0 });
@@ -870,9 +765,10 @@ export class Grove {
 		this.hemi.groundColor.set(0x3e434e).lerp(new THREE.Color(0x8e8a86), m);
 		this.hemi.intensity = lerp(1.7, 0.75, m);
 		U.uSunColor.value.copy(this.light.color).multiplyScalar(lerp(0.18, 1, m));
-		this.renderer.toneMappingExposure = lerp(0.82, 1.0, m);
+		this.exposure = lerp(0.82, 1.0, m);
 		// warm lamps against cool shadows by night; by day, neutral
-		this.grade.uniforms.get('uWarm')!.value = lerp(0.85, 0.2, m);
+		this.warm = lerp(0.85, 0.2, m);
+		this.renderer.toneMappingExposure = graded(this.exposure, this.warm);
 		const env = m > 0.5 ? this.envDay : this.envNight;
 		this.scene.environment = env;
 		// Polished brass is all reflection: under the night sky alone it would
@@ -897,7 +793,8 @@ export class Grove {
 			this.moonT = this.clock;
 		}
 		this.dayTo = to;
-		this.air.setDay(day);
+		// (the doves come with the trees, when the page has had its turn)
+		this.air?.setDay(day);
 		this.islet?.setDay(day);
 		if (this.reduced) {
 			this.dayMix = this.dayTo;
@@ -945,19 +842,19 @@ export class Grove {
 		this.W = w;
 		this.H = h;
 		this.layout = w >= 900 && w / h > 1.05 ? 'side' : 'stack';
-		// a budget of pixels, not a ratio: a large, dense screen is drawn a
-		// little under its own density, which with the multisampling is still
-		// sharp, and holds the frame rate where a ratio would not
-		// A phone's picture is small and seen close: drawn under twice its
-		// width it is soft and its fine things shimmer. It may go up to its
-		// own density, three, as far as the budget allows; it starts at two
-		// and the governor takes it up only while the frames keep time.
+		// The screen's own density, up to a budget of pixels: a laptop's
+		// Retina screen is drawn whole (drawn under it and stretched up, the
+		// picture was soft, and its fine leaves shimmered), and only a large,
+		// dense monitor a little under. A phone's picture is small and seen
+		// close: it may go up to its own density, three, as far as its budget
+		// allows; it starts at two and the governor takes it up only while the
+		// frames keep time.
 		this.native = Math.min(window.devicePixelRatio || 1, this.flowing ? 3 : 2);
-		this.dprCap = Math.min(this.native, Math.sqrt((this.flowing ? 2.0e6 : 2.4e6) / (w * h)));
+		this.dprCap = Math.min(this.native, Math.sqrt((this.flowing ? 2.6e6 : 8.0e6) / (w * h)));
 		this.dprCap = Math.max(1, Math.round(this.dprCap * 4) / 4);
 		this.dpr = Math.min(this.dpr, this.dprCap);
+		this.settleAt = performance.now() + 1500;
 		this.renderer.setSize(w, h, false);
-		this.setSamples();
 		this.sizeBuffers();
 		this.sizeSky();
 		this.camera.aspect = w / h;
@@ -1111,8 +1008,9 @@ export class Grove {
 			this.buildIslet(true);
 			const v = this.islet;
 			if (!v) return;
-			// its own budget of pixels, up to twice the page's
-			const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.2e6 / (size.w * size.h)));
+			// the screen's own density, up to a budget of pixels (the grove is
+			// not drawn while it shows, so it has the grove's time to spend)
+			const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.5e6 / (size.w * size.h)));
 			v.frame(size.w, size.h, size.frameH, Math.max(1, dpr));
 			v.open();
 		} else this.islet?.close();
@@ -1154,7 +1052,9 @@ export class Grove {
 						{ phone }
 					)),
 				() => islet.grow(),
-				() => islet.plant(),
+				() => islet.plantTree(),
+				() => islet.plantShrubs(),
+				() => islet.plantFlowers(),
 				() => {
 					view = new IsletView(canvas, islet, this.reduced);
 					view.onMiss = () => this.onIsletMiss?.();
@@ -1177,6 +1077,8 @@ export class Grove {
 			const f = q.shift();
 			if (!f) return;
 			f();
+			// (frames about a step of the building are no measure of the scene)
+			this.settleAt = performance.now() + 1000;
 			if (q.length) idle(next);
 		};
 		idle(next);
@@ -1573,6 +1475,10 @@ export class Grove {
 
 	// ── the loop ──────────────────────────────────────────────────────────
 	async ready() {
+		await this.plant();
+		this.air = new Air(groveHabitat(this));
+		this.air.setDay(this.dayTo > 0.5);
+		this.world.add(this.air.group);
 		this.sky.bake(this.renderer);
 		await this.texReady;
 		this.sky.update(this.renderer);
@@ -1636,87 +1542,19 @@ export class Grove {
 			this.sky.render(this.renderer, cam);
 			this.skyDirty = false;
 		}
-		this.drawGramMask();
-		this.composer.render();
+		this.renderer.setRenderTarget(null);
+		this.renderer.render(this.scene, this.camera);
+		this.outline.draw(this.renderer, this.scene, this.camera, this.gramGlow);
 	}
 
-	/**
-	 * While the gramophone is under the pointer, a mask of it for the
-	 * outline: the building drawn first into depth alone, so that a pier in
-	 * front of the machine hides its line too, then the machine in white.
-	 * A few dozen draws, and none at all otherwise.
-	 */
-	private drawGramMask() {
-		if (this.gramGlow < 0.002) return;
-		const r = this.renderer,
-			cam = this.camera,
-			scene = this.scene;
-		const keep = {
-			layers: cam.layers.mask,
-			shadows: r.shadowMap.needsUpdate,
-			override: scene.overrideMaterial,
-			autoClear: r.autoClear,
-			clear: r.getClearColor(new THREE.Color()),
-			alpha: r.getClearAlpha(),
-			target: r.getRenderTarget()
-		};
-		// (and no shadows drawn in passing, from a camera that sees only this)
-		r.shadowMap.needsUpdate = false;
-		r.setRenderTarget(this.gramMask);
-		r.setClearColor(0x000000, 1);
-		r.clear();
-		r.autoClear = false;
-		cam.layers.set(OCCLUDER_LAYER);
-		scene.overrideMaterial = this.maskDepth;
-		r.render(scene, cam);
-		cam.layers.set(GRAM_LAYER);
-		scene.overrideMaterial = this.maskWhite;
-		r.render(scene, cam);
-		cam.layers.mask = keep.layers;
-		scene.overrideMaterial = keep.override;
-		r.autoClear = keep.autoClear;
-		r.setClearColor(keep.clear, keep.alpha);
-		r.setRenderTarget(keep.target);
-		r.shadowMap.needsUpdate = keep.shadows;
-	}
-
-	/** An edge filter does what multisampling would, for a fraction of what
-	 *  it costs: on a half-float frame, multisampling was a fifth of it. */
-	private setSamples() {
-		const n = 0;
-		if (this.composer.multisampling !== n) this.composer.multisampling = n;
-		if (this.fxaa) {
-			this.fxaa.enabled = true;
-			this.fxaa.renderToScreen = false;
-			this.mainPass.renderToScreen = false;
-		}
-	}
-
-	/**
-	 * The canvas and the picture's buffers at the drawing scale. The canvas
-	 * is left for the browser to bring up to the screen: filling a canvas of
-	 * the screen's own size costs more, mostly in the browser, which blurs
-	 * every pane of frosted glass over it afresh each frame. Instead the last
-	 * pass sharpens the picture ahead of that stretch, which undoes most of
-	 * its softening for next to nothing.
-	 */
+	/** The canvas at the drawing scale: the screen's own density, unless the frame rate asks for less. */
 	private sizeBuffers() {
 		const bw = Math.max(1, Math.round(this.W * this.dpr)),
 			bh = Math.max(1, Math.round(this.H * this.dpr));
 		this.renderer.setPixelRatio(this.dpr);
 		this.renderer.setSize(this.W, this.H, false);
-		const c = this.composer;
-		c.inputBuffer.setSize(bw, bh);
-		c.outputBuffer.setSize(bw, bh);
-		for (const p of c.passes) p.setSize(bw, bh);
 		U.uBufH.value = bh;
-		this.gramMask.setSize(bw, bh);
-		this.outline.uniforms.get('uMask')!.value = this.gramMask.texture;
-		this.outline.uniforms.get('uTexel')!.value.set(1 / bw, 1 / bh);
-		// drawn at the screen's density there is nothing to make up for
-		// (and on a phone only lightly: sharpened hard, its small fine things
-		// shimmer)
-		this.present.sharpness = this.dpr >= this.native - 0.01 ? 0 : this.flowing ? 0.3 : 0.55;
+		this.outline.setSize(bw, bh);
 	}
 
 	/** The sky's sheet: fewer pixels by day, when it is all soft cloud, than
@@ -1820,7 +1658,8 @@ export class Grove {
 			keyDir: this.keyDir,
 			hemi: this.hemi,
 			day: this.dayMix,
-			exposure: this.renderer.toneMappingExposure,
+			exposure: this.exposure,
+			warm: this.warm,
 			envIntensity: this.scene.environmentIntensity,
 			playing: this.playing,
 			level: this.playing ? this.level() : 0
@@ -1981,7 +1820,6 @@ export class Grove {
 		this.gramGlow = damp(this.gramGlow, this.overGram ? 1 : this.gramFlash, 9, dt);
 		// a little warmth in the brass, and the line round it
 		this.gramophone.hover.value = this.gramGlow * 0.6;
-		this.outline.uniforms.get('uOn')!.value = this.gramGlow;
 		// and what comes out of it
 		const g = this.gramophone.group;
 		this.mouth.copy(this.gramophone.mouth).applyMatrix4(g.matrixWorld);
@@ -2047,11 +1885,21 @@ export class Grove {
 
 	/** Hold the frame rate by giving up resolution, and take it back when there is room. */
 	private adapt(ms: number, dt: number) {
+		const now = performance.now();
+		// The opening is no measure of the scene: pictures decoding, programs
+		// compiling, the islet built in the gaps. Judged on it, the picture
+		// came down to half the screen's density in its first seconds and
+		// stayed there. Nor are the frames after a change of size or scale.
+		if (this.intro.t < this.intro.dur + 1.5 || now < this.settleAt) {
+			this.frameTimes.length = 0;
+			this.scrollTimes.length = 0;
+			return;
+		}
 		// Frames while the page scrolls are the ones that matter most, and
 		// the dearest: the sky is drawn every frame then, not every other. So
 		// they are counted too, apart, and if they came late the scale comes
-		// down once the page is still, and stays down: judged only at rest it
-		// would climb back to where the next scroll stutters again.
+		// down once the page is still: judged only at rest it would climb back
+		// to where the next scroll stutters again.
 		if (this.scrolling) {
 			if (this.world.visible) this.scrollTimes.push(dt * 1000);
 			this.frameTimes.length = 0;
@@ -2062,7 +1910,7 @@ export class Grove {
 		// the page, where frames are held back on purpose, nor in the first
 		// seconds after a scroll, which run heavy (shadows catching up,
 		// pictures decoding).
-		if (!this.world.visible || performance.now() - this.scrolledAt < 2500) {
+		if (!this.world.visible || now - this.scrolledAt < 2500) {
 			this.frameTimes.length = 0;
 			return;
 		}
@@ -2070,8 +1918,7 @@ export class Grove {
 			const late = this.lateness(this.scrollTimes);
 			this.scrollTimes.length = 0;
 			if (late > 0.08 && this.dpr > 1) {
-				this.dprCeil = Math.max(1, this.dpr - 0.25);
-				this.pendingScale = this.dprCeil;
+				this.lower(now);
 				return;
 			}
 		}
@@ -2082,16 +1929,33 @@ export class Grove {
 		this.frameTimes.length = 0;
 		const tick = s[Math.floor(s.length * 0.1)];
 		const late = this.lateness(s);
-		const top = Math.min(this.dprCap, this.dprCeil);
-		let next = this.dpr;
-		// once it has had to come down it stays down: going back up and down
-		// every second or two, the picture sharpens and softens by turns
-		if ((late > 0.12 || tick > 22) && this.dpr > 1) {
-			next = Math.max(1, this.dpr - 0.25);
-			this.dprCeil = next;
-		} else if (late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
-			next = Math.min(top, this.dpr + 0.25);
-		if (next !== this.dpr) this.pendingScale = next;
+		// A scale given up is not tried again at once, or the picture sharpens
+		// and softens by turns; but not given up for good either, or one bad
+		// moment (another app busy, a tab opening) left it soft all visit. It
+		// is tried again after half a minute of frames that keep time, and if
+		// that fails, after twice as long.
+		const top =
+			now - this.ceilAt > this.ceilWait ? this.dprCap : Math.min(this.dprCap, this.dprCeil);
+		// (and only after two bad spells running: one alone is as often some
+		// other app's moment as this one's, and a change of scale is itself a
+		// hitch, every buffer made anew)
+		const bad = (late > 0.12 || tick > 22) && this.dpr > 1;
+		this.strikes = bad ? this.strikes + 1 : 0;
+		if (this.strikes >= 2) {
+			this.strikes = 0;
+			this.lower(now);
+		} else if (!bad && late < 0.03 && tick < 18 && ms < tick * 0.5 && this.dpr < top)
+			this.pendingScale = Math.min(top, this.dpr + 0.25);
+	}
+	private strikes = 0;
+
+	/** a step down in scale, and a ceiling under the one that failed */
+	private lower(now: number) {
+		// (back up where it failed before, and failed again: wait longer)
+		if (this.dpr > this.dprCeil) this.ceilWait = Math.min(this.ceilWait * 2, 8 * 60e3);
+		this.dprCeil = Math.max(1, this.dpr - 0.25);
+		this.ceilAt = now;
+		this.pendingScale = this.dprCeil;
 	}
 
 	/**
@@ -2108,7 +1972,7 @@ export class Grove {
 
 	private setScale(d: number) {
 		this.dpr = d;
-		this.setSamples();
+		this.settleAt = performance.now() + 1000;
 		this.sizeBuffers();
 		this.sizeSky();
 	}
@@ -2130,7 +1994,7 @@ export class Grove {
 	dispose() {
 		this.stop();
 		for (const [t, type, fn, o] of this.listeners) t.removeEventListener(type, fn, o);
-		this.composer.dispose();
+		this.outline.dispose();
 		this.renderer.dispose();
 	}
 }
