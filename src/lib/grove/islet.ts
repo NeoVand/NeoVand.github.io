@@ -1,9 +1,12 @@
 import * as THREE from 'three';
-import { patch, nightPatch, U } from './shared';
+import { patch, nightPatch, nightPatchWarm, U } from './shared';
 import { vn3 } from './island';
 import { rng, lerp, clamp, smoothstep } from './rng';
 import { buildStand, prepareStand, type Stand, type PlantItem } from './flora/plants';
-import { MAPLE, AZALEA } from './flora/species';
+import { MAPLE, AZALEA, WHITE_SHRUB, wildflower } from './flora/species';
+import { buildGramophone, type Gramophone } from './gramophone';
+import { woodTexture } from './textures';
+import type { Habitat } from './air';
 import { Petals, type PetalSource } from './flora/petals';
 import { waterMaterial, buildFall, Spray, stepWater, WATER_U, type FallShape } from './water';
 import type { Glow } from './glow';
@@ -14,9 +17,10 @@ import type { Glow } from './glow';
 // its crown a parasol wider than the rock; under it a spring in a basin of
 // stone, running off in a short channel to the lip and over it, falling away
 // past the side of the rock until the fall breaks into spray and is gone into
-// the air. A stone lantern by the water, lit at dusk, and fireflies over it.
-// Now and then a leaf lets go and goes over the edge. Three small stones
-// float round it, as if they had broken off and not yet decided to fall.
+// the air. A stone lantern by the water, lit at dusk, and fireflies over it;
+// a gramophone on a flat stone at the edge of the maple's shade; azaleas and
+// drifts of wildflowers in the grass; doves, on the tree and the stones and
+// walking the grass. Now and then a leaf lets go and goes over the edge.
 
 export interface IsletMaterials {
 	/** the grove's own crag, read from three sides */
@@ -30,11 +34,13 @@ export interface IsletMaterials {
 
 /** the rock's top: its mean radius, and how far down it goes */
 const RT = 3.2;
-const DEPTH = 5.4;
+const DEPTH = 3.4;
 /** the spring's surface */
 const WL = -0.02;
-/** where the tree stands, and the basin */
+/** where the tree stands, and the basin, the lantern and the gramophone */
 const TREE = new THREE.Vector2(-0.95, -0.55);
+const LANTERN = new THREE.Vector2(-0.35, 1.55);
+const GRAM = new THREE.Vector2(0.1, -1.0);
 const POOL = { x: 0.95, z: 0.62, a: 1.0, b: 0.72, rot: 0.45 };
 /** the lip, as an angle round from +x toward +z */
 const LIP_A = 0.74;
@@ -395,6 +401,14 @@ export class Islet {
 	group = new THREE.Group();
 	tree!: Stand;
 	stands: Stand[] = [];
+	/** the gramophone, and its brass (which by night is given a room to shine in) */
+	gram: Gramophone;
+	brass: THREE.MeshStandardMaterial;
+	/** where a bird may stand: the stones' tops, the lantern's roof */
+	private stoneTops: THREE.Vector3[] = [];
+	private lanternTop = new THREE.Vector3();
+	/** what the planting and the walking keep clear of: x, z and a reach */
+	private keepOut: [number, number, number][] = [];
 	pool: THREE.Mesh;
 	/** what a tap can land on: the rock, the ground, the water, the stones, the lantern */
 	solid: THREE.Object3D[] = [];
@@ -404,8 +418,6 @@ export class Islet {
 	private bark: IsletMaterials['bark'];
 	private phone: boolean;
 	private spray: Spray;
-	private floaters: { m: THREE.Mesh; a: number; r: number; y: number; ph: number; w: number }[] =
-		[];
 	private lamp: THREE.Vector3;
 	private glass: THREE.MeshStandardMaterial;
 	private flies: THREE.Points;
@@ -502,6 +514,8 @@ export class Islet {
 			st.castShadow = st.receiveShadow = true;
 			g.add(st);
 			this.solid.push(st);
+			this.stoneTops.push(st.position.clone().setY(st.position.y + s * sq * 0.92));
+			this.keepOut.push([x, z, s * 1.3 + 0.12]);
 		}
 		// stepping stones from the front edge to the lantern and the water
 		const steps: [number, number][] = [
@@ -517,11 +531,12 @@ export class Islet {
 			st.position.set(x, groundY(x, z) - 0.01, z);
 			st.receiveShadow = true;
 			g.add(st);
+			this.keepOut.push([x, z, 0.24]);
 		});
 
 		// the lantern, by the water, on the near side
-		const lx = -0.35,
-			lz = 1.55;
+		const lx = LANTERN.x,
+			lz = LANTERN.y;
 		this.glass = m.glass.clone();
 		const lan = lantern(m.rock, this.glass);
 		lan.group.position.set(lx, groundY(lx, lz) - 0.03, lz);
@@ -530,24 +545,35 @@ export class Islet {
 		g.add(lan.group);
 		this.solid.push(lan.group);
 		this.lamp = lan.light.clone().multiplyScalar(0.8).add(lan.group.position);
+		this.lanternTop = lan.group.position.clone().setY(lan.group.position.y + 1.02);
+		this.keepOut.push([lx, lz, 0.45], [TREE.x, TREE.y, 0.6]);
 
-		// the stones in the air round it
-		for (let i = 0; i < 3; i++) {
-			const s = [0.42, 0.3, 0.22][i];
-			const st = new THREE.Mesh(stoneGeometry(40 + i * 7, 0.2), m.rock);
-			st.scale.set(s * 1.2, s, s);
-			st.castShadow = true;
-			st.receiveShadow = true;
-			g.add(st);
-			this.floaters.push({
-				m: st,
-				a: [2.3, 4.1, 5.6][i] + r() * 0.3,
-				r: [4.7, 5.1, 4.5][i],
-				y: [-1.2, 0.6, -2.6][i],
-				ph: r() * 6,
-				w: [0.05, -0.04, 0.06][i]
-			});
-		}
+		// the gramophone, on a flat stone at the edge of the maple's shade, its
+		// horn turned to the water and to whoever is looking
+		this.brass = patch(
+			new THREE.MeshStandardMaterial({
+				color: 0xd8a650,
+				metalness: 1,
+				roughness: 0.26,
+				side: THREE.DoubleSide
+			}),
+			'brass',
+			nightPatchWarm
+		);
+		const gram = buildGramophone(this.brass, woodTexture(8));
+		const slab = new THREE.Mesh(stoneGeometry(91, 0.3, 1), m.rock);
+		slab.scale.set(0.62, 0.09, 0.55);
+		slab.rotation.y = 0.4;
+		slab.position.set(GRAM.x, groundY(GRAM.x, GRAM.y) - 0.01, GRAM.y);
+		slab.castShadow = slab.receiveShadow = true;
+		gram.group.position.set(GRAM.x, slab.position.y + 0.055, GRAM.y);
+		gram.group.scale.setScalar(1.3);
+		gram.group.rotation.y = 0.45;
+		gram.group.updateMatrix();
+		g.add(slab, gram.group);
+		this.solid.push(slab);
+		this.gram = gram;
+		this.keepOut.push([GRAM.x, GRAM.y, 0.62]);
 
 		this.leaves = new Petals({ ground: groundAt, size: [0.13, 0.19], life: [8, 12], sink: 0.5 });
 		g.add(this.leaves.mesh);
@@ -657,21 +683,61 @@ export class Islet {
 		if (!this.prep) this.grow();
 		const { item: treeItem, opt: barkOpt, prep } = this.prep!;
 		this.tree = buildStand([treeItem], barkOpt, prep);
-		this.group.add(this.tree.group);
-		const shrubs: PlantItem[] = [
+		const bush =
+			(species: typeof AZALEA) =>
+			([x, z, s]: number[]) => {
+				this.keepOut.push([x, z, s * 0.55]);
+				return {
+					species,
+					seed: Math.floor(this.r() * 1e6),
+					pos: new THREE.Vector3(x, groundY(x, z) - 0.02, z),
+					rotY: this.r() * 6.28,
+					scale: s
+				};
+			};
+		const azaleas: PlantItem[] = [
 			[1.95, -1.35, 0.9],
 			[-1.95, 0.95, 0.8],
-			[POOL.x - 0.2, POOL.z + 1.05, 0.62]
-		].map(([x, z, s]) => ({
-			species: AZALEA,
-			seed: Math.floor(this.r() * 1e6),
-			pos: new THREE.Vector3(x, groundY(x, z) - 0.02, z),
-			rotY: this.r() * 6.28,
-			scale: s
-		}));
-		const bushes = buildStand(shrubs, { ...barkOpt, density: 0.9 });
-		this.group.add(bushes.group);
-		this.stands = [this.tree, bushes];
+			[POOL.x - 0.2, POOL.z + 1.05, 0.62],
+			[-2.2, -1.2, 0.75],
+			[1.0, -2.2, 0.7],
+			[2.4, 0.1, 0.62]
+		].map(bush(AZALEA));
+		const whites: PlantItem[] = [
+			[-1.35, 1.95, 0.7],
+			[-2.6, 0.15, 0.66]
+		].map(bush(WHITE_SHRUB));
+		const opt = { ...barkOpt, density: 0.9 };
+		this.stands = [this.tree, buildStand(azaleas, opt), buildStand(whites, opt)];
+		// and in the grass, drifts of wildflowers, each drift of one kind
+		const kinds = [
+			new THREE.Color(0.97, 0.96, 0.9),
+			new THREE.Color(0.98, 0.8, 0.22),
+			new THREE.Color(0.96, 0.5, 0.66),
+			new THREE.Color(0.52, 0.6, 0.98)
+		].map((c, i) => ({ species: wildflower('wildflower-' + i, c), items: [] as PlantItem[] }));
+		const at = new THREE.Vector3();
+		for (let d = 0; d < 16; d++) {
+			const kind = kinds[d % kinds.length];
+			if (!this.lawnSpot(this.r, at, 0.3)) continue;
+			const n = 8 + Math.floor(this.r() * 6);
+			for (let k = 0; k < n; k++) {
+				const a = this.r() * Math.PI * 2,
+					rr = Math.sqrt(this.r()) * 0.5;
+				const x = at.x + Math.cos(a) * rr,
+					z = at.z + Math.sin(a) * rr;
+				if (!this.open(x, z, 0.06)) continue;
+				kind.items.push({
+					species: kind.species,
+					seed: Math.floor(this.r() * 1e6),
+					pos: new THREE.Vector3(x, groundY(x, z) - 0.01, z),
+					rotY: this.r() * 6.28,
+					scale: lerp(0.9, 1.35, this.r())
+				});
+			}
+		}
+		for (const k of kinds) if (k.items.length) this.stands.push(buildStand(k.items, opt));
+		for (const st of this.stands) this.group.add(st.group);
 
 		// the leaves that let go: a sample of the crown's, in its colours
 		const pal = MAPLE.palette;
@@ -682,6 +748,127 @@ export class Islet {
 				pal.leafUnder.clone().multiplyScalar(1.3),
 				pal.leafAlt!.clone()
 			]
+		};
+	}
+
+	/** is (x, z) open grass, `m` clear of anything standing on it? */
+	private open(x: number, z: number, m: number) {
+		if (Math.hypot(x, z) > outline(Math.atan2(z, x)) * 0.86) return false;
+		const e = poolE(x, z);
+		if (e < 1.3) return false;
+		if (e >= 0.9 && channelAt(x, z).d < 0.3) return false;
+		for (const [kx, kz, kr] of this.keepOut) if (Math.hypot(x - kx, z - kz) < kr + m) return false;
+		return true;
+	}
+
+	/** somewhere on open grass, into `out`; false if none was found */
+	private lawnSpot(r: () => number, out: THREE.Vector3, m = 0.15) {
+		for (let k = 0; k < 40; k++) {
+			const a = r() * Math.PI * 2,
+				d = Math.sqrt(r()) * 0.84;
+			const R0 = outline(a);
+			out.set(Math.cos(a) * R0 * d, 0, Math.sin(a) * R0 * d);
+			if (this.open(out.x, out.z, m)) {
+				out.y = groundY(out.x, out.z);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Where the doves live here: on the maple, mostly; on the grass, walking
+	 * and pecking; on the stones, the lantern's roof, the rim of the horn and
+	 * the gramophone's lid; along the edge of the rock. Nothing to fly round,
+	 * and they come in from above, out of the top of the picture.
+	 */
+	habitat(view: { readonly camera: THREE.PerspectiveCamera; readonly reduced: boolean }): Habitat {
+		const self = this;
+		const gm = this.gram.group.matrix;
+		const horn = this.gram.rim.clone().applyMatrix4(gm);
+		const lidA = this.gram.lid[0].clone().applyMatrix4(gm),
+			lidB = this.gram.lid[1].clone().applyMatrix4(gm);
+		const run = new THREE.Vector3().subVectors(lidB, lidA);
+		// on the stone lip, clear of the fall
+		const rimAt = (a: number, out: THREE.Vector3) => {
+			const dl = Math.atan2(Math.sin(a - LIP_A), Math.cos(a - LIP_A));
+			if (Math.abs(dl) < 0.3) a = LIP_A + Math.sign(dl || 1) * 0.3;
+			const R0 = outline(a) * 0.95;
+			out.set(Math.cos(a) * R0, 0, Math.sin(a) * R0);
+			return out.setY(groundY(out.x, out.z));
+		};
+		return {
+			get camera() {
+				return view.camera;
+			},
+			get reduced() {
+				return view.reduced;
+			},
+			get trees() {
+				return self.tree ? [self.tree] : [];
+			},
+			count: 7,
+			spots: [
+				{ name: 'ground', weight: 4 },
+				{ name: 'stone', weight: 1.5 },
+				{ name: 'rim', weight: 1.5 },
+				{ name: 'lantern', weight: 1, single: true },
+				{ name: 'horn', weight: 1, single: true },
+				{ name: 'lid', weight: 1 }
+			],
+			spotChance: 0.5,
+			walks: ['ground', 'rim', 'lid'],
+			fallback: 'ground',
+			refuge: ['ground', 'stone'],
+			spot(name, r, out) {
+				switch (name) {
+					case 'stone':
+						return out.copy(self.stoneTops[Math.floor(r() * self.stoneTops.length)]);
+					case 'lantern':
+						return out.copy(self.lanternTop);
+					case 'horn':
+						return out.copy(horn);
+					case 'lid':
+						return out.copy(lidA).lerp(lidB, lerp(0.15, 0.85, r()));
+					case 'rim':
+						return rimAt(r() * Math.PI * 2, out);
+					default:
+						if (!self.lawnSpot(r, out)) out.set(0.4, groundY(0.4, 2.2), 2.2);
+						return out;
+				}
+			},
+			walk(name, p, d, r, q) {
+				if (name === 'lid') {
+					const len2 = run.lengthSq();
+					const u = q.subVectors(p, lidA).dot(run) / len2;
+					return q.copy(lidA).lerp(lidB, clamp(u + d / Math.sqrt(len2), 0.1, 0.9));
+				}
+				if (name === 'rim') {
+					const a = Math.atan2(p.z, p.x);
+					return rimAt(a + d / outline(a), q);
+				}
+				if (name === 'ground') {
+					const a = r() * Math.PI * 2;
+					q.set(p.x + Math.cos(a) * d, 0, p.z + Math.sin(a) * d);
+					if (!self.open(q.x, q.z, 0.1)) return null;
+					return q.setY(groundY(q.x, q.z));
+				}
+				return null;
+			},
+			settle(name, p) {
+				if (name === 'ground' || name === 'rim') p.y = groundY(p.x, p.z);
+			},
+			solid: () => false,
+			around: null,
+			// over the crown, and not so wide it leaves the picture
+			ring: { r: [4.2, 4.9], h: [4.5, 5.1] },
+			offstage(out, r) {
+				const side = r() < 0.5 ? -1 : 1;
+				return out.set(side * lerp(1.5, 5, r()), lerp(10, 13, r()), lerp(-3, 3, r()));
+			},
+			arrive: 1,
+			pxH: 1000,
+			dpr: 1
 		};
 	}
 
@@ -703,24 +890,15 @@ export class Islet {
 		this.leaves.drop(this.leafSrc, near, n);
 	}
 
-	update(dt: number, night: number, reduced: boolean) {
+	update(dt: number, night: number, reduced: boolean, playing = false) {
 		const t = U.uTime.value;
+		if (playing) {
+			this.gram.record.rotation.y -= dt * 3.5;
+			this.gram.crank.rotation.x += dt * 5.2;
+		}
 		stepWater(t);
 		this.spray.update(dt, reduced);
 		this.leaves.update(dt, [this.leafSrc], reduced);
-		for (const f of this.floaters) {
-			const a = f.a + (reduced ? 0 : t * f.w);
-			f.m.position.set(
-				Math.cos(a) * f.r,
-				f.y + (reduced ? 0 : Math.sin(t * 0.55 + f.ph) * 0.14),
-				Math.sin(a) * f.r
-			);
-			f.m.rotation.set(
-				Math.sin(t * 0.21 + f.ph) * 0.12,
-				a * 0.6 + f.ph,
-				Math.cos(t * 0.17 + f.ph) * 0.1
-			);
-		}
 		// the lantern: lit as the light goes, and alive once it is
 		const flick = reduced ? 1 : 0.92 + 0.08 * Math.sin(t * 7.3) * Math.sin(t * 3.1 + 1.2);
 		this.glass.emissiveIntensity = lerp(0.25, 1.35, night) * flick;
@@ -769,4 +947,4 @@ export class Islet {
 }
 
 /** how big the islet is, for framing: its span, and its top and foot */
-export const ISLET_FRAME = { w: 8.6, top: 5.2, foot: -4.9 };
+export const ISLET_FRAME = { w: 8.6, top: 5.2, foot: -3.9 };

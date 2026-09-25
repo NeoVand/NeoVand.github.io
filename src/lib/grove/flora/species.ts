@@ -728,6 +728,56 @@ export const MAPLE: Species = {
 	}
 };
 
+/**
+ * Wildflowers in the grass: a few short stems from one root, a pair of
+ * leaves part way up each, and a flower at the top. Small, and many.
+ */
+export function wildflower(name: string, blossom: THREE.Color): Species {
+	return {
+		name,
+		blade: { w: 0.32, cup: 0.12, droop: 0.25 },
+		palette: {
+			leafTop: new THREE.Color(0.1, 0.2, 0.07),
+			leafUnder: new THREE.Color(0.18, 0.28, 0.12),
+			leafVary: 0.25,
+			blossom,
+			barkTint: new THREE.Color(0.35, 0.45, 0.25)
+		},
+		gnarl: 0,
+		base: 0.008,
+		tip: 0.004,
+		pipe: 2,
+		flare: 0,
+		flex: 1.2,
+		rows: 2,
+		castLeaves: false,
+		derive(seed) {
+			const r = rng(seed);
+			const R = (a: number, b: number) => lerp(a, b, r());
+			const sk = newSkeleton();
+			const root = new Turtle(sk, { n: 0 });
+			const stems = 3 + Math.floor(r() * 3);
+			for (let k = 0; k < stems; k++) {
+				const s = root.branch();
+				s.roll(k * 137.5 + R(-20, 20)).pitch(R(6, 32));
+				const h = R(0.14, 0.3);
+				s.forward(h * 0.45, 1, 0.08, 8, r);
+				for (const side of [-1, 1])
+					s.leaf(
+						s.l.clone().multiplyScalar(side).addScaledVector(up, 0.3).normalize(),
+						up.clone().addScaledVector(s.l, side * 0.3),
+						R(0.05, 0.07),
+						0
+					);
+				s.forward(h * 0.55, 2, 0.08, 8, r);
+				s.leaf(s.h, up.clone().add(s.h), R(0.11, 0.15), 1);
+			}
+			taperRadii(sk, { base: this.base, tip: this.tip, p: this.pipe, flare: this.flare });
+			return sk;
+		}
+	};
+}
+
 /** azaleas: low mounds by the water, covered in magenta */
 export const AZALEA = shrub('azalea', new THREE.Color(0.86, 0.16, 0.42), 0.85);
 

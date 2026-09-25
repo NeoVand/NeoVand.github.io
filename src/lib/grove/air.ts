@@ -123,7 +123,222 @@ interface Wheel {
 	linger: number;
 }
 
-const N = 24;
+/**
+ * Where a flock lives: the trees it has, the other places it stands and
+ * walks, what it must fly round, where it comes in from and goes to, and the
+ * eye it is seen by. The grove's is its rotunda and its wall; the islet's,
+ * its lantern, its stones, its grass and its gramophone.
+ */
+export interface Habitat {
+	readonly camera: THREE.PerspectiveCamera;
+	readonly reduced: boolean;
+	readonly trees: TreeHandles[];
+	/** how many birds */
+	count: number;
+	/** places to stand other than a twig, how often each is taken, and those
+	 *  that have room for one bird only */
+	spots: { name: string; weight: number; single?: boolean }[];
+	/** how often a bird takes one of those rather than a twig */
+	spotChance: number;
+	/** which of them are ledges it can walk along */
+	walks: string[];
+	/** where to wait while no tree is ready, and where a bird put off a tree goes */
+	fallback: string;
+	refuge: string[];
+	/** a place of the kind */
+	spot(name: string, r: () => number, out: THREE.Vector3): THREE.Vector3;
+	/** somewhere `d` along from `p` on the same ledge, into `out`; or null */
+	walk(
+		name: string,
+		p: THREE.Vector3,
+		d: number,
+		r: () => number,
+		out: THREE.Vector3
+	): THREE.Vector3 | null;
+	/** a point walked to, put back onto its surface */
+	settle?(name: string, p: THREE.Vector3): void;
+	/** inside what a bird must fly round, with `m` to spare */
+	solid(p: THREE.Vector3, m: number): boolean;
+	/** how wide round it a flight swings, and how high over it; null if nothing */
+	readonly around: { R: number; top: number } | null;
+	/** the ring a startled flock goes round on, how wide and how high */
+	ring: { r: [number, number]; h: [number, number] };
+	/** a point out of the picture, where arrivals come from and leavers go */
+	offstage(out: THREE.Vector3, r: () => number): THREE.Vector3;
+	/** where a firefly might be; without it, no fireflies */
+	flyHome?(near: THREE.Vector3 | undefined, r: () => number): THREE.Vector3;
+	/** how far the lights have come on, and the picture's height in its own
+	 *  pixels and its scale, for the fireflies */
+	readonly arrive: number;
+	readonly pxH: number;
+	readonly dpr: number;
+}
+
+/** The grove's: the rotunda's dome, its cornice sills and its finial, and the wall. */
+export function groveHabitat(g: Grove): Habitat {
+	const tmp = new THREE.Vector3(),
+		tmp2 = new THREE.Vector3();
+	/** on the dome, at a latitude up from the cornice and an azimuth round from the front */
+	const roofAt = (lat: number, az: number, out: THREE.Vector3) => {
+		const { r: R, y, h } = g.pavilion.dome;
+		return out.set(
+			Math.cos(lat) * R * Math.sin(az),
+			y + Math.sin(lat) * h + 0.02,
+			Math.cos(lat) * R * Math.cos(az)
+		);
+	};
+	/** where on the dome a point is, as [latitude, azimuth] */
+	const domeAt = (p: THREE.Vector3): [number, number] => {
+		const { r: R, y, h } = g.pavilion.dome;
+		return [Math.atan2((p.y - 0.02 - y) / h, Math.hypot(p.x, p.z) / R), Math.atan2(p.x, p.z)];
+	};
+	return {
+		get camera() {
+			return g.camera;
+		},
+		get reduced() {
+			return g.reduced;
+		},
+		get trees() {
+			return g.trees;
+		},
+		get arrive() {
+			return g.arrive;
+		},
+		get pxH() {
+			return g.H * g.bufferScale;
+		},
+		get dpr() {
+			return g.bufferScale;
+		},
+		count: 24,
+		spots: [
+			{ name: 'roof', weight: 2 },
+			{ name: 'sill', weight: 1 },
+			{ name: 'rim', weight: 1 },
+			{ name: 'crown', weight: 1, single: true }
+		],
+		spotChance: 0.22,
+		walks: ['roof', 'sill', 'rim'],
+		fallback: 'roof',
+		refuge: ['roof', 'sill'],
+		spot(group, r, out) {
+			if (group === 'roof') return roofAt(lerp(0.35, 1.2, r()), lerp(-1.3, 1.3, r()), out);
+			if (group === 'crown') return out.copy(g.pavilion.crown).setY(g.pavilion.crown.y + 0.06);
+			if (group === 'sill') {
+				const [a, b] = g.pavilion.sills[Math.floor(r() * g.pavilion.sills.length)];
+				return out.copy(a).lerp(b, r());
+			}
+			if (group === 'rim') {
+				// the near side, where it is seen
+				const cand = g.island.rim.filter((p) => p.z > 1);
+				return out.copy(cand[Math.floor(r() * cand.length)]);
+			}
+			return out.set(0, 0, 0);
+		},
+		// over the dome, down the cornice's run, round the wall's top
+		walk(group, p, d, r, q) {
+			if (group === 'roof') {
+				const { r: R, h } = g.pavilion.dome;
+				const [lat, az] = domeAt(p);
+				const a = r() * Math.PI;
+				return roofAt(
+					clamp(lat + (Math.sin(a) * d) / h, 0.35, 1.2),
+					clamp(az + (Math.cos(a) * d) / (R * Math.cos(lat)), -1.35, 1.35),
+					q
+				);
+			}
+			if (group === 'sill') {
+				// the run it is on, and how far along it
+				let best = g.pavilion.sills[0],
+					bd = Infinity;
+				for (const run of g.pavilion.sills) {
+					const dd = p.distanceTo(run[0]) + p.distanceTo(run[1]);
+					if (dd < bd) [bd, best] = [dd, run];
+				}
+				const [a, b] = best;
+				const len = a.distanceTo(b);
+				const u = tmp.subVectors(p, a).dot(tmp2.subVectors(b, a)) / (len * len);
+				return q.copy(a).lerp(b, clamp(u + d / len, 0.06, 0.94));
+			}
+			if (group === 'rim') {
+				const top = g.island.rim[0];
+				const cx = Math.hypot(top.x, top.z);
+				const th = Math.atan2(-p.z, p.x) + d / cx;
+				q.set(cx * Math.cos(th), top.y, -cx * Math.sin(th));
+				// and only on the near side, where it is seen
+				return q.z < 1 ? null : q;
+			}
+			return null;
+		},
+		settle(group, p) {
+			if (group === 'roof') {
+				const [lat, az] = domeAt(p);
+				roofAt(lat, az, p);
+			}
+		},
+		/** in the rotunda's walls or under its dome */
+		solid(p, m) {
+			const pv = g.pavilion;
+			const { r: R, y: dy, h } = pv.dome;
+			if (p.y < pv.floorY - 0.4) return false;
+			const rh = Math.hypot(p.x, p.z);
+			// the cornice's corners, where the sills are, stand out furthest
+			const [a, b] = pv.sills[0];
+			const eaves = a.y;
+			const wallR = Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2) + 0.1;
+			if (p.y < eaves + m) return rh < wallR + m;
+			if (p.y < dy) return rh < R + m;
+			const u = rh / (R + m),
+				v = (p.y - dy) / (h + m);
+			if (u * u + v * v < 1) return true;
+			return rh < 0.3 + m && p.y < pv.crown.y + 0.3 + m;
+		},
+		get around() {
+			const pv = g.pavilion;
+			const [a, b] = pv.sills[0];
+			return {
+				R: Math.max(Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2), pv.dome.r) + 1.4,
+				top: pv.crown.y + 1
+			};
+		},
+		// about the heads of the trees, out beyond the cypresses
+		ring: { r: [7, 8.6], h: [6.4, 7.6] },
+		offstage(out, r) {
+			const side = r() < 0.5 ? -1 : 1;
+			out.set(side * lerp(12, 18, r()), lerp(9, 14, r()), lerp(-8, 6, r()));
+			// keep it on the far side of the camera's frame
+			out.x += g.camera.position.x * 0.2;
+			return out;
+		},
+		/**
+		 * Somewhere a firefly might be: mostly low over the lawn and among the
+		 * shrubs by the wall, some up in the lower crowns; never in the
+		 * rotunda's walls, and never out over the edge.
+		 */
+		flyHome(near, r) {
+			const p = new THREE.Vector3();
+			for (let k = 0; k < 20; k++) {
+				if (near) {
+					p.set(near.x + (r() - 0.5) * 2.4, 0, near.z + (r() - 0.5) * 2.4);
+					p.y = clamp(near.y + (r() - 0.5) * 0.8, 0.25, 3.6);
+				} else {
+					const a = r() * Math.PI * 2,
+						rad = lerp(2.9, 6.2, Math.sqrt(r()));
+					const high = r() < 0.25;
+					p.set(
+						Math.sin(a) * rad,
+						high ? lerp(1.8, 3.6, r()) : lerp(0.25, 1.5, r()),
+						Math.cos(a) * rad
+					);
+				}
+				const rh = Math.hypot(p.x, p.z);
+				if (rh > 2.9 && rh < 6.2) return p;
+			}
+			return p.set(0, 0.8, 4.2);
+		}
+	};
+}
 
 /** A white dove: body along +z, wings hinged at the shoulders, grey at the
  *  tips, as in the old pictures of garden houses in the air. */
@@ -213,7 +428,8 @@ mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0.0, -s, 0.0, 
 
 export class Air {
 	group = new THREE.Group();
-	private grove: Grove;
+	private h: Habitat;
+	private n: number;
 	private birds: THREE.InstancedMesh;
 	private wingAttr: THREE.InstancedBufferAttribute;
 	private headAttr: THREE.InstancedBufferAttribute;
@@ -225,7 +441,7 @@ export class Air {
 	 *  in a frame that turns with the eye, and their light on the garden is
 	 *  laid where they really are. */
 	private flyGroup = new THREE.Group();
-	private flyWorld = new Float32Array(N * 3);
+	private flyWorld: Float32Array;
 	/** the eye's turn about the island, and whether the island is being turned */
 	private yaw = 0;
 	private spinning = false;
@@ -253,8 +469,10 @@ export class Air {
 	private tmp = new THREE.Vector3();
 	private tmp2 = new THREE.Vector3();
 
-	constructor(grove: Grove) {
-		this.grove = grove;
+	constructor(h: Habitat) {
+		this.h = h;
+		const N = (this.n = h.count);
+		this.flyWorld = new Float32Array(N * 3);
 		this.day = this.dayTo = U.uNight.value < 0.5 ? 1 : 0;
 		const geo = birdGeometry();
 		this.wingAttr = new THREE.InstancedBufferAttribute(new Float32Array(N * 2), 2);
@@ -423,31 +641,9 @@ export class Air {
 		}
 	}
 
-	/**
-	 * Somewhere a firefly might be: mostly low over the lawn and among the
-	 * shrubs by the wall, some up in the lower crowns; never in the rotunda's
-	 * walls, and never out over the edge.
-	 */
+	/** somewhere a firefly might be, if this habitat has any */
 	private flyHome(near?: THREE.Vector3) {
-		const p = new THREE.Vector3();
-		for (let k = 0; k < 20; k++) {
-			if (near) {
-				p.set(near.x + (this.r() - 0.5) * 2.4, 0, near.z + (this.r() - 0.5) * 2.4);
-				p.y = clamp(near.y + (this.r() - 0.5) * 0.8, 0.25, 3.6);
-			} else {
-				const a = this.r() * Math.PI * 2,
-					rad = lerp(2.9, 6.2, Math.sqrt(this.r()));
-				const high = this.r() < 0.25;
-				p.set(
-					Math.sin(a) * rad,
-					high ? lerp(1.8, 3.6, this.r()) : lerp(0.25, 1.5, this.r()),
-					Math.cos(a) * rad
-				);
-			}
-			const rh = Math.hypot(p.x, p.z);
-			if (rh > 2.9 && rh < 6.2) return p;
-		}
-		return p.set(0, 0.8, 4.2);
+		return this.h.flyHome ? this.h.flyHome(near, this.r) : new THREE.Vector3(0, -200, 0);
 	}
 
 	// ── where a bird can be ───────────────────────────────────────────────
@@ -485,38 +681,7 @@ export class Air {
 	}
 
 	private pointSites(group: string) {
-		const g = this.grove;
-		const r = this.r;
-		if (group === 'roof')
-			return this.roofAt(lerp(0.35, 1.2, r()), lerp(-1.3, 1.3, r()), new THREE.Vector3());
-		if (group === 'crown') return g.pavilion.crown.clone().setY(g.pavilion.crown.y + 0.06);
-		if (group === 'sill') {
-			const [a, b] = g.pavilion.sills[Math.floor(r() * g.pavilion.sills.length)];
-			return a.clone().lerp(b, r());
-		}
-		if (group === 'rim') {
-			const rim = g.island.rim;
-			// the near side, where it is seen
-			const cand = rim.filter((p) => p.z > 1);
-			return cand[Math.floor(r() * cand.length)].clone();
-		}
-		return new THREE.Vector3();
-	}
-
-	/** on the dome, at a latitude up from the cornice and an azimuth round from the front */
-	private roofAt(lat: number, az: number, out: THREE.Vector3) {
-		const { r: R, y, h } = this.grove.pavilion.dome;
-		return out.set(
-			Math.cos(lat) * R * Math.sin(az),
-			y + Math.sin(lat) * h + 0.02,
-			Math.cos(lat) * R * Math.cos(az)
-		);
-	}
-
-	/** where on the dome a point is, as [latitude, azimuth] */
-	private domeAt(p: THREE.Vector3): [number, number] {
-		const { r: R, y, h } = this.grove.pavilion.dome;
-		return [Math.atan2((p.y - 0.02 - y) / h, Math.hypot(p.x, p.z) / R), Math.atan2(p.x, p.z)];
+		return this.h.spot(group, this.r, new THREE.Vector3());
 	}
 
 	/** is anyone else standing at `q`, or on the way there? */
@@ -531,44 +696,15 @@ export class Air {
 
 	/**
 	 * Somewhere a short way along the ledge a bird is standing on, clear of
-	 * the others: over the dome, down the cornice's run, round the wall's
-	 * top. Null if there is nowhere.
+	 * the others. Null if there is nowhere.
 	 */
 	private along(s: PointSite, lo: number, hi: number, cr: Creature) {
-		const g = this.grove;
+		if (!this.h.walks.includes(s.group)) return null;
 		const r = this.r;
 		const q = new THREE.Vector3();
 		for (let k = 0; k < 8; k++) {
 			const d = lerp(lo, hi, r()) * (r() < 0.5 ? -1 : 1);
-			if (s.group === 'roof') {
-				const { r: R, h } = g.pavilion.dome;
-				const [lat, az] = this.domeAt(s.p);
-				const a = r() * Math.PI;
-				this.roofAt(
-					clamp(lat + (Math.sin(a) * d) / h, 0.35, 1.2),
-					clamp(az + (Math.cos(a) * d) / (R * Math.cos(lat)), -1.35, 1.35),
-					q
-				);
-			} else if (s.group === 'sill') {
-				// the run it is on, and how far along it
-				let best = g.pavilion.sills[0],
-					bd = Infinity;
-				for (const run of g.pavilion.sills) {
-					const dd = s.p.distanceTo(run[0]) + s.p.distanceTo(run[1]);
-					if (dd < bd) [bd, best] = [dd, run];
-				}
-				const [a, b] = best;
-				const len = a.distanceTo(b);
-				const u = this.tmp.subVectors(s.p, a).dot(this.tmp2.subVectors(b, a)) / (len * len);
-				q.copy(a).lerp(b, clamp(u + d / len, 0.06, 0.94));
-			} else if (s.group === 'rim') {
-				const top = g.island.rim[0];
-				const cx = Math.hypot(top.x, top.z);
-				const th = Math.atan2(-s.p.z, s.p.x) + d / cx;
-				q.set(cx * Math.cos(th), top.y, -cx * Math.sin(th));
-				// and only on the near side, where it is seen
-				if (q.z < 1) continue;
-			} else return null;
+			if (!this.h.walk(s.group, s.p, d, r, q)) continue;
 			if (q.distanceTo(s.p) < lo * 0.6 || this.crowded(q, cr)) continue;
 			return q;
 		}
@@ -597,20 +733,24 @@ export class Air {
 
 	private pickSite(cr: Creature, prefer?: TreeHandles | null): Site {
 		const r = this.r();
-		const trees = this.grove.trees;
+		const h = this.h;
+		const trees = h.trees;
 		const tree = prefer ?? this.partyTree[cr.party] ?? trees[Math.floor(this.r() * trees.length)];
-		if (prefer === undefined && r < 0.22) {
-			const groups = ['roof', 'roof', 'sill', 'rim', 'crown'];
-			const gname = groups[Math.floor(this.r() * groups.length)];
-			if (
-				gname !== 'crown' ||
-				!this.c.some((o) => o.site?.kind === 'point' && o.site.group === 'crown')
-			)
+		if (prefer === undefined && r < h.spotChance) {
+			let x = this.r() * h.spots.reduce((a, s) => a + s.weight, 0);
+			let sp = h.spots[0];
+			for (const s of h.spots) {
+				sp = s;
+				if ((x -= s.weight) < 0) break;
+			}
+			const gname = sp.name;
+			if (!sp.single || !this.c.some((o) => o.site?.kind === 'point' && o.site.group === gname))
 				return { kind: 'point', p: this.pointSites(gname), group: gname };
 		}
-		const twigs = this.twigsOf(tree);
-		// a tree still coming up: wait on the building instead
-		if (!twigs.length) return { kind: 'point', p: this.pointSites('roof'), group: 'roof' };
+		const twigs = tree ? this.twigsOf(tree) : [];
+		// a tree still coming up: wait somewhere else instead
+		if (!tree || !twigs.length)
+			return { kind: 'point', p: this.pointSites(h.fallback), group: h.fallback };
 		return { kind: 'twig', tree, i: twigs[Math.floor(this.r() * twigs.length)] };
 	}
 
@@ -651,22 +791,9 @@ export class Air {
 		cr.hopTo = null;
 	}
 
-	/** is `p` in the rotunda's walls or under its dome, with `m` to spare? */
+	/** is `p` in what a bird flies round, with `m` to spare? */
 	private inBuilding(p: THREE.Vector3, m: number) {
-		const pv = this.grove.pavilion;
-		const { r: R, y: dy, h } = pv.dome;
-		if (p.y < pv.floorY - 0.4) return false;
-		const rh = Math.hypot(p.x, p.z);
-		// the cornice's corners, where the sills are, stand out furthest
-		const [a, b] = pv.sills[0];
-		const eaves = a.y;
-		const wallR = Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2) + 0.1;
-		if (p.y < eaves + m) return rh < wallR + m;
-		if (p.y < dy) return rh < R + m;
-		const u = rh / (R + m),
-			v = (p.y - dy) / (h + m);
-		if (u * u + v * v < 1) return true;
-		return rh < 0.3 + m && p.y < pv.crown.y + 0.3 + m;
+		return this.h.solid(p, m);
 	}
 
 	/** does the flight laid out for `cr` keep out of the building? */
@@ -686,12 +813,11 @@ export class Air {
 	 * goes up over the dome.
 	 */
 	private route(cr: Creature, end: THREE.Vector3) {
-		if (this.clear(cr, end)) return;
-		const pv = this.grove.pavilion;
+		const around = this.h.around;
+		if (!around || this.clear(cr, end)) return;
 		const c1 = cr.c1.clone(),
 			c2 = cr.c2.clone();
-		const [a, b] = pv.sills[0];
-		const R = Math.max(Math.hypot((a.x + b.x) / 2, (a.z + b.z) / 2), pv.dome.r) + 1.4;
+		const R = around.R;
 		const n = new THREE.Vector3(-(end.z - cr.from.z), 0, end.x - cr.from.x).normalize();
 		const mid = cr.from.clone().lerp(end, 0.5);
 		const near = Math.sign(n.x * mid.x + n.z * mid.z) || 1;
@@ -711,7 +837,7 @@ export class Air {
 			}
 		}
 		// over the top, higher each time until it is clear
-		const top = pv.crown.y + 1;
+		const top = around.top;
 		for (let k = 0; k < 4; k++) {
 			const y = (top + k - 0.125 * (cr.from.y + end.y)) / 0.75;
 			cr.c1.copy(c1).setY(Math.max(c1.y, y));
@@ -726,7 +852,7 @@ export class Air {
 	 * garden's visitor, now and then away, otherwise anywhere.
 	 */
 	private face(cr: Creature) {
-		const cam = this.group.worldToLocal(this.tmp.copy(this.grove.camera.position));
+		const cam = this.group.worldToLocal(this.tmp.copy(this.h.camera.position));
 		const toCam = Math.atan2(cam.x - cr.pos.x, cam.z - cr.pos.z);
 		const r = this.r();
 		const want =
@@ -776,17 +902,12 @@ export class Air {
 
 	/** A point just out of the picture, from where an arrival can come in. */
 	private offstage(out: THREE.Vector3) {
-		const cam = this.grove.camera;
-		const side = this.r() < 0.5 ? -1 : 1;
-		out.set(side * lerp(12, 18, this.r()), lerp(9, 14, this.r()), lerp(-8, 6, this.r()));
-		// keep it on the far side of the camera's frame
-		out.x += cam.position.x * 0.2;
-		return out;
+		return this.h.offstage(out, this.r);
 	}
 
 	begin() {
 		this.started = true;
-		const trees = this.grove.trees;
+		const trees = this.h.trees;
 		const shuffled = [...trees].sort(() => this.r() - 0.5);
 		this.partyTree = [shuffled[0] ?? null, shuffled[1] ?? null];
 		for (const cr of this.c) {
@@ -798,8 +919,8 @@ export class Air {
 				continue;
 			}
 			const site = this.pickSite(cr);
-			const delay = this.grove.reduced ? 0 : lerp(2.6, 7.5, this.r());
-			if (this.grove.reduced) {
+			const delay = this.h.reduced ? 0 : lerp(2.6, 7.5, this.r());
+			if (this.h.reduced) {
 				cr.site = site;
 				this.sitePos(site, cr.pos);
 				cr.state = 'perch';
@@ -813,6 +934,37 @@ export class Air {
 	}
 
 	/**
+	 * Everyone at once where they would be by now: for a flock first seen
+	 * long after it would have come in. By night they are away.
+	 */
+	settle() {
+		this.started = true;
+		const shuffled = [...this.h.trees].sort(() => this.r() - 0.5);
+		this.partyTree = [shuffled[0] ?? null, shuffled[1] ?? null];
+		for (const cr of this.c) {
+			if (this.dayTo < 0.5) {
+				cr.state = 'away';
+				cr.site = null;
+				this.offstage(cr.pos);
+				continue;
+			}
+			const site = this.pickSite(cr);
+			cr.site = site;
+			this.sitePos(site, cr.pos);
+			cr.state = 'perch';
+			cr.pose = 1;
+			cr.arriving = false;
+			cr.act = 'idle';
+			cr.timer = lerp(0.5, 5, this.r());
+			cr.yaw = cr.yawTo = cr.yawStep = this.face(cr);
+		}
+	}
+
+	get begun() {
+		return this.started;
+	}
+
+	/**
 	 * The lights change over. As night comes the doves go: up off their
 	 * perches a few at a time, and away out of the picture. With the morning
 	 * they come back in from where they went, and settle.
@@ -821,7 +973,7 @@ export class Air {
 		const was = this.dayTo;
 		this.dayTo = day ? 1 : 0;
 		if (!this.started || was === this.dayTo) return;
-		const reduced = this.grove.reduced;
+		const reduced = this.h.reduced;
 		for (const cr of this.c) {
 			const leaving = cr.state === 'fly' && cr.site?.kind === 'point' && cr.site.group === 'away';
 			if (!day) {
@@ -864,7 +1016,7 @@ export class Air {
 	 * and each, as its perch comes round, drops out of the ring onto it.
 	 */
 	startle() {
-		if (!this.started || this.grove.reduced) return;
+		if (!this.started || this.h.reduced) return;
 		const wheeling = this.c.some((cr) => cr.state === 'wheel');
 		let sx = 0,
 			sz = 0;
@@ -914,8 +1066,8 @@ export class Air {
 			w: new THREE.Vector3(ox * 1.3 + Math.sin(ah) * 1.1, 3.2, oz * 1.3 + Math.cos(ah) * 1.1),
 			ah,
 			// about the heads of the trees, out beyond the cypresses
-			r: lerp(7, 8.6, r()),
-			h: lerp(6.4, 7.6, r()),
+			r: lerp(this.h.ring.r[0], this.h.ring.r[1], r()),
+			h: lerp(this.h.ring.h[0], this.h.ring.h[1], r()),
 			ph: r() * Math.PI * 2,
 			off: (r() - 0.5) * 1.1,
 			v: lerp(4.6, 5.6, r()),
@@ -963,7 +1115,7 @@ export class Air {
 		// never into the building, nor through a crown: out and up from
 		// anything just ahead of it
 		const ahead = this.tmp.copy(q).addScaledVector(w, 0.45);
-		for (const t of this.grove.trees) {
+		for (const t of this.h.trees) {
 			const c = this.toAir(t.crown, this.tmp2);
 			const dx = ahead.x - c.x,
 				dy = ahead.y - c.y,
@@ -1019,23 +1171,24 @@ export class Air {
 			(cr) => cr.state !== 'wheel' && cr.site?.kind === 'twig' && cr.site.tree === t
 		);
 		if (!onIt.length) return;
-		const others = this.grove.trees.filter((o) => o !== t && !this.partyTree.includes(o));
+		const others = this.h.trees.filter((o) => o !== t && !this.partyTree.includes(o));
 		const next =
-			others[Math.floor(this.r() * others.length)] ?? this.grove.trees.find((o) => o !== t)!;
+			others[Math.floor(this.r() * others.length)] ?? this.h.trees.find((o) => o !== t) ?? null;
 		for (const cr of onIt) {
 			if (this.partyTree[cr.party] === t) this.partyTree[cr.party] = next;
 			const toBuilding = this.r() < 0.33;
-			const group = this.r() < 0.6 ? 'roof' : 'sill';
+			const ref = this.h.refuge;
+			const group = this.r() < 0.6 ? ref[0] : ref[1 % ref.length];
 			const site: Site = toBuilding
 				? { kind: 'point', p: this.pointSites(group), group }
-				: this.pickSite(cr, next);
+				: this.pickSite(cr, next ?? undefined);
 			this.fly(cr, site, this.r() * 0.25);
 		}
 	}
 
 	private migrate() {
 		const party = this.r() < 0.5 ? 0 : 1;
-		const trees = this.grove.trees.filter((t) => !this.partyTree.includes(t));
+		const trees = this.h.trees.filter((t) => !this.partyTree.includes(t));
 		if (!trees.length) return;
 		const next = trees[Math.floor(this.r() * trees.length)];
 		this.partyTree[party] = next;
@@ -1108,10 +1261,7 @@ export class Air {
 				if (Math.abs(cr.yawTo - cr.yaw) > 0.5) break;
 				cr.gait += dt * 3.4;
 				p.addScaledVector(d, Math.min(1, (0.24 * dt) / left));
-				if (site.group === 'roof') {
-					const [lat, az] = this.domeAt(p);
-					this.roofAt(lat, az, p);
-				}
+				this.h.settle?.(site.group, p);
 				// the head thrust forward in the first part of each step, then
 				// held where it is in the air while the body walks up under it
 				const s = cr.gait % 1;
@@ -1236,7 +1386,7 @@ export class Air {
 		cr.actT = 0;
 		cr.act = 'idle';
 		cr.timer = lerp(0.6, 2.8, r());
-		const ledge = s.kind === 'point' && ['roof', 'sill', 'rim'].includes(s.group);
+		const ledge = s.kind === 'point' && this.h.walks.includes(s.group);
 		const twig = s.kind === 'twig';
 		// how likely each is: walk, hop, peck, preen, flutter, coo, turn, rest, off
 		const w = ledge
@@ -1311,7 +1461,7 @@ export class Air {
 		this.day = damp(this.day, this.dayTo, 2.2, dt);
 		this.group.visible = visible && this.started;
 		if (!this.started) return;
-		const reduced = this.grove.reduced;
+		const reduced = this.h.reduced;
 		this.migrateT -= dt;
 		if (this.migrateT < 0) {
 			this.migrateT = lerp(16, 28, this.r());
@@ -1485,8 +1635,8 @@ export class Air {
 		// and then drifts off to another patch nearby; and each flashes on
 		// its own clock, a slow swell and fade, dark most of the time.
 		// and the fireflies come out once the island has arrived
-		const on = smoothstep(0.1, 0.9, night) * this.grove.arrive;
-		for (let i = 0; i < this.ff.length; i++) {
+		const on = smoothstep(0.1, 0.9, night) * this.h.arrive;
+		for (let i = 0; i < (this.h.flyHome ? this.ff.length : 0); i++) {
 			const f = this.ff[i];
 			const k = i * 3;
 			if (!reduced) {
@@ -1523,7 +1673,7 @@ export class Air {
 		// where the fireflies really are, turned with the air, for their light
 		const cy = Math.cos(yaw),
 			sy = Math.sin(yaw);
-		for (let i = 0; i < N; i++) {
+		for (let i = 0; i < this.n; i++) {
 			const x = this.flyPos[i * 3],
 				z = this.flyPos[i * 3 + 2];
 			this.flyWorld[i * 3] = x * cy + z * sy;
@@ -1536,12 +1686,12 @@ export class Air {
 		(this.flies.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true;
 		(this.flies.geometry.getAttribute('aGlow') as THREE.BufferAttribute).needsUpdate = true;
 		// in the picture's own pixels, which are not the canvas's
-		const H = this.grove.H * this.grove.bufferScale;
-		const fov = THREE.MathUtils.degToRad(this.grove.camera.fov);
+		const H = this.h.pxH;
+		const fov = THREE.MathUtils.degToRad(this.h.camera.fov);
 		const fu = (this.flies.material as THREE.ShaderMaterial).uniforms;
 		fu.uScale.value = (0.55 * H) / (2 * Math.tan(fov / 2));
-		fu.uDpr.value = this.grove.bufferScale;
-		this.flies.visible = night > 0.02;
+		fu.uDpr.value = this.h.dpr;
+		this.flies.visible = night > 0.02 && !!this.h.flyHome;
 		this.birds.visible = anyBird;
 	}
 }

@@ -3,7 +3,11 @@ import { U } from './shared';
 import { Islet, ISLET_FRAME } from './islet';
 import { SHADOW_LAYER } from './flora/plants';
 import { rustleFrom } from './flora/wind';
-import { clamp, damp, easeOut, lerp } from './rng';
+import { clamp, damp, easeOut, lerp, smoothstep } from './rng';
+import { Air } from './air';
+import { Notes } from './notes';
+import { lampRoom } from './gramophone';
+import { moonTexture } from './sky';
 
 // ─── The islet, over the reading room ─────────────────────────────────────
 // While a paper is open the page lies under frosted glass, and over the glass,
@@ -12,8 +16,10 @@ import { clamp, damp, easeOut, lerp } from './rng';
 // It keeps the grove's hours: its light is the grove's light, its wind the
 // grove's wind, and the grove's clock runs it. It comes up into its place as
 // the room opens and sinks away as it closes; a hand turns it and tilts it; a
-// tap in the crown shakes leaves down, a tap on the water rings it, and a tap
-// on nothing at all closes the room, as a tap on the glass would.
+// tap in the crown shakes leaves down, a tap on the water rings it, a tap on
+// the gramophone plays a record (the same one the grove's plays), and a tap
+// on nothing at all closes the room, as a tap on the glass would. Its doves
+// are the grove's kind, and do as they do; and the moon hangs by it.
 
 // The picture's grade, after the tone map, for a renderer that draws straight
 // to its canvas: what the grove's last pass does, in the same terms, so the
@@ -41,6 +47,56 @@ export interface Lights {
 	day: number;
 	exposure: number;
 	envIntensity: number;
+	/** whether a record is playing, and how loud it is now */
+	playing: boolean;
+	level: number;
+}
+
+/** where on the canvas the moon hangs: across it, and down its framed part */
+const MOON_AT = [0.83, 0.15];
+/** its radius on screen, in the page's pixels, and how far off it is drawn */
+const MOON_R = 30;
+const MOON_D = 80;
+
+/** The moon, a disc with its painting on it, and a glow round it that only adds light. */
+function moonMesh() {
+	const m = new THREE.ShaderMaterial({
+		uniforms: { uMap: { value: moonTexture() }, uOn: { value: 0 }, uGlow: { value: 1 } },
+		vertexShader: /* glsl */ `
+			varying vec2 vUv;
+			void main() {
+				vUv = uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+			}`,
+		fragmentShader: /* glsl */ `
+			uniform sampler2D uMap;
+			uniform float uOn;
+			uniform float uGlow;
+			varying vec2 vUv;
+			void main() {
+				vec2 p = vUv * 2.0 - 1.0;
+				float r = length(p);
+				const float R = 0.34;
+				float disc = 1.0 - smoothstep(R - 0.012, R + 0.004, r);
+				vec3 m = texture2D(uMap, p / (2.0 * R) + 0.5).rgb;
+				float limb = 0.82 + 0.18 * sqrt(max(0.0, 1.0 - (r / R) * (r / R)));
+				vec3 moon = vec3(1.0, 0.97, 0.9) * m * 2.2 * limb;
+				float halo = exp(-max(r - R, 0.0) * 7.0) * 0.16 * (1.0 - disc) * uGlow;
+				if (disc + halo < 0.002) discard;
+				gl_FragColor = vec4(moon * disc + vec3(0.8, 0.86, 1.0) * halo, 1.0);
+				#include <tonemapping_fragment>
+				#include <colorspace_fragment>
+				// the disc covers what is behind it; the glow only adds
+				gl_FragColor = vec4(gl_FragColor.rgb * uOn, disc * uOn);
+			}`,
+		transparent: true,
+		depthWrite: false,
+		premultipliedAlpha: true
+	});
+	const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), m);
+	mesh.frustumCulled = false;
+	mesh.renderOrder = -10;
+	return mesh;
 }
 
 /** A sky to be reflected in the water and the stone: a gradient, overhead to
@@ -84,6 +140,19 @@ export class IsletView {
 	private hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 1);
 	private envDay: THREE.Texture | null = null;
 	private envNight: THREE.Texture | null = null;
+	private envRoom: THREE.Texture | null = null;
+	/** a record asked for: the grove's gramophone and this one play the same */
+	onGramophone?: () => void;
+	/** its doves, the notes out of its horn, and the moon */
+	private air: Air;
+	private notes = new Notes();
+	private moon = moonMesh();
+	private wasSpinning = false;
+	private orbit = 0;
+	private overGram = false;
+	private gramGlow = 0;
+	private mouth = new THREE.Vector3();
+	private mouthDir = new THREE.Vector3();
 	/** coming up into its place (1), or gone (0), and which way it is going */
 	private k = 0;
 	private to = 0;
@@ -116,7 +185,7 @@ export class IsletView {
 	constructor(
 		public canvas: HTMLCanvasElement,
 		public islet: Islet,
-		private reduced: boolean
+		readonly reduced: boolean
 	) {
 		const r = new THREE.WebGLRenderer({
 			canvas,
@@ -145,7 +214,18 @@ export class IsletView {
 		this.key.shadow.camera.layers.enable(SHADOW_LAYER);
 		this.scene.add(this.key, this.key.target, this.hemi, islet.group);
 		this.gateShadowLayer();
+		this.air = new Air(islet.habitat(this));
+		islet.group.add(this.air.group, this.notes.points);
+		// the moon hangs in the view, not on the islet: it stays where it is as
+		// the islet is turned
+		this.camera.add(this.moon);
+		this.scene.add(this.camera);
 		this.bind();
+	}
+
+	/** the lights changing over: the doves go for the night, or come back */
+	setDay(day: boolean) {
+		this.air.setDay(day);
 	}
 
 	/** the skies it reflects, by day and by night: made apart, being the dearest part of it */
@@ -154,6 +234,10 @@ export class IsletView {
 		const r = this.renderer;
 		this.envDay = skyEnv(r, [0.16, 0.3, 0.64], [0.55, 0.64, 0.78], [0.62, 0.6, 0.6]);
 		this.envNight = skyEnv(r, [0.02, 0.028, 0.056], [0.06, 0.07, 0.1], [0.05, 0.056, 0.078]);
+		// and by night the brass has the lamplit room the grove gives it
+		const pm = new THREE.PMREMGenerator(r);
+		this.envRoom = pm.fromScene(lampRoom(), 0, 0.05, 50).texture;
+		pm.dispose();
 	}
 
 	/** The maple's shadow is cast by a thinned set of its leaves on a layer of
@@ -225,13 +309,27 @@ export class IsletView {
 		const fy = this.frameH / 2 / this.H;
 		cam.setViewOffset(this.W, this.H, 0, (0.5 - fy) * this.H, this.W, this.H);
 		cam.near = Math.max(0.5, this.dist - 16);
-		cam.far = this.dist + 60;
+		cam.far = Math.max(this.dist + 60, MOON_D + 20);
 		cam.updateProjectionMatrix();
 		this.islet.setScale((this.H * dpr) / (2 * tan), dpr);
+		// the moon: where it hangs on the canvas, as a point in the camera's own
+		// space, and as big as its radius on screen asks at that distance
+		const v = new THREE.Vector3(
+			MOON_AT[0] * 2 - 1,
+			1 - 2 * ((MOON_AT[1] * this.frameH) / this.H),
+			0.5
+		).applyMatrix4(cam.projectionMatrixInverse);
+		this.moon.position.copy(v.multiplyScalar(-MOON_D / v.z));
+		const perM = this.H / (2 * tan) / MOON_D;
+		this.moon.scale.setScalar((2 * (MOON_R / perM)) / 0.68);
+		this.pxPerUnit = (this.H * dpr) / (2 * tan);
 	}
+	private pxPerUnit = 1000;
 
 	open() {
 		this.to = 1;
+		// the doves, the first time: already where they would be
+		if (!this.air.begun) this.air.settle();
 		if (this.k === 0) {
 			this.yaw = 0;
 			this.yawVel = 0;
@@ -264,9 +362,12 @@ export class IsletView {
 		}
 		this.skies();
 		this.islet.group.visible = true;
-		// a throw spins on and slows; left alone a while, it goes home
+		// a throw spins on and slows; left alone a while, it goes home. While a
+		// record plays it turns slowly round, as the grove does.
+		this.orbit = damp(this.orbit, L.playing && !this.reduced ? 0.09 : 0, 0.5, dt);
+		if (this.orbit > 0.004) this.spunAt = this.clock;
 		if (!this.drag) {
-			this.yaw += this.yawVel * dt;
+			this.yaw += (this.yawVel + this.orbit) * dt;
 			const home = Math.round(this.yaw / (Math.PI * 2)) * Math.PI * 2;
 			if (!this.reduced && this.clock - this.spunAt > 5 && Math.abs(this.yawVel) < 0.4) {
 				const w = 0.9;
@@ -319,7 +420,33 @@ export class IsletView {
 			.normalize()
 			.transformDirection(cam.matrixWorldInverse);
 
-		this.islet.update(dt, 1 - L.day, this.reduced);
+		// the moon out by night, faint in the day's sky
+		const mu = (this.moon.material as THREE.ShaderMaterial).uniforms;
+		mu.uOn.value = lerp(1, 0.4, smoothstep(0.35, 0.8, L.day)) * clamp(this.k * 1.5, 0, 1);
+		mu.uGlow.value = 1 - smoothstep(0.3, 0.7, L.day);
+		// by night the brass shines with the lamplit room; by day with the day
+		this.islet.brass.envMap = L.day > 0.5 ? null : this.envRoom;
+		this.islet.update(dt, 1 - L.day, this.reduced, L.playing);
+		// the doves: put up when it is turned, as the grove's are
+		const spinning = !!this.drag?.moved || Math.abs(this.yawVel) > 0.35;
+		if (spinning && !this.wasSpinning && (Math.abs(this.yawVel) > 0.8 || this.drag?.moved))
+			this.air.startle();
+		if (spinning || Math.abs(this.yawVel) < 0.2) this.wasSpinning = spinning;
+		this.air.update(dt, true, yaw, spinning);
+		// the machine: lit under the hand, and the notes out of its horn
+		this.gramGlow = damp(this.gramGlow, this.overGram ? 1 : 0, 9, dt);
+		this.islet.gram.hover.value = this.gramGlow * 0.6;
+		const gg = this.islet.gram.group;
+		this.mouth.copy(this.islet.gram.mouth).applyMatrix4(gg.matrix);
+		this.mouthDir.copy(this.islet.gram.mouthDir).transformDirection(gg.matrix);
+		this.notes.update(
+			dt,
+			L.playing ? L.level : 0,
+			L.playing && !this.reduced,
+			this.mouth,
+			this.mouthDir,
+			this.pxPerUnit * 0.36
+		);
 		// the shadows a few times a second, or every frame while it turns
 		this.shadowTick = (this.shadowTick + 1) % 4;
 		this.renderer.shadowMap.needsUpdate =
@@ -338,9 +465,12 @@ export class IsletView {
 		this.ray.setFromCamera(this.ndc, this.camera);
 	}
 
-	/** what is under the pointer: the maple's crown, the water, the rest of the islet, or nothing */
-	private pick(): 'tree' | 'pool' | 'islet' | null {
+	/** what is under the pointer: the gramophone, the maple's crown, the water, the rest of the islet, or nothing */
+	private pick(): 'gram' | 'tree' | 'pool' | 'islet' | null {
 		const ray = this.ray.ray;
+		const g = this.islet.gram;
+		const box = g.hit.clone().applyMatrix4(g.group.matrix);
+		if (ray.intersectsBox(box)) return 'gram';
 		const t = this.islet.tree;
 		// the crown as a squashed ball, as wide as it reaches and as high as the tree
 		const rh = t.crownR * 0.85,
@@ -385,7 +515,9 @@ export class IsletView {
 				// over the islet, a hand that can take hold of it
 				if (e.pointerType === 'mouse' && this.active) {
 					this.point(e);
-					this.canvas.style.cursor = this.pick() ? 'grab' : '';
+					const hit = this.pick();
+					this.overGram = hit === 'gram';
+					this.canvas.style.cursor = hit === 'gram' ? 'pointer' : hit ? 'grab' : '';
 				}
 				return;
 			}
@@ -414,7 +546,8 @@ export class IsletView {
 			// a tap, not a turn
 			this.point(e);
 			const hit = this.pick();
-			if (hit === 'tree') {
+			if (hit === 'gram') this.onGramophone?.();
+			else if (hit === 'tree') {
 				const t = this.islet.tree;
 				const at = this.ray.ray.closestPointToPoint(t.crown, new THREE.Vector3());
 				rustleFrom(at, 1);
@@ -432,6 +565,7 @@ export class IsletView {
 		for (const [type, fn] of this.listeners) this.canvas.removeEventListener(type, fn);
 		this.envDay?.dispose();
 		this.envNight?.dispose();
+		this.envRoom?.dispose();
 		this.renderer.dispose();
 	}
 }

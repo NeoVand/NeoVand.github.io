@@ -148,6 +148,8 @@ export class Notes {
 					float a = (fill + halo) * fade;
 					if (a < 0.01) discard;
 					gl_FragColor = vec4((uInk * fill + uHalo * halo) / max(fill + halo, 1e-4), a);
+					#include <tonemapping_fragment>
+					#include <colorspace_fragment>
 				}`,
 			transparent: true,
 			depthWrite: false

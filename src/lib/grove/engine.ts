@@ -18,7 +18,7 @@ import { Glow } from './glow';
 import { buildRotunda, rotundaClearance, type RotundaParts } from './rotunda';
 import { buildFairyLights, type FairyLights } from './fairylights';
 import { PresentPass } from './present';
-import { buildGramophone, type Gramophone } from './gramophone';
+import { buildGramophone, lampRoom, type Gramophone } from './gramophone';
 import {
 	buildStand,
 	prepareStand,
@@ -33,7 +33,7 @@ import { rustleFrom } from './flora/wind';
 import { Petals, type PetalSource } from './flora/petals';
 import { patch, nightPatch, nightPatchWarm } from './shared';
 import { rng, clamp, damp, easeInOut, lerp, smoothstep } from './rng';
-import { Air } from './air';
+import { Air, groveHabitat } from './air';
 import { Islet } from './islet';
 import { IsletView } from './isletview';
 import { Notes } from './notes';
@@ -96,46 +96,6 @@ const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 /** how far the sky is tipped up behind the island, in degrees, by layout */
 const SKY_TILT = { side: 0, stack: 9 };
-
-/**
- * The rotunda by lamplight, as the gramophone would see it from the floor:
- * warm flags below, six open bays of night between lit brick piers, a dim
- * vault, and the lantern overhead. Baked once into an environment for the
- * brass, which by night has nothing but this to be shiny with.
- */
-function lampRoom() {
-	const scene = new THREE.Scene();
-	const mat = new THREE.ShaderMaterial({
-		side: THREE.BackSide,
-		vertexShader: /* glsl */ `
-			varying vec3 vD;
-			void main() {
-				vD = position;
-				gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-			}`,
-		fragmentShader: /* glsl */ `
-			varying vec3 vD;
-			void main() {
-				vec3 d = normalize(vD);
-				float az = atan(d.x, d.z);
-				float e = d.y;
-				// the floor, brightest under the lamp
-				vec3 floorC = vec3(0.62, 0.4, 0.22) * mix(0.25, 0.9, 1.0 - smoothstep(-0.9, -0.2, e));
-				// the bays, open to the night, and the piers between them
-				float bay = smoothstep(-0.1, 0.35, cos(az * 6.0));
-				vec3 wall = mix(vec3(0.5, 0.22, 0.1) * 0.5, vec3(0.02, 0.03, 0.07), bay);
-				vec3 vault = vec3(0.3, 0.17, 0.08) * 0.35;
-				vec3 c = mix(e < 0.6 ? wall : vault, floorC, 1.0 - smoothstep(-0.08, 0.0, e));
-				// the lantern: up, and a little toward the back of the room
-				vec3 L = normalize(vec3(-0.1, 1.0, -0.4));
-				float a = acos(clamp(dot(d, L), -1.0, 1.0));
-				c += vec3(1.0, 0.66, 0.34) * (60.0 * (1.0 - smoothstep(0.06, 0.09, a)) + 2.5 * exp(-a * 7.0));
-				gl_FragColor = vec4(c, 1.0);
-			}`
-	});
-	scene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 64, 32), mat));
-	return scene;
-}
 
 /** The grade, after the tone map and in display terms: a little more
  *  saturation than AgX leaves, a gentle S for contrast, warm lights and cool
@@ -514,7 +474,7 @@ export class Grove {
 		this.scene.add(this.hemi);
 
 		this.build();
-		this.air = new Air(this);
+		this.air = new Air(groveHabitat(this));
 		this.world.add(this.air.group);
 		this.applyDay(this.dayMix);
 		this.bind();
@@ -938,6 +898,7 @@ export class Grove {
 		}
 		this.dayTo = to;
 		this.air.setDay(day);
+		this.islet?.setDay(day);
 		if (this.reduced) {
 			this.dayMix = this.dayTo;
 			this.moonK = this.dayTo;
@@ -1197,6 +1158,8 @@ export class Grove {
 				() => {
 					view = new IsletView(canvas, islet, this.reduced);
 					view.onMiss = () => this.onIsletMiss?.();
+					// its gramophone plays the grove's record
+					view.onGramophone = () => this.onGramophone?.();
 					this.islet = view;
 				},
 				() => view.skies(),
@@ -1855,7 +1818,9 @@ export class Grove {
 			hemi: this.hemi,
 			day: this.dayMix,
 			exposure: this.renderer.toneMappingExposure,
-			envIntensity: this.scene.environmentIntensity
+			envIntensity: this.scene.environmentIntensity,
+			playing: this.playing,
+			level: this.playing ? this.level() : 0
 		});
 		// its little lights, into the one glow map both pictures read
 		if (shown) v.islet.lightUp(this.glow, 1 - this.dayMix, this.lampCol, this.flyCol);

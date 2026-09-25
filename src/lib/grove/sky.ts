@@ -700,7 +700,7 @@ void main() {
  * has loaded; until then a plain pale disc. Its grey is read as it is, not as
  * sRGB, since it is a picture of brightness rather than a colour.
  */
-function moonTexture() {
+export function moonTexture() {
 	const c = document.createElement('canvas');
 	c.width = c.height = 512;
 	const g = c.getContext('2d')!;
