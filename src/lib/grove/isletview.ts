@@ -15,8 +15,9 @@ import { moonTexture } from './sky';
 // in the corner the words leave free, the islet floats: drawn by a renderer of
 // its own onto a canvas with nothing behind it, so the glass shows round it.
 // It keeps the grove's hours: its light is the grove's light, its wind the
-// grove's wind, and the grove's clock runs it. It comes up into its place as
-// the room opens and sinks away as it closes; a hand turns it and tilts it; a
+// grove's wind, and the grove's clock runs it. It comes out of the paper's
+// deck with the pages as the room opens, and goes back into it with them as
+// it closes; a hand turns it and tilts it; a
 // tap in the crown shakes leaves down, a tap on the water rings it, a tap on
 // the gramophone plays a record (the same one the grove's plays), and a tap
 // on nothing at all closes the room, as a tap on the glass would. Its doves
@@ -38,18 +39,26 @@ export interface Lights {
 	/** whether a record is playing, and how loud it is now */
 	playing: boolean;
 	level: number;
+	/** the grove's moon's radius on the screen, in the page's pixels */
+	moonPx: number;
 }
 
 /** where on the canvas the moon hangs: across it, and down its framed part */
-const MOON_AT = [0.83, 0.15];
-/** its radius on screen, in the page's pixels, and how far off it is drawn */
-const MOON_R = 30;
+const MOON_AT = [0.79, 0.2];
+/** how far off it is drawn */
 const MOON_D = 80;
+/** the disc's radius on its plane, the plane being a unit square (a margin round it for its edge) */
+const MOON_DISC = 0.47;
 
-/** The moon, a disc with its painting on it, and a glow round it that only adds light. */
+/**
+ * The moon, as the grove's sky draws it: the same painting, read a little
+ * inside its own edge, with the same brightness and contrast and the same
+ * light, so that the moon over the islet is the grove's moon. No glow of
+ * its own: the grove's has none.
+ */
 function moonMesh() {
 	const m = new THREE.ShaderMaterial({
-		uniforms: { uMap: { value: moonTexture() }, uOn: { value: 0 }, uGlow: { value: 1 } },
+		uniforms: { uMap: { value: moonTexture() }, uOn: { value: 0 }, uGain: { value: 2.4 } },
 		vertexShader: /* glsl */ `
 			varying vec2 vUv;
 			void main() {
@@ -59,23 +68,20 @@ function moonMesh() {
 		fragmentShader: /* glsl */ `
 			uniform sampler2D uMap;
 			uniform float uOn;
-			uniform float uGlow;
+			uniform float uGain;
 			varying vec2 vUv;
 			void main() {
-				vec2 p = vUv * 2.0 - 1.0;
+				vec2 p = (vUv * 2.0 - 1.0) / ${(MOON_DISC * 2).toFixed(2)};
 				float r = length(p);
-				const float R = 0.34;
-				float disc = 1.0 - smoothstep(R - 0.012, R + 0.004, r);
-				vec3 m = texture2D(uMap, p / (2.0 * R) + 0.5).rgb;
-				float limb = 0.82 + 0.18 * sqrt(max(0.0, 1.0 - (r / R) * (r / R)));
-				vec3 moon = vec3(1.0, 0.97, 0.9) * m * 2.2 * limb;
-				float halo = exp(-max(r - R, 0.0) * 7.0) * 0.16 * (1.0 - disc) * uGlow;
-				if (disc + halo < 0.002) discard;
-				gl_FragColor = vec4(moon * disc + vec3(0.8, 0.86, 1.0) * halo, 1.0);
+				float w = max(fwidth(r), 1e-4);
+				float disc = 1.0 - smoothstep(1.0 - w, 1.0 + w, r);
+				if (disc < 0.002) discard;
+				float face = texture2D(uMap, 0.5 + p * 0.415).r;
+				float v = clamp((face * 1.28 - 0.5) * 1.06 + 0.5, 0.0, 1.0);
+				gl_FragColor = vec4(vec3(1.0, 0.975, 0.93) * uGain * pow(v, 2.2), 1.0);
 				#include <tonemapping_fragment>
 				#include <colorspace_fragment>
-				// the disc covers what is behind it; the glow only adds
-				gl_FragColor = vec4(gl_FragColor.rgb * uOn, disc * uOn);
+				gl_FragColor = vec4(gl_FragColor.rgb * disc * uOn, disc * uOn);
 			}`,
 		transparent: true,
 		depthWrite: false,
@@ -318,14 +324,15 @@ export class IsletView {
 			0.5
 		).applyMatrix4(cam.projectionMatrixInverse);
 		this.moon.position.copy(v.multiplyScalar(-MOON_D / v.z));
-		const perM = this.H / (2 * tan) / MOON_D;
-		this.moon.scale.setScalar((2 * (MOON_R / perM)) / 0.68);
+		// (the page's pixels to a unit, at the moon's distance: sized in step)
+		this.moonPerM = this.H / (2 * tan) / MOON_D;
 		this.pxPerUnit = (this.H * dpr) / (2 * tan);
 		const bw = Math.max(1, Math.round(this.W * dpr)),
 			bh = Math.max(1, Math.round(this.H * dpr));
 		this.outline.setSize(bw, bh);
 	}
 	private pxPerUnit = 1000;
+	private moonPerM = 1;
 
 	open() {
 		this.to = 1;
@@ -339,10 +346,11 @@ export class IsletView {
 		if (this.reduced) this.k = 1;
 	}
 
+	/** gone at once: the room carries it away itself (see ReadingRoom) */
 	close() {
 		this.to = 0;
+		this.k = 0;
 		this.drag = null;
-		if (this.reduced) this.k = 0;
 	}
 
 	/** still coming, there, or going: anything to draw */
@@ -378,14 +386,15 @@ export class IsletView {
 		}
 		this.pitch = damp(this.pitch, this.pitchTo, 12, dt);
 
-		// up out of the glass into its place, turning a little as it comes
+		// turning a little into its place as it comes (the room brings it, out
+		// of the paper's deck, with the pages)
 		const rise = 1 - easeOut(this.k);
 		const drift = this.reduced ? 0 : Math.sin(this.clock * 0.05) * 0.08;
-		const yaw = this.yaw + YAW0 + drift - 0.5 * rise;
+		const yaw = this.yaw + YAW0 + drift - 0.45 * rise;
 		this.viewYaw = yaw;
 		const pitch = THREE.MathUtils.degToRad(13) + this.pitch;
 		const F = ISLET_FRAME;
-		const target = new THREE.Vector3(0, (F.top + F.foot) / 2 + rise * 0.3 * this.hv, 0);
+		const target = new THREE.Vector3(0, (F.top + F.foot) / 2, 0);
 		const cam = this.camera;
 		cam.position.set(
 			target.x + Math.sin(yaw) * Math.cos(pitch) * this.dist,
@@ -394,7 +403,6 @@ export class IsletView {
 		);
 		cam.lookAt(target);
 		cam.updateMatrixWorld();
-		this.canvas.style.opacity = String(clamp(this.k * 1.8, 0, 1));
 
 		// the grove's light, turned with the view as the grove turns its own
 		this.key.color.copy(L.key.color);
@@ -421,11 +429,13 @@ export class IsletView {
 			.normalize()
 			.transformDirection(cam.matrixWorldInverse);
 
-		// the moon out by night, faint in the day's sky
+		// the moon out by night, as big as the grove's and as bright (the
+		// exposure here being a little more by night, its light a little less),
+		// and gone in the full day, as the grove's is
 		const mu = (this.moon.material as THREE.ShaderMaterial).uniforms;
-		// (gone in the full day, as the grove's is)
-		mu.uOn.value = (1 - smoothstep(0.55, 0.85, L.day)) * clamp(this.k * 1.5, 0, 1);
-		mu.uGlow.value = 1 - smoothstep(0.3, 0.7, L.day);
+		mu.uOn.value = 1 - smoothstep(0.55, 0.85, L.day);
+		mu.uGain.value = 2.4 / lerp(1.22, 1, L.day);
+		this.moon.scale.setScalar(L.moonPx / this.moonPerM / MOON_DISC);
 		this.moon.visible = mu.uOn.value > 0.002;
 		// by night the brass shines with the lamplit room; by day with the day
 		this.islet.brass.envMap = L.day > 0.5 ? null : this.envRoom;

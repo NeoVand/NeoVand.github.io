@@ -1709,7 +1709,12 @@ export class Grove {
 			warm: this.warm,
 			envIntensity: this.scene.environmentIntensity,
 			playing: this.playing,
-			level: this.playing ? this.level() : 0
+			level: this.playing ? this.level() : 0,
+			// the grove's moon on the screen: its size in the sky (see sky.ts)
+			// through the camera it is drawn from
+			moonPx:
+				(0.0165 * this.sky.uniforms.uMoonS.value * (this.H / 2)) /
+				Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))
 		});
 		// its little lights, into the one glow map both pictures read
 		if (shown) v.islet.lightUp(this.glow, 1 - this.dayMix, this.lampCol, this.flyCol);

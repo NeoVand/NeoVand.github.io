@@ -27,9 +27,11 @@
 	let pagesEl = $state<HTMLDivElement>() as unknown as HTMLDivElement;
 	let flyLayer: HTMLDivElement;
 	let closeBtn: HTMLButtonElement;
-	// the islet's canvas, over the glass in the room the words leave free
+	// the islet's canvas, over the glass in the room the words leave free, and
+	// the height of the part of it the islet is framed in
 	let isletCv: HTMLCanvasElement;
 	let islet = $state(false);
+	let isletFrameH = 0;
 
 	let deck: HTMLElement | null = null;
 	let flying = false;
@@ -244,8 +246,43 @@
 			return;
 		}
 		islet = true;
+		isletFrameH = frameH;
 		Object.assign(isletCv.style, { left: x + 'px', width: w + 'px', height: innerHeight + 'px' });
 		g.read({ w, h: innerHeight, frameH });
+	}
+
+	// The islet belongs to the paper: it comes out of the deck with the pages
+	// and goes back into it with them, the same way and at the same pace. Its
+	// picture's middle is put on the deck's, as small as the deck.
+	const FLIGHT = 'transform 680ms cubic-bezier(0.3, 0.1, 0.1, 1)';
+	function deckPose(d: HTMLElement) {
+		const r = d.getBoundingClientRect();
+		const x = parseFloat(isletCv.style.left),
+			w = parseFloat(isletCv.style.width);
+		const k = Math.max(0.05, Math.min(r.width / (w * 0.86), r.height / (isletFrameH * 0.95)));
+		const dx = r.left + r.width / 2 - (x + w / 2),
+			dy = r.top + r.height / 2 - isletFrameH / 2;
+		isletCv.style.transformOrigin = `${w / 2}px ${isletFrameH / 2}px`;
+		return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${k.toFixed(4)})`;
+	}
+	function isletOut(d: HTMLElement) {
+		const st = isletCv.style;
+		st.transition = 'none';
+		st.transform = deckPose(d);
+		st.opacity = '0';
+		isletCv.getBoundingClientRect();
+		st.transition = `${FLIGHT} 70ms, opacity 300ms var(--ease) 70ms`;
+		st.transform = 'none';
+		st.opacity = '1';
+	}
+	function isletHome(d: HTMLElement) {
+		const st = isletCv.style;
+		st.transition = `${FLIGHT}, opacity 280ms var(--ease) 400ms`;
+		st.transform = deckPose(d);
+		st.opacity = '0';
+	}
+	function isletReset() {
+		Object.assign(isletCv.style, { transition: '', transform: '', opacity: '' });
 	}
 
 	$effect(() => {
@@ -270,6 +307,12 @@
 		await tick();
 		checkCut();
 		frameIslet();
+		// (shown, so that its flight can begin)
+		await tick();
+		if (islet) {
+			if (reduced()) isletCv.style.opacity = '1';
+			else isletOut(d);
+		}
 		if (!reduced()) {
 			flying = true;
 			fly(d, true, () => (flying = false));
@@ -282,9 +325,14 @@
 		if (!deck || flying || hidden) return;
 		const d = deck;
 		isIn = false;
-		// the islet goes down into the glass while the pages go home
-		if (islet) stage.grove?.read(null);
+		// the islet goes home into the deck with the pages
+		const hadIslet = islet;
+		if (hadIslet && !reduced()) isletHome(d);
 		const finish = () => {
+			if (hadIslet) {
+				stage.grove?.read(null);
+				isletReset();
+			}
 			// hover stays off this deck until the pointer moves, so the fan
 			// does not swing out under a pointer that merely stayed put
 			d.classList.add('no-hover');
@@ -422,7 +470,7 @@
 						style="--pd:{300 + Math.min(6, i - FAN) * 55}ms"
 					>
 						<img alt="Page {i}" decoding="async" use:lazyPage={i} />
-						<figcaption>{i} / {paper.pages}</figcaption>
+						<figcaption>{i}</figcaption>
 					</figure>
 				{/each}
 			</div>
@@ -603,11 +651,61 @@
 		padding: 0 clamp(24px, 6vw, 96px);
 		width: max-content;
 	}
+	/* A page is a sheet lying on the glass: a close shadow where it touches
+	   and a wide soft one under it. Under the pointer it lifts a little
+	   toward the eye, and its shadow spreads and softens as it would. */
 	.rpage {
 		height: calc(100% - 26px);
 		aspect-ratio: 720 / 932;
 		scroll-snap-align: start;
 		position: relative;
+		isolation: isolate;
+		transition: transform 520ms var(--ease-out);
+	}
+	.rpage::before,
+	.rpage::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		border-radius: 3px;
+		transition: opacity 520ms var(--ease-out);
+	}
+	.rpage::before {
+		box-shadow:
+			0 1px 2px rgba(0, 0, 0, 0.3),
+			0 12px 28px -8px rgba(0, 0, 0, 0.5),
+			0 34px 64px -26px rgba(0, 0, 0, 0.5);
+	}
+	.rpage::after {
+		opacity: 0;
+		box-shadow:
+			0 2px 4px rgba(0, 0, 0, 0.22),
+			0 26px 48px -12px rgba(0, 0, 0, 0.55),
+			0 56px 96px -34px rgba(0, 0, 0, 0.5);
+	}
+	:global(.day) .rpage::before {
+		box-shadow:
+			0 1px 2px rgba(22, 36, 47, 0.16),
+			0 12px 26px -10px rgba(22, 36, 47, 0.26),
+			0 30px 56px -26px rgba(22, 36, 47, 0.24);
+	}
+	:global(.day) .rpage::after {
+		box-shadow:
+			0 2px 4px rgba(22, 36, 47, 0.12),
+			0 24px 44px -14px rgba(22, 36, 47, 0.3),
+			0 50px 86px -34px rgba(22, 36, 47, 0.26);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.in .rpage:hover {
+			transform: translateY(-5px);
+		}
+		.in .rpage:hover::before {
+			opacity: 0;
+		}
+		.in .rpage:hover::after {
+			opacity: 1;
+		}
 	}
 	.rpage img {
 		width: 100%;
@@ -615,29 +713,27 @@
 		object-fit: cover;
 		object-position: top center;
 		background: #fff;
-		border-radius: 4px;
-		box-shadow:
-			0 2px 4px rgba(0, 0, 0, 0.35),
-			0 18px 40px rgba(0, 0, 0, 0.45);
-	}
-	:global(.day) .rpage img {
-		box-shadow:
-			0 1px 3px rgba(22, 36, 47, 0.18),
-			0 16px 34px rgba(22, 36, 47, 0.22);
+		border-radius: 3px;
 	}
 	.rpage figcaption {
 		position: absolute;
 		left: 0;
+		right: 0;
 		bottom: -22px;
-		font-size: 12px;
+		text-align: center;
+		font-size: 11.5px;
+		letter-spacing: 0.04em;
 		color: var(--muted);
+		opacity: 0.8;
 		font-feature-settings: 'tnum';
 	}
-	.rpage.late img {
+	.rpage.late img,
+	.rpage.late::before {
 		opacity: 0;
 		transform: translateY(14px);
 	}
-	.in .rpage.late:global(.ready) img {
+	.in .rpage.late:global(.ready) img,
+	.in .rpage.late:global(.ready)::before {
 		opacity: 1;
 		transform: none;
 		transition:
