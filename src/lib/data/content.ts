@@ -72,6 +72,28 @@ export const filters: Filter[] = [
 ];
 export const projects: Project[] = [
 	{
+		title: 'mindview',
+		href: 'https://neovand.github.io/mindview/',
+		repo: 'https://github.com/NeoVand/mindview',
+		desc: 'Watch a ternary language model read your prompt and a diffusion model paint it, layer by layer.',
+		tags: ['ai', 'art', 'webgpu'],
+		accent: '#f59e0b',
+		ground: 'linear-gradient(135deg,#0d0d0f,#050506)',
+		img: '/media/mindview.jpg',
+		video: '/media/mindview.mp4'
+	},
+	{
+		title: 'OP-XY Agent',
+		href: 'https://neovand.github.io/op-xy-agent/',
+		repo: 'https://github.com/NeoVand/op-xy-agent',
+		desc: 'A playable replica of the OP-XY synth, with an AI agent that teaches it and drives the real one.',
+		tags: ['ai', 'tool'],
+		accent: '#d4d4d8',
+		ground: 'linear-gradient(135deg,#1c1d20,#111214)',
+		img: '/media/op-xy-agent.jpg',
+		video: null
+	},
+	{
 		title: 'Tissue',
 		href: 'https://neovand.github.io/tissue/',
 		repo: 'https://github.com/NeoVand/tissue',
