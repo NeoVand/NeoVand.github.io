@@ -51,20 +51,27 @@
 			const step = (now: number) => {
 				if (stopped) return;
 				const p = Math.max(0, Math.min(1, (now - t0) / dur));
-				const [node, off] = at(Math.round(total * p));
-				range.setStart(node, off);
-				// the caret rides the end of what is written
-				const r = document.createRange();
-				r.setStart(node, off);
-				r.setEnd(node, off);
-				const box = r.getClientRects()[0] ?? r.getBoundingClientRect();
-				const host = bioEl.getBoundingClientRect();
-				caret.style.transform = `translate(${box.left - host.left}px, ${box.top - host.top}px)`;
-				caret.style.height = `${box.height || 20}px`;
+				try {
+					const [node, off] = at(Math.round(total * p));
+					range.setStart(node, off);
+					// the caret rides the end of what is written
+					const r = document.createRange();
+					r.setStart(node, off);
+					r.setEnd(node, off);
+					const box = r.getClientRects()[0] ?? r.getBoundingClientRect();
+					const host = bioEl.getBoundingClientRect();
+					caret.style.transform = `translate(${box.left - host.left}px, ${box.top - host.top}px)`;
+					caret.style.height = `${box.height || 20}px`;
+				} catch {
+					return finish();
+				}
 				if (p < 1) raf = requestAnimationFrame(step);
 				else finish();
 			};
 			raf = requestAnimationFrame(step);
+			// and whatever becomes of the frames (a phone may hold them back
+			// while a finger is on the glass), the paragraph is whole by the end
+			setTimeout(finish, dur + 500);
 		}
 
 		function finish() {
@@ -78,14 +85,14 @@
 			shown = true;
 			if (canType) setTimeout(() => type(performance.now(), 2800), 450);
 		});
-		// scrolling, a click or Escape lands the opening at once
+		// scrolling (by wheel or by finger), a click, a tap or a key lands
+		// the opening at once
 		const skip = () => typing && finish();
-		addEventListener('wheel', skip, { passive: true });
-		addEventListener('keydown', skip);
+		const on = ['wheel', 'scroll', 'pointerdown', 'keydown'] as const;
+		for (const e of on) addEventListener(e, skip, { passive: true });
 		return () => {
 			finish();
-			removeEventListener('wheel', skip);
-			removeEventListener('keydown', skip);
+			for (const e of on) removeEventListener(e, skip);
 		};
 	});
 </script>
@@ -287,8 +294,11 @@
 			font-size: min(56px, calc((100vw - 60px) / 8.4));
 			margin-bottom: 18px;
 		}
+		/* a phone's column is narrow and the paragraph long: set smaller, it
+		   reads in fewer lines and a shorter scroll */
 		.bio {
-			font-size: 15.5px;
+			font-size: 14px;
+			line-height: 1.62;
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
