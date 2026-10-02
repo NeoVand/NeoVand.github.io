@@ -21,26 +21,55 @@
 			});
 	}
 
-	// Clips play under a hand on a wide screen, and are only fetched then.
+	// Clips play wherever they are in sight, on any screen: fetched as their
+	// card comes near, playing while it is mostly on the screen, paused when
+	// it leaves. Not for a reader who asks for less motion or less data; and
+	// where a phone refuses to play (iOS in Low Power Mode does), the still
+	// simply stays.
+	let near: IntersectionObserver | undefined, sight: IntersectionObserver | undefined;
+	const sources = new WeakMap<Element, string>();
+	const load = (v: HTMLVideoElement) => {
+		if (v.src) return;
+		v.preload = 'auto';
+		v.src = sources.get(v)!;
+	};
 	function clip(node: HTMLVideoElement, p: Project) {
-		const card = node.closest('article')!;
-		const hover = matchMedia('(hover: hover)').matches;
-		if (!hover || !p.video) return;
-		const enter = () => {
-			// not for a card the page has slid under a still pointer
-			if (document.documentElement.classList.contains('scroll-still')) return;
-			if (!node.src) node.src = p.video!;
-			if (node.paused) node.play().catch(() => {});
-		};
-		const leave = () => node.pause();
-		card.addEventListener('pointerenter', enter);
-		card.addEventListener('pointermove', enter);
-		card.addEventListener('pointerleave', leave);
+		const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+		if (!p.video || matchMedia('(prefers-reduced-motion: reduce)').matches || conn?.saveData)
+			return;
+		sources.set(node, p.video);
+		near ??= new IntersectionObserver(
+			(es) => {
+				for (const e of es)
+					if (e.isIntersecting) {
+						load(e.target as HTMLVideoElement);
+						near!.unobserve(e.target);
+					}
+			},
+			{ rootMargin: '60% 0px' }
+		);
+		sight ??= new IntersectionObserver(
+			(es) => {
+				for (const e of es) {
+					const v = e.target as HTMLVideoElement;
+					if (e.isIntersecting) {
+						load(v);
+						v.play().catch(() => {});
+					} else v.pause();
+				}
+			},
+			{ threshold: 0.5 }
+		);
+		const on = () => node.classList.add('on');
+		node.addEventListener('playing', on);
+		near.observe(node);
+		sight.observe(node);
 		return {
 			destroy() {
-				card.removeEventListener('pointerenter', enter);
-				card.removeEventListener('pointermove', enter);
-				card.removeEventListener('pointerleave', leave);
+				node.removeEventListener('playing', on);
+				near?.unobserve(node);
+				sight?.unobserve(node);
+				node.pause();
 			}
 		};
 	}
@@ -204,7 +233,8 @@
 			opacity 300ms var(--ease),
 			transform 900ms var(--ease-out);
 	}
-	.card:hover .thumb video {
+	/* in over its still once it is really playing */
+	.thumb video:global(.on) {
 		opacity: 1;
 	}
 	.body {
