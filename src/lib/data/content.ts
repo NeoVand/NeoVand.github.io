@@ -102,7 +102,7 @@ export const projects: Project[] = [
 		accent: '#d4d4d8',
 		ground: 'linear-gradient(135deg,#1c1d20,#111214)',
 		img: '/media/op-xy-agent.jpg',
-		video: null
+		video: '/media/op-xy-agent.mp4'
 	},
 	{
 		title: 'Tissue',
