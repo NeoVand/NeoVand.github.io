@@ -374,17 +374,30 @@ b {
 	}
 }
 
-/* A card under the pointer: a thin, clean line drawn round it, no lift and
-   no shadow, and the picture inside it coming a little closer. */
+/* how far down the bio the light of its opening has come (see Hero) */
+@property --reveal {
+	syntax: '<percentage>';
+	inherits: false;
+	initial-value: -20%;
+}
+
+/* A card's edge is drawn over everything in it. The glass's own hairline
+   lies under its contents, and a picture filling one side of the card hid
+   it there, leaving the border round the words alone: so the line, and the
+   glass's lit edge, are laid over the picture too, the same all round. Under
+   the pointer the line brightens, no lift and no shadow, and the picture
+   inside comes a little closer. */
+.card-ring::before {
+	z-index: 2;
+}
 .card-ring::after {
 	content: '';
 	position: absolute;
 	inset: 0;
 	z-index: 3;
 	border-radius: inherit;
-	box-shadow: inset 0 0 0 1px var(--ring);
-	opacity: 0;
-	transition: opacity 260ms var(--ease);
+	box-shadow: inset 0 0 0 1px var(--hair);
+	transition: box-shadow 260ms var(--ease);
 	pointer-events: none;
 }
 .card-ring .thumb img,
@@ -395,7 +408,7 @@ b {
 }
 @media (hover: hover) {
 	:root:not(.scroll-still) .card-ring:hover::after {
-		opacity: 1;
+		box-shadow: inset 0 0 0 1px var(--ring);
 	}
 	:root:not(.scroll-still) .card-ring:hover .thumb img,
 	:root:not(.scroll-still) .card-ring:hover .thumb video {
@@ -404,7 +417,7 @@ b {
 }
 .card-ring:focus-visible::after,
 .card-ring:has(:focus-visible)::after {
-	opacity: 1;
+	box-shadow: inset 0 0 0 1px var(--ring);
 }
 @media (prefers-reduced-motion: reduce) {
 	.card-ring:hover .thumb img,

@@ -72,6 +72,17 @@ export const filters: Filter[] = [
 ];
 export const projects: Project[] = [
 	{
+		title: 'Engine Lab',
+		href: 'https://neovand.github.io/Diesel/',
+		repo: 'https://github.com/NeoVand/Diesel',
+		desc: 'Take a V12 diesel apart in your browser, reshape its parts, and solve their stresses on the GPU.',
+		tags: ['tool', 'educational', 'webgpu'],
+		accent: '#c2652a',
+		ground: 'linear-gradient(135deg,#0a0b0d,#040405)',
+		img: '/media/engine-lab.jpg',
+		video: '/media/engine-lab.mp4'
+	},
+	{
 		title: 'mindview',
 		href: 'https://neovand.github.io/mindview/',
 		repo: 'https://github.com/NeoVand/mindview',
