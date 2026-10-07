@@ -1175,7 +1175,7 @@ export const earlier: Earlier[] = [
 	}
 ];
 export const resume: Resume = {
-	pdf: '/media/Neo-Mohsenvand-Resume.pdf?v=e3172e83115f',
+	pdf: '/media/Neo-Mohsenvand-Resume.pdf?v=5cf12018d24d',
 	experience: [
 		{
 			id: 'cv-caterpillar',
