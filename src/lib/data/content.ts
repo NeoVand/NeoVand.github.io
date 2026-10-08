@@ -72,6 +72,17 @@ export const filters: Filter[] = [
 ];
 export const projects: Project[] = [
 	{
+		title: 'Homology & Cohomology',
+		href: 'https://neovand.github.io/homology/',
+		repo: 'https://github.com/NeoVand/homology',
+		desc: 'Learn to count holes, from first principles to cohomology, with interactive 3D figures and a homology calculator.',
+		tags: ['educational', 'webgl'],
+		accent: '#e5c77f',
+		ground: 'linear-gradient(135deg,#0b101a,#05080d)',
+		img: '/media/homology.jpg',
+		video: '/media/homology.mp4'
+	},
+	{
 		title: 'Engine Lab',
 		href: 'https://neovand.github.io/Diesel/',
 		repo: 'https://github.com/NeoVand/Diesel',
