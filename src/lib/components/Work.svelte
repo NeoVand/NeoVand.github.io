@@ -143,6 +143,18 @@
 									></span
 								>
 							{/each}
+							{#if p.links}
+								<span class="links">
+									{#each p.links as l (l.href)}
+										<a
+											href={l.href}
+											target="_blank"
+											rel="noopener"
+											aria-label="{p.title} {l.label.toLowerCase()}">{l.label}</a
+										>
+									{/each}
+								</span>
+							{/if}
 						</div>
 					</div>
 				</article>
@@ -279,6 +291,7 @@
 	}
 	.tags {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 10px;
 		margin-top: 4px;
 		color: var(--faint);
@@ -286,6 +299,25 @@
 	.tag svg {
 		width: 14px;
 		height: 14px;
+	}
+	/* above the card's own link, like .repo; the padding is there for fingers */
+	.links {
+		position: relative;
+		z-index: 2;
+		margin-left: auto;
+		display: flex;
+		gap: 12px;
+		font-size: 12.5px;
+		line-height: 14px;
+	}
+	.links a {
+		padding: 6px 4px;
+		margin: -6px -4px;
+		color: var(--muted);
+		text-decoration: none;
+	}
+	.links a:hover {
+		color: var(--title);
 	}
 	@media (max-width: 700px) {
 		.chips {

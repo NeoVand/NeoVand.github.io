@@ -21,6 +21,8 @@ export interface Project {
 	ground: string | null;
 	img: string;
 	video: string | null;
+	/** further places to go, as small words at the card's foot; the card itself opens `href` */
+	links?: { label: string; href: string }[];
 }
 
 export interface Paper {

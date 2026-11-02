@@ -72,6 +72,21 @@ export const filters: Filter[] = [
 ];
 export const projects: Project[] = [
 	{
+		title: 'Sketchpad',
+		href: 'https://neovand.github.io/sketchpad/',
+		repo: 'https://github.com/NeoVand/sketchpad',
+		desc: 'A small model does exact arithmetic on a sheet, certified at every length.',
+		tags: ['ai', 'research', 'webgpu'],
+		accent: '#d6336c',
+		ground: 'linear-gradient(135deg,#ffffff,#f3f4f7)',
+		img: '/media/sketchpad.jpg',
+		video: '/media/sketchpad.mp4',
+		links: [
+			{ label: 'Paper', href: 'https://neovand.github.io/sketchpad/paper' },
+			{ label: 'Model', href: 'https://huggingface.co/mohsenvand/sketchpad-0.8b-preview' }
+		]
+	},
+	{
 		title: 'Homology & Cohomology',
 		href: 'https://neovand.github.io/homology/',
 		repo: 'https://github.com/NeoVand/homology',
@@ -102,7 +117,8 @@ export const projects: Project[] = [
 		accent: '#f59e0b',
 		ground: 'linear-gradient(135deg,#0d0d0f,#050506)',
 		img: '/media/mindview.jpg',
-		video: '/media/mindview.mp4'
+		video: '/media/mindview.mp4',
+		links: [{ label: 'Model', href: 'https://huggingface.co/mohsenvand/mindview-t2i-turbo' }]
 	},
 	{
 		title: 'OP-XY Agent',
@@ -569,6 +585,30 @@ export const media: MediaItem[] = [
 		source: 'MIT Media Lab',
 		img: '/media/press/mit-media-lab.jpg',
 		video: false
+	},
+	{
+		href: 'https://www.youtube.com/watch?v=RTVMdf301sg',
+		title: 'Sketchpad: a small language model that does exact arithmetic, and can prove it',
+		short: 'Sketchpad',
+		source: 'YouTube',
+		img: '/media/press/RTVMdf301sg.jpg',
+		video: true
+	},
+	{
+		href: 'https://www.youtube.com/watch?v=TsbKQGiD8Ug',
+		title: 'Tissue: mechanistic interpretability in the browser',
+		short: 'Tissue',
+		source: 'YouTube',
+		img: '/media/press/TsbKQGiD8Ug.jpg',
+		video: true
+	},
+	{
+		href: 'https://www.youtube.com/watch?v=jyEHHKMNal8',
+		title: 'Engine Lab',
+		short: 'Engine Lab',
+		source: 'YouTube',
+		img: '/media/press/jyEHHKMNal8.jpg',
+		video: true
 	},
 	{
 		href: 'https://www.youtube.com/watch?v=NpmzZkep5KI',
