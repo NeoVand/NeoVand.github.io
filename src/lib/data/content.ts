@@ -4,13 +4,13 @@ import type { Project, Paper, MediaItem, Earlier, Resume, Filter, ProfileLink } 
 export const meta = {
 	title: 'Neo Mohsenvand',
 	description:
-		'Neo Mohsenvand is an AI/ML engineer and product designer building agentic systems, realtime AI, evaluation infrastructure and local ML tools at Caterpillar.',
-	h1: 'Neo Mohsenvand — AI/ML Engineer and Product Designer',
+		'Neo Mohsenvand is an AI/ML research engineer and product designer working across representation learning, neuroscience, generative AI, GPU systems and human–AI interaction.',
+	h1: 'Neo Mohsenvand — AI/ML Research Engineer and Product Designer',
 	name: 'Neo Mohsenvand',
 	footer: '© 2025 Neo Mohsenvand'
 };
 export const bio =
-	"I'm an <strong>AI/ML engineer and product designer</strong>, and Chief AI Architect for Global Finance at <strong>Caterpillar</strong>, where I advance AI adoption through original products, shared infrastructure, and engineering education. I build <strong>enterprise AI agents</strong> and the software around them: document workflows, <strong>evaluation systems</strong>, <strong>voice interfaces</strong>, and tools that bring people into decisions. I also make <strong>local AI tools</strong> and interactive educational applications for exploring agent workflows, training models, and understanding retrieval. Before Caterpillar, I led research at <strong>BrainCo</strong> and worked on machine learning for biosignals at <strong>Apple</strong>. I did my <strong>PhD at MIT</strong>, in <strong>Human–AI Interaction</strong> at the <strong>Media Lab</strong>, and stayed on there as a postdoctoral researcher; my work explored self-supervised learning, brain-computer interfaces, and tools for human memory and attention. Before MIT, I earned a master's in <strong>Mathematical Modelling and Scientific Computing</strong> at <strong>Oxford</strong>. I'm drawn to the intersection of <strong>software</strong>, <strong>design</strong>, and <strong>intelligence</strong>, both artificial and biological.";
+	"I'm an <strong>AI/ML research engineer and product designer</strong> turning <strong>advanced mathematics</strong> into models, GPU systems, human–AI interfaces and large agentic systems. I make neural computation visible and small models more capable, working across <strong>neuroscience</strong>, <strong>generative AI</strong> and <strong>artificial life</strong>. My independent work includes ternary image-generation models, visual scratchpads for arithmetic, browser-based LLM training and interactive scientific tools. As <strong>Chief AI Architect at Caterpillar</strong>, I turn research and design into deployed products, shared infrastructure and engineering education. Previously, I led wearable AI and brain-computer interface research at <strong>BrainCo</strong> and developed machine learning for biosignals at <strong>Apple</strong>. I earned my <strong>PhD in Media Arts and Sciences at MIT</strong> and stayed at the <strong>Media Lab</strong> as a part-time postdoctoral researcher, exploring self-supervised learning and interfaces for human memory and attention. Before MIT, I studied <strong>Mathematical Modelling and Scientific Computing at Oxford</strong>. I'm drawn to problems where software, design and intelligence—both artificial and biological—meet.";
 export const links: ProfileLink[] = [
 	{
 		label: 'GitHub',
@@ -75,7 +75,7 @@ export const projects: Project[] = [
 		title: 'Sketchpad',
 		href: 'https://neovand.github.io/sketchpad/',
 		repo: 'https://github.com/NeoVand/sketchpad',
-		desc: 'A small model does exact arithmetic on a sheet, certified at every length.',
+		desc: 'Created a visual scratchpad architecture with a LoRA-tuned 0.8B vision-language model; 220/220 preregistered arithmetic cases vs. 217 for the best of 10 baselines; Lean proofs.',
 		tags: ['ai', 'research', 'webgpu'],
 		accent: '#d6336c',
 		ground: 'linear-gradient(135deg,#ffffff,#f3f4f7)',
@@ -112,13 +112,16 @@ export const projects: Project[] = [
 		title: 'mindview',
 		href: 'https://neovand.github.io/mindview/',
 		repo: 'https://github.com/NeoVand/mindview',
-		desc: 'Watch a ternary language model read your prompt and a diffusion model paint it, layer by layer.',
+		desc: 'Built an LLM/diffusion visualization system; distilled and fine-tuned a 1.2 GB ternary image-generation pipeline for WebGPU.',
 		tags: ['ai', 'art', 'webgpu'],
 		accent: '#f59e0b',
 		ground: 'linear-gradient(135deg,#0d0d0f,#050506)',
 		img: '/media/mindview.jpg',
 		video: '/media/mindview.mp4',
-		links: [{ label: 'Model', href: 'https://huggingface.co/mohsenvand/mindview-t2i-turbo' }]
+		links: [
+			{ label: 'Model', href: 'https://huggingface.co/mohsenvand/mindview-t2i-turbo' },
+			{ label: 'Demo', href: 'https://huggingface.co/spaces/mohsenvand/mindview-t2i-turbo' }
+		]
 	},
 	{
 		title: 'OP-XY Agent',
@@ -168,7 +171,7 @@ export const projects: Project[] = [
 		title: 'harnessXray',
 		href: 'https://neovand.github.io/harnessXray/',
 		repo: 'https://github.com/NeoVand/harnessXray',
-		desc: 'See how an AI agent really works: prompts, tools, memory, and token cost.',
+		desc: 'Agent observability: streamed request capture, record/replay and persistent checkpoints.',
 		tags: ['educational', 'ai', 'research'],
 		accent: '#6366f1',
 		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
@@ -179,7 +182,7 @@ export const projects: Project[] = [
 		title: 'Voicebook',
 		href: 'https://neovand.github.io/voicebook/',
 		repo: 'https://github.com/NeoVand/voicebook',
-		desc: 'Talk with your documents: AI-controlled scrolling and highlighting, local inference, and optional cloud models.',
+		desc: 'Designed an agentic PDF/Markdown reader for technical papers: LLM explanations of equations and figures, synchronized narration, scrolling and highlighting; local or cloud inference.',
 		tags: ['ai', 'webgpu', 'tool'],
 		accent: '#38bdf8',
 		ground: 'linear-gradient(135deg,#04121c,#020c14)',
@@ -201,7 +204,7 @@ export const projects: Project[] = [
 		title: 'jaxverse',
 		href: 'https://neovand.github.io/jaxverse/',
 		repo: 'https://github.com/NeoVand/jaxverse',
-		desc: 'An interactive book on deep learning where every model trains live on your own GPU.',
+		desc: 'Interactive deep-learning book with live browser LLM training: pretraining, SFT and RLVR.',
 		tags: ['educational', 'ai', 'webgpu'],
 		accent: '#38bdf8',
 		ground: 'linear-gradient(135deg,#04121c,#020c14)',
@@ -212,7 +215,7 @@ export const projects: Project[] = [
 		title: 'Embedding Playground',
 		href: 'https://neovand.github.io/EmbeddingPlayground/',
 		repo: 'https://github.com/NeoVand/EmbeddingPlayground',
-		desc: 'Five labs for text-embedding models: compare, trace, search, classify, cluster.',
+		desc: 'Built a 12-model experiment lab for retrieval, classification and clustering, with 3D embeddings and live attention/tensor inspection.',
 		tags: ['educational', 'ai', 'webgpu'],
 		accent: '#38bdf8',
 		ground: 'linear-gradient(135deg,#04121c,#020c14)',
@@ -223,7 +226,7 @@ export const projects: Project[] = [
 		title: 'gradientlab.ai',
 		href: 'https://gradientlab.ai',
 		repo: 'https://github.com/NeoVand/GradientDescent',
-		desc: 'Watch optimizers navigate loss landscapes in real time, with D3-powered animations.',
+		desc: 'Interactive optimization lab: optimizer races, curvature analysis and lessons; 5M lifetime visitors.',
 		tags: ['educational', 'ai', 'research'],
 		accent: '#a855f7',
 		ground: 'linear-gradient(135deg,#180828,#0f0520)',
@@ -399,7 +402,7 @@ export const projects: Project[] = [
 		title: 'Zilion',
 		href: 'https://github.com/NeoVand/zilion',
 		repo: 'https://github.com/NeoVand/zilion',
-		desc: 'Thousands of Z80 CPUs in a single WebGPU dispatch, an emulator built for artificial life.',
+		desc: 'Built a WebGPU CPU-emulation lab for emergent replication and heredity: Z80, 6502, 8086, BFF.',
 		tags: ['webgpu'],
 		accent: '#22c55e',
 		ground: 'linear-gradient(135deg,#041808,#030f06)',
@@ -1226,14 +1229,14 @@ export const earlier: Earlier[] = [
 	}
 ];
 export const resume: Resume = {
-	pdf: '/media/Neo-Mohsenvand-Resume.pdf?v=5cf12018d24d',
+	pdf: '/media/Neo-Mohsenvand-Resume.pdf?v=4e5949ad611d',
 	experience: [
 		{
 			id: 'cv-caterpillar',
 			org: 'Caterpillar',
 			when: 'Apr 2024 – present',
 			roles: ['Chief AI Architect, Global Finance since January 2026'],
-			body: '<h3 class="cv-position">Chief AI Architect, Global Finance<span class="cv-when">January 2026 – present · Irving, TX</span></h3> <ul class="cv-notes"> <li><strong>Tempo:</strong> Built an enterprise investigation platform and designed its meeting-like interview interface, combining stakeholder discovery, scheduling and OpenAI Realtime voice interviews with structured forms. Available to hundreds of internal users for idea intake, requirements gathering and conflict resolution.</li> <li><strong>Aperture:</strong> Built a new agentic image-generation harness for slide decks and visual assets, using terse prompts and hundreds of references to reduce reliance on third-party subscriptions.</li> <li><strong>Touchless Invoice Processing agent:</strong> Co-developed end-to-end orchestration from email ingestion and scanned-invoice OCR through exception handling and Snowflake writes, with a detailed multi-level evaluation framework. Reduced invoices needing human review from <strong>100% to 2%</strong>.</li> <li><strong>Teaching:</strong> Created 10+ workshop apps, including agentic RAG, talking dashboards and a voice-only data-science interface I designed. Teach engineers and senior leaders in the workshop\'s fifth iteration.</li> <li>Developing shared infrastructure for AI application prototyping and deployment across Global Finance.</li> </ul> <h3 class="cv-position">Senior Principal Data Scientist, Global Finance<span class="cv-when">May 2025 – January 2026 · Irving, TX</span></h3> <ul class="cv-notes"> <li><strong>Penman:</strong> Built and deployed an enterprise financial-analysis system using <strong>SvelteKit and Azure</strong> to analyze earnings-call transcripts and regulatory filings for finance leaders.</li> <li>Redesigned earnings-call transcript proofreading in Penman to help finance teams identify disclosure risks.</li> <li>Built <strong>MLflow / DeepEval</strong> evaluation infrastructure and coordinated organization-wide benchmark development.</li> <li>Built an AI-idea prioritization agent with RICE-derived scoring, internal impact metrics and human review.</li> <li>Designed adversarial LLM analysis of draft financial disclosures.</li> </ul> <h3 class="cv-position">Senior Engineering Fellow, Artificial Intelligence<span class="cv-when">April 2024 – May 2025 · Illinois</span></h3> <ul class="cv-notes"> <li>Founding technical hire of CAT Tech AI; led four engineers delivering <strong>12+ applications</strong> for <strong>8,000+ technical users</strong> through engineering-analysis automation.</li> <li>Created <strong>Magic Table</strong> for million-row spreadsheet/database workflows, combining formulas and iterative local-LLM prompts to reduce cloud compute costs; developed versions with Ollama.</li> <li>Built a <strong>ModernBERT-based embedding model</strong> for Caterpillar products and parts; orchestrated data collection, developed a synthetic training-pair generation app, and trained on an <strong>on-premises H200 cluster</strong>.</li> <li>Led distributed training, data curation, SFT/PEFT, PPO/DPO alignment, and automated and human evaluation.</li> <li>Established an AI curriculum and reading group across 10+ teams, training 300+ engineers.</li> </ul>'
+			body: '<h3 class="cv-position">Chief AI Architect, Global Finance<span class="when">January 2026 – present · Irving, TX</span></h3> <ul class="cv-notes"> <li><strong>Tempo:</strong> Designed and built a conversational investigation system with a meeting-like interview interface, combining stakeholder discovery, scheduling and OpenAI Realtime voice interviews with structured forms. Available to hundreds of internal users for idea intake, requirements gathering and conflict resolution.</li> <li><strong>Aperture:</strong> Designed and built a custom agentic image-generation harness that expands terse prompts and hundreds of references into slide decks and visual assets, reducing reliance on third-party subscriptions.</li> <li><strong>Touchless Invoice Processing agent:</strong> Co-developed end-to-end orchestration from email ingestion and scanned-invoice OCR through exception handling and Snowflake writes, with a detailed multi-level evaluation framework. Reduced invoices needing human review from <strong>100% to 2%</strong>.</li> <li><strong>Teaching:</strong> Created 10+ workshop apps, including agentic RAG, talking dashboards and a voice-only data-science interface I designed. Teach engineers and senior leaders in the workshop\'s fifth iteration.</li> <li>Developing shared infrastructure for AI application prototyping and deployment across Global Finance.</li> </ul> <h3 class="cv-position">Senior Principal Data Scientist, Global Finance<span class="when">May 2025 – January 2026 · Irving, TX</span></h3> <ul class="cv-notes"> <li><strong>Penman:</strong> Built and deployed an enterprise financial-analysis system using <strong>SvelteKit and Azure</strong> to analyze earnings-call transcripts and regulatory filings for finance leaders.</li> <li>Redesigned earnings-call transcript proofreading in Penman to help finance teams identify disclosure risks.</li> <li>Built <strong>MLflow / DeepEval</strong> evaluation infrastructure and coordinated organization-wide benchmark development.</li> <li>Built an AI-idea prioritization agent with RICE-derived scoring, internal impact metrics and human review.</li> <li>Designed adversarial LLM analysis of draft financial disclosures.</li> </ul> <h3 class="cv-position">Senior Engineering Fellow, Artificial Intelligence<span class="when">April 2024 – May 2025 · Illinois</span></h3> <ul class="cv-notes"> <li>Founding technical hire of CAT Tech AI; led four engineers delivering <strong>12+ applications</strong> for <strong>8,000+ technical users</strong> through engineering-analysis automation.</li> <li>Created <strong>Magic Table</strong> for million-row spreadsheet/database workflows, combining formulas and iterative local-LLM prompts to reduce cloud compute costs; developed versions with Ollama.</li> <li>Built a <strong>ModernBERT-based embedding model</strong> for Caterpillar products and parts; orchestrated data collection, developed a synthetic training-pair generation app, and trained on an <strong>on-premises H200 cluster</strong>.</li> <li>Led distributed training, data curation, SFT/PEFT, PPO/DPO alignment, and automated and human evaluation.</li> <li>Established an AI curriculum and reading group across 10+ teams, training 300+ engineers.</li> </ul>'
 		},
 		{
 			id: 'cv-brainco',
@@ -1246,7 +1249,7 @@ export const resume: Resume = {
 			id: 'cv-mit-postdoc',
 			org: 'MIT Media Lab',
 			when: 'Nov 2021 – Jun 2022',
-			roles: ['Postdoctoral Research Scientist · Cambridge, MA'],
+			roles: ['Postdoctoral Research Scientist (part-time) · Cambridge, MA'],
 			body: '<ul class="cv-notes"> <li>Researched multimodal memory systems and physiological data, building on doctoral work in continuous-capture memory interfaces and self-supervised EEG representations.</li> </ul>'
 		},
 		{
@@ -1275,9 +1278,9 @@ export const resume: Resume = {
 		{
 			id: 'cv-mit-phd',
 			org: 'MIT',
-			when: 'Completed 2021',
-			roles: ['PhD, Human–AI Interaction · Media Lab'],
-			body: '<ul class="cv-notes"> <li>Completed in 2021; listed in MIT’s February 2022 degree record. Research in self-supervised learning and human–AI interaction.</li> <li>Thesis: <em>Classifying and Displaying Brain-Waves through Self-Supervised Learning.</em> Advisor: Pattie Maes. Co-advisors: Tomaso Poggio and Ed Boyden.</li> <li>First author of <a href="https://proceedings.mlr.press/v136/mohsenvand20a.html">SeqCLR</a> (ML4H NeurIPS Workshop, 2020), adapting contrastive learning to EEG through channel recombination and signal augmentations; evaluated emotion recognition, sleep staging, and abnormal-EEG detection across three datasets.</li> <li>Doctoral work also included continuous-capture memory interfaces and tools for human attention.</li> </ul>'
+			when: '2021',
+			roles: ['PhD, Media Arts and Sciences · Media Lab'],
+			body: '<ul class="cv-notes"> <li>Research in self-supervised learning and human–AI interaction.</li> <li>Thesis: <em>Classifying and Displaying Brain-Waves through Self-Supervised Learning.</em> Advisor: Pattie Maes. Co-advisors: Tomaso Poggio and Ed Boyden.</li> <li>First author of <a href="https://proceedings.mlr.press/v136/mohsenvand20a.html">SeqCLR</a> (ML4H NeurIPS Workshop, 2020), adapting contrastive learning to EEG through channel recombination and signal augmentations; evaluated emotion recognition, sleep staging, and abnormal-EEG detection across three datasets.</li> <li>Doctoral work also included continuous-capture memory interfaces and tools for human attention.</li> </ul>'
 		},
 		{
 			id: 'cv-oxford',
@@ -1304,7 +1307,7 @@ export const resume: Resume = {
 		},
 		{
 			year: '2017',
-			html: '<b>First place and the Koch AI Prize</b> — MIT Grand Hack, for <em>Memoroom</em>, VR for Alzheimer’s'
+			html: '<b>First place and AI Prize</b> — MIT Grand Hack, for <em>Memoroom</em>, VR for Alzheimer’s'
 		},
 		{
 			year: '2014',
@@ -1323,32 +1326,12 @@ export const resume: Resume = {
 		{
 			label: 'Programming',
 			icon: 'icon-resume-codesquare',
-			text: 'Python, TypeScript, MATLAB, Mathematica, GLSL, WGSL'
-		},
-		{
-			label: 'Applications & UI',
-			icon: 'icon-resume-browser',
-			text: 'SvelteKit, React, Three.js / WebGL'
-		},
-		{
-			label: 'Design & UX',
-			icon: 'icon-resume-webdesign01',
-			text: 'Adobe Creative Cloud, UX study design, Design Systems'
-		},
-		{
-			label: 'Cloud & data',
-			icon: 'icon-resume-database',
-			text: 'Azure, AWS, Docker, progressive delivery, Snowflake, multimodal data pipelines'
-		},
-		{
-			label: 'Data science',
-			icon: 'icon-resume-chartlinedata01',
-			text: 'Time-series analysis, biosignal processing, feature extraction, scientific visualization'
+			text: 'Python, TypeScript, Embedded C, MATLAB, Mathematica, Lean, GLSL, WGSL'
 		},
 		{
 			label: 'Machine learning',
 			icon: 'icon-resume-aibrain03',
-			text: 'PyTorch, JAX, transformers, self-supervised learning, mechanistic interpretability'
+			text: 'JAX, PyTorch, transformers, self-supervised learning, mechanistic interpretability'
 		},
 		{
 			label: 'Training & alignment',
@@ -1356,9 +1339,14 @@ export const resume: Resume = {
 			text: 'FSDP, DeepSpeed, Ray; SFT, PEFT, LoRA, PPO / DPO, quantization'
 		},
 		{
-			label: 'Inference & serving',
-			icon: 'icon-resume-cpu',
-			text: 'Ollama, Transformers.js, WebGPU, ONNX / WASM, vLLM'
+			label: 'Evaluation',
+			icon: 'icon-resume-checklist',
+			text: 'MLflow, DeepEval, benchmark design, automated and human evaluation'
+		},
+		{
+			label: 'Agentic engineering',
+			icon: 'icon-resume-workflowsquare03',
+			text: 'Harness engineering, LangGraph, RAG, tool orchestration, Claude Code, Codex'
 		},
 		{
 			label: 'Realtime AI',
@@ -1366,14 +1354,29 @@ export const resume: Resume = {
 			text: 'OpenAI Realtime, ElevenLabs, Deepgram; low-latency multithreaded harnesses'
 		},
 		{
-			label: 'Agentic engineering',
-			icon: 'icon-resume-workflowsquare03',
-			text: 'LangGraph, agent harnesses, RAG, tool orchestration, human-in-the-loop workflows'
+			label: 'Inference & serving',
+			icon: 'icon-resume-cpu',
+			text: 'Ollama, Transformers.js, WebGPU, ONNX / WASM, vLLM'
 		},
 		{
-			label: 'Evaluation',
-			icon: 'icon-resume-checklist',
-			text: 'MLflow, DeepEval, benchmark design, automated and human evaluation'
+			label: 'Data science',
+			icon: 'icon-resume-chartlinedata01',
+			text: 'Time-series analysis, biosignal processing, feature extraction, scientific visualization'
+		},
+		{
+			label: 'Cloud & data',
+			icon: 'icon-resume-database',
+			text: 'Azure, AWS, Docker, progressive delivery, Snowflake, multimodal data pipelines'
+		},
+		{
+			label: 'Design & UX',
+			icon: 'icon-resume-webdesign01',
+			text: 'Adobe Creative Cloud, UX study design, Design Systems'
+		},
+		{
+			label: 'Applications & UI',
+			icon: 'icon-resume-browser',
+			text: 'SvelteKit, React, Three.js / WebGL'
 		},
 		{
 			label: 'Leading & teaching',
