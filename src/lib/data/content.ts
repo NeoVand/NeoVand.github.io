@@ -75,7 +75,7 @@ export const projects: Project[] = [
 		title: 'Sketchpad',
 		href: 'https://neovand.github.io/sketchpad/',
 		repo: 'https://github.com/NeoVand/sketchpad',
-		desc: 'Created a visual scratchpad architecture with a LoRA-tuned 0.8B vision-language model; 220/220 preregistered arithmetic cases vs. 217 for the best of 10 baselines; Lean proofs.',
+		desc: 'A small LLM with digital pen and paper: exact thousand-digit arithmetic and step-by-step algebra, running in your browser. Solved all 220 benchmark problems, outperforming ten models including frontier systems.',
 		tags: ['ai', 'research', 'webgpu'],
 		accent: '#d6336c',
 		ground: 'linear-gradient(135deg,#ffffff,#f3f4f7)',
