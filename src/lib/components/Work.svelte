@@ -3,7 +3,6 @@
 	import type { Project } from '$lib/data/types';
 
 	let query = $state('');
-	let activeSection = $state('');
 	let searchInput: HTMLInputElement | undefined;
 
 	function normalize(value: string) {
@@ -88,9 +87,6 @@
 	const resultCount = $derived(
 		groups.reduce((count, section) => count + section.projects.length, 0)
 	);
-	const currentSection = $derived(
-		groups.some((section) => section.id === activeSection) ? activeSection : (groups[0]?.id ?? '')
-	);
 
 	function projectAction(project: Project) {
 		if (project.href === project.repo) return 'View on GitHub';
@@ -101,50 +97,6 @@
 	function clearSearch() {
 		query = '';
 		searchInput?.focus();
-	}
-
-	function focusSearch() {
-		searchInput?.focus({ preventScroll: true });
-		searchInput?.scrollIntoView({ block: 'center' });
-	}
-
-	function jumpToSection(event: Event) {
-		const id = (event.currentTarget as HTMLSelectElement).value;
-		const heading = document.getElementById(`${id}-title`);
-		if (!heading) return;
-		activeSection = id;
-		heading.focus({ preventScroll: true });
-		heading.scrollIntoView({ block: 'start' });
-	}
-
-	function trackSections(sectionIds: readonly string[]) {
-		return (node: HTMLElement) => {
-			let frame = 0;
-			function update() {
-				frame = 0;
-				// Always fall back to the first field when the directory is still
-				// below the reading line, including after a jump back or resize.
-				let current = sectionIds[0] ?? '';
-				const readingLine = Math.min(window.innerHeight * 0.25, 160);
-				for (const id of sectionIds) {
-					const section = node.querySelector<HTMLElement>(`#${id}`);
-					if (!section || section.getBoundingClientRect().top > readingLine) break;
-					current = id;
-				}
-				activeSection = current;
-			}
-			function scheduleUpdate() {
-				if (!frame) frame = requestAnimationFrame(update);
-			}
-			update();
-			window.addEventListener('scroll', scheduleUpdate, { passive: true });
-			window.addEventListener('resize', scheduleUpdate);
-			return () => {
-				cancelAnimationFrame(frame);
-				window.removeEventListener('scroll', scheduleUpdate);
-				window.removeEventListener('resize', scheduleUpdate);
-			};
-		};
 	}
 
 	// Share observers across the directory. Clips only load near the viewport
@@ -267,35 +219,7 @@
 		</div>
 
 		<div class="directory">
-			{#if groups.length > 0}
-				<nav class="directory-index" aria-label="Project sections">
-					<div class="mobile-index">
-						<label for="project-section">Browse</label>
-						<div class="select-wrap">
-							<select id="project-section" value={currentSection} onchange={jumpToSection}>
-								{#each groups as group (group.id)}
-									<option value={group.id}>{group.title}</option>
-								{/each}
-							</select>
-							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"
-								><path d="m7 10 5 5 5-5" /></svg
-							>
-						</div>
-						<button
-							class="mobile-search"
-							type="button"
-							onclick={focusSearch}
-							aria-label="Search projects"
-						>
-							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"
-								><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg
-							>
-						</button>
-					</div>
-				</nav>
-			{/if}
-
-			<div class="project-groups" {@attach trackSections(groups.map((group) => group.id))}>
+			<div class="project-groups">
 				{#each groups as group (group.id)}
 					<section class="project-group" id={group.id} aria-labelledby="{group.id}-title">
 						<header class="group-head">
@@ -510,9 +434,6 @@
 		font-size: 12px;
 		color: var(--muted);
 	}
-	.directory-index {
-		display: none;
-	}
 	.project-groups {
 		min-width: 0;
 	}
@@ -718,89 +639,6 @@
 		.search-area {
 			width: 270px;
 		}
-		.directory-index {
-			display: block;
-			position: sticky;
-			top: max(10px, env(safe-area-inset-top, 0px));
-			z-index: 5;
-			margin-bottom: 28px;
-			border: 1px solid var(--hair);
-			border-radius: 12px;
-			background: var(--bg);
-			box-shadow: 0 3px 14px var(--cast);
-		}
-		.project-group,
-		.group-head h3 {
-			scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 88px);
-		}
-		.mobile-index {
-			display: flex;
-			align-items: center;
-			gap: 12px;
-			padding: 4px 10px 4px 14px;
-		}
-		.mobile-search {
-			display: grid;
-			place-items: center;
-			flex: none;
-			width: 36px;
-			height: 40px;
-			border: 0;
-			border-radius: 8px;
-			background: transparent;
-			color: var(--muted);
-			cursor: pointer;
-		}
-		.mobile-search:hover {
-			background: var(--pane-2);
-			color: var(--title);
-		}
-		.mobile-search svg {
-			width: 17px;
-			height: 17px;
-			stroke: currentColor;
-			stroke-width: 1.65;
-		}
-		.mobile-index label {
-			flex: none;
-			font-size: 12px;
-			color: var(--muted);
-		}
-		.select-wrap {
-			position: relative;
-			flex: 1;
-			min-width: 0;
-		}
-		.select-wrap svg {
-			position: absolute;
-			right: 0;
-			top: 50%;
-			width: 18px;
-			height: 18px;
-			transform: translateY(-50%);
-			color: var(--muted);
-			stroke: currentColor;
-			stroke-width: 1.7;
-			pointer-events: none;
-		}
-		select {
-			appearance: none;
-			width: 100%;
-			max-width: 100%;
-			min-height: 44px;
-			padding: 9px 24px 9px 2px;
-			border: 0;
-			border-radius: 0;
-			background: transparent;
-			color: var(--title);
-			font: inherit;
-			font-size: 13px;
-			cursor: pointer;
-		}
-		select option {
-			background: var(--bg);
-			color: var(--title);
-		}
 		.project-row {
 			grid-template-columns: 230px minmax(0, 1fr);
 			column-gap: 24px;
@@ -810,7 +648,7 @@
 		.directory-head {
 			flex-direction: column;
 			gap: 22px;
-			margin-bottom: 14px;
+			margin-bottom: 28px;
 		}
 		.directory-intro {
 			max-width: none;
@@ -824,19 +662,6 @@
 		}
 		.search-summary {
 			font-size: 11px;
-		}
-		.mobile-index {
-			gap: 8px;
-			padding: 4px 8px 4px 12px;
-		}
-		.mobile-index label {
-			font-size: 11px;
-		}
-		select {
-			font-size: 12px;
-		}
-		.directory-index {
-			margin-bottom: 26px;
 		}
 		.group-head {
 			margin-bottom: 15px;
@@ -892,14 +717,6 @@
 	@media (max-width: 370px) {
 		.project-list {
 			padding-inline: 12px;
-		}
-		.mobile-index label {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			overflow: hidden;
-			clip: rect(0 0 0 0);
-			white-space: nowrap;
 		}
 	}
 </style>
