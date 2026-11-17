@@ -72,6 +72,39 @@ export const filters: Filter[] = [
 ];
 export const projects: Project[] = [
 	{
+		title: 'Attention at Absolute Zero',
+		href: 'https://neovand.github.io/cold-attention/',
+		repo: 'https://github.com/NeoVand/cold-attention',
+		desc: 'Watch trained zero-temperature attention models solve 30 algorithmic tasks in your browser, one step at a time.',
+		tags: ['ai', 'research', 'webgpu'],
+		accent: '#315fa6',
+		ground: 'linear-gradient(135deg,#ffffff,#eef3fb)',
+		img: '/media/cold-attention.jpg',
+		video: '/media/cold-attention.mp4',
+		links: [
+			{ label: 'Paper', href: 'https://arxiv.org/abs/2611.11937' },
+			{ label: 'Models', href: 'https://huggingface.co/mohsenvand/cold-attention-clrs30' }
+		]
+	},
+	{
+		title: 'Gravitational Camera',
+		href: 'https://neovand.github.io/gravitational-camera/',
+		repo: 'https://github.com/NeoVand/gravitational-camera',
+		desc: 'What if a camera sensed gravity instead of light? Compare both views of the same scene in interactive simulations.',
+		tags: ['educational', 'research', 'webgpu'],
+		accent: '#74b7e4',
+		ground: 'linear-gradient(135deg,#182535,#090d14)',
+		img: '/media/gravitational-camera.jpg',
+		video: '/media/gravitational-camera.mp4',
+		links: [
+			{
+				label: 'Paper',
+				href: 'https://neovand.github.io/gravitational-camera/gravitational-camera.pdf'
+			},
+			{ label: 'Demos', href: 'https://neovand.github.io/gravitational-camera/demo/' }
+		]
+	},
+	{
 		title: 'Sketchpad',
 		href: 'https://neovand.github.io/sketchpad/',
 		repo: 'https://github.com/NeoVand/sketchpad',
