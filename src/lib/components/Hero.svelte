@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { bio, links, meta } from '$lib/data/content';
+	import { bio, meta } from '$lib/data/content';
 
 	let { cvOpen = $bindable(false) }: { cvOpen?: boolean } = $props();
 
@@ -20,13 +20,7 @@
 		<div class="bio-wrap">
 			<p class="bio">{@html bio}</p>
 		</div>
-		<nav class="links" aria-label="Elsewhere">
-			{#each links as l (l.href)}
-				<a class="pill glass" href={l.href} target="_blank" rel="noopener">
-					<svg aria-hidden="true"><use href="#{l.icon}" /></svg>
-					<span>{l.label}</span>
-				</a>
-			{/each}
+		<div class="links">
 			<button
 				class="pill glass cv-toggle"
 				type="button"
@@ -37,7 +31,7 @@
 				<svg aria-hidden="true"><use href="#icon-leaf" /></svg>
 				<span>Résumé</span>
 			</button>
-		</nav>
+		</div>
 	</div>
 </header>
 
@@ -61,8 +55,6 @@
 		width: min(35rem, 36vw);
 		/* In flow so a long bio or wrapped links can grow the hero rather
 		   than clipping above the viewport or overlapping the work below. */
-		/* the links below are sized to it */
-		container-type: inline-size;
 	}
 	.name {
 		font-family: var(--serif);
@@ -89,14 +81,10 @@
 		color: var(--title);
 		font-weight: 570;
 	}
-	/* Keep the labels and touch targets at a readable size. The links find
-	   another row when needed, then settle into pairs in a narrow column. */
+	/* The résumé stays with the bio; profile links live in the page header. */
 	.links {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
 		margin-top: 28px;
-		max-width: 100%;
 	}
 	.links .pill {
 		min-width: 0;
@@ -108,15 +96,11 @@
 		font-size: 13px;
 		line-height: 1.35;
 		text-align: left;
-		white-space: normal;
+		white-space: nowrap;
 	}
 	.links .pill svg {
 		width: 16px;
 		height: 16px;
-	}
-	.links .pill span {
-		min-width: 0;
-		overflow-wrap: anywhere;
 	}
 	.links .pill:focus-visible {
 		outline: 2px solid var(--focus);
@@ -125,20 +109,6 @@
 	.links .cv-toggle[aria-expanded='true'] {
 		background: var(--pane-2);
 		box-shadow: inset 0 0 0 1px var(--ring);
-	}
-	@container (max-width: 420px) {
-		.links {
-			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-		.links .pill {
-			padding-inline: 12px;
-			border-radius: 16px;
-		}
-		.links .cv-toggle {
-			grid-column: 1 / -1;
-			justify-content: center;
-		}
 	}
 
 	/* the opening: one orchestrated moment, after the veil */
