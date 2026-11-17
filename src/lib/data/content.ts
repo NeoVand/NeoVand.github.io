@@ -18,6 +18,11 @@ export const links: ProfileLink[] = [
 		icon: 'icon-github'
 	},
 	{
+		label: 'Hugging Face',
+		href: 'https://huggingface.co/mohsenvand',
+		icon: 'icon-huggingface'
+	},
+	{
 		label: 'LinkedIn',
 		href: 'https://linkedin.com/in/mohsenvand',
 		icon: 'icon-linkedin'

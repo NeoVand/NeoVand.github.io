@@ -13,7 +13,7 @@
 	});
 </script>
 
-<header class="hero" class:shown>
+<header class={['hero', { shown }]}>
 	<h1 class="visually-hidden">{meta.h1}</h1>
 	<div class="copy">
 		<p class="name" aria-hidden="true">{meta.name}</p>
@@ -24,9 +24,7 @@
 			{#each links as l (l.href)}
 				<a class="pill glass" href={l.href} target="_blank" rel="noopener">
 					<svg aria-hidden="true"><use href="#{l.icon}" /></svg>
-					{#if l.label === 'Google Scholar'}<span
-							><span class="wide-only">Google&nbsp;</span>Scholar</span
-						>{:else}{l.label}{/if}
+					<span>{l.label}</span>
 				</a>
 			{/each}
 			<button
@@ -37,7 +35,7 @@
 				onclick={() => (cvOpen = !cvOpen)}
 			>
 				<svg aria-hidden="true"><use href="#icon-leaf" /></svg>
-				Résumé
+				<span>Résumé</span>
 			</button>
 		</nav>
 	</div>
@@ -47,18 +45,22 @@
 	.hero {
 		position: relative;
 		z-index: 1;
+		display: flex;
+		align-items: center;
 		min-height: 100svh;
+		padding-block: 48px;
 		/* the island is behind this, on the canvas; the empty part of the hero
 		   lets a hand through to it */
 		pointer-events: none;
 	}
 	.copy {
 		pointer-events: auto;
-		position: absolute;
-		left: 58vw;
-		top: 50%;
+		position: relative;
+		flex-shrink: 0;
+		margin-left: 58vw;
 		width: min(35rem, 36vw);
-		transform: translateY(-50%);
+		/* In flow so a long bio or wrapped links can grow the hero rather
+		   than clipping above the viewport or overlapping the work below. */
 		/* the links below are sized to it */
 		container-type: inline-size;
 	}
@@ -87,54 +89,55 @@
 		color: var(--title);
 		font-weight: 570;
 	}
-	/* The four links keep to one line, always. Where the column is too
-	   narrow for them at full size they drop the "Google", tighten, and then
-	   scale down together with it, every measure in the one unit --u; on the
-	   narrowest phones they lose their icons rather than get smaller still. */
+	/* Keep the labels and touch targets at a readable size. The links find
+	   another row when needed, then settle into pairs in a narrow column. */
 	.links {
-		--u: 1px;
 		display: flex;
-		flex-wrap: nowrap;
-		gap: calc(10 * var(--u));
+		flex-wrap: wrap;
+		gap: 8px;
 		margin-top: 28px;
+		max-width: 100%;
 	}
 	.links .pill {
-		flex: none;
-		height: calc(38 * var(--u));
-		padding: 0 calc(16 * var(--u));
-		gap: calc(8 * var(--u));
-		font-size: calc(13.5 * var(--u));
-		white-space: nowrap;
+		min-width: 0;
+		max-width: 100%;
+		min-height: 44px;
+		height: auto;
+		padding: 10px 14px;
+		gap: 8px;
+		font-size: 13px;
+		line-height: 1.35;
+		text-align: left;
+		white-space: normal;
 	}
 	.links .pill svg {
-		width: calc(15 * var(--u));
-		height: calc(15 * var(--u));
+		width: 16px;
+		height: 16px;
 	}
-	@container (max-width: 505.98px) {
+	.links .pill span {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.links .pill:focus-visible {
+		outline: 2px solid var(--focus);
+		outline-offset: 3px;
+	}
+	.links .cv-toggle[aria-expanded='true'] {
+		background: var(--pane-2);
+		box-shadow: inset 0 0 0 1px var(--ring);
+	}
+	@container (max-width: 420px) {
 		.links {
-			--u: min(1px, calc(100cqi / 405));
-			gap: calc(7 * var(--u));
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 		.links .pill {
-			height: calc(36 * var(--u));
-			padding: 0 calc(12 * var(--u));
-			gap: calc(6 * var(--u));
-			font-size: calc(13 * var(--u));
+			padding-inline: 12px;
+			border-radius: 16px;
 		}
-		.links .pill svg {
-			width: calc(14 * var(--u));
-			height: calc(14 * var(--u));
-		}
-		.wide-only {
-			display: none;
-		}
-	}
-	@container (max-width: 357.98px) {
-		.links {
-			--u: min(1px, calc(100cqi / 318));
-		}
-		.links .pill svg {
-			display: none;
+		.links .cv-toggle {
+			grid-column: 1 / -1;
+			justify-content: center;
 		}
 	}
 
@@ -185,11 +188,11 @@
 	/* Stacked: the island takes the top of the screen and the words come
 	   under it, the width of the screen. The same rule as the renderer's. */
 	@media (max-width: 899px), (max-aspect-ratio: 21/20) {
+		.hero {
+			display: block;
+			padding-block: 0;
+		}
 		.copy {
-			position: relative;
-			left: auto;
-			top: auto;
-			transform: none;
 			width: auto;
 			max-width: 40rem;
 			margin: 0 auto;
