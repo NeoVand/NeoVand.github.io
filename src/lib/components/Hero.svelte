@@ -21,6 +21,7 @@
 			<p class="bio">{@html bio}</p>
 		</div>
 		<div class="links">
+			<a class="pill glass explore-link" href="#work">Explore projects</a>
 			<button
 				class="pill glass cv-toggle"
 				type="button"
@@ -85,6 +86,9 @@
 	.links {
 		display: flex;
 		margin-top: 28px;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 10px;
 	}
 	.links .pill {
 		min-width: 0;
@@ -97,6 +101,10 @@
 		line-height: 1.35;
 		text-align: left;
 		white-space: nowrap;
+	}
+	.links .explore-link {
+		color: var(--title);
+		font-weight: 570;
 	}
 	.links .pill svg {
 		width: 16px;

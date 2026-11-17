@@ -4,24 +4,40 @@ export interface ProfileLink {
 	icon: string;
 }
 
-export interface Filter {
-	key: string;
-	label: string;
+export type ProjectSectionId =
+	| 'ai-ml-research'
+	| 'physics-research'
+	| 'artificial-life-research'
+	| 'ai-engineering'
+	| 'ai-ml-education'
+	| 'math-and-physics'
+	| 'software-development'
+	| 'music-and-art';
+
+export interface ProjectSection {
+	id: ProjectSectionId;
+	title: string;
+	description: string;
 }
 
 export interface Project {
 	title: string;
+	section: ProjectSectionId;
 	href: string;
 	repo: string | null;
-	/** may carry inline markup (entities, <em>) */
+	/** Plain-text description, rendered without HTML. */
 	desc: string;
+	/** Exact phrases in the description to emphasize. */
+	highlights?: string[];
+	/** Search keywords; not displayed as tags. */
 	tags: string[];
+	status?: 'In progress';
 	accent: string | null;
 	/** a CSS gradient that stands in while the thumbnail loads */
 	ground: string | null;
-	img: string;
+	img: string | null;
 	video: string | null;
-	/** further places to go, as small words at the card's foot; the card itself opens `href` */
+	/** Additional resources alongside the project's main destination. */
 	links?: { label: string; href: string }[];
 }
 

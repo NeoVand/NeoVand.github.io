@@ -1,5 +1,13 @@
 // Extracted from master's index.html by the content script; edit freely.
-import type { Project, Paper, MediaItem, Earlier, Resume, Filter, ProfileLink } from './types';
+import type {
+	Project,
+	Paper,
+	MediaItem,
+	Earlier,
+	Resume,
+	ProjectSection,
+	ProfileLink
+} from './types';
 
 export const meta = {
 	title: 'Neo Mohsenvand',
@@ -33,69 +41,157 @@ export const links: ProfileLink[] = [
 		icon: 'icon-scholar'
 	}
 ];
-export const filters: Filter[] = [
+export const projectSections: ProjectSection[] = [
 	{
-		key: 'all',
-		label: 'All'
+		id: 'ai-ml-research',
+		title: 'AI/ML Research',
+		description:
+			'Attention mechanisms, certified neural computation, model compression, and probability sampling.'
 	},
 	{
-		key: 'ai',
-		label: 'AI'
+		id: 'physics-research',
+		title: 'Physics Research',
+		description: 'Mathematical results in gravitational imaging and interference geometry.'
 	},
 	{
-		key: 'art',
-		label: 'Art'
+		id: 'artificial-life-research',
+		title: 'Artificial Life Research',
+		description: 'Experiments and formal results on replication, heredity, and collective behavior.'
 	},
 	{
-		key: 'alife',
-		label: 'Artificial Life'
+		id: 'ai-engineering',
+		title: 'AI Engineering',
+		description: 'Tools for building, inspecting, and working with AI systems.'
 	},
 	{
-		key: 'educational',
-		label: 'Educational'
+		id: 'ai-ml-education',
+		title: 'AI/ML Education',
+		description: 'Learn by changing the experiment, training the model, and seeing what happens.'
 	},
 	{
-		key: 'game',
-		label: 'Game'
+		id: 'math-and-physics',
+		title: 'Math and Physics',
+		description: 'Interactive books and experiments that make abstract ideas tangible.'
 	},
 	{
-		key: 'research',
-		label: 'Research'
+		id: 'software-development',
+		title: 'Software Development',
+		description:
+			'Visual guides, practical tools, and laboratories for understanding how software works.'
 	},
 	{
-		key: 'tool',
-		label: 'Tools'
-	},
-	{
-		key: 'webgl',
-		label: 'WebGL'
-	},
-	{
-		key: 'webgpu',
-		label: 'WebGPU'
+		id: 'music-and-art',
+		title: 'Music and Art',
+		description:
+			'Playable instruments, visual worlds, and experiments at the meeting of sound and computation.'
 	}
 ];
+
 export const projects: Project[] = [
 	{
-		title: 'Attention at Absolute Zero',
+		title: 'Cold Attention',
 		href: 'https://neovand.github.io/cold-attention/',
 		repo: 'https://github.com/NeoVand/cold-attention',
-		desc: 'A new attention mechanism that counts how many candidates tie for the top score. One shared model scored 97.2% across 30 algorithmic tasks on inputs of 64 items or more after training without hints on inputs of at most 16 items.',
+		desc: 'Introduced a higher-order attention mechanism that preserves how many candidates tie for the top score and reconstructs discrete state between reasoning steps. A shared general block averaged 97.2% across the 30-task CLRS benchmark at 64 items, after answer-only training on inputs of at most 16 items. Fully cold maximum retrieval reached at least 99.95% on sets up to 16,384 items across ten seeds. Finite checks also establish correctness of trained family-relation blocks at arbitrary context sizes for correctly encoded, acyclic inputs.',
+		highlights: [
+			'97.2% across the 30-task CLRS benchmark',
+			'at least 99.95% on sets up to 16,384 items',
+			'arbitrary context sizes'
+		],
 		tags: ['ai', 'research', 'webgpu'],
 		accent: '#315fa6',
 		ground: 'linear-gradient(135deg,#ffffff,#eef3fb)',
 		img: '/media/cold-attention.jpg',
 		video: '/media/cold-attention.mp4',
 		links: [
-			{ label: 'Paper', href: 'https://arxiv.org/abs/2611.11937' },
-			{ label: 'Models', href: 'https://huggingface.co/mohsenvand/cold-attention-clrs30' }
-		]
+			{
+				label: 'Paper',
+				href: 'https://arxiv.org/abs/2611.11937'
+			},
+			{
+				label: 'Models',
+				href: 'https://huggingface.co/mohsenvand/cold-attention-clrs30'
+			}
+		],
+		section: 'ai-ml-research'
+	},
+	{
+		title: 'Sketchpad',
+		href: 'https://neovand.github.io/sketchpad/',
+		repo: 'https://github.com/NeoVand/sketchpad',
+		desc: 'Trained a 0.8B-parameter vision-language model to perform exact arithmetic through a three-cell visual scratchpad; the model computes every output digit. Under explicit runtime assumptions, Lean-checked theorems reduce correctness at arbitrary input lengths to 2,446 local cases, all passed on an Apple M4 browser deployment. In a pre-registered server benchmark, it solved 220/220 addition and multiplication problems, including 1,000-digit sums; the strongest of ten comparison models solved 217/220. A separate browser evaluation passed 200/200 tests of division, roots, GCD, and signed arithmetic.',
+		highlights: [
+			'0.8B-parameter',
+			'Lean-checked theorems',
+			'2,446 local cases',
+			'220/220 addition and multiplication problems'
+		],
+		tags: ['ai', 'research', 'webgpu'],
+		accent: '#d6336c',
+		ground: 'linear-gradient(135deg,#ffffff,#f3f4f7)',
+		img: '/media/sketchpad.jpg',
+		video: '/media/sketchpad.mp4',
+		links: [
+			{
+				label: 'Paper',
+				href: 'https://neovand.github.io/sketchpad/paper'
+			},
+			{
+				label: 'Model',
+				href: 'https://huggingface.co/mohsenvand/sketchpad-0.8b-preview'
+			}
+		],
+		section: 'ai-ml-research'
+	},
+	{
+		title: 'mindview',
+		href: 'https://neovand.github.io/mindview/',
+		repo: 'https://github.com/NeoVand/mindview',
+		desc: 'Built a WebGPU runtime that exposes the actual layer computations of a language model and a diffusion transformer. Using PrismML’s ternary models, trained a replacement text adapter, reduced the reader from 28 to 9 layers, and distilled one-, two-, and four-step image generation into a 1.2 GB download. The pipeline generates 512×512 images in about 4, 6, and 15 seconds respectively on an M4 MacBook Air in Chrome.',
+		highlights: [
+			'one-, two-, and four-step image generation',
+			'1.2 GB download',
+			'about 4, 6, and 15 seconds'
+		],
+		tags: ['ai', 'art', 'webgpu'],
+		accent: '#f59e0b',
+		ground: 'linear-gradient(135deg,#0d0d0f,#050506)',
+		img: '/media/mindview.jpg',
+		video: '/media/mindview.mp4',
+		links: [
+			{
+				label: 'Model',
+				href: 'https://huggingface.co/mohsenvand/mindview-t2i-turbo'
+			},
+			{
+				label: 'Demo',
+				href: 'https://huggingface.co/spaces/mohsenvand/mindview-t2i-turbo'
+			}
+		],
+		section: 'ai-ml-research'
+	},
+	{
+		title: 'MacMac',
+		href: 'https://macmac.lol/',
+		repo: 'https://github.com/NeoVand/MacMac',
+		desc: 'Designed and built a real-time probability-sampling game with a Gaussian kernel density estimate computed from each player’s samples. Shape error against a target distribution provides quantitative feedback on sampling strategy. Seeded targets, adaptive difficulty, and synchronized multiplayer matches make strategies directly comparable under a fixed time budget.',
+		highlights: ['Gaussian kernel density estimate', 'synchronized multiplayer matches'],
+		tags: ['game', 'research'],
+		accent: '#a855f7',
+		ground: 'linear-gradient(135deg,#140820,#0d0618)',
+		img: '/media/macmac.jpg',
+		video: null,
+		section: 'ai-ml-research'
 	},
 	{
 		title: 'Gravitational Camera',
 		href: 'https://neovand.github.io/gravitational-camera/',
 		repo: 'https://github.com/NeoVand/gravitational-camera',
-		desc: 'A theory of imaging with gravity. The paper derives the limits of seeing mass through walls and shows how a single ideal pixel could separate up to four overlapping gravitational waves over time.',
+		desc: 'Developed an imaging theory for hypothetical detectors of gravitational tidal fields. Derived a quantitative logarithmic limit on near-field resolution and conditions under which one pixel can separate up to four overlapping gravitational waves over time, with fixed directions and independent waveforms. The work also treats thermal gravitational emission and imaging of moving masses, with a WebGPU simulator checked against an independent Python implementation.',
+		highlights: [
+			'logarithmic limit on near-field resolution',
+			'one pixel can separate up to four overlapping gravitational waves'
+		],
 		tags: ['educational', 'research', 'webgpu'],
 		accent: '#74b7e4',
 		ground: 'linear-gradient(135deg,#182535,#090d14)',
@@ -106,423 +202,484 @@ export const projects: Project[] = [
 				label: 'Paper',
 				href: 'https://neovand.github.io/gravitational-camera/gravitational-camera.pdf'
 			},
-			{ label: 'Demos', href: 'https://neovand.github.io/gravitational-camera/demo/' }
-		]
-	},
-	{
-		title: 'Sketchpad',
-		href: 'https://neovand.github.io/sketchpad/',
-		repo: 'https://github.com/NeoVand/sketchpad',
-		desc: 'A small LLM with digital pen and paper: exact thousand-digit arithmetic and step-by-step algebra, running in your browser. Solved all 220 benchmark problems, outperforming ten models including frontier systems.',
-		tags: ['ai', 'research', 'webgpu'],
-		accent: '#d6336c',
-		ground: 'linear-gradient(135deg,#ffffff,#f3f4f7)',
-		img: '/media/sketchpad.jpg',
-		video: '/media/sketchpad.mp4',
-		links: [
-			{ label: 'Paper', href: 'https://neovand.github.io/sketchpad/paper' },
-			{ label: 'Model', href: 'https://huggingface.co/mohsenvand/sketchpad-0.8b-preview' }
-		]
-	},
-	{
-		title: 'Homology & Cohomology',
-		href: 'https://neovand.github.io/homology/',
-		repo: 'https://github.com/NeoVand/homology',
-		desc: 'Learn to count holes, from first principles to cohomology, with interactive 3D figures and a homology calculator.',
-		tags: ['educational', 'webgl'],
-		accent: '#e5c77f',
-		ground: 'linear-gradient(135deg,#0b101a,#05080d)',
-		img: '/media/homology.jpg',
-		video: '/media/homology.mp4'
-	},
-	{
-		title: 'Engine Lab',
-		href: 'https://neovand.github.io/Diesel/',
-		repo: 'https://github.com/NeoVand/Diesel',
-		desc: 'Take a V12 diesel apart in your browser, reshape its parts, and solve their stresses on the GPU.',
-		tags: ['tool', 'educational', 'webgpu'],
-		accent: '#c2652a',
-		ground: 'linear-gradient(135deg,#0a0b0d,#040405)',
-		img: '/media/engine-lab.jpg',
-		video: '/media/engine-lab.mp4'
-	},
-	{
-		title: 'mindview',
-		href: 'https://neovand.github.io/mindview/',
-		repo: 'https://github.com/NeoVand/mindview',
-		desc: 'Built an LLM/diffusion visualization system; distilled and fine-tuned a 1.2 GB ternary image-generation pipeline for WebGPU.',
-		tags: ['ai', 'art', 'webgpu'],
-		accent: '#f59e0b',
-		ground: 'linear-gradient(135deg,#0d0d0f,#050506)',
-		img: '/media/mindview.jpg',
-		video: '/media/mindview.mp4',
-		links: [
-			{ label: 'Model', href: 'https://huggingface.co/mohsenvand/mindview-t2i-turbo' },
-			{ label: 'Demo', href: 'https://huggingface.co/spaces/mohsenvand/mindview-t2i-turbo' }
-		]
-	},
-	{
-		title: 'OP-XY Agent',
-		href: 'https://neovand.github.io/op-xy-agent/',
-		repo: 'https://github.com/NeoVand/op-xy-agent',
-		desc: 'A playable replica of the OP-XY synth, with an AI agent that teaches it and drives the real one.',
-		tags: ['ai', 'tool'],
-		accent: '#d4d4d8',
-		ground: 'linear-gradient(135deg,#1c1d20,#111214)',
-		img: '/media/op-xy-agent.jpg',
-		video: '/media/op-xy-agent.mp4'
-	},
-	{
-		title: 'Tissue',
-		href: 'https://neovand.github.io/tissue/',
-		repo: 'https://github.com/NeoVand/tissue',
-		desc: 'An interpretability lab: train a transformer in your browser, then probe its neurons.',
-		tags: ['ai', 'research', 'webgpu'],
-		accent: '#22c55e',
-		ground: 'linear-gradient(135deg,#1b2022,#101415)',
-		img: '/media/tissue.jpg',
-		video: null
-	},
-	{
-		title: 'Pattern',
-		href: 'https://neovand.github.io/pattern/',
-		repo: 'https://github.com/NeoVand/pattern',
-		desc: 'Machine learning for absolute beginners, from fitting a line to running an agent.',
-		tags: ['educational', 'ai', 'webgpu'],
-		accent: '#a78bfa',
-		ground: 'linear-gradient(135deg,#1b1f20,#141619)',
-		img: '/media/pattern.jpg',
-		video: null
-	},
-	{
-		title: 'Before the Move',
-		href: 'https://neovand.github.io/LearningWorldModels/',
-		repo: 'https://github.com/NeoVand/LearningWorldModels',
-		desc: 'World models from first principles — train one in the page, or ask the book aloud.',
-		tags: ['educational', 'ai', 'webgpu'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#1a1d1f,#141619)',
-		img: '/media/before-the-move.jpg',
-		video: null
-	},
-	{
-		title: 'harnessXray',
-		href: 'https://neovand.github.io/harnessXray/',
-		repo: 'https://github.com/NeoVand/harnessXray',
-		desc: 'Agent observability: streamed request capture, record/replay and persistent checkpoints.',
-		tags: ['educational', 'ai', 'research'],
-		accent: '#6366f1',
-		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
-		img: '/media/harnessxray.jpg',
-		video: null
-	},
-	{
-		title: 'Voicebook',
-		href: 'https://neovand.github.io/voicebook/',
-		repo: 'https://github.com/NeoVand/voicebook',
-		desc: 'Designed an agentic PDF/Markdown reader for technical papers: LLM explanations of equations and figures, synchronized narration, scrolling and highlighting; local or cloud inference.',
-		tags: ['ai', 'webgpu', 'tool'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#04121c,#020c14)',
-		img: '/media/voicebook.jpg',
-		video: null
-	},
-	{
-		title: 'LangX',
-		href: 'https://langx.lol/',
-		repo: 'https://github.com/NeoVand/LangX',
-		desc: 'An interactive AI engineering course: 29 lessons on the LangChain stack.',
-		tags: ['educational', 'ai'],
-		accent: '#a855f7',
-		ground: 'linear-gradient(135deg,#150828,#0d0520)',
-		img: '/media/langx.jpg',
-		video: '/media/langx.mp4'
-	},
-	{
-		title: 'jaxverse',
-		href: 'https://neovand.github.io/jaxverse/',
-		repo: 'https://github.com/NeoVand/jaxverse',
-		desc: 'Interactive deep-learning book with live browser LLM training: pretraining, SFT and RLVR.',
-		tags: ['educational', 'ai', 'webgpu'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#04121c,#020c14)',
-		img: '/media/jaxverse.jpg',
-		video: '/media/jaxverse.mp4'
-	},
-	{
-		title: 'Embedding Playground',
-		href: 'https://neovand.github.io/EmbeddingPlayground/',
-		repo: 'https://github.com/NeoVand/EmbeddingPlayground',
-		desc: 'Built a 12-model experiment lab for retrieval, classification and clustering, with 3D embeddings and live attention/tensor inspection.',
-		tags: ['educational', 'ai', 'webgpu'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#04121c,#020c14)',
-		img: '/media/embedding-playground.jpg',
-		video: '/media/embedding-playground.mp4'
-	},
-	{
-		title: 'gradientlab.ai',
-		href: 'https://gradientlab.ai',
-		repo: 'https://github.com/NeoVand/GradientDescent',
-		desc: 'Interactive optimization lab: optimizer races, curvature analysis and lessons; 5M lifetime visitors.',
-		tags: ['educational', 'ai', 'research'],
-		accent: '#a855f7',
-		ground: 'linear-gradient(135deg,#180828,#0f0520)',
-		img: '/media/gradientlab.jpg',
-		video: null
-	},
-	{
-		title: 'VLMOCR',
-		href: 'https://neovand.github.io/VLMOCR/',
-		repo: 'https://github.com/NeoVand/VLMOCR',
-		desc: 'Multi-region image-to-text with vision language models. Prompt and stream.',
-		tags: ['ai', 'research'],
-		accent: '#e89c3e',
-		ground: 'linear-gradient(135deg,#1a1206,#120d04)',
-		img: '/media/vlmocr.jpg',
-		video: null
-	},
-	{
-		title: 'jax-js skill',
-		href: 'https://github.com/NeoVand/jax-js-skill',
-		repo: 'https://github.com/NeoVand/jax-js-skill',
-		desc: 'An agent skill for training real neural networks in the browser with jax-js.',
-		tags: ['ai', 'webgpu'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#04121c,#020c14)',
-		img: '/media/jax-js-skill.jpg',
-		video: null
-	},
-	{
-		title: 'General Relativity',
-		href: 'https://neovand.github.io/general-relativity/',
-		repo: 'https://github.com/NeoVand/general-relativity',
-		desc: 'From a cart and a clock to curved spacetime — change the experiment, or ask the page aloud.',
-		tags: ['educational', 'ai', 'webgl'],
-		accent: '#a78bfa',
-		ground: 'linear-gradient(135deg,#141a2a,#090c16)',
-		img: '/media/general-relativity.jpg',
-		video: '/media/general-relativity.mp4'
-	},
-	{
-		title: 'MIDI Lab',
-		href: 'https://neovand.github.io/midilab/',
-		repo: 'https://github.com/NeoVand/midilab',
-		desc: 'Thirty-one lessons wired to a live MIDI engine — press a key and the bytes appear, decoded.',
-		tags: ['educational', 'tool'],
-		accent: '#22c55e',
-		ground: 'linear-gradient(135deg,#08160a,#050e07)',
-		img: '/media/midilab.jpg',
-		video: '/media/midilab.mp4'
-	},
-	{
-		title: 'TerminalVibes',
-		href: 'https://neovand.github.io/terminalvibes/',
-		repo: 'https://github.com/NeoVand/terminalvibes',
-		desc: 'A visual guide to the shell for the AI era. Read, verify, and run in a browser playground.',
-		tags: ['educational'],
-		accent: '#22c55e',
-		ground: 'linear-gradient(135deg,#08160a,#050e07)',
-		img: '/media/terminalvibes.jpg',
-		video: null
-	},
-	{
-		title: 'Protocol Lab',
-		href: 'https://neovand.github.io/coms/',
-		repo: 'https://github.com/NeoVand/coms',
-		desc: 'An interactive atlas of 46 network protocols, from TCP to QUIC.',
-		tags: ['educational'],
-		accent: '#e89c3e',
-		ground: 'linear-gradient(135deg,#1c1006,#130b04)',
-		img: '/media/protocol-lab.jpg',
-		video: null
-	},
-	{
-		title: 'GitVibes',
-		href: 'https://neovand.github.io/gitvibes/',
-		repo: 'https://github.com/NeoVand/gitvibes',
-		desc: 'A visual, interactive guide to Git for AI-assisted coders, minus the jargon.',
-		tags: ['educational'],
-		accent: '#e89c3e',
-		ground: 'linear-gradient(135deg,#1a1004,#110c03)',
-		img: '/media/gitvibes.jpg',
-		video: null
-	},
-	{
-		title: 'SoftMax Explainer',
-		href: 'https://neovand.github.io/SoftMaxExplainer/',
-		repo: 'https://github.com/NeoVand/SoftMaxExplainer',
-		desc: 'The softmax function made interactive: temperature, logits, probability.',
-		tags: ['educational'],
-		accent: '#a855f7',
-		ground: 'linear-gradient(135deg,#120828,#0c0620)',
-		img: '/media/softmax.jpg',
-		video: null
-	},
-	{
-		title: 'Neocalculus',
-		href: 'https://neovand.github.io/neocalculus/',
-		repo: 'https://github.com/NeoVand/neocalculus',
-		desc: 'An infinitesimal-first calculus book. Learn by manipulation, not memory.',
-		tags: ['educational'],
-		accent: '#a855f7',
-		ground: 'linear-gradient(135deg,#0e0622,#080418)',
-		img: '/media/neocalculus.jpg',
-		video: null
-	},
-	{
-		title: 'RDB',
-		href: 'https://neovand.github.io/RDB/',
-		repo: 'https://github.com/NeoVand/RDB',
-		desc: 'Relational databases from first principles — with live SQL playgrounds in every section.',
-		tags: ['educational'],
-		accent: '#e89c3e',
-		ground: 'linear-gradient(135deg,#1a1206,#120d04)',
-		img: '/media/rdb.jpg',
-		video: null
-	},
-	{
-		title: 'UI Atlas',
-		href: 'https://neovand.github.io/ui-component-guide/',
-		repo: 'https://github.com/NeoVand/ui-component-guide',
-		desc: 'A component reference for vibe coders: browse, compare, copy in one place.',
-		tags: ['educational'],
-		accent: '#e89c3e',
-		ground: 'linear-gradient(135deg,#18130a,#100e06)',
-		img: '/media/ui-atlas.jpg',
-		video: null
-	},
-	{
-		title: 'Swarm',
-		href: 'https://neovand.github.io/swarm/',
-		repo: 'https://github.com/NeoVand/swarm',
-		desc: 'Thousands of agents forming emergent flocks, GPU-accelerated in your browser.',
-		tags: ['research', 'art', 'alife', 'webgpu'],
-		accent: '#6366f1',
-		ground: 'linear-gradient(135deg,#0b1130,#07091e)',
-		img: '/media/swarm.jpg',
-		video: '/media/swarm.mp4'
+			{
+				label: 'Demos',
+				href: 'https://neovand.github.io/gravitational-camera/demo/'
+			}
+		],
+		section: 'physics-research'
 	},
 	{
 		title: 'Moiré',
 		href: 'https://neovand.github.io/Moire/',
 		repo: 'https://github.com/NeoVand/moire',
-		desc: 'A WebGPU studio for interference fields, where every layer is a scalar field rather than a drawing.',
+		desc: 'I developed the counting-map and distance-field theory behind this renderer and implemented it in WebGPU. The Moiré Fields paper below presents the theory. Its inversion algorithm bounds the search and skips provably irrelevant curve indices, running 10–35× faster than fixed enumeration in the tested rotated settings. Fourteen curve families and twelve simultaneous layers support live editing; a shader compiler automatically differentiates user-defined fields. The solver agrees with exhaustive evaluation wherever its certified search interval fits the execution budget.',
+		highlights: [
+			'I developed the counting-map and distance-field theory',
+			'10–35× faster',
+			'automatically differentiates user-defined fields',
+			'certified search interval'
+		],
 		tags: ['art', 'webgpu'],
 		accent: '#e5e7eb',
 		ground: 'linear-gradient(135deg,#0b0b0b,#050505)',
 		img: '/media/moire.jpg',
-		video: '/media/moire.mp4'
+		video: '/media/moire.mp4',
+		section: 'physics-research'
 	},
 	{
-		title: 'Games of Life',
-		href: 'https://neovand.github.io/games-of-life/',
-		repo: 'https://github.com/NeoVand/games-of-life',
-		desc: 'WebGPU-powered cellular automaton engine with a live rule editor, presets, and brush tools.',
-		tags: ['art', 'alife', 'webgpu'],
-		accent: '#22c55e',
-		ground: 'linear-gradient(135deg,#061408,#040e06)',
-		img: '/media/games-of-life.jpg',
-		video: null
+		title: 'Moiré Fields',
+		href: 'https://neovand.github.io/Moire/paper/',
+		repo: 'https://github.com/NeoVand/Moire/tree/main/paper',
+		desc: 'Derived a local law for moiré fringes from differences between counting fields, with explicit validity conditions and an error bound. Continued fractions and lattice reduction identify dominant beats beyond a fixed harmonic-order cutoff; winding numbers determine the signed count of fringe endings at defects. Encoding a scalar field into two layers makes their interference draw its contour map, with a mean localization error of 0.80 pixels on the hardest tested field.',
+		highlights: ['local law for moiré fringes', 'winding numbers', '0.80 pixels'],
+		tags: ['research', 'art'],
+		accent: '#e5e7eb',
+		ground: 'linear-gradient(135deg,#f5f4f0,#e6e5e0)',
+		img: '/media/moire-fields.jpg',
+		video: null,
+		section: 'physics-research'
 	},
 	{
 		title: 'Algocell',
 		href: 'https://neovand.github.io/algocell/',
 		repo: 'https://github.com/NeoVand/algocell',
-		desc: 'Artificial life emerging from Z80 machine code bytes — evolution in your browser.',
+		desc: 'Built a GPU artificial-life system in which self-replicating Z80 programs emerge from random bytes without an imposed fitness function. The associated study distinguishes reproduction from heredity: one early copier sustained lineages, yet none of 512 tested variants met the defined transmission criterion. Derived a conditional law linking copy displacement to heritable payload in overlapping copiers; all 1,067,608 tested Z80 cases matched its predictions.',
+		highlights: [
+			'distinguishes reproduction from heredity',
+			'none of 512 tested variants',
+			'1,067,608 tested Z80 cases'
+		],
 		tags: ['alife', 'webgpu'],
 		accent: '#22c55e',
 		ground: 'linear-gradient(135deg,#041808,#030f06)',
 		img: '/media/algocell.jpg',
-		video: null
+		video: null,
+		section: 'artificial-life-research'
+	},
+	{
+		title: 'Swarm',
+		href: 'https://neovand.github.io/swarm/',
+		repo: 'https://github.com/NeoVand/swarm',
+		desc: 'Implemented metric-aware steering and area compensation for flocking on curved surfaces, including the torus, Möbius strip, and Klein bottle. A calibrated drift reduced the ratio between the most- and least-crowded regions from 5.7 to about 1.5 in the documented torus test. The WebGPU simulator supports seven interacting species and five neighbor-search strategies.',
+		highlights: ['metric-aware steering and area compensation', 'from 5.7 to about 1.5'],
+		tags: ['research', 'art', 'alife', 'webgpu'],
+		accent: '#6366f1',
+		ground: 'linear-gradient(135deg,#0b1130,#07091e)',
+		img: '/media/swarm.jpg',
+		video: '/media/swarm.mp4',
+		section: 'artificial-life-research'
+	},
+	{
+		title: 'Games of Life',
+		href: 'https://neovand.github.io/games-of-life/',
+		repo: 'https://github.com/NeoVand/games-of-life',
+		desc: 'Built a reusable WebGPU cellular-automaton engine with square and hexagonal lattices, multistate rules, and configurable positive or negative influence from dying cells. Separated the rules and GPU runtime into framework-independent packages with a CPU fallback and an embeddable interface. Added real-time sonification that maps cell states to frequency spectra on the GPU and synthesizes the resulting audio.',
+		highlights: ['square and hexagonal lattices', 'real-time sonification'],
+		tags: ['art', 'alife', 'webgpu'],
+		accent: '#22c55e',
+		ground: 'linear-gradient(135deg,#061408,#040e06)',
+		img: '/media/games-of-life.jpg',
+		video: null,
+		section: 'artificial-life-research'
 	},
 	{
 		title: 'Zilion',
 		href: 'https://github.com/NeoVand/zilion',
 		repo: 'https://github.com/NeoVand/zilion',
-		desc: 'Built a WebGPU CPU-emulation lab for emergent replication and heredity: Z80, 6502, 8086, BFF.',
+		desc: 'Built a WebGPU batch emulator for artificial-life experiments across Z80, 6502, 8086, and BFF instruction sets, separating processor semantics from world rules and recording execution and memory writes. Validation covers more than seven million reference cases with zero unexpected differences under documented compatibility rules. The Z80 core executed 1.09 billion instruction steps per second in a warm GPU benchmark on an Apple M4, excluding host transfers.',
+		highlights: [
+			'more than seven million reference cases',
+			'1.09 billion instruction steps per second'
+		],
 		tags: ['webgpu'],
 		accent: '#22c55e',
 		ground: 'linear-gradient(135deg,#041808,#030f06)',
 		img: '/media/zilion.jpg',
-		video: null
+		video: null,
+		section: 'artificial-life-research'
 	},
 	{
 		title: 'Boids',
 		href: 'https://neovand.github.io/boids/',
 		repo: 'https://github.com/NeoVand/boids',
-		desc: "Craig Reynolds' flocking algorithm in WebGL, every rule a live control.",
+		desc: 'Implemented Craig Reynolds’ flocking model with spatially partitioned neighbor queries and custom WebGL rendering, supporting thousands of agents in real time. Added live controls for the interaction rules and visual diagnostics for speed, orientation, and local density, with a Canvas2D fallback for devices without WebGL.',
+		highlights: ['spatially partitioned neighbor queries', 'thousands of agents in real time'],
 		tags: ['art', 'alife', 'webgl'],
 		accent: '#a855f7',
 		ground: 'linear-gradient(135deg,#140820,#0d0618)',
 		img: '/media/boids.jpg',
+		video: null,
+		section: 'artificial-life-research'
+	},
+	{
+		title: 'harnessXray',
+		href: 'https://neovand.github.io/harnessXray/',
+		repo: 'https://github.com/NeoVand/harnessXray',
+		desc: 'Look inside a working AI agent as it runs: its plans, tools, memory, subagents, and context window. Recorded runs, request capture, replay, and persistent checkpoints make the surrounding harness available for inspection.',
+		highlights: ['request capture, replay, and persistent checkpoints'],
+		tags: ['educational', 'ai', 'research'],
+		accent: '#6366f1',
+		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
+		img: '/media/harnessxray.jpg',
+		video: null,
+		section: 'ai-engineering'
+	},
+	{
+		title: 'Voicebook',
+		href: 'https://neovand.github.io/voicebook/',
+		repo: 'https://github.com/NeoVand/voicebook',
+		desc: 'Read technical papers with an AI companion that explains equations and figures. Narration, scrolling, and highlighting stay synchronized as you explore PDF or Markdown documents with local or cloud models.',
+		highlights: ['explains equations and figures'],
+		tags: ['ai', 'webgpu', 'tool'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#04121c,#020c14)',
+		img: '/media/voicebook.jpg',
+		video: null,
+		section: 'ai-engineering'
+	},
+	{
+		title: 'LangX',
+		href: 'https://langx.lol/',
+		repo: 'https://github.com/NeoVand/LangX',
+		desc: 'A practical, interactive course in AI engineering with 29 lessons on the LangChain stack. Work through the tools and concepts used to assemble language models into applications.',
+		highlights: ['29 lessons'],
+		tags: ['educational', 'ai'],
+		accent: '#a855f7',
+		ground: 'linear-gradient(135deg,#150828,#0d0520)',
+		img: '/media/langx.jpg',
+		video: '/media/langx.mp4',
+		section: 'ai-engineering'
+	},
+	{
+		title: 'Embedding Playground',
+		href: 'https://neovand.github.io/EmbeddingPlayground/',
+		repo: 'https://github.com/NeoVand/EmbeddingPlayground',
+		desc: 'Compare twelve models on retrieval, classification, and clustering tasks. Explore their embeddings in 3D and inspect attention and tensors to connect model behavior with the representations underneath.',
+		highlights: ['twelve models', 'attention and tensors'],
+		tags: ['educational', 'ai', 'webgpu'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#04121c,#020c14)',
+		img: '/media/embedding-playground.jpg',
+		video: '/media/embedding-playground.mp4',
+		section: 'ai-engineering'
+	},
+	{
+		title: 'VLMOCR',
+		href: 'https://neovand.github.io/VLMOCR/',
+		repo: 'https://github.com/NeoVand/VLMOCR',
+		desc: 'Turn selected regions of an image into text with vision language models. Give each region a prompt and watch the results stream in to explore how model instructions shape extraction.',
+		highlights: ['selected regions of an image'],
+		tags: ['ai', 'research'],
+		accent: '#e89c3e',
+		ground: 'linear-gradient(135deg,#1a1206,#120d04)',
+		img: '/media/vlmocr.jpg',
+		video: null,
+		section: 'ai-engineering'
+	},
+	{
+		title: 'jax-js skill',
+		href: 'https://github.com/NeoVand/jax-js-skill',
+		repo: 'https://github.com/NeoVand/jax-js-skill',
+		desc: 'An agent skill for building and training real neural networks in the browser with jax-js. It gives coding agents guidance for working with browser-based machine learning and GPU computation.',
+		highlights: ['training real neural networks'],
+		tags: ['ai', 'webgpu'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#04121c,#020c14)',
+		img: '/media/jax-js-skill.jpg',
+		video: null,
+		section: 'ai-engineering'
+	},
+	{
+		title: 'gradientlab.ai',
+		href: 'https://gradientlab.ai',
+		repo: 'https://github.com/NeoVand/GradientDescent',
+		desc: 'Explore gradient descent through live loss landscapes, optimizer races, and learning-rate controls. Guided lessons and curvature analysis connect the geometry you see with the way optimization algorithms learn.',
+		highlights: ['optimizer races', 'curvature analysis'],
+		tags: ['educational', 'ai', 'research'],
+		accent: '#a855f7',
+		ground: 'linear-gradient(135deg,#180828,#0f0520)',
+		img: '/media/gradientlab.jpg',
+		video: null,
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'jaxverse',
+		href: 'https://neovand.github.io/jaxverse/',
+		repo: 'https://github.com/NeoVand/jaxverse',
+		desc: 'An interactive deep-learning book with models that train on your own device. Follow the path from a single neuron to language models, diffusion, reinforcement learning, and visual world models.',
+		highlights: ['models that train on your own device'],
+		tags: ['educational', 'ai', 'webgpu'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#04121c,#020c14)',
+		img: '/media/jaxverse.jpg',
+		video: '/media/jaxverse.mp4',
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'World Models: Before the Move',
+		href: 'https://neovand.github.io/LearningWorldModels/',
+		repo: 'https://github.com/NeoVand/LearningWorldModels',
+		desc: 'An interactive book on world models: how a system learns to imagine what happens next. Train a model in your browser, compare its predictions with reality, or discuss the text with a voice tutor.',
+		highlights: ['Train a model in your browser'],
+		tags: ['educational', 'ai', 'webgpu'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#1a1d1f,#141619)',
+		img: '/media/before-the-move.jpg',
+		video: null,
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'Pattern',
+		href: 'https://neovand.github.io/pattern/',
+		repo: 'https://github.com/NeoVand/pattern',
+		desc: 'A visual introduction to machine learning, from fitting a line to running a tool-using agent. Follow real training experiments, inspect the data, and build intuition one interactive chapter at a time.',
+		highlights: ['real training experiments'],
+		tags: ['educational', 'ai', 'webgpu'],
+		accent: '#a78bfa',
+		ground: 'linear-gradient(135deg,#1b1f20,#141619)',
+		img: '/media/pattern.jpg',
+		video: null,
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'Tissue',
+		href: 'https://neovand.github.io/tissue/',
+		repo: 'https://github.com/NeoVand/tissue',
+		desc: 'Train a small transformer in your browser, then inspect its measured activations in 3D. Follow generation token by token and intervene in the model to test how changes affect its behavior.',
+		highlights: ['measured activations in 3D'],
+		tags: ['ai', 'research', 'webgpu'],
+		accent: '#22c55e',
+		ground: 'linear-gradient(135deg,#1b2022,#101415)',
+		img: '/media/tissue.jpg',
+		video: null,
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'SoftMax Explainer',
+		href: 'https://neovand.github.io/SoftMaxExplainer/',
+		repo: 'https://github.com/NeoVand/SoftMaxExplainer',
+		desc: 'See how a model turns raw scores into probabilities. Adjust logits and temperature to explore how the softmax function changes the balance between confident and evenly distributed predictions.',
+		highlights: ['logits and temperature'],
+		tags: ['educational'],
+		accent: '#a855f7',
+		ground: 'linear-gradient(135deg,#120828,#0c0620)',
+		img: '/media/softmax.jpg',
+		video: null,
+		section: 'ai-ml-education'
+	},
+	{
+		title: 'General Relativity',
+		href: 'https://neovand.github.io/general-relativity/',
+		repo: 'https://github.com/NeoVand/general-relativity',
+		desc: 'An interactive introduction to relativity, from a cart and a clock to curved spacetime. Change the experiments as you read, explore the geometry, or ask the page a question aloud.',
+		highlights: ['curved spacetime'],
+		tags: ['educational', 'ai', 'webgl'],
+		accent: '#a78bfa',
+		ground: 'linear-gradient(135deg,#141a2a,#090c16)',
+		img: '/media/general-relativity.jpg',
+		video: '/media/general-relativity.mp4',
+		section: 'math-and-physics'
+	},
+	{
+		title: 'Homology & Cohomology',
+		href: 'https://neovand.github.io/homology/',
+		repo: 'https://github.com/NeoVand/homology',
+		desc: 'Learn how mathematics counts holes and distinguishes shapes. Interactive 3D figures and a homology calculator connect the basic geometric ideas to the machinery of homology and cohomology.',
+		highlights: ['counts holes and distinguishes shapes'],
+		tags: ['educational', 'webgl'],
+		accent: '#e5c77f',
+		ground: 'linear-gradient(135deg,#0b101a,#05080d)',
+		img: '/media/homology.jpg',
+		video: '/media/homology.mp4',
+		section: 'math-and-physics'
+	},
+	{
+		title: 'Neocalculus',
+		href: 'https://neovand.github.io/neocalculus/',
+		repo: 'https://github.com/NeoVand/neocalculus',
+		desc: 'An interactive calculus book built around local linearity. Move points and change parameters to connect derivatives, accumulation, gradients, and differential forms through a shared geometric picture.',
+		highlights: ['local linearity'],
+		tags: ['educational'],
+		accent: '#a855f7',
+		ground: 'linear-gradient(135deg,#0e0622,#080418)',
+		img: '/media/neocalculus.jpg',
+		video: null,
+		section: 'math-and-physics'
+	},
+	{
+		title: 'Goldbach',
+		href: 'https://neovand.github.io/Goldbach/',
+		repo: 'https://github.com/NeoVand/goldbach',
+		desc: 'Built an FFT-based numerical study that computes Goldbach partition counts for every even number through 20 million and measures agreement with the Hardy–Littlewood prediction. A second experiment detects the first five Riemann-zero frequencies in weighted cumulative counts; the first and fifth amplitudes agree within 1% with Fujii’s prediction under the Riemann hypothesis. A density-matched random-prime control lacks the same alignment.',
+		highlights: [
+			'every even number through 20 million',
+			'first five Riemann-zero frequencies',
+			'within 1%'
+		],
+		tags: ['research'],
+		accent: '#6366f1',
+		ground: 'linear-gradient(135deg,#f4f4f5,#e4e4e7)',
+		img: '/media/goldbach.jpg',
+		video: null,
+		section: 'math-and-physics'
+	},
+	{
+		title: 'GitVibes',
+		href: 'https://neovand.github.io/gitvibes/',
+		repo: 'https://github.com/NeoVand/gitvibes',
+		desc: 'A visual guide to Git for people building software with AI. Interactive explanations make repositories, changes, and collaboration easier to understand, so you can see what your tools are doing.',
+		highlights: ['repositories, changes, and collaboration'],
+		tags: ['educational'],
+		accent: '#e89c3e',
+		ground: 'linear-gradient(135deg,#1a1004,#110c03)',
+		img: '/media/gitvibes.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'TerminalVibes',
+		href: 'https://neovand.github.io/terminalvibes/',
+		repo: 'https://github.com/NeoVand/terminalvibes',
+		desc: 'Learn to read, verify, and run shell commands with a visual guide and browser playground. Build the confidence to understand the commands an AI assistant suggests before using them.',
+		highlights: ['read, verify, and run shell commands'],
+		tags: ['educational'],
+		accent: '#22c55e',
+		ground: 'linear-gradient(135deg,#08160a,#050e07)',
+		img: '/media/terminalvibes.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'Protocol Lab',
+		href: 'https://neovand.github.io/coms/',
+		repo: 'https://github.com/NeoVand/coms',
+		desc: 'An interactive atlas of 46 network protocols, from TCP to QUIC. Step through exchanges, inspect packet layouts and example code, and compare the mechanisms that let computers communicate.',
+		highlights: ['46 network protocols'],
+		tags: ['educational'],
+		accent: '#e89c3e',
+		ground: 'linear-gradient(135deg,#1c1006,#130b04)',
+		img: '/media/protocol-lab.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'Engine Lab',
+		href: 'https://neovand.github.io/Diesel/',
+		repo: 'https://github.com/NeoVand/Diesel',
+		desc: 'Take a V12 diesel engine apart in your browser and explore how its components fit together. Reshape parts and solve their stresses on the GPU to connect mechanical geometry with simulation.',
+		highlights: ['solve their stresses on the GPU'],
+		tags: ['tool', 'educational', 'webgpu'],
+		accent: '#c2652a',
+		ground: 'linear-gradient(135deg,#0a0b0d,#040405)',
+		img: '/media/engine-lab.jpg',
+		video: '/media/engine-lab.mp4',
+		section: 'software-development'
+	},
+	{
+		title: 'RDB',
+		href: 'https://neovand.github.io/RDB/',
+		repo: 'https://github.com/NeoVand/RDB',
+		desc: 'Learn relational databases from first principles with live SQL playgrounds throughout the book. Read a concept, run a query, and inspect the result without leaving the page.',
+		highlights: ['live SQL playgrounds'],
+		tags: ['educational'],
+		accent: '#e89c3e',
+		ground: 'linear-gradient(135deg,#1a1206,#120d04)',
+		img: '/media/rdb.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'Vid2GIF',
+		href: 'https://github.com/NeoVand/Vid2GIF',
+		repo: 'https://github.com/NeoVand/Vid2GIF',
+		desc: 'A native macOS tool for turning video clips into GIFs. Tune the conversion while previewing the actual encoded result, so you can judge quality and file size before exporting.',
+		highlights: ['actual encoded result'],
+		tags: ['tool'],
+		accent: '#38bdf8',
+		ground: 'linear-gradient(135deg,#04121c,#020c14)',
+		img: '/media/vid2gif.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'TalkOver',
+		href: 'https://chromewebstore.google.com/detail/talkover/jhkcpmamhcpjefjclddbpjoccgbjladl',
+		repo: 'https://github.com/NeoVand/TalkOver',
+		desc: 'Record a browser tab with your microphone and a webcam overlay, then export a video or GIF. The recording workflow runs locally, making it useful for demonstrations, walkthroughs, and quick explanations.',
+		highlights: ['microphone and a webcam overlay', 'runs locally'],
+		tags: ['tool'],
+		accent: '#6366f1',
+		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
+		img: '/media/talkover.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'UI Atlas',
+		href: 'https://neovand.github.io/ui-component-guide/',
+		repo: 'https://github.com/NeoVand/ui-component-guide',
+		desc: 'A visual reference for interface components. Browse examples, compare different patterns, and copy what you need while learning the vocabulary for describing an interface to a coding assistant.',
+		highlights: ['visual reference for interface components'],
+		tags: ['educational'],
+		accent: '#e89c3e',
+		ground: 'linear-gradient(135deg,#18130a,#100e06)',
+		img: '/media/ui-atlas.jpg',
+		video: null,
+		section: 'software-development'
+	},
+	{
+		title: 'MIDI Lab',
+		href: 'https://neovand.github.io/midilab/',
+		repo: 'https://github.com/NeoVand/midilab',
+		desc: 'Learn music and MIDI through a playable instrument and hands-on lessons. Press a key to inspect the messages it sends, explore how sound is controlled, and test your understanding with practical checkpoints.',
+		highlights: ['playable instrument and hands-on lessons'],
+		tags: ['educational', 'tool'],
+		accent: '#22c55e',
+		ground: 'linear-gradient(135deg,#08160a,#050e07)',
+		img: '/media/midilab.jpg',
+		video: '/media/midilab.mp4',
+		section: 'music-and-art'
+	},
+	{
+		title: 'OP-XY Agent',
+		href: 'https://neovand.github.io/op-xy-agent/',
+		repo: 'https://github.com/NeoVand/op-xy-agent',
+		desc: 'A playable browser replica of the OP-XY synthesizer paired with an AI guide. Learn its controls, create patterns and sounds, and explore an agent that can also interact with the physical instrument.',
+		highlights: ['playable browser replica of the OP-XY synthesizer'],
+		tags: ['ai', 'tool'],
+		accent: '#d4d4d8',
+		ground: 'linear-gradient(135deg,#1c1d20,#111214)',
+		img: '/media/op-xy-agent.jpg',
+		video: '/media/op-xy-agent.mp4',
+		section: 'music-and-art'
+	},
+	{
+		title: 'Chord',
+		section: 'music-and-art',
+		href: 'https://github.com/NeoVand/chord',
+		repo: 'https://github.com/NeoVand/chord',
+		desc: 'A playable instrument for exploring harmony through sound and geometry. Connected views of overtones, tuning, chords, and waveforms let you hear an interval and see the relationships behind it.',
+		highlights: ['harmony through sound and geometry'],
+		tags: ['music', 'art', 'harmony', 'tuning', 'audio', 'webgpu'],
+		status: 'In progress',
+		accent: null,
+		ground: null,
+		img: null,
 		video: null
 	},
 	{
 		title: 'Vibe Coding',
 		href: 'https://neovand.github.io/vibe-coding/',
 		repo: 'https://github.com/NeoVand/vibe-coding',
-		desc: 'A first-person flight through volumetric clouds and ocean waves, raymarched in real time.',
+		desc: 'A real-time visual experiment that lets you fly through volumetric clouds and ocean waves. Explore an atmospheric world built from raymarched light, water, and procedural geometry.',
+		highlights: ['volumetric clouds and ocean waves'],
 		tags: ['art', 'webgpu', 'webgl'],
 		accent: '#6366f1',
 		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
 		img: '/media/vibe-coding.jpg',
-		video: '/media/vibe-coding.mp4'
-	},
-	{
-		title: 'Moiré Fields',
-		href: 'https://neovand.github.io/Moire/paper/',
-		repo: 'https://github.com/NeoVand/Moire/tree/main/paper',
-		desc: 'The theory behind Moiré: interference as a scalar field, and where the fringes fall.',
-		tags: ['research', 'art'],
-		accent: '#e5e7eb',
-		ground: 'linear-gradient(135deg,#f5f4f0,#e6e5e0)',
-		img: '/media/moire-fields.jpg',
-		video: null
-	},
-	{
-		title: 'Goldbach',
-		href: 'https://neovand.github.io/Goldbach/',
-		repo: 'https://github.com/NeoVand/goldbach',
-		desc: 'One FFT counts every Goldbach partition — and the Riemann zeros turn up in the residue.',
-		tags: ['research'],
-		accent: '#6366f1',
-		ground: 'linear-gradient(135deg,#f4f4f5,#e4e4e7)',
-		img: '/media/goldbach.jpg',
-		video: null
-	},
-	{
-		title: 'MacMac',
-		href: 'https://macmac.lol/',
-		repo: 'https://github.com/NeoVand/MacMac',
-		desc: 'A game about sampling probability distributions with the fewest clicks.',
-		tags: ['game', 'research'],
-		accent: '#a855f7',
-		ground: 'linear-gradient(135deg,#140820,#0d0618)',
-		img: '/media/macmac.jpg',
-		video: null
-	},
-	{
-		title: 'Vid2GIF',
-		href: 'https://github.com/NeoVand/Vid2GIF',
-		repo: 'https://github.com/NeoVand/Vid2GIF',
-		desc: 'A native macOS video-to-GIF converter that previews the real encoded output as you tune it.',
-		tags: ['tool'],
-		accent: '#38bdf8',
-		ground: 'linear-gradient(135deg,#04121c,#020c14)',
-		img: '/media/vid2gif.jpg',
-		video: null
-	},
-	{
-		title: 'TalkOver',
-		href: 'https://chromewebstore.google.com/detail/talkover/jhkcpmamhcpjefjclddbpjoccgbjladl',
-		repo: 'https://github.com/NeoVand/TalkOver',
-		desc: 'Record a browser tab with mic and webcam overlay, then export to video or GIF. All local.',
-		tags: ['tool'],
-		accent: '#6366f1',
-		ground: 'linear-gradient(135deg,#0a0a1e,#060614)',
-		img: '/media/talkover.jpg',
-		video: null
+		video: '/media/vibe-coding.mp4',
+		section: 'music-and-art'
 	}
 ];
 export const papers: Paper[] = [
