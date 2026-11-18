@@ -226,119 +226,117 @@
 							<h3 id="{group.id}-title" tabindex="-1">{group.title}</h3>
 							<p>{group.description}</p>
 						</header>
-						<div class="project-list glass">
-							{#each group.projects as project (project.href)}
-								<article class="project-row">
-									<a
-										class="thumb"
-										href={project.href}
-										target="_blank"
-										rel="noopener"
-										tabindex="-1"
-										aria-hidden="true"
-										style:background={project.ground ?? 'var(--pane-2)'}
-									>
-										{#if project.video}
-											<video
-												muted
-												loop
-												playsinline
-												preload="none"
-												poster={project.img ?? undefined}
-												{@attach clip(project)}
-												aria-hidden="true"
-											></video>
-										{:else if project.img}
-											<img src={project.img} alt="" loading="lazy" decoding="async" />
-										{:else}
-											<svg
-												class="project-placeholder"
-												viewBox="0 0 120 80"
-												fill="none"
-												aria-hidden="true"
+						{#each group.projects as project (project.href)}
+							<article class="project-row">
+								<a
+									class="thumb"
+									href={project.href}
+									target="_blank"
+									rel="noopener"
+									tabindex="-1"
+									aria-hidden="true"
+									style:background={project.ground ?? 'var(--pane-2)'}
+								>
+									{#if project.video}
+										<video
+											muted
+											loop
+											playsinline
+											preload="none"
+											poster={project.img ?? undefined}
+											{@attach clip(project)}
+											aria-hidden="true"
+										></video>
+									{:else if project.img}
+										<img src={project.img} alt="" loading="lazy" decoding="async" />
+									{:else}
+										<svg
+											class="project-placeholder"
+											viewBox="0 0 120 80"
+											fill="none"
+											aria-hidden="true"
+										>
+											<path d="M21 29h78M21 40h78M21 51h78" />
+											<path d="M48 49V20l31-6v29M48 27l31-6" />
+											<ellipse cx="42" cy="51" rx="6" ry="4" /><ellipse
+												cx="73"
+												cy="45"
+												rx="6"
+												ry="4"
+											/>
+										</svg>
+									{/if}
+								</a>
+								<div class="project-copy">
+									<div class="project-heading">
+										<h4>
+											<a href={project.href} target="_blank" rel="noopener">{project.title}</a>
+										</h4>
+										{#if project.status}<span class="project-status">{project.status}</span>{/if}
+									</div>
+									<div class="project-details">
+										<p class="project-description">
+											{#each project.descriptionSegments as segment (segment.start)}{#if segment.emphasis}<strong
+														>{segment.text}</strong
+													>{:else}{segment.text}{/if}{/each}
+										</p>
+										<div class="project-links">
+											<a
+												class="primary-link"
+												href={project.href}
+												target="_blank"
+												rel="noopener"
+												aria-label="{projectAction(project)}: {project.title}"
 											>
-												<path d="M21 29h78M21 40h78M21 51h78" />
-												<path d="M48 49V20l31-6v29M48 27l31-6" />
-												<ellipse cx="42" cy="51" rx="6" ry="4" /><ellipse
-													cx="73"
-													cy="45"
-													rx="6"
-													ry="4"
-												/>
-											</svg>
-										{/if}
-									</a>
-									<div class="project-copy">
-										<div class="project-heading">
-											<h4>
-												<a href={project.href} target="_blank" rel="noopener">{project.title}</a>
-											</h4>
-											{#if project.status}<span class="project-status">{project.status}</span>{/if}
-										</div>
-										<div class="project-details">
-											<p class="project-description">
-												{#each project.descriptionSegments as segment (segment.start)}{#if segment.emphasis}<strong
-															>{segment.text}</strong
-														>{:else}{segment.text}{/if}{/each}
-											</p>
-											<div class="project-links">
+												{projectAction(project)}
+											</a>
+											{#if project.repo && project.repo !== project.href}
 												<a
-													class="primary-link"
-													href={project.href}
+													href={project.repo}
 													target="_blank"
 													rel="noopener"
-													aria-label="{projectAction(project)}: {project.title}"
+													aria-label="{project.title} source on GitHub"
 												>
-													{projectAction(project)}
+													<svg aria-hidden="true"><use href="#icon-github" /></svg>Source
 												</a>
-												{#if project.repo && project.repo !== project.href}
-													<a
-														href={project.repo}
-														target="_blank"
-														rel="noopener"
-														aria-label="{project.title} source on GitHub"
-													>
-														<svg aria-hidden="true"><use href="#icon-github" /></svg>Source
-													</a>
-												{/if}
-												{#each project.links ?? [] as link (link.href)}
-													{@const resource = resourceType(link.label)}
-													<a
-														href={link.href}
-														target="_blank"
-														rel="noopener"
-														aria-label="{project.title} {link.label.toLowerCase()}"
-													>
-														{#if resource === 'paper'}
-															<svg
-																class="resource-icon"
-																viewBox="0 0 24 24"
-																fill="none"
-																aria-hidden="true"
-																><path
-																	d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"
-																/><path d="M14 3v6h6M8 13h8M8 17h6" /></svg
-															>
-														{:else if resource === 'model'}
-															<svg
-																class="resource-icon"
-																viewBox="0 0 24 24"
-																fill="none"
-																aria-hidden="true"
-																><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9Z" /><path
-																	d="m3.5 7.5 8.5 4.5 8.5-4.5M12 12v9M7.75 5.25l8.5 4.5"
-																/></svg
-															>
-														{/if}
-														{link.label}</a
-													>
-												{/each}
-											</div>
+											{/if}
+											{#each project.links ?? [] as link (link.href)}
+												{@const resource = resourceType(link.label)}
+												<a
+													href={link.href}
+													target="_blank"
+													rel="noopener"
+													aria-label="{project.title} {link.label.toLowerCase()}"
+												>
+													{#if resource === 'paper'}
+														<svg
+															class="resource-icon"
+															viewBox="0 0 24 24"
+															fill="none"
+															aria-hidden="true"
+															><path
+																d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"
+															/><path d="M14 3v6h6M8 13h8M8 17h6" /></svg
+														>
+													{:else if resource === 'model'}
+														<svg
+															class="resource-icon"
+															viewBox="0 0 24 24"
+															fill="none"
+															aria-hidden="true"
+															><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9Z" /><path
+																d="m3.5 7.5 8.5 4.5 8.5-4.5M12 12v9M7.75 5.25l8.5 4.5"
+															/></svg
+														>
+													{/if}
+													{link.label}</a
+												>
+											{/each}
 										</div>
 									</div>
-								</article>
-							{/each}
-						</div>
+								</div>
+							</article>
+						{/each}
 					</section>
 				{:else}
 					<div class="empty-state glass">
@@ -462,27 +460,19 @@
 		font-size: 14px;
 		line-height: 1.5;
 	}
-	.project-list {
-		border-radius: 16px;
-		padding-inline: 24px;
-	}
 	.project-row {
 		display: grid;
 		grid-template-columns: 320px minmax(0, 1fr);
-		grid-template-rows: auto auto;
 		align-items: start;
-		gap: 5px 20px;
+		gap: 20px;
 		padding-block: 14px;
 	}
 	.project-row + .project-row {
 		border-top: 1px solid var(--hair);
 	}
 	.thumb {
-		grid-column: 1;
-		grid-row: 2;
 		display: block;
 		position: relative;
-		align-self: start;
 		overflow: hidden;
 		border-radius: 8px;
 		background: var(--pane-2);
@@ -508,16 +498,12 @@
 		fill: currentColor;
 	}
 	.project-copy {
-		display: contents;
-	}
-	.project-details {
-		grid-column: 2;
-		grid-row: 2;
 		min-width: 0;
 	}
+	.project-details {
+		margin-top: 5px;
+	}
 	.project-heading {
-		grid-column: 2;
-		grid-row: 1;
 		min-width: 0;
 		display: flex;
 		align-items: center;
@@ -624,9 +610,6 @@
 		.project-row {
 			grid-template-columns: 260px minmax(0, 1fr);
 		}
-		.project-list {
-			padding-inline: 20px;
-		}
 	}
 	@media (max-width: 800px) {
 		.directory-head {
@@ -676,29 +659,15 @@
 		.project-group + .project-group {
 			margin-top: 26px;
 		}
-		.project-list {
-			border-radius: 12px;
-			padding-inline: 15px;
-		}
 		.project-row {
 			grid-template-columns: minmax(0, 1fr);
 			gap: 10px;
-			padding-block: 14px;
-		}
-		.thumb {
-			grid-column: auto;
-			grid-row: auto;
-		}
-		.project-copy {
-			display: block;
-			min-width: 0;
 		}
 		.project-heading h4 {
 			line-height: 1.3;
 		}
 		.project-description {
 			line-height: 1.55;
-			margin-top: 5px;
 		}
 		.project-links {
 			gap: 4px 16px;
@@ -706,15 +675,9 @@
 		}
 		.project-links a {
 			min-height: 34px;
-			font-size: 12px;
 		}
 		.empty-state {
 			padding: 26px;
-		}
-	}
-	@media (max-width: 370px) {
-		.project-list {
-			padding-inline: 12px;
 		}
 	}
 </style>
