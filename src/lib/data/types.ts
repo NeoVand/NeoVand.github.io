@@ -46,6 +46,7 @@ export interface Paper {
 	title: string;
 	venue: string;
 	pdf: string;
+	arxiv?: string;
 	pages: number;
 	authors: string;
 	abstract: string;

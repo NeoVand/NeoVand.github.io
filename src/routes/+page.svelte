@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { readLights } from '$lib/lights.svelte';
-	import { meta } from '$lib/data/content';
+	import { meta, preprints } from '$lib/data/content';
 	import Scene from '$lib/components/Scene.svelte';
 	import Hero from '$lib/components/Hero.svelte';
 	import Resume from '$lib/components/Resume.svelte';
@@ -26,6 +26,12 @@
 	<Hero bind:cvOpen />
 	<Resume bind:open={cvOpen} />
 	<Work />
+	<Papers
+		id="preprints"
+		title="Preprints"
+		items={preprints}
+		onopen={(p, deck) => room.open(p, deck)}
+	/>
 	<Papers onopen={(p, deck) => room.open(p, deck)} />
 	<Media />
 	<Earlier />

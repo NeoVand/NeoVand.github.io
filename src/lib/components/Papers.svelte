@@ -4,7 +4,17 @@
 
 	// the room itself stands at the top of the page, over everything,
 	// lamp cord included; the decks only ask for it
-	let { onopen }: { onopen: (p: Paper, deck: HTMLElement) => void } = $props();
+	let {
+		id = 'papers',
+		title = 'Selected publications',
+		items = papers,
+		onopen
+	}: {
+		id?: string;
+		title?: string;
+		items?: readonly Paper[];
+		onopen: (p: Paper, deck: HTMLElement) => void;
+	} = $props();
 
 	function open(e: MouseEvent, p: Paper) {
 		// a modified click means "the PDF, please", as the link says
@@ -14,13 +24,13 @@
 	}
 </script>
 
-<section class="section" id="papers" aria-labelledby="papers-title">
+<section class="section" {id} aria-labelledby="{id}-title">
 	<div class="wrap">
 		<div class="section-head">
-			<h2 class="section-title" id="papers-title">Selected publications</h2>
+			<h2 class="section-title" id="{id}-title">{title}</h2>
 		</div>
 		<div class="decks">
-			{#each papers as p (p.slug)}
+			{#each items as p (p.slug)}
 				<a class="deck" href={p.pdf} target="_blank" rel="noopener" onclick={(e) => open(e, p)}>
 					<div class="fan">
 						{#each [4, 3, 2, 1, 0] as i (i)}

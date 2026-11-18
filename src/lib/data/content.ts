@@ -682,6 +682,31 @@ export const projects: Project[] = [
 		section: 'music-and-art'
 	}
 ];
+export const preprints: Paper[] = [
+	{
+		slug: 'sketchpad',
+		title: 'Sketchpad: certified exact arithmetic with a small vision-language model',
+		venue: 'arXiv · 2026',
+		pdf: '/papers/Sketchpad.pdf',
+		arxiv: 'https://arxiv.org/abs/2611.04434',
+		pages: 25,
+		authors: 'Mostafa ‘Neo’ Mohsenvand',
+		abstract:
+			'Language models are accurate on most long-arithmetic problems, but their accuracy is estimated on samples and carries no guarantee for an unseen input; tool use is exact but moves the computation outside the network. We show that exactness at all input lengths becomes a finite, checkable property of a network when each of its steps reads only a bounded view of an external working memory. In Sketchpad, Qwen3.5-0.8B with a low-rank adapter executes arithmetic procedures on a rendered sheet. Each forward pass reads a three-cell view and emits one step: a digit, a carry or borrow, and the next operation. A fixed runtime moves the view and writes no digit of a result. We prove in Lean that the model is then exact on all inputs of any length if and only if it is exact on the finite set of views the runtime presents, that no finite test suffices when steps also read earlier steps, and that the guarantee tolerates bounded numerical perturbation and extends to compositions of procedures. All 2,446 views pass on the deployment device, a laptop GPU running the model in a web browser. The certified model performs signed addition and subtraction, long multiplication and division, square roots and greatest common divisors at arbitrary length. It solved 200 of 200 pre-registered problems in the browser, and 220 of 220 sums of up to 1,000 digits and products of up to 20 digits, of which GPT-6.1 Sol, the strongest of ten other models, solved 217. A symbolic runtime built on these procedures solves, expands and factors polynomials with every number computed by the model, and a multiplicative gate on the adapter recovers the base model exactly when the sheet is not in use.'
+	},
+	{
+		slug: 'cold-attention',
+		title: 'Attention at Absolute Zero',
+		venue: 'arXiv · 2026',
+		pdf: '/papers/cold-attention.pdf',
+		arxiv: 'https://arxiv.org/abs/2611.11937',
+		pages: 51,
+		authors: 'Mostafa ‘Neo’ Mohsenvand',
+		abstract:
+			'Attention scores the candidates that could support an answer, which we call witnesses, and reads those scores at a temperature. We build a higher-order attention layer whose state lives on pairs of items, so that it can answer questions about relations, such as whether one town can be reached from another. For a pair of items a and b, every third item k is a candidate witness, judged through its two legs (a,k) and (k,b). The layer reads these witnesses at zero temperature, keeping the best witness and the number of witnesses that tie with it, and passes on only bits that compare such counts. It is looped, rebuilding its pair state from the input and these bits at every loop, and it is trained from answers alone. Each choice removes one of three ways in which soft attention fails as inputs grow: its weight disperses over ever more candidates, learned scores cannot resolve the shrinking gaps between them, and a soft state drifts from loop to loop. Trained in this way, the layer stays exact far beyond the sizes it saw. In maximum retrieval it is right on at least 99.95% of sets a thousand times larger than any in training, on every one of ten seeds, where the same network trained with a soft count falls to 42% at 4,096 items. On the thirty algorithms of CLRS-30, trained without hints, a general form of the layer, which reads half its channels at zero temperature but embeds the input’s numbers and carries a real-valued state from loop to loop, beats the best published model, even though that model is trained with hints on some tasks; the full cold layer is right on every test input of 9 of the 12 tasks whose answers depend on the numbers only through comparisons. From yes-or-no answers it learns to decide 2-SAT and two-colouring exactly at 500 variables and, as our theory predicts, not parity equations, which the layer cannot express. Beside a frozen language model of 7 billion parameters it chains family relations exactly in contexts of 1,000 statements after training on 16, where the model alone falls to 44%, and finite checks on the trained weights prove every block that learned correct at every size, on contexts without cycles and given what the model reads. On CLUTRR, given the stories’ graphs, it is right on every story of five to ten relations and learns exactly the benchmark’s 62 rules; from their text, with no hand-written rule, the model frozen and only a small read-in trained from the answers, it lifts an open 7B model from 33% to 65%, above every system we found reported without hand-written rules except frontier reasoning models.'
+	}
+];
+
 export const papers: Paper[] = [
 	{
 		slug: 'bone-conduction',

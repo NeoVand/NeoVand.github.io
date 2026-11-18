@@ -450,6 +450,29 @@
 					<svg aria-hidden="true"><use href="#icon-download" /></svg>
 					Download PDF
 				</a>
+				{#if paper.arxiv}
+					<a
+						class="pill glass"
+						href={paper.arxiv}
+						target="_blank"
+						rel="noopener"
+						aria-label="View {paper.title} on arXiv"
+					>
+						<svg
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.7"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+							><path
+								d="M14 3h7v7M21 3l-9 9M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"
+							/></svg
+						>
+						View on arXiv
+					</a>
+				{/if}
 				<span class="count">{paper.pages} page{paper.pages === 1 ? '' : 's'}</span>
 			</div>
 		</div>
@@ -621,6 +644,7 @@
 	}
 	.actions {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		gap: 14px;
 		margin-top: 16px;
