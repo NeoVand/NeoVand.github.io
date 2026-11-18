@@ -354,17 +354,19 @@
 
 <style>
 	.work {
+		padding-top: 40px;
+		padding-bottom: 16px;
 		scroll-margin-top: 24px;
 	}
 	.directory-head {
 		display: flex;
 		align-items: start;
 		justify-content: space-between;
-		gap: 32px;
-		margin-bottom: 48px;
+		gap: 24px;
+		margin-bottom: 24px;
 	}
 	.directory-intro {
-		margin-top: 14px;
+		margin-top: 8px;
 		max-width: 36em;
 		font-size: 15px;
 		line-height: 1.6;
@@ -429,7 +431,7 @@
 		background: var(--pane-2);
 	}
 	.search-summary {
-		margin-top: 9px;
+		margin-top: 7px;
 		padding-left: 1px;
 		font-size: 12px;
 		color: var(--muted);
@@ -441,10 +443,10 @@
 		scroll-margin-top: 32px;
 	}
 	.project-group + .project-group {
-		margin-top: 52px;
+		margin-top: 30px;
 	}
 	.group-head {
-		margin-bottom: 20px;
+		margin-bottom: 12px;
 	}
 	.group-head h3 {
 		width: fit-content;
@@ -454,11 +456,11 @@
 		scroll-margin-top: 24px;
 	}
 	.group-head p {
-		margin-top: 9px;
-		max-width: 64ch;
+		margin-top: 5px;
+		max-width: 80ch;
 		color: var(--muted);
 		font-size: 14px;
-		line-height: 1.65;
+		line-height: 1.5;
 	}
 	.project-list {
 		border-radius: 16px;
@@ -469,8 +471,8 @@
 		grid-template-columns: 320px minmax(0, 1fr);
 		grid-template-rows: auto auto;
 		align-items: start;
-		gap: 8px 32px;
-		padding-block: 28px;
+		gap: 5px 20px;
+		padding-block: 14px;
 	}
 	.project-row + .project-row {
 		border-top: 1px solid var(--hair);
@@ -524,9 +526,9 @@
 		row-gap: 5px;
 	}
 	.project-heading h4 {
-		font-size: 20px;
+		font-size: 18px;
 		font-weight: 590;
-		line-height: 1.4;
+		line-height: 1.35;
 		letter-spacing: -0.015em;
 		color: var(--title);
 	}
@@ -544,11 +546,11 @@
 		white-space: nowrap;
 	}
 	.project-description {
-		max-width: 64ch;
+		max-width: 80ch;
 		margin-top: 0;
 		color: var(--text);
-		font-size: 15px;
-		line-height: 1.7;
+		font-size: 14px;
+		line-height: 1.5;
 		text-wrap: pretty;
 	}
 	.project-description strong {
@@ -559,8 +561,8 @@
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		column-gap: 18px;
-		margin-top: 8px;
+		column-gap: 16px;
+		margin-top: 5px;
 	}
 	.project-links a {
 		display: inline-flex;
@@ -621,7 +623,6 @@
 	@media (max-width: 1050px) {
 		.project-row {
 			grid-template-columns: 260px minmax(0, 1fr);
-			column-gap: 26px;
 		}
 		.project-list {
 			padding-inline: 20px;
@@ -629,8 +630,8 @@
 	}
 	@media (max-width: 800px) {
 		.directory-head {
-			gap: 22px;
-			margin-bottom: 28px;
+			gap: 20px;
+			margin-bottom: 20px;
 		}
 		.directory-intro {
 			font-size: 14px;
@@ -641,18 +642,17 @@
 		}
 		.project-row {
 			grid-template-columns: 230px minmax(0, 1fr);
-			column-gap: 24px;
 		}
 	}
 	@media (max-width: 560px) {
 		.directory-head {
 			flex-direction: column;
-			gap: 22px;
-			margin-bottom: 28px;
+			gap: 16px;
+			margin-bottom: 20px;
 		}
 		.directory-intro {
 			max-width: none;
-			margin-top: 10px;
+			margin-top: 6px;
 		}
 		.search-area {
 			width: 100%;
@@ -664,17 +664,17 @@
 			font-size: 11px;
 		}
 		.group-head {
-			margin-bottom: 15px;
+			margin-bottom: 10px;
 		}
 		.group-head h3 {
-			font-size: 23px;
+			font-size: 22px;
 		}
 		.group-head p {
 			font-size: 13px;
-			margin-top: 8px;
+			margin-top: 5px;
 		}
 		.project-group + .project-group {
-			margin-top: 38px;
+			margin-top: 26px;
 		}
 		.project-list {
 			border-radius: 12px;
@@ -682,8 +682,8 @@
 		}
 		.project-row {
 			grid-template-columns: minmax(0, 1fr);
-			gap: 16px;
-			padding-block: 22px;
+			gap: 10px;
+			padding-block: 14px;
 		}
 		.thumb {
 			grid-column: auto;
@@ -694,17 +694,15 @@
 			min-width: 0;
 		}
 		.project-heading h4 {
-			font-size: 18px;
-			line-height: 1.4;
+			line-height: 1.3;
 		}
 		.project-description {
-			font-size: 14px;
-			line-height: 1.65;
-			margin-top: 8px;
+			line-height: 1.55;
+			margin-top: 5px;
 		}
 		.project-links {
 			gap: 4px 16px;
-			margin-top: 8px;
+			margin-top: 4px;
 		}
 		.project-links a {
 			min-height: 34px;
