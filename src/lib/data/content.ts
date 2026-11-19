@@ -134,7 +134,7 @@ export const projects: Project[] = [
 		links: [
 			{
 				label: 'Paper',
-				href: 'https://neovand.github.io/sketchpad/paper'
+				href: 'https://arxiv.org/abs/2611.04434'
 			},
 			{
 				label: 'Model',
