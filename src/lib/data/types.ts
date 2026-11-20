@@ -48,6 +48,8 @@ export interface Paper {
 	pdf: string;
 	arxiv?: string;
 	pages: number;
+	/** Intrinsic size of this paper’s reading-room page images, in pixels. */
+	pageSize: { width: number; height: number };
 	authors: string;
 	abstract: string;
 }

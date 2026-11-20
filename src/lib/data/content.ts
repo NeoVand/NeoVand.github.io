@@ -690,6 +690,7 @@ export const preprints: Paper[] = [
 		pdf: '/papers/Sketchpad.pdf',
 		arxiv: 'https://arxiv.org/abs/2611.04434',
 		pages: 25,
+		pageSize: { width: 720, height: 1019 },
 		authors: 'Mostafa ‘Neo’ Mohsenvand',
 		abstract:
 			'Language models are accurate on most long-arithmetic problems, but their accuracy is estimated on samples and carries no guarantee for an unseen input; tool use is exact but moves the computation outside the network. We show that exactness at all input lengths becomes a finite, checkable property of a network when each of its steps reads only a bounded view of an external working memory. In Sketchpad, Qwen3.5-0.8B with a low-rank adapter executes arithmetic procedures on a rendered sheet. Each forward pass reads a three-cell view and emits one step: a digit, a carry or borrow, and the next operation. A fixed runtime moves the view and writes no digit of a result. We prove in Lean that the model is then exact on all inputs of any length if and only if it is exact on the finite set of views the runtime presents, that no finite test suffices when steps also read earlier steps, and that the guarantee tolerates bounded numerical perturbation and extends to compositions of procedures. All 2,446 views pass on the deployment device, a laptop GPU running the model in a web browser. The certified model performs signed addition and subtraction, long multiplication and division, square roots and greatest common divisors at arbitrary length. It solved 200 of 200 pre-registered problems in the browser, and 220 of 220 sums of up to 1,000 digits and products of up to 20 digits, of which GPT-6.1 Sol, the strongest of ten other models, solved 217. A symbolic runtime built on these procedures solves, expands and factors polynomials with every number computed by the model, and a multiplicative gate on the adapter recovers the base model exactly when the sheet is not in use.'
@@ -701,6 +702,7 @@ export const preprints: Paper[] = [
 		pdf: '/papers/cold-attention.pdf',
 		arxiv: 'https://arxiv.org/abs/2611.11937',
 		pages: 51,
+		pageSize: { width: 720, height: 1019 },
 		authors: 'Mostafa ‘Neo’ Mohsenvand',
 		abstract:
 			'Attention scores the candidates that could support an answer, which we call witnesses, and reads those scores at a temperature. We build a higher-order attention layer whose state lives on pairs of items, so that it can answer questions about relations, such as whether one town can be reached from another. For a pair of items a and b, every third item k is a candidate witness, judged through its two legs (a,k) and (k,b). The layer reads these witnesses at zero temperature, keeping the best witness and the number of witnesses that tie with it, and passes on only bits that compare such counts. It is looped, rebuilding its pair state from the input and these bits at every loop, and it is trained from answers alone. Each choice removes one of three ways in which soft attention fails as inputs grow: its weight disperses over ever more candidates, learned scores cannot resolve the shrinking gaps between them, and a soft state drifts from loop to loop. Trained in this way, the layer stays exact far beyond the sizes it saw. In maximum retrieval it is right on at least 99.95% of sets a thousand times larger than any in training, on every one of ten seeds, where the same network trained with a soft count falls to 42% at 4,096 items. On the thirty algorithms of CLRS-30, trained without hints, a general form of the layer, which reads half its channels at zero temperature but embeds the input’s numbers and carries a real-valued state from loop to loop, beats the best published model, even though that model is trained with hints on some tasks; the full cold layer is right on every test input of 9 of the 12 tasks whose answers depend on the numbers only through comparisons. From yes-or-no answers it learns to decide 2-SAT and two-colouring exactly at 500 variables and, as our theory predicts, not parity equations, which the layer cannot express. Beside a frozen language model of 7 billion parameters it chains family relations exactly in contexts of 1,000 statements after training on 16, where the model alone falls to 44%, and finite checks on the trained weights prove every block that learned correct at every size, on contexts without cycles and given what the model reads. On CLUTRR, given the stories’ graphs, it is right on every story of five to ten relations and learns exactly the benchmark’s 62 rules; from their text, with no hand-written rule, the model frozen and only a small read-in trained from the answers, it lifts an open 7B model from 33% to 65%, above every system we found reported without hand-written rules except frontier reasoning models.'
@@ -715,6 +717,7 @@ export const papers: Paper[] = [
 		venue: 'IEEE International Conference on Consumer Electronics · 2024 · Principal investigator',
 		pdf: '/papers/bone-conduction.pdf',
 		pages: 5,
+		pageSize: { width: 720, height: 932 },
 		authors:
 			'Chanel Manzanillo, Ralfy Chettiar, Rahil Soroushmojdehi, Leou Ying, Juewei Dong, Mostafa ‘Neo’ Mohsenvand',
 		abstract:
@@ -727,6 +730,7 @@ export const papers: Paper[] = [
 		venue: 'HealthyIoT / HealthWear, Springer LNICST · 2024 · Principal investigator',
 		pdf: '/papers/breathing.pdf',
 		pages: 20,
+		pageSize: { width: 720, height: 1019 },
 		authors: 'Ian Karman, Yue Sun, Rahil Soroushmojdehi, Jose A. Silva, Mostafa ‘Neo’ Mohsenvand',
 		abstract:
 			'This study presents a low-latency, real-time breathing cycle tracking system utilizing a conditional Generative Adversarial Network (GAN) with Wasserstein loss, with a low-powered, low sample rate photoplethysmography (PPG) sensor. The aim is to provide a clinically accurate respiratory tool capable of tracking and visualizing the breathing cycle and rate in real time for at-home and general ambulatory applications. To detect breathing activity in real time, we used a wearable headband with a 25 Hz PPG sensor and an inductive respiratory sensor as ground truth, processing the inputs in one-second windows to meet the latency constraints. Signal processing and machine learning techniques were explored, and the proposed GAN-based method with Wasserstein loss and gradient penalty outperformed the others in accurately tracking the ground-truth breathing curve. Leveraging the GAN-generated breathing curve, a peak-detection algorithm calculated the respiratory rate with an average mean absolute error of 1.47 breaths per minute across ten test subjects — comparable to the high-sampling-rate PPG literature (1 bpm), but five times faster in real-time monitoring. The GAN-generated respiratory signal from a low-sampling-rate wearable PPG sensor demonstrates potential as a viable alternative to traditional respiratory monitoring, useful in applications such as pain management.'
@@ -737,6 +741,7 @@ export const papers: Paper[] = [
 		venue: 'NeurIPS ML4H Workshop, PMLR · 2020',
 		pdf: '/papers/seqclr.pdf',
 		pages: 16,
+		pageSize: { width: 720, height: 932 },
 		authors: 'Mostafa ‘Neo’ Mohsenvand, Mohammad Rasool Izadi, Pattie Maes',
 		abstract:
 			'Interpreting and labeling human electroencephalogram (EEG) is a challenging task requiring years of medical training. We present a framework for learning representations from EEG signals via contrastive learning. By recombining channels from multi-channel recordings, we increase the number of samples quadratically per recording. We train a channel-wise feature extractor by extending the SimCLR framework to time-series data. We introduce a set of augmentations for EEG and study their efficacy on different classification tasks. We demonstrate that the learned features improve EEG classification and significantly reduce the amount of labeled data needed on three separate tasks: emotion recognition (SEED), normal/abnormal EEG classification (TUH), and sleep-stage scoring (SleepEDF). Our models show improved performance over previously reported supervised models on SEED and SleepEDF and self-supervised models on all three tasks.'
@@ -748,6 +753,7 @@ export const papers: Paper[] = [
 		venue: 'NeuroImage · 2017',
 		pdf: '/papers/optical-flow.pdf',
 		pages: 17,
+		pageSize: { width: 720, height: 960 },
 		authors: 'Navvab Afrashteh, Samsoon Inayat, Mostafa Mohsenvand, Majid H. Mohajerani',
 		abstract:
 			'Wide-field optical imaging techniques constitute powerful tools to investigate mesoscale neuronal activity. The sampled data is a sequence of image frames in which one can investigate the flow of brain activity starting and terminating at source and sink locations. Approaches to the analysis of information flow include qualitative assessment to identify sources and sinks of activity as well as their trajectories, and quantitative measurements based on the temporal variation of pixel intensity; a few studies have estimated wave motion using optical-flow techniques from computer vision, but a comprehensive toolbox for the quantitative analysis of mesoscale brain activity data has been lacking. We present a graphical-user-interface toolbox in Matlab for investigating the spatiotemporal dynamics of mesoscale brain activity using optical-flow analyses. It implements three optical-flow methods — Horn–Schunck, Combined Local-Global, and Temporospatial — for estimating velocity vector fields of the flow of activity, from which we determine the locations of sources and sinks as well as the trajectories and velocities of flow. Using simulated data as well as sensory-evoked voltage and calcium imaging data from mice, we compared the efficacy of the three methods; the combined local-global method yields the best estimates of wave motion. The automated approach permits rapid and effective quantification of mesoscale brain dynamics and may facilitate the study of brain function in response to new experiences or pathology.'
@@ -758,6 +764,7 @@ export const papers: Paper[] = [
 		venue: 'ACM Transactions on Knowledge Discovery from Data · 2017',
 		pdf: '/papers/rumor-gauge.pdf',
 		pages: 36,
+		pageSize: { width: 720, height: 1067 },
 		authors: 'Soroush Vosoughi, Mostafa ‘Neo’ Mohsenvand, Deb Roy',
 		abstract:
 			'The spread of malicious or accidental misinformation in social media, especially in time-sensitive situations such as real-world emergencies, can have harmful effects on individuals and society. In this work, we developed models for automated verification of rumors — unverified information — that propagate through Twitter. To predict the veracity of rumors, we identified salient features of rumors by examining three aspects of information spread: the linguistic style used to express rumors, the characteristics of the people involved in propagating information, and network propagation dynamics. The predicted veracity of a time series of these features extracted from a rumor (a collection of tweets) is generated using Hidden Markov Models. The verification algorithm was trained and tested on 209 rumors representing 938,806 tweets collected from real-world events, including the 2013 Boston Marathon bombings, the 2014 Ferguson unrest and the 2014 Ebola epidemic, and many other rumors reported on popular websites that document public rumors. The algorithm correctly predicted the veracity of 75% of the rumors faster than any other public source, including journalists and law enforcement officials. The ability to track rumors and predict their outcomes may have practical applications for news consumers, financial markets, journalists and emergency services, and more generally may help minimize the impact of false information on Twitter.'
@@ -769,6 +776,7 @@ export const papers: Paper[] = [
 		venue: 'Nature Neuroscience · 2013',
 		pdf: '/papers/motifs.pdf',
 		pages: 13,
+		pageSize: { width: 720, height: 950 },
 		authors:
 			'Majid H. Mohajerani, Allen W. Chan, Mostafa Mohsenvand, Jeffrey LeDue, Rui Liu, David A. McVea, Jamie D. Boyd, Yu Tian Wang, Mark Reimers, Timothy H. Murphy',
 		abstract:

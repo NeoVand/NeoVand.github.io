@@ -32,10 +32,12 @@
 		<div class="decks">
 			{#each items as p (p.slug)}
 				<a class="deck" href={p.pdf} target="_blank" rel="noopener" onclick={(e) => open(e, p)}>
-					<div class="fan">
+					<div class="fan" style:--paper-ratio={p.pageSize.width / p.pageSize.height}>
 						{#each [4, 3, 2, 1, 0] as i (i)}
 							<img
 								class="page"
+								width={p.pageSize.width}
+								height={p.pageSize.height}
 								style="--i:{i}"
 								src="/media/papers/{p.slug}-{i + 1}.jpg"
 								alt={i === 0 ? 'First page of the paper' : ''}
@@ -72,7 +74,7 @@
 	.fan {
 		position: relative;
 		width: 100%;
-		aspect-ratio: 1 / 0.838;
+		aspect-ratio: 1 / calc(0.52 / var(--paper-ratio) + 0.16);
 		margin-bottom: 18px;
 	}
 	.page {
@@ -80,8 +82,9 @@
 		left: 24%;
 		bottom: 10.6%;
 		width: 52%;
-		aspect-ratio: 1 / 1.35;
-		object-fit: cover;
+		height: auto;
+		aspect-ratio: var(--paper-ratio);
+		object-fit: contain;
 		object-position: top center;
 		background: #fff;
 		border-radius: 6px;
@@ -105,8 +108,11 @@
 	.deck:focus-visible .fan {
 		--fan: 10deg;
 	}
-	:global(:root:not(.scroll-still)) .deck:global(.no-hover):hover .fan {
-		--fan: 5.5deg;
+	/* The hidden fan settles before its return flight is measured. Keep
+	   keyboard focus from changing that destination during the handoff. */
+	.deck:global(.no-hover) .page {
+		transform: rotate(calc((var(--i) - 2) * 5.5deg));
+		transition: none;
 	}
 	.meta {
 		display: flex;

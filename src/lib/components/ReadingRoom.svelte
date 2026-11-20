@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import type { Paper } from '$lib/data/types';
 	import { stage } from '$lib/stage.svelte';
 
@@ -34,8 +34,14 @@
 	let isletFrameH = 0;
 
 	let deck: HTMLElement | null = null;
-	let flying = false;
-	let holding: (() => void) | null = null;
+	let flying = $state(false);
+	let closing = false;
+	let pendingClose = false;
+	let flightEpoch = 0;
+	let activeAnimations: Animation[] = [];
+	let settleFlight: (() => void) | null = null;
+	let unlockScroll: (() => void) | null = null;
+	let releaseFan: (() => void) | null = null;
 	const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	const authors = $derived(
@@ -56,178 +62,245 @@
 		});
 	}
 
-	// Pages load only as they come into the stream's view: a paper can be
-	// thirty-six pages, and most visits look at three.
+	// The first pages reuse the already-visible fan thumbnails immediately.
+	// High-resolution sheets replace those previews only after decoding.
 	let lazy: IntersectionObserver | null = null;
-	function lazyPage(img: HTMLImageElement, i: number) {
-		const src = `/media/papers/pages/${paper!.slug}-${i}.jpg`;
-		if (i <= FAN + 2) {
-			img.src = src;
-			if (i > FAN) decoded(img).then(() => img.parentElement?.classList.add('ready'));
-			return;
-		}
-		lazy ??= new IntersectionObserver(
-			(entries) => {
-				for (const e of entries) {
-					if (!e.isIntersecting) continue;
-					const im = e.target as HTMLImageElement;
-					if (im.dataset.src) {
-						im.src = im.dataset.src;
-						delete im.dataset.src;
-						decoded(im).then(() => im.parentElement?.classList.add('ready'));
-					}
-					lazy!.unobserve(im);
-				}
-			},
-			{ root: stream, rootMargin: '0px 600px 0px 600px' }
-		);
-		img.dataset.src = src;
-		lazy.observe(img);
-		return { destroy: () => lazy?.unobserve(img) };
-	}
-
-	// Where each of the fan's pages sits on screen: centre, size and angle,
-	// read back from the transform so a deck caught mid-hover flies from
-	// where it actually is.
-	function fanRects(d: HTMLElement) {
-		const pages = [...d.querySelectorAll<HTMLImageElement>('.page')].sort(
-			(a, b) => +a.style.getPropertyValue('--i') - +b.style.getPropertyValue('--i')
-		);
-		return pages.map((img) => {
-			const r = img.getBoundingClientRect();
-			const m = new DOMMatrixReadOnly(getComputedStyle(img).transform);
-			return {
-				el: img,
-				cx: r.left + r.width / 2,
-				cy: r.top + r.height / 2,
-				w: img.offsetWidth,
-				a: Math.atan2(m.b, m.a)
+	const pageLoads = new WeakMap<HTMLImageElement, () => void>();
+	function pageImage(slug: string, index: number) {
+		return (img: HTMLImageElement) => {
+			let live = true;
+			let pending: HTMLImageElement | null = null;
+			const ready = () => {
+				if (live) img.parentElement?.classList.add('ready');
 			};
-		});
+			const load = () => {
+				if (pending) return;
+				pending = new Image();
+				pending.decoding = 'async';
+				pending.src = '/media/papers/pages/' + slug + '-' + index + '.jpg';
+				const source = pending;
+				void decoded(source).then(() => {
+					if (!live || !source.naturalWidth) return;
+					img.src = source.src;
+					ready();
+				});
+			};
+			if (index <= FAN) {
+				img.src = '/media/papers/' + slug + '-' + index + '.jpg';
+				void decoded(img).then(ready);
+			}
+			if (index <= FAN + 2) load();
+			else {
+				lazy ??= new IntersectionObserver(
+					(entries) => {
+						for (const entry of entries) {
+							if (!entry.isIntersecting) continue;
+							pageLoads.get(entry.target as HTMLImageElement)?.();
+							lazy?.unobserve(entry.target);
+						}
+					},
+					{ root: stream, rootMargin: '0px 600px' }
+				);
+				pageLoads.set(img, load);
+				lazy.observe(img);
+			}
+			return () => {
+				live = false;
+				lazy?.unobserve(img);
+				pageLoads.delete(img);
+				if (pending && !pending.complete) pending.src = '';
+			};
+		};
 	}
 
-	// A double of a fan page: a canvas painted from the page's own image, so
-	// it needs nothing from the network and is whole the instant it is made.
-	function makeDouble(src: HTMLImageElement, w: number, h: number) {
-		if (src.complete && src.naturalWidth) {
-			const c = document.createElement('canvas');
-			const dpr = Math.min(2, devicePixelRatio || 1);
-			c.width = Math.round(w * dpr);
-			c.height = Math.round(h * dpr);
-			const g = c.getContext('2d')!;
-			const s = Math.max(c.width / src.naturalWidth, c.height / src.naturalHeight);
-			const dw = src.naturalWidth * s,
-				dh = src.naturalHeight * s;
-			g.drawImage(src, (c.width - dw) / 2, 0, dw, dh);
-			return c;
-		}
-		const d = document.createElement('img');
-		d.src = src.currentSrc || src.src;
-		d.alt = '';
-		return d;
-	}
-
-	function endHold() {
-		const h = holding;
-		holding = null;
-		h?.();
-	}
-
-	// The flight is made by doubles in a layer over the whole room, because
-	// the stream clips whatever leaves its box and the deck is well outside
-	// it. The real pages are shown or hidden underneath as the doubles arrive.
-	function fly(d: HTMLElement, toRoom: boolean, done?: () => void) {
-		endHold();
-		const fan = fanRects(d);
-		const imgs = [...pagesEl.querySelectorAll<HTMLImageElement>('.rpage img')].slice(0, FAN);
-		const fanPages = [...d.querySelectorAll<HTMLImageElement>('.page')];
-		flyLayer.innerHTML = '';
-		const doubles: HTMLElement[] = [];
-		for (let i = Math.min(FAN, imgs.length) - 1; i >= 0; i--) {
-			const img = imgs[i],
-				f = fan[i];
-			if (!f) continue;
-			const r = img.getBoundingClientRect();
-			const dbl = makeDouble(f.el, r.width, r.height);
-			dbl.className = 'dbl';
-			Object.assign(dbl.style, {
-				left: r.left + 'px',
-				top: r.top + 'px',
-				width: r.width + 'px',
-				height: r.height + 'px'
+	function fanRects(d: HTMLElement) {
+		return [...d.querySelectorAll<HTMLImageElement>('.page')]
+			.sort((a, b) => +a.style.getPropertyValue('--i') - +b.style.getPropertyValue('--i'))
+			.map((img) => {
+				const rect = img.getBoundingClientRect();
+				const style = getComputedStyle(img);
+				const matrix = new DOMMatrixReadOnly(style.transform);
+				return {
+					el: img,
+					cx: rect.left + rect.width / 2,
+					cy: rect.top + rect.height / 2,
+					w: parseFloat(style.width),
+					h: parseFloat(style.height),
+					a: Math.atan2(matrix.b, matrix.a),
+					filter: style.filter,
+					radius: parseFloat(style.borderTopLeftRadius) || 0
+				};
 			});
-			const sc = Math.max(0.05, f.w / r.width);
-			// a slight lift out of the page on the way, so the flight has depth
-			const pose = `translate(${(f.cx - (r.left + r.width / 2)).toFixed(1)}px, ${(f.cy - (r.top + r.height / 2)).toFixed(1)}px) rotate(${f.a.toFixed(4)}rad) scale(${sc.toFixed(4)})`;
-			const cs = getComputedStyle(f.el);
-			// the deck page's radius and shadows, divided by the scale so they
-			// come out the deck's true size once scaled
-			const look = cs.filter.replace(
+	}
+	type FanRect = ReturnType<typeof fanRects>[number];
+
+	// A single moving frame owns its printed surface. The whole source image
+	// is painted, never cropped; close can blend to a different fan page inside
+	// that same frame when the reader has scrolled further through the paper.
+	function printedSurface(source: HTMLImageElement, width: number, height: number) {
+		if (!source.complete || !source.naturalWidth) {
+			const fallback = document.createElement('img');
+			fallback.src = source.currentSrc || source.src;
+			fallback.alt = '';
+			return fallback;
+		}
+		const canvas = document.createElement('canvas');
+		const dpr = Math.min(2, devicePixelRatio || 1);
+		canvas.width = Math.max(1, Math.round(width * dpr));
+		canvas.height = Math.max(1, Math.round(height * dpr));
+		const context = canvas.getContext('2d')!;
+		context.fillStyle = '#fff';
+		context.fillRect(0, 0, canvas.width, canvas.height);
+		const scale = Math.min(
+			canvas.width / source.naturalWidth,
+			canvas.height / source.naturalHeight
+		);
+		const w = source.naturalWidth * scale;
+		const h = source.naturalHeight * scale;
+		context.drawImage(source, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+		return canvas;
+	}
+
+	function clearFlight() {
+		for (const animation of activeAnimations) animation.cancel();
+		activeAnimations = [];
+		flyLayer?.replaceChildren();
+	}
+
+	function fly(d: HTMLElement, toRoom: boolean, origin: FanRect[] | null, done: () => void) {
+		const epoch = ++flightEpoch;
+		clearFlight();
+		const fan = origin ?? fanRects(d);
+		const allImages = [...pagesEl.querySelectorAll<HTMLImageElement>('.rpage img')];
+		const viewport = stream.getBoundingClientRect();
+		const images = toRoom
+			? allImages.slice(0, fan.length)
+			: allImages
+					.filter((img) => {
+						const r = img.getBoundingClientRect();
+						return (
+							r.right > viewport.left &&
+							r.left < viewport.right &&
+							r.bottom > viewport.top &&
+							r.top < viewport.bottom
+						);
+					})
+					.slice(0, fan.length);
+		const frames = images.map((img) => ({
+			img,
+			rect: img.getBoundingClientRect(),
+			opacity: getComputedStyle(img).opacity,
+			shadow: getComputedStyle(img.parentElement!, '::before').boxShadow
+		}));
+		// Hide complete sheets, including their pseudo-element shadows and
+		// captions. Stop momentum/snap before measuring or handing off frames.
+		stream.style.scrollSnapType = 'none';
+		stream.scrollTo({ left: stream.scrollLeft, behavior: 'instant' });
+		pagesEl.style.visibility = 'hidden';
+		for (const page of fan) page.el.style.visibility = 'hidden';
+		d.classList.add('no-hover');
+		const motions: Animation[] = [];
+		const duration = 680;
+		const stagger = 30;
+		for (let index = frames.length - 1; index >= 0; index--) {
+			const { img, rect, opacity, shadow } = frames[index];
+			const target = fan[index];
+			if (!target || !rect.width || !rect.height) continue;
+			const frame = document.createElement('div');
+			frame.className = 'dbl';
+			Object.assign(frame.style, {
+				left: rect.left + 'px',
+				top: rect.top + 'px',
+				width: rect.width + 'px',
+				height: rect.height + 'px'
+			});
+			const source = printedSurface(toRoom ? target.el : img, rect.width, rect.height);
+			frame.append(source);
+			const scaleX = target.w / rect.width;
+			const scaleY = target.h / rect.height;
+			const scale = (scaleX + scaleY) / 2;
+			const pose =
+				'translate(' +
+				(target.cx - rect.left - rect.width / 2) +
+				'px,' +
+				(target.cy - rect.top - rect.height / 2) +
+				'px) rotate(' +
+				target.a +
+				'rad) scale(' +
+				scaleX +
+				',' +
+				scaleY +
+				')';
+			const filter = target.filter.replace(
 				/drop-shadow\(([^()]*(?:\([^()]*\))?[^()]*)\)/g,
-				(_m, inner: string) =>
+				(_match, inner: string) =>
 					'drop-shadow(' +
-					inner.replace(/(-?\d*\.?\d+)px/g, (_mm, v) => (parseFloat(v) / sc).toFixed(2) + 'px') +
+					inner.replace(
+						/(-?\d*\.?\d+)px/g,
+						(_part, value) => (parseFloat(value) / scale).toFixed(3) + 'px'
+					) +
 					')'
 			);
-			const deckR = (parseFloat(cs.borderTopLeftRadius) || 8) / sc + 'px';
-			dbl.style.transitionDelay = `${(toRoom ? i : FAN - 1 - i) * 36}ms`;
-			dbl.style.transform = toRoom ? pose : 'none';
-			dbl.style.filter = toRoom ? look : 'none';
-			dbl.style.borderRadius = toRoom ? deckR : '4px';
-			dbl.classList.toggle('paper', !toRoom);
-			dbl.dataset.pose = pose;
-			dbl.dataset.look = look;
-			dbl.dataset.deckR = deckR;
-			flyLayer.appendChild(dbl);
-			doubles.push(dbl);
+			const deckFrame = {
+				transform: pose,
+				filter,
+				borderRadius: target.radius / scale + 'px',
+				boxShadow: 'none',
+				opacity: 1
+			};
+			const roomFrame = {
+				transform: 'none',
+				filter: 'none',
+				borderRadius: '3px',
+				boxShadow: shadow,
+				opacity: toRoom ? 1 : Number(opacity)
+			};
+			flyLayer.append(frame);
+			const delay = (toRoom ? index : frames.length - 1 - index) * stagger;
+			motions.push(
+				frame.animate(toRoom ? [deckFrame, roomFrame] : [roomFrame, deckFrame], {
+					duration,
+					delay,
+					easing: 'cubic-bezier(0.3, 0.1, 0.1, 1)',
+					fill: 'both'
+				})
+			);
+			if (!toRoom) {
+				const destination = printedSurface(target.el, rect.width, rect.height);
+				frame.append(destination);
+				const blend = { duration: 220, delay: delay + 360, fill: 'both' as const };
+				motions.push(source.animate([{ opacity: 1 }, { opacity: 0 }], blend));
+				motions.push(destination.animate([{ opacity: 0 }, { opacity: 1 }], blend));
+			}
 		}
-		imgs.forEach((im) => (im.style.visibility = 'hidden'));
-		fanPages.forEach((p) => (p.style.visibility = 'hidden'));
-		flyLayer.getBoundingClientRect();
-		for (const dbl of doubles) {
-			dbl.style.transform = toRoom ? 'none' : dbl.dataset.pose!;
-			dbl.style.filter = toRoom ? 'none' : dbl.dataset.look!;
-			dbl.style.borderRadius = toRoom ? '4px' : dbl.dataset.deckR!;
-			dbl.classList.toggle('paper', toRoom);
+		// A narrow screen may show fewer than five reader sheets. The remaining
+		// sheets emerge behind the arrivals, rather than popping in at the end.
+		if (!toRoom) {
+			for (const page of fan.slice(frames.length)) {
+				page.el.style.visibility = '';
+				motions.push(
+					page.el.animate([{ opacity: 0 }, { opacity: 1 }], {
+						duration: 180,
+						delay: 500,
+						fill: 'both'
+					})
+				);
+			}
 		}
-		// the pages underneath must be decoded before the doubles leave, or
-		// the swap paints a frame of blank paper where the image has not landed
-		const under = toRoom ? imgs : fanPages;
-		const ready = Promise.all(under.map(decoded));
-		const patient = new Promise((r) => setTimeout(r, toRoom ? 8000 : 1500));
-		setTimeout(
-			() => {
-				if (!toRoom) {
-					Promise.race([ready, patient]).then(() =>
-						requestAnimationFrame(() => {
-							under.forEach((im) => (im.style.visibility = ''));
-							flyLayer.innerHTML = '';
-							done?.();
-						})
-					);
-					return;
-				}
-				done?.();
-				let held = true;
-				const swap = () => {
-					if (!held) return;
-					held = false;
-					holding = null;
-					under.forEach((im) => (im.style.visibility = ''));
-					for (const dbl of doubles) {
-						dbl.style.transition = 'opacity 180ms linear';
-						dbl.classList.remove('paper');
-						dbl.style.opacity = '0';
-					}
-					setTimeout(() => {
-						if (doubles[0]?.parentNode === flyLayer) flyLayer.innerHTML = '';
-					}, 200);
-				};
-				holding = swap;
-				Promise.race([ready, patient]).then(() => requestAnimationFrame(swap));
-			},
-			680 + FAN * 36 + 40
-		);
+		activeAnimations = motions;
+		let ended = false;
+		const finish = () => {
+			if (ended || epoch !== flightEpoch) return;
+			ended = true;
+			settleFlight = null;
+			if (toRoom) pagesEl.style.visibility = '';
+			else for (const page of fan) page.el.style.visibility = '';
+			clearFlight();
+			stream.style.scrollSnapType = '';
+			done();
+		};
+		settleFlight = finish;
+		void Promise.all(motions.map((animation) => animation.finished.catch(() => {}))).then(finish);
 	}
 
 	// On a wide screen, with a mouse, the room over the words, beside the
@@ -293,13 +366,40 @@
 		g.onIsletMiss = () => close();
 	});
 
+	function holdFan(d: HTMLElement) {
+		releaseFan?.();
+		d.classList.add('no-hover');
+		const wake = () => {
+			d.classList.remove('no-hover');
+			removeEventListener('pointermove', wake);
+			removeEventListener('keydown', wake);
+			releaseFan = null;
+		};
+		addEventListener('pointermove', wake);
+		addEventListener('keydown', wake);
+		releaseFan = wake;
+	}
+
 	export async function open(p: Paper, d: HTMLElement) {
-		if (flying) return;
+		if (!hidden) return;
+		releaseFan?.();
+		const origin = fanRects(d);
+		const root = document.documentElement;
+		const overflow = root.style.overflow;
+		const gutter = root.style.scrollbarGutter;
+		root.style.scrollbarGutter = 'stable';
+		root.style.overflow = 'hidden';
+		unlockScroll = () => {
+			root.style.overflow = overflow;
+			root.style.scrollbarGutter = gutter;
+		};
 		deck = d;
 		paper = p;
 		absOpen = false;
+		pendingClose = false;
+		closing = false;
+		flying = !reduced();
 		hidden = false;
-		document.documentElement.style.overflow = 'hidden';
 		await tick();
 		stream.scrollLeft = 0;
 		head.scrollTop = 0;
@@ -307,57 +407,76 @@
 		await tick();
 		checkCut();
 		frameIslet();
-		// (shown, so that its flight can begin)
 		await tick();
 		if (islet) {
 			if (reduced()) isletCv.style.opacity = '1';
 			else isletOut(d);
 		}
 		if (!reduced()) {
-			flying = true;
-			fly(d, true, () => (flying = false));
+			fly(d, true, origin, () => {
+				flying = false;
+				if (pendingClose) {
+					pendingClose = false;
+					close();
+				}
+			});
+		} else {
+			d.classList.add('no-hover');
+			for (const page of origin) page.el.style.visibility = 'hidden';
+			flying = false;
 		}
-		requestAnimationFrame(() => (isIn = true));
+		isIn = true;
 		room.focus({ preventScroll: true });
 	}
 
 	export function close() {
-		if (!deck || flying || hidden) return;
+		if (!deck || hidden || closing) return;
+		if (flying) {
+			pendingClose = true;
+			return;
+		}
 		const d = deck;
-		isIn = false;
-		// the islet goes home into the deck with the pages
+		closing = true;
 		const hadIslet = islet;
-		if (hadIslet && !reduced()) isletHome(d);
 		const finish = () => {
 			if (hadIslet) {
 				stage.grove?.read(null);
 				isletReset();
 			}
-			// hover stays off this deck until the pointer moves, so the fan
-			// does not swing out under a pointer that merely stayed put
-			d.classList.add('no-hover');
-			const wake = () => {
-				d.classList.remove('no-hover');
-				removeEventListener('pointermove', wake);
-				removeEventListener('keydown', wake);
-			};
-			addEventListener('pointermove', wake);
-			addEventListener('keydown', wake);
+			holdFan(d);
+			for (const page of d.querySelectorAll<HTMLElement>('.page')) page.style.visibility = '';
 			hidden = true;
-			document.documentElement.style.overflow = '';
-			d.querySelectorAll<HTMLElement>('.page').forEach((p) => (p.style.visibility = ''));
+			isIn = false;
 			flying = false;
+			closing = false;
 			islet = false;
 			deck = null;
 			paper = null;
 			lazy?.disconnect();
 			lazy = null;
+			unlockScroll?.();
+			unlockScroll = null;
 			d.focus({ preventScroll: true });
 		};
 		if (reduced()) return finish();
+		// Snapshot the currently painted sheets before .in/hover/late-page
+		// styles change. The real layer then stays hidden for the entire flight.
+		fly(d, false, null, finish);
 		flying = true;
-		fly(d, false, finish);
+		isIn = false;
+		if (hadIslet) isletHome(d);
 	}
+
+	onDestroy(() => {
+		flightEpoch += 1;
+		settleFlight = null;
+		clearFlight();
+		lazy?.disconnect();
+		unlockScroll?.();
+		releaseFan?.();
+		deck?.querySelectorAll<HTMLElement>('.page').forEach((page) => (page.style.visibility = ''));
+		if (islet) stage.grove?.read(null);
+	});
 
 	function checkCut() {
 		if (!head) return;
@@ -367,6 +486,8 @@
 	}
 
 	function toggleAbstract() {
+		if (closing || pendingClose) return;
+		settleFlight?.();
 		const on = !absOpen;
 		const full = abstractEl.scrollHeight;
 		if (on) {
@@ -385,16 +506,25 @@
 		if (hidden) return;
 		if (e.key === 'Escape') return close();
 		if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+			e.preventDefault();
+			if (flying) return;
 			const page = pagesEl.firstElementChild as HTMLElement | null;
 			if (!page) return;
-			const step = page.getBoundingClientRect().width + 22;
-			stream.scrollBy({ left: e.key === 'ArrowRight' ? step : -step, behavior: 'smooth' });
-			e.preventDefault();
+			const step =
+				page.getBoundingClientRect().width + parseFloat(getComputedStyle(pagesEl).columnGap);
+			stream.scrollBy({
+				left: e.key === 'ArrowRight' ? step : -step,
+				behavior: reduced() ? 'instant' : 'smooth'
+			});
 		}
 	}
 
 	// the wheel reads along the row
 	function onWheel(e: WheelEvent) {
+		if (flying) {
+			e.preventDefault();
+			return;
+		}
 		if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
 			stream.scrollLeft += e.deltaY;
 			e.preventDefault();
@@ -405,14 +535,14 @@
 <svelte:window
 	onkeydown={onKey}
 	onresize={() => {
+		settleFlight?.();
 		checkCut();
 		if (!hidden && isIn) frameIslet();
 	}}
 />
 
 <div
-	class="room"
-	class:in={isIn}
+	class={['room', { in: isIn, moving: flying }]}
 	{hidden}
 	role="dialog"
 	aria-modal="true"
@@ -485,14 +615,24 @@
 			bind:this={stream}
 			onwheel={onWheel}
 		>
-			<div class="pages" bind:this={pagesEl}>
+			<div
+				class="pages"
+				bind:this={pagesEl}
+				style:--paper-ratio={paper.pageSize.width / paper.pageSize.height}
+			>
 				{#each Array.from({ length: paper.pages }, (_, k) => k + 1) as i (i)}
 					<figure
 						class="rpage"
 						class:late={i > FAN}
 						style="--pd:{300 + Math.min(6, i - FAN) * 55}ms"
 					>
-						<img alt="Page {i}" decoding="async" use:lazyPage={i} />
+						<img
+							alt="Page {i}"
+							width={paper.pageSize.width}
+							height={paper.pageSize.height}
+							decoding="async"
+							{@attach pageImage(paper.slug, i)}
+						/>
 						<figcaption>{i}</figcaption>
 					</figure>
 				{/each}
@@ -654,6 +794,8 @@
 		color: var(--muted);
 	}
 	.stream {
+		--reader-gutter: clamp(24px, 6vw, 96px);
+		container-type: size;
 		position: relative;
 		z-index: 1;
 		flex: 1 1 0;
@@ -662,7 +804,7 @@
 		overflow-y: hidden;
 		scroll-snap-type: x proximity;
 		/* a page snaps to the margin the row keeps, not to the window's edge */
-		scroll-padding-inline: clamp(24px, 6vw, 96px);
+		scroll-padding-inline: var(--reader-gutter);
 		scrollbar-width: thin;
 		padding: 12px 0 20px;
 		outline: none;
@@ -672,15 +814,16 @@
 		align-items: flex-start;
 		gap: 22px;
 		height: 100%;
-		padding: 0 clamp(24px, 6vw, 96px);
+		padding: 0 var(--reader-gutter);
 		width: max-content;
 	}
 	/* A page is a sheet lying on the glass: a close shadow where it touches
 	   and a wide soft one under it. Under the pointer it lifts a little
 	   toward the eye, and its shadow spreads and softens as it would. */
 	.rpage {
-		height: calc(100% - 26px);
-		aspect-ratio: 720 / 932;
+		flex: none;
+		width: min(calc((100cqh - 26px) * var(--paper-ratio)), calc(100cqw - 2 * var(--reader-gutter)));
+		aspect-ratio: var(--paper-ratio);
 		scroll-snap-align: start;
 		position: relative;
 		isolation: isolate;
@@ -721,20 +864,22 @@
 			0 50px 86px -34px rgba(22, 36, 47, 0.26);
 	}
 	@media (hover: hover) and (pointer: fine) {
-		.in .rpage:hover {
+		.in:not(.moving) .rpage:hover {
 			transform: translateY(-5px);
 		}
-		.in .rpage:hover::before {
+		.in:not(.moving) .rpage:hover::before {
 			opacity: 0;
 		}
-		.in .rpage:hover::after {
+		.in:not(.moving) .rpage:hover::after {
 			opacity: 1;
 		}
 	}
 	.rpage img {
+		position: absolute;
+		inset: 0;
 		width: 100%;
 		height: 100%;
-		object-fit: cover;
+		object-fit: contain;
 		object-position: top center;
 		background: #fff;
 		border-radius: 3px;
@@ -756,8 +901,8 @@
 		opacity: 0;
 		transform: translateY(14px);
 	}
-	.in .rpage.late:global(.ready) img,
-	.in .rpage.late:global(.ready)::before {
+	.in:not(.moving) .rpage.late:global(.ready) img,
+	.in:not(.moving) .rpage.late:global(.ready)::before {
 		opacity: 1;
 		transform: none;
 		transition:
@@ -770,34 +915,60 @@
 		z-index: 3;
 		pointer-events: none;
 	}
+	.moving .pages {
+		visibility: hidden;
+	}
+	.moving .stream {
+		pointer-events: none;
+		scroll-snap-type: none;
+	}
 	.fly :global(.dbl) {
 		position: fixed;
 		display: block;
-		object-fit: cover;
-		object-position: top center;
+		overflow: hidden;
 		background: #fff;
 		transform-origin: 50% 50%;
-		transition:
-			transform 680ms cubic-bezier(0.3, 0.1, 0.1, 1),
-			filter 680ms var(--ease),
-			border-radius 680ms var(--ease);
 		will-change: transform;
 	}
-	.fly :global(.dbl.paper) {
-		box-shadow:
-			0 2px 4px rgba(0, 0, 0, 0.35),
-			0 18px 40px rgba(0, 0, 0, 0.45);
+	.fly :global(.dbl > *) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
 	}
+
 	@media (max-width: 700px) {
+		.backdrop {
+			background: rgb(4, 6, 10);
+			-webkit-backdrop-filter: none;
+			backdrop-filter: none;
+		}
+		:global(.day) .backdrop {
+			background: linear-gradient(rgb(86, 128, 184), rgb(142, 174, 212));
+		}
 		.head {
 			padding: 56px 20px 12px;
 		}
 		.stream {
+			--reader-gutter: 20px;
 			min-height: 46%;
 		}
 		.pages {
-			padding: 0 20px;
 			gap: 14px;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.backdrop,
+		.head,
+		.close,
+		.abstract,
+		.rpage,
+		.rpage::before,
+		.rpage::after,
+		.in .rpage.late:global(.ready) img,
+		.in .rpage.late:global(.ready)::before {
+			transition: none;
 		}
 	}
 </style>
